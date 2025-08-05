@@ -1,0 +1,38 @@
+import './App.css'
+import { ThemeProvider } from '@/components/theme/theme-provider'
+import { BrowserRouter, Routes, Route } from 'react-router'
+import { Home } from '@/modules/Home/Home'
+import { DatabaseList } from '@/modules/Connection/ConnectionList'
+import { ConnectClickhouse } from '@/modules/Connection/Databases/Clickhouse'
+import { Editor } from '@/modules/Editor/Editor'
+import { ConnectionLayout } from '@/modules/Connection/Layout'
+import { AppProvider } from './modules/Context/AppContext'
+import { NavigationBar } from './modules/NavigationBar/NavigationBar'
+
+function App() {
+  return (
+    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+      <AppProvider>
+        <BrowserRouter>
+          <div className="h-screen w-screen flex flex-col overflow-hidden">
+            <div style={{ ['--wails-draggable' as any]: 'drag' }}  className="shrink-0">
+              <NavigationBar />
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/connect" element={<ConnectionLayout />}>
+                  <Route index element={<DatabaseList />} />
+                  <Route path="clickhouse" element={<ConnectClickhouse />} />
+                </Route>
+                <Route path="/editor" element={<Editor />} />
+              </Routes>
+            </div>
+          </div>
+        </BrowserRouter>
+      </AppProvider>
+    </ThemeProvider>
+  );
+}
+
+export default App
