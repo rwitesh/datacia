@@ -28,7 +28,7 @@ export function EditorSidebar() {
   }, [database])
  
   return (
-    <Sidebar style={{ position: "sticky" }}>
+    <Sidebar className="top-10">
       <SidebarContent className="flex flex-col h-full gap-0">
         <div className="shrink-0 sticky top-0 bg-sidebar border-b border-sidebar-border z-10 px-3 py-2">
           <div className="flex items-center w-full">
