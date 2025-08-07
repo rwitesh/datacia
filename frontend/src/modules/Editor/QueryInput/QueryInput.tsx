@@ -66,6 +66,19 @@ export function QueryInput({
     };
   }, [schema]);
 
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) return;
+
+    const currentDoc = view.state.doc.toString();
+    if (currentDoc !== sqlQuery) {
+      view.dispatch({
+        changes: { from: 0, to: currentDoc.length, insert: sqlQuery },
+      });
+    }
+  }, [sqlQuery]);
+  
+
 
   return (
     <div className="flex-none">
