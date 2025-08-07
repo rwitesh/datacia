@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { EditorSidebar } from "./EditorSidebar/EditorSidebar";
-import { ExecuteQuery } from "../../../wailsjs/go/database/ClickHouse";
+import { RunQuery } from "../../../wailsjs/go/database/ClickHouse";
 import { QueryResult } from "./QueryResult/QueryResult";
 import { QueryInput } from "./QueryInput/QueryInput";
 import { QueryToolbar } from "./QueryToolbar/QueryToolbar";
@@ -11,16 +11,16 @@ export const Editor = () => {
   const [results, setResults] = useState<any[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const executeQuery = async () => {
+  const runQuery = async () => {
     if (!sqlQuery.trim()) return;
     setIsExecuting(true);
     setError(null);
 
     try {
-      const response = await ExecuteQuery(sqlQuery);
+      const response = await RunQuery(sqlQuery);
       setResults(response);
     } catch (err: any) {
-      setError(err?.message || "Error executing query");
+      setError(err || "Error executing query");
       setResults(null);
     } finally {
       setIsExecuting(false);
@@ -33,7 +33,7 @@ export const Editor = () => {
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className="shrink-0">
           <QueryToolbar
-            executeQuery={executeQuery}
+            runQuery={runQuery}
             sqlQuery={sqlQuery}
             setSqlQuery={setSqlQuery}
             isExecuting={isExecuting}

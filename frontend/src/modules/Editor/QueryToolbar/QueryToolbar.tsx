@@ -2,8 +2,8 @@ import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import {MenuBar } from "./Menubar";
 
-export function QueryToolbar({ executeQuery, sqlQuery, setSqlQuery, isExecuting }: {
-    executeQuery: () => void;
+export function QueryToolbar({ runQuery, sqlQuery, setSqlQuery, isExecuting }: {
+    runQuery: () => void;
     sqlQuery: string;
     setSqlQuery: (value: string) => void;
     isExecuting: boolean;
@@ -20,7 +20,7 @@ export function QueryToolbar({ executeQuery, sqlQuery, setSqlQuery, isExecuting 
                 <Button
                     variant="outline"
                     size="sm"
-                    onClick={executeQuery}
+                    onClick={runQuery}
                     disabled={isExecuting || !sqlQuery.trim()}
                     className="cursor-pointer"
                 >

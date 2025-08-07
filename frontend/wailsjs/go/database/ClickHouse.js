@@ -14,14 +14,14 @@ export function Connect(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['database']['ClickHouse']['Connect'](arg1, arg2, arg3, arg4, arg5);
 }
 
-export function ExecuteQuery(arg1) {
-  return window['go']['database']['ClickHouse']['ExecuteQuery'](arg1);
-}
-
 export function FetchDatabases() {
   return window['go']['database']['ClickHouse']['FetchDatabases']();
 }
 
 export function FetchTables() {
   return window['go']['database']['ClickHouse']['FetchTables']();
+}
+
+export function RunQuery(arg1) {
+  return window['go']['database']['ClickHouse']['RunQuery'](arg1);
 }

@@ -7,8 +7,8 @@ export function Close():Promise<void>;
 
 export function Connect(arg1:string,arg2:number,arg3:string,arg4:string,arg5:string):Promise<void>;
 
-export function ExecuteQuery(arg1:string):Promise<Array<Record<string, any>>>;
-
 export function FetchDatabases():Promise<Array<string>>;
 
 export function FetchTables():Promise<Array<string>>;
+
+export function RunQuery(arg1:string):Promise<Array<Record<string, any>>>;

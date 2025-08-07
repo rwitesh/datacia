@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"layerbit-go/pkg/utils"
+	"log"
 	"time"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
@@ -72,13 +73,27 @@ func (ch *ClickHouse) Close() error {
 	return nil
 }
 
-func (ch *ClickHouse) ExecuteQuery(rawQuery string) ([]map[string]interface{}, error) {
-	rows, err := ch.conn.Query(context.Background(), rawQuery)
-	if err != nil {
-		return nil, err
+func (ch *ClickHouse) RunQuery(rawQuery string) ([]map[string]interface{}, error) {
+	queryType := utils.DetectQueryType(rawQuery)
+	log.Println(queryType)
+	if queryType == utils.QueryTypeCommand {
+		err := ch.conn.Exec(context.Background(), rawQuery)
+		if err != nil {
+			return nil, err
+		}
+		return []map[string]interface{}{}, nil
 	}
-	defer rows.Close()
-	return utils.ScanDynamicColumns(rows)
+
+	if queryType == utils.QueryTypeRead {
+		rows, err := ch.conn.Query(context.Background(), rawQuery)
+		if err != nil {
+			return nil, err
+		}
+		defer rows.Close()
+		return utils.ScanDynamicColumns(rows)
+	}
+
+	return nil, fmt.Errorf("unsupported or unknown query type")
 }
 
 func (ch *ClickHouse) FetchTables() ([]string, error) {

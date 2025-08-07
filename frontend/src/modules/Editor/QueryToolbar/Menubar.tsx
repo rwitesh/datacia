@@ -34,7 +34,7 @@ export function MenuBar() {
   return (
     <Menubar className="border-none bg-background">
       <MenubarMenu>
-        <MenubarTrigger className="cursor-pointer">Databases</MenubarTrigger>
+        <MenubarTrigger className="cursor-pointer">{database}</MenubarTrigger>
         <MenubarContent className="bg-white dark:bg-zinc-900 min-w-[180px]">
           <MenubarLabel className="text-xs text-muted-foreground px-2">Select Database</MenubarLabel>
           <MenubarSeparator />

@@ -26,7 +26,7 @@ export function MenuBar() {
     } catch (error) {
       // handle/log error
     } finally {
-      navigate("/connect");
+      navigate("/connect/clickhouse");
     }
   };
 

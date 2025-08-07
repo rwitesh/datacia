@@ -26,10 +26,12 @@ export function QueryResult({
         ) : results && results.length > 0 ? (
           <DataTable columns={Object.keys(results[0])} data={results} />
         ) : (
-          <div className="flex justify-center items-center h-full text-muted-foreground">
-            {results && results.length === 0
-              ? "Query executed successfully"
-              : "Run a query to see results"}
+          <div className="flex justify-center items-center h-full">
+            {results && results.length === 0 ? (
+              <span className="text-green-600">Query executed successfully</span>
+            ) : (
+              <span className="text-muted-foreground">Run a query to see results</span>
+            )}
           </div>
         )}
       </div>
