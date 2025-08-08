@@ -83,7 +83,7 @@ export function QueryInput({
   return (
     <div className="flex-none">
       <div className="text-sm font-medium mb-2">SQL Query</div>
-      <div ref={editorRef} className="border rounded font-mono text-sm" />
+      <div ref={editorRef} className="border-y font-mono text-sm" />
     </div>
   );
 }

@@ -36,7 +36,7 @@ export const Editor = () => {
             runQuery={runQuery}
           />
         </div>
-        <div className="flex-1 flex flex-col p-4 gap-4 overflow-hidden">
+        <div className="flex-1 flex flex-col gap-4 overflow-hidden">
           <div className="shrink-0">
             <QueryInput sqlQuery={sqlQuery} setSqlQuery={setSqlQuery} />
           </div>
