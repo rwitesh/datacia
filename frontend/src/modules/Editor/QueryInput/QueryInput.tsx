@@ -4,6 +4,7 @@ import { EditorState } from "@codemirror/state";
 import { autocompletion } from "@codemirror/autocomplete";
 import { sql } from "@codemirror/lang-sql";
 import { useAppContext } from "@/modules/Context/AppContext";
+import { lineNumbers } from "@codemirror/view";
 export function QueryInput({
   sqlQuery,
   setSqlQuery,
@@ -31,6 +32,7 @@ export function QueryInput({
     const state = EditorState.create({
       doc: sqlQuery,
       extensions: [
+        lineNumbers(),
         sql({ upperCaseKeywords: true, schema }),
         autocompletion(),
         EditorView.updateListener.of((v) => {
@@ -49,6 +51,13 @@ export function QueryInput({
             color: "var(--foreground)",
             backgroundColor: "var(--background)",
           },
+          ".cm-lineNumbers": {
+            backgroundColor: "var(--background)",
+
+          },
+          ".cm-gutters": {
+            border: "none",
+          }
         }),
       ],
     });
@@ -77,12 +86,11 @@ export function QueryInput({
       });
     }
   }, [sqlQuery]);
-  
+
 
 
   return (
     <div className="flex-none">
-      <div className="text-sm font-medium mb-2">SQL Query</div>
       <div ref={editorRef} className="border-y font-mono text-sm" />
     </div>
   );
