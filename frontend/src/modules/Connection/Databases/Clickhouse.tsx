@@ -8,6 +8,7 @@ import { useState } from "react"
 import { useNavigate } from "react-router"
 import { Connect } from "../../../../wailsjs/go/database/ClickHouse"
 import { useAppContext } from "@/modules/Context/AppContext"
+import { toast } from "sonner"
 
 type FormValues = {
   connectionName: string
@@ -21,8 +22,7 @@ type FormValues = {
 export const ConnectClickhouse = () => {
   const navigate = useNavigate()
   const { setDatabase } = useAppContext()
-  const [showPassword, setShowPassword] = useState(false)
-  const [testStatus, setTestStatus] = useState<"success" | "fail" | null>(null)
+  const [showPassword, setShowPassword] = useState(false);
 
   const {
     register,
@@ -45,10 +45,11 @@ export const ConnectClickhouse = () => {
 
     try {
       await Connect(data.host, Number(data.port), data.username, data.password, data.database)
-      setTestStatus("success")
-    } catch (error) {
-      console.error("Test failed:", error)
-      setTestStatus("fail")
+      toast.success("Connection test successful")
+    } catch (error: any) {
+      toast.error("Connection refused", {
+        description: error
+      })
     }
   }
 
@@ -56,31 +57,24 @@ export const ConnectClickhouse = () => {
   const onSubmit = async (data: FormValues) => {
     try {
       await Connect(data.host, Number(data.port), data.username, data.password, data.database)
-      setDatabase(data.database) // Save the database name in context or state
-      // Optionally save the connection name & details locally
-      // Then navigate to another screen
-      navigate("/editor") // or whatever your route is
-    } catch (error) {
-      console.error("Connection failed:", error)
-      setTestStatus("fail") // reuse red ring styling if needed
+      setDatabase(data.database)
+      navigate("/editor")
+    } catch (error: any) {
+      toast.error("Connection refused", {
+        description: error
+      })
     }
   }
-  const cardRing =
-    testStatus === "success"
-      ? "ring-2 ring-green-500 shadow-green-200"
-      : testStatus === "fail"
-        ? "ring-2 ring-red-500 shadow-red-200"
-        : ""
 
   return (
     <div className="flex flex-1 min-w-screen items-center justify-center">
-      <Card className={`transition-all duration-300 shadow-md w-full max-w-md ${cardRing}`}>
+      <Card className={`transition-all duration-300 shadow-md w-full max-w-md`}>
         <CardHeader>
           <div className="flex items-center justify-between">
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate(-1)}
+              onClick={() => navigate("/")}
               className="px-2 cursor-pointer"
             >
               <ArrowLeft className="w-4 h-4 mr-1" />
@@ -185,7 +179,7 @@ export const ConnectClickhouse = () => {
                   className="h-9 text-sm cursor-pointer"
                   onClick={onTest}
                 >
-                  Test Connection
+                  Test
                 </Button>
                 <Button
                   type="submit"

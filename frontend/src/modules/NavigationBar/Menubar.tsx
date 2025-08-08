@@ -13,18 +13,19 @@ import {
   MenubarRadioItem,
 } from "@/components/ui/menubar";
 import { useNavigate } from "react-router";
-import { Close } from "../../../wailsjs/go/database/ClickHouse";
 import { useTheme, type Theme } from "@/components/theme/theme-provider";
+import { useAppContext } from "../Context/AppContext";
+import { Bolt } from "lucide-react";
 
 export function MenuBar() {
   const navigate = useNavigate();
+  const { database, closeConnection } = useAppContext();
   const { theme, setTheme } = useTheme();
 
   const DisconnectHandler = async () => {
     try {
-      await Close();
+      await closeConnection();
     } catch (error) {
-      // handle/log error
     } finally {
       navigate("/connect/clickhouse");
     }
@@ -33,9 +34,9 @@ export function MenuBar() {
   return (
     <Menubar className="border-none bg-background">
       <MenubarMenu>
-        <MenubarTrigger className="cursor-pointer">Settings</MenubarTrigger>
+        <MenubarTrigger className="cursor-pointer"><Bolt size={18} /></MenubarTrigger>
         <MenubarContent className="bg-white dark:bg-zinc-900 min-w-[180px]">
-          <MenubarLabel className="text-xs text-muted-foreground px-2">My Account</MenubarLabel>
+          <MenubarLabel className="text-xs text-muted-foreground px-2">Settings</MenubarLabel>
           <MenubarSeparator />
 
           <MenubarSub >
@@ -57,8 +58,13 @@ export function MenuBar() {
               </MenubarRadioGroup>
             </MenubarSubContent>
           </MenubarSub>
-          <MenubarSeparator />
-          <MenubarItem className="cursor-pointer text-xs" onClick={DisconnectHandler}>Disconnect</MenubarItem>
+          {
+            database ?
+              <>
+                <MenubarSeparator />
+                <MenubarItem className="cursor-pointer text-xs" onClick={DisconnectHandler}>Disconnect</MenubarItem>
+              </> : <></>
+          }
         </MenubarContent>
       </MenubarMenu>
     </Menubar>

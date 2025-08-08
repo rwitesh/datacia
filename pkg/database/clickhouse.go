@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"layerbit-go/pkg/utils"
-	"log"
 	"time"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
@@ -45,9 +44,9 @@ func (ch *ClickHouse) Connect(host string, port uint16, username, password, data
 			"max_execution_time": 60,
 		},
 		DialTimeout:     10 * time.Second,
-		MaxOpenConns:    10,
-		MaxIdleConns:    5,
-		ConnMaxLifetime: 10 * time.Minute,
+		MaxOpenConns:    1,
+		MaxIdleConns:    1,
+		ConnMaxLifetime: 1 * time.Minute,
 	})
 	if err != nil {
 		return fmt.Errorf("unable to open ClickHouse connection: %w", err)
@@ -75,7 +74,6 @@ func (ch *ClickHouse) Close() error {
 
 func (ch *ClickHouse) RunQuery(rawQuery string) ([]map[string]interface{}, error) {
 	queryType := utils.DetectQueryType(rawQuery)
-	log.Println(queryType)
 	if queryType == utils.QueryTypeCommand {
 		err := ch.conn.Exec(context.Background(), rawQuery)
 		if err != nil {

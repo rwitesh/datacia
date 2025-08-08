@@ -34,9 +34,6 @@ export const Editor = () => {
         <div className="shrink-0">
           <QueryToolbar
             runQuery={runQuery}
-            sqlQuery={sqlQuery}
-            setSqlQuery={setSqlQuery}
-            isExecuting={isExecuting}
           />
         </div>
         <div className="flex-1 flex flex-col p-4 gap-4 overflow-hidden">

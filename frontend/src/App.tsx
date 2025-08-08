@@ -8,6 +8,7 @@ import { Editor } from '@/modules/Editor/Editor'
 import { ConnectionLayout } from '@/modules/Connection/Layout'
 import { AppProvider } from './modules/Context/AppContext'
 import { NavigationBar } from './modules/NavigationBar/NavigationBar'
+import { Toaster } from 'sonner'
 
 function App() {
   return (
@@ -15,9 +16,10 @@ function App() {
       <AppProvider>
         <BrowserRouter>
           <div className="h-screen w-screen flex flex-col overflow-hidden">
-            <div style={{ ['--wails-draggable' as any]: 'drag' }}  className="shrink-0">
+            <div style={{ ['--wails-draggable' as any]: 'drag' }} className="shrink-0">
               <NavigationBar />
             </div>
+            <Toaster position='top-center' richColors />
             <div className="flex-1 overflow-hidden">
               <Routes>
                 <Route path="/" element={<Home />} />

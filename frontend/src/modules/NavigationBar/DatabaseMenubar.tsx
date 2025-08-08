@@ -8,11 +8,12 @@ import {
   MenubarRadioGroup,
   MenubarRadioItem,
 } from "@/components/ui/menubar";
-import { ChangeDatabase, FetchDatabases } from "../../../../wailsjs/go/database/ClickHouse";
+import { ChangeDatabase, FetchDatabases } from "../../../wailsjs/go/database/ClickHouse";
 import { useEffect, useState } from "react";
 import { useAppContext } from "@/modules/Context/AppContext";
+import { Database } from "lucide-react";
 
-export function MenuBar() {
+export function DatabaseMenuBar() {
  const [databases, setDatabases] = useState<string[]>([]);
   const { database, setDatabase } = useAppContext();
 
@@ -34,9 +35,9 @@ export function MenuBar() {
   return (
     <Menubar className="border-none bg-background">
       <MenubarMenu>
-        <MenubarTrigger className="cursor-pointer">{database}</MenubarTrigger>
+        <MenubarTrigger className="cursor-pointer"><Database size={16}/></MenubarTrigger>
         <MenubarContent className="bg-white dark:bg-zinc-900 min-w-[180px]">
-          <MenubarLabel className="text-xs text-muted-foreground px-2">Select Database</MenubarLabel>
+          <MenubarLabel className="text-xs text-muted-foreground px-2">Open Database</MenubarLabel>
           <MenubarSeparator />
           <MenubarRadioGroup value={database} onValueChange={(db) => changeDatabaseHandler(db)()}>
             {databases.map((db) => (
