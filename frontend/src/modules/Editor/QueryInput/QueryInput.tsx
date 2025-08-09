@@ -5,6 +5,7 @@ import { autocompletion } from "@codemirror/autocomplete";
 import { sql } from "@codemirror/lang-sql";
 import { useAppContext } from "@/modules/Context/AppContext";
 import { lineNumbers } from "@codemirror/view";
+
 export function QueryInput({
   sqlQuery,
   setSqlQuery,
@@ -37,15 +38,18 @@ export function QueryInput({
         autocompletion(),
         EditorView.updateListener.of((v) => {
           if (v.docChanged) {
-            const newVal = v.state.doc.toString();
-            setSqlQuery(newVal);
+            setSqlQuery(v.state.doc.toString());
           }
         }),
         EditorView.theme({
           "&": {
-            height: "200px",
+            height: "100%",
             fontFamily: "monospace",
             fontSize: "0.875rem",
+          },
+          ".cm-scroller": {
+            height: "100%",
+            overflow: "auto",
           },
           ".cm-tooltip": {
             color: "var(--foreground)",
@@ -53,11 +57,13 @@ export function QueryInput({
           },
           ".cm-lineNumbers": {
             backgroundColor: "var(--background)",
-
+          },
+          ".cm-content": {
+            caretColor: "var(--foreground)",
           },
           ".cm-gutters": {
             border: "none",
-          }
+          },
         }),
       ],
     });
@@ -73,7 +79,7 @@ export function QueryInput({
       view.destroy();
       viewRef.current = null;
     };
-  }, [schema]);
+  }, [schema, setSqlQuery]);
 
   useEffect(() => {
     const view = viewRef.current;
@@ -87,11 +93,12 @@ export function QueryInput({
     }
   }, [sqlQuery]);
 
-
-
   return (
-    <div className="flex-none">
-      <div ref={editorRef} className="border-y font-mono text-sm" />
+    <div className="h-full w-full">
+      <div
+        ref={editorRef}
+        className="h-full w-full border-y font-mono text-sm"
+      />
     </div>
   );
 }
