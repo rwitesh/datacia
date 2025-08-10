@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+// modules/Context/EditorContext.tsx
+import React, { createContext, useContext, useMemo } from "react";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { ListTables } from "@/services/clickhouse";
 import { useAppContext } from "./AppContext";
 
@@ -11,63 +13,32 @@ type EditorContextType = {
 
 const EditorContext = createContext<EditorContextType | undefined>(undefined);
 
-function shallowArrayEqual(a: string[], b: string[]) {
-    if (a === b) return true;
-    if (a.length !== b.length) return false;
-    for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
-    return true;
-}
-
 export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
     const { database } = useAppContext();
-    const [tables, setTables] = useState<string[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string>();
-    const inFlightForDb = useRef<string | undefined>(undefined);
 
-    const fetchTables = async (db?: string) => {
-        const activeDb = db ?? database;
-        if (!activeDb) {
-            inFlightForDb.current = undefined;
-            setTables([]);
-            setError(undefined);
-            setLoading(false);
-            return;
-        }
+    const q = useQuery<string[], Error>({
+        queryKey: ["tables", database ?? ""],
+        queryFn: async () => {
+            if (!database) return [];
+            const rows = await ListTables(database);
+            return rows ?? [];
+        },
+        enabled: !!database,
 
-        inFlightForDb.current = activeDb;
-        setLoading(true);
-        setError(undefined);
+        refetchOnWindowFocus: false,
+        staleTime: 10_000,
+        retry: 2,
+        placeholderData: keepPreviousData,
+    });
 
-        try {
-            const next = (await ListTables(activeDb)) || [];
-            if (inFlightForDb.current === activeDb) {
-                setTables(prev => (shallowArrayEqual(prev, next) ? prev : next));
-            }
-        } catch (e: any) {
-            if (inFlightForDb.current === activeDb) {
-                setTables([]);
-                setError(e?.message ?? String(e));
-            }
-        } finally {
-            if (inFlightForDb.current === activeDb) setLoading(false);
-        }
-    };
-
-    // Refetch when database changes
-    useEffect(() => {
-        fetchTables();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [database]);
-
-    const value = useMemo(
+    const value = useMemo<EditorContextType>(
         () => ({
-            tables,
-            loading,
-            error,
-            refresh: () => fetchTables(),
+            tables: q.data ?? [],
+            loading: q.isFetching,
+            error: q.error ? String(q.error) : undefined,
+            refresh: () => { void q.refetch(); },
         }),
-        [tables, loading, error]
+        [q.data, q.isFetching, q.error, q.refetch]
     );
 
     return <EditorContext.Provider value={value}>{children}</EditorContext.Provider>;

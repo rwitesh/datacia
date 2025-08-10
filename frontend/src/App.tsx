@@ -10,9 +10,21 @@ import { AppProvider } from "./modules/Context/AppContext";
 import { NavigationBar } from "./modules/NavigationBar/NavigationBar";
 import { Toaster } from "sonner";
 import { EditorProvider } from "./modules/Context/EditorContext";
+import {QueryClient, QueryClientProvider} from '@tanstack/react-query'
+
+const queryClient = new QueryClient({
+  // defaultOptions: {
+  //   queries: {
+  //     refetchOnWindowFocus: false,
+  //     retry: 2,
+  //     staleTime: 10_000,
+  //   },
+  // },
+});
 
 function App() {
   return (
+    <QueryClientProvider client={queryClient}>
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
       <AppProvider>
         <BrowserRouter>
@@ -46,6 +58,7 @@ function App() {
         </BrowserRouter>
       </AppProvider>
     </ThemeProvider>
+    </QueryClientProvider>
   );
 }
 

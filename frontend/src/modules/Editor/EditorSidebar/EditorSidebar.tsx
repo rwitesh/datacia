@@ -26,7 +26,7 @@ export function EditorSidebar() {
           {tables.map((table: string) => (
             <button
               key={table}
-              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-sidebar-accent"
+              className="flex w-full items-center gap-2 rounded-md px-2 py-1 text-xs hover:bg-sidebar-accent"
               title={table}
             >
               <Table className="h-3 w-3 opacity-60" />
