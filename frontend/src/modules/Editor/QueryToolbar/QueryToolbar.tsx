@@ -7,7 +7,7 @@ export function QueryToolbar({ isExecuting, runQuery, stopQuery }: {
     stopQuery: () => void;
 }) {
     return (
-        <div className="flex items-center justify-end p-2 bg-muted/50">
+        <div className="flex items-center justify-end p-1 bg-muted/50">
             <div className="flex items-center gap-2">
                 {
                     !isExecuting ? <Button

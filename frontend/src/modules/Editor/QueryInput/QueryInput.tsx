@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { EditorView } from "codemirror";
 import { EditorState } from "@codemirror/state";
-import { autocompletion } from "@codemirror/autocomplete";
+import { autocompletion, closeBrackets } from "@codemirror/autocomplete";
 import { sql } from "@codemirror/lang-sql";
 import { lineNumbers } from "@codemirror/view";
 import { useEditorContext } from "@/modules/Context/EditorContext";
@@ -36,6 +36,7 @@ export function QueryInput({
         lineNumbers(),
         sql({ upperCaseKeywords: true, schema }),
         autocompletion(),
+        closeBrackets(),
         EditorView.updateListener.of((v) => {
           if (v.docChanged) {
             setSqlQuery(v.state.doc.toString());
@@ -97,7 +98,7 @@ export function QueryInput({
     <div className="h-full w-full">
       <div
         ref={editorRef}
-        className="h-full w-full border-y font-mono text-sm"
+        className="h-full w-full font-mono text-sm"
       />
     </div>
   );

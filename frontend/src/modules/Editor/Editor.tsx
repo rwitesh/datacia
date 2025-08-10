@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CancelRunningQuery, RunQuery } from "@/services/clickhouse";
 import { QueryResult } from "./QueryResult/QueryResult";
 import { QueryInput } from "./QueryInput/QueryInput";
@@ -10,8 +10,12 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { EditorFooter } from "./EditorFooter/EditorFooter";
+import { useAppContext } from "../Context/AppContext";
+import { useNavigate } from "react-router";
 
 export const Editor = () => {
+  const navigate = useNavigate();
+  const {database} = useAppContext();
   const [sqlQuery, setSqlQuery] = useState("");
   const [isExecuting, setIsExecuting] = useState(false);
   const [results, setResults] = useState<any[] | null>(null);
@@ -37,6 +41,10 @@ export const Editor = () => {
     setIsExecuting(false)
   }
 
+  useEffect(()=> {
+    if (database === "") navigate("/connect/clickhouse")
+  }, [database])
+
   return (
     <div className="h-full w-full flex flex-col">
       <div className="flex-1 min-h-0">
@@ -53,8 +61,8 @@ export const Editor = () => {
             </div>
           </ResizablePanel>
 
-          <ResizableHandle/>
-          <ResizablePanel minSize={5} className="min-w-0">
+          <ResizableHandle />
+          <ResizablePanel className="min-w-0">
             <div className="flex h-full w-full flex-col overflow-hidden">
               <div className="shrink-0 border-b">
                 <QueryToolbar isExecuting={isExecuting} runQuery={runQuery} stopQuery={stopQuery} />
@@ -70,7 +78,7 @@ export const Editor = () => {
                     <QueryInput sqlQuery={sqlQuery} setSqlQuery={setSqlQuery} />
                   </div>
                 </ResizablePanel>
-                <ResizableHandle/>
+                <ResizableHandle />
                 <ResizablePanel minSize={0} className="min-h-0">
                   <div className="h-full overflow-hidden">
                     <QueryResult isExecuting={isExecuting} error={error} results={results} />
