@@ -9,6 +9,7 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
+import { EditorFooter } from "./EditorFooter/EditorFooter";
 
 export const Editor = () => {
   const [sqlQuery, setSqlQuery] = useState("");
@@ -37,49 +38,52 @@ export const Editor = () => {
   }
 
   return (
-    <div className="h-full w-full overflow-hidden">
-      <ResizablePanelGroup direction="horizontal" className="h-full w-full">
-        <ResizablePanel
-          defaultSize={25}
-          minSize={0}
-          maxSize={100}
-          collapsible
-          className="min-w-0"
-        >
-          <div className="h-full w-full overflow-hidden">
-            <EditorSidebar />
-          </div>
-        </ResizablePanel>
-
-        <ResizableHandle withHandle />
-        <ResizablePanel minSize={5} className="min-w-0">
-          <div className="flex h-full w-full flex-col overflow-hidden">
-            <div className="shrink-0 border-b">
-              <QueryToolbar isExecuting={isExecuting} runQuery={runQuery} stopQuery={stopQuery} />
+    <div className="h-full w-full flex flex-col">
+      <div className="flex-1 min-h-0">
+        <ResizablePanelGroup direction="horizontal" className="h-full w-full">
+          <ResizablePanel
+            defaultSize={25}
+            minSize={0}
+            maxSize={100}
+            collapsible
+            className="min-w-0"
+          >
+            <div className="h-full w-full overflow-hidden">
+              <EditorSidebar />
             </div>
+          </ResizablePanel>
 
-            <ResizablePanelGroup direction="vertical" className="flex-1">
-              <ResizablePanel
-                defaultSize={45}
-                minSize={0}
-                className="min-h-0"
-              >
-                <div className="h-full">
-                  <QueryInput sqlQuery={sqlQuery} setSqlQuery={setSqlQuery} />
-                </div>
-              </ResizablePanel>
+          <ResizableHandle/>
+          <ResizablePanel minSize={5} className="min-w-0">
+            <div className="flex h-full w-full flex-col overflow-hidden">
+              <div className="shrink-0 border-b">
+                <QueryToolbar isExecuting={isExecuting} runQuery={runQuery} stopQuery={stopQuery} />
+              </div>
 
-              <ResizableHandle withHandle />
-
-              <ResizablePanel minSize={0} className="min-h-0">
-                <div className="h-full overflow-hidden">
-                  <QueryResult isExecuting={isExecuting} error={error} results={results} />
-                </div>
-              </ResizablePanel>
-            </ResizablePanelGroup>
-          </div>
-        </ResizablePanel>
-      </ResizablePanelGroup>
+              <ResizablePanelGroup direction="vertical" className="flex-1">
+                <ResizablePanel
+                  defaultSize={45}
+                  minSize={0}
+                  className="min-h-0"
+                >
+                  <div className="h-full">
+                    <QueryInput sqlQuery={sqlQuery} setSqlQuery={setSqlQuery} />
+                  </div>
+                </ResizablePanel>
+                <ResizableHandle/>
+                <ResizablePanel minSize={0} className="min-h-0">
+                  <div className="h-full overflow-hidden">
+                    <QueryResult isExecuting={isExecuting} error={error} results={results} />
+                  </div>
+                </ResizablePanel>
+              </ResizablePanelGroup>
+            </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      </div>
+      <div className="shrink-0 border-t">
+        <EditorFooter rowCount={results ? results.length : 0} />
+      </div>
     </div>
   );
 };
