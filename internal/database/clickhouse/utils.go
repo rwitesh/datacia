@@ -2,6 +2,7 @@ package clickhouse
 
 import (
 	"context"
+	"log"
 	"reflect"
 	"regexp"
 	"strings"
@@ -56,6 +57,7 @@ func ScanDynamicColumns(rows driver.Rows) ([]map[string]interface{}, error) {
 	columns := rows.Columns()
 	colTypes := rows.ColumnTypes()
 
+	var count = 0
 	for rows.Next() {
 		scanTargets, err := prepareScanTargets(colTypes)
 		if err != nil {
@@ -78,11 +80,13 @@ func ScanDynamicColumns(rows driver.Rows) ([]map[string]interface{}, error) {
 		}
 
 		response = append(response, rowsEntry)
+		count++
 	}
 
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
+	log.Println(count)
 	return response, nil
 }
 

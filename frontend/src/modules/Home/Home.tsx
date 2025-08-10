@@ -6,7 +6,7 @@ import { useNavigate } from "react-router"
 export const Home = () => {
     const navigate = useNavigate()
     return (
-      <div style={{ ['--wails-draggable' as any]: 'drag' }}  className="relative h-[calc(100vh-64px)] text-white flex flex-col items-center justify-center px-4 overflow-hidden">
+      <div style={{ ['--wails-draggable' as any]: 'drag' }}  className="relative h-[calc(100vh-64px)] text-white flex flex-col items-center justify-center px-4 overflow-hidden cursor-default select-none">
             <motion.div
                 className="absolute w-48 h-48 rounded-full z-0"
                 style={{

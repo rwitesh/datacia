@@ -1,18 +1,22 @@
+import * as React from "react";
 import {
   useReactTable,
   getCoreRowModel,
   flexRender,
   type ColumnDef,
   type ColumnResizeMode,
-} from '@tanstack/react-table';
+} from "@tanstack/react-table";
+import { useVirtualizer } from "@tanstack/react-virtual";
 
-export function DataTable({
-  columns,
-  data,
-}: {
+type Props = {
   columns: string[];
   data: Record<string, any>[];
-}) {
+};
+
+export function DataTable({ columns, data }: Props) {
+  const [columnSizing, setColumnSizing] = React.useState<Record<string, number>>({});
+  const scrollRef = React.useRef<HTMLDivElement | null>(null);
+
   if (!columns.length) {
     return (
       <div className="p-3 text-muted-foreground text-xs">
@@ -21,95 +25,134 @@ export function DataTable({
     );
   }
 
-  const columnDefs: ColumnDef<any>[] = columns.map((colKey) => ({
-    accessorKey: colKey,
-    header: colKey,
-    cell: (info) => {
-      const value = info.getValue();
-      return value === null
-        ? 'NULL'
-        : typeof value === 'object'
-          ? JSON.stringify(value)
-          : String(value);
-    },
-  }));
+  const columnDefs = React.useMemo<ColumnDef<any>[]>(() => {
+    return columns.map((colKey) => ({
+      accessorKey: colKey,
+      header: colKey,
+      cell: (info) => {
+        const value = info.getValue();
+        return value === null
+          ? "NULL"
+          : typeof value === "object"
+            ? JSON.stringify(value)
+            : String(value);
+      },
+    }));
+  }, [columns]);
 
   const table = useReactTable({
     data,
     columns: columnDefs,
     getCoreRowModel: getCoreRowModel(),
-    columnResizeMode: 'onChange' as ColumnResizeMode,
+    columnResizeMode: "onChange" as ColumnResizeMode,
+    state: { columnSizing },
+    onColumnSizingChange: setColumnSizing,
+  });
+
+  const rows = table.getRowModel().rows;
+  const headers = table.getFlatHeaders();
+  const colWidths = headers.map((h) => Math.max(40, Math.floor(h.getSize())));
+  const totalWidth = colWidths.reduce((a, b) => a + b, 0);
+  const gridTemplateColumns = React.useMemo(
+    () => colWidths.map((w) => `${w}px`).join(" "),
+    [colWidths]
+  );
+
+  const rowVirtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => 24,
+    overscan: 10,
   });
 
   return (
-    <div className="h-full w-full overflow-auto rounded-lg">
-      <table className="min-w-full table-fixed border-separate border-spacing-0 text-xs" style={{
-        width: table.getCenterTotalSize(),
-      }}>
-        <thead className="sticky top-0 z-10 bg-muted">
-          {table.getHeaderGroups().map((headerGroup) => (
-            <tr key={headerGroup.id}>
-              {headerGroup.headers.map((header) => (
-                <th
-                  key={header.id}
-                  colSpan={header.colSpan}
-                  style={{ width: header.getSize() }}
-                  className="relative border border-border bg-muted px-2 py-1 text-left font-medium select-none touch-none"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="overflow-hidden text-ellipsis whitespace-nowrap pr-2">
-                      {flexRender(header.column.columnDef.header, header.getContext())}
-                    </span>
-                  </div>
-                  {header.column.getCanResize() && (
-                    <div
-                      onMouseDown={header.getResizeHandler()}
-                      onTouchStart={header.getResizeHandler()}
-                      className="absolute right-0 top-0 h-full w-2 cursor-col-resize bg-transparent"
-                    />
-                  )}
-                </th>
+    <div className="h-full w-full overflow-hidden">
+      <div
+        ref={scrollRef}
+        className="h-full w-full overflow-auto"
+        style={{ contain: "strict" }}
+      >
+        <div className="sticky top-0 z-10 bg-muted">
+          <table
+            className="table-fixed border-separate border-spacing-0 text-xs cursor-default select-none"
+            style={{ width: totalWidth }}
+          >
+            <thead>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <tr key={headerGroup.id}>
+                  {headerGroup.headers.map((header, i) => (
+                    <th
+                      key={header.id}
+                      colSpan={header.colSpan}
+                      style={{ width: colWidths[i] }}
+                      className="relative border border-border bg-muted px-2 py-1 font-medium"
+                    >
+                      <div className="flex items-center justify-center h-full">
+                        <span className="overflow-hidden text-ellipsis whitespace-nowrap">
+                          {flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                        </span>
+                      </div>
+                      {header.column.getCanResize() && (
+                        <div
+                          onMouseDown={header.getResizeHandler()}
+                          onTouchStart={header.getResizeHandler()}
+                          className="absolute right-0 top-0 h-full w-2 cursor-col-resize bg-transparent"
+                        />
+                      )}
+                    </th>
+                  ))}
+                </tr>
               ))}
-            </tr>
-          ))}
-        </thead>
-        <tbody>
-          {table.getRowModel().rows.map((row, rowIndex) => (
-            <tr
-              key={row.id}
-              className={`${rowIndex % 2 === 0 ? 'bg-muted' : 'bg-background'
-                }`}
-            >
-              {row.getVisibleCells().map((cell) => {
-                const column = cell.column;
-                const header = table.getFlatHeaders().find(
-                  (h) => h.column.id === column.id
-                );
-                const resizeHandler = header?.getResizeHandler();
+            </thead>
 
-                return (
-                  <td
+          </table>
+        </div>
+        <div
+          className="relative"
+          style={{ width: totalWidth, height: rowVirtualizer.getTotalSize() }}
+        >
+          {rowVirtualizer.getVirtualItems().map((vi) => {
+            const row = rows[vi.index];
+            const even = vi.index % 2 === 0;
+
+            return (
+              <div
+                key={row.id}
+                role="row"
+                className={`${even ? "bg-muted" : "bg-background"}`}
+                style={{
+                  position: "absolute",
+                  insetInlineStart: 0,
+                  transform: `translateY(${vi.start}px)`,
+                  width: totalWidth,
+                  height: vi.size,
+                  display: "grid",
+                  gridTemplateColumns,
+                }}
+              >
+                {row.getVisibleCells().map((cell, ci) => (
+                  <div
                     key={cell.id}
-                    style={{ width: column.getSize() }}
-                    className="relative border-r border-border px-2 py-1"
+                    role="cell"
+                    className="relative border-r border-border px-2"
+                    style={{ width: colWidths[ci] }}
                   >
-                    <div className="overflow-hidden text-ellipsis whitespace-nowrap">
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    <div className="overflow-hidden text-ellipsis whitespace-nowrap text-xs h-full flex items-center cursor-default select-none">
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
+                      )}
                     </div>
-                    {column.getCanResize() && (
-                      <div
-                        onMouseDown={resizeHandler}
-                        onTouchStart={resizeHandler}
-                        className="absolute right-0 top-0 h-full w-2 cursor-col-resize bg-transparent active:select-none"
-                      />
-                    )}
-                  </td>
-                );
-              })}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
