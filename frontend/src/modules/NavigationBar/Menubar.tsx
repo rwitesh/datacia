@@ -16,16 +16,17 @@ import { useNavigate } from "react-router";
 import { useTheme, type Theme } from "@/components/theme/theme-provider";
 import { useAppContext } from "../Context/AppContext";
 import { Bolt } from "lucide-react";
-import {Close} from "@/services/clickhouse"
+import { Close } from "@/services/clickhouse"
 
 export function MenuBar() {
   const navigate = useNavigate();
-  const { database} = useAppContext();
+  const { database, setDatabase } = useAppContext();
   const { theme, setTheme } = useTheme();
 
   const DisconnectHandler = async () => {
     try {
       await Close;
+      setDatabase("")
     } catch (error) {
     } finally {
       navigate("/connect/clickhouse");
@@ -37,7 +38,7 @@ export function MenuBar() {
       <MenubarMenu>
         <MenubarTrigger className="cursor-pointer"><Bolt size={18} /></MenubarTrigger>
         <MenubarContent className="bg-white dark:bg-zinc-900 min-w-[180px]">
-          <MenubarLabel className="text-xs text-muted-foreground px-2">Settings</MenubarLabel>
+          <MenubarLabel className="text-xs text-muted-foreground px-2 cursor-default select-none">Settings</MenubarLabel>
           <MenubarSeparator />
 
           <MenubarSub >

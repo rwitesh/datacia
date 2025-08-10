@@ -81,7 +81,7 @@ export const ClickhouseConnection = () => {
               Back
             </Button>
           </div>
-          <CardTitle className="mt-2 text-lg">Connect to ClickHouse</CardTitle>
+          <CardTitle className="mt-2 text-lg cursor-default select-none">Connect to ClickHouse</CardTitle>
         </CardHeader>
 
         <CardContent>

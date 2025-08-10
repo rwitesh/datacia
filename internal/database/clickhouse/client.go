@@ -125,6 +125,10 @@ func (ch *ClickHouse) ExecuteQuery(sql string) ([]map[string]interface{}, error)
 }
 
 func (ch *ClickHouse) FetchTables(database string) ([]string, error) {
+	if database == "" {
+		return nil, errors.New("no active database found")
+	}
+
 	if ch.conn == nil {
 		return nil, errors.New("no active connection found")
 	}

@@ -3,8 +3,8 @@ import { EditorView } from "codemirror";
 import { EditorState } from "@codemirror/state";
 import { autocompletion } from "@codemirror/autocomplete";
 import { sql } from "@codemirror/lang-sql";
-import { useAppContext } from "@/modules/Context/AppContext";
 import { lineNumbers } from "@codemirror/view";
+import { useEditorContext } from "@/modules/Context/EditorContext";
 
 export function QueryInput({
   sqlQuery,
@@ -16,7 +16,7 @@ export function QueryInput({
   const editorRef = useRef<HTMLDivElement | null>(null);
   const viewRef = useRef<EditorView | null>(null);
 
-  const { tables } = useAppContext();
+  const { tables } = useEditorContext();
 
   const schema = useMemo(() => {
     return Object.fromEntries((tables || []).map((t) => [t, []]));

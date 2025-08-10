@@ -1,22 +1,16 @@
 import React, { createContext, useContext, useMemo, useState } from "react";
 
 type AppContextType = {
-  database: string;
+  database: string; 
   setDatabase: React.Dispatch<React.SetStateAction<string>>;
-  tables: string[];
-  setTables: React.Dispatch<React.SetStateAction<string[]>>;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider = ({ children }: { children: React.ReactNode }) => {
-  const [database, setDatabase] = useState<string>("");
-  const [tables, setTables] = useState<string[]>([]);
+  const [database, setDatabase] = useState<string>("")
 
-  const value = useMemo(
-    () => ({ database, setDatabase, tables, setTables }),
-    [database, tables]
-  );
+  const value = useMemo(() => ({ database, setDatabase }), [database]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };

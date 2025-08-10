@@ -11,7 +11,7 @@ export function QueryResult({
 }) {
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      <div className="shrink-0 text-xs font-medium p-2 text-muted-foreground">
+      <div className="shrink-0 text-xs font-medium p-2 text-muted-foreground cursor-default select-none">
         Results
       </div>
       <div className="flex-1 overflow-hidden border-y">
@@ -26,7 +26,7 @@ export function QueryResult({
         ) : results && results.length > 0 ? (
           <DataTable columns={Object.keys(results[0])} data={results} />
         ) : (
-          <div className="flex justify-center items-center h-full">
+          <div className="flex justify-center items-center h-full cursor-default select-none">
             {results && results.length === 0 ? (
               <span className="text-green-600">Query executed successfully</span>
             ) : (

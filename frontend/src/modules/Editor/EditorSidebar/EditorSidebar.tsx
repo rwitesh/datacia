@@ -1,42 +1,19 @@
-import { useEffect, useState } from "react";
 import { RefreshCw, Table } from "lucide-react";
-import { ListTables } from "@/services/clickhouse";
 import { Button } from "@/components/ui/button";
-import { useAppContext } from "@/modules/Context/AppContext";
+import { useEditorContext } from "@/modules/Context/EditorContext";
 
 export function EditorSidebar() {
-  const { database, tables = [], setTables } = useAppContext();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string>();
-
-  const listTables = async () => {
-    setLoading(true);
-    setError(undefined);
-    try {
-      const result = await ListTables(database);
-      setTables(result || []);
-    } catch (e: any) {
-      setError(e);
-      setTables([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    listTables();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [database]);
+  const {tables, loading, error, refresh} = useEditorContext();
 
   return (
     <div className="h-full w-full flex flex-col bg-sidebar text-sidebar-foreground">
       <div className="sticky top-0 z-10 flex items-center gap-2 px-3 py-2 border-b border-sidebar-border bg-sidebar">
         <Table className="h-4 w-4" />
-        <span className="text-sm font-medium">Tables</span>
+        <span className="text-sm font-medium ">Tables</span>
         <Button
           variant="ghost"
           size="icon"
-          onClick={listTables}
+          onClick={refresh}
           disabled={loading}
           className="ml-auto h-6 w-6 cursor-pointer"
         >
@@ -59,11 +36,11 @@ export function EditorSidebar() {
 
           {!loading && tables.length === 0 && (
             error ? (
-              <div className="px-2 py-1.5 text-xs text-red-500 bg-transparent">
+              <div className="px-2 py-1.5 text-xs text-red-500 bg-transparent cursor-default select-none">
                 {error}
               </div>
             ) : (
-              <div className="px-2 py-1.5 text-xs text-muted-foreground bg-muted rounded-md">
+              <div className="px-2 py-1.5 text-xs text-muted-foreground bg-muted rounded-md cursor-default select-none">
                 No tables found
               </div>
             )
