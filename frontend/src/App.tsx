@@ -3,7 +3,7 @@ import { ThemeProvider } from '@/components/theme/theme-provider'
 import { BrowserRouter, Routes, Route } from 'react-router'
 import { Home } from '@/modules/Home/Home'
 import { DatabaseList } from '@/modules/Connection/ConnectionList'
-import { ConnectClickhouse } from '@/modules/Connection/Databases/Clickhouse'
+import { ClickhouseConnection } from '@/modules/Connection/Databases/Clickhouse'
 import { Editor } from '@/modules/Editor/Editor'
 import { ConnectionLayout } from '@/modules/Connection/Layout'
 import { AppProvider } from './modules/Context/AppContext'
@@ -25,7 +25,7 @@ function App() {
                 <Route path="/" element={<Home />} />
                 <Route path="/connect" element={<ConnectionLayout />}>
                   <Route index element={<DatabaseList />} />
-                  <Route path="clickhouse" element={<ConnectClickhouse />} />
+                  <Route path="clickhouse" element={<ClickhouseConnection />} />
                 </Route>
                 <Route path="/editor" element={<Editor />} />
               </Routes>

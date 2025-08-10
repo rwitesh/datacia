@@ -16,15 +16,16 @@ import { useNavigate } from "react-router";
 import { useTheme, type Theme } from "@/components/theme/theme-provider";
 import { useAppContext } from "../Context/AppContext";
 import { Bolt } from "lucide-react";
+import {Close} from "@/services/clickhouse"
 
 export function MenuBar() {
   const navigate = useNavigate();
-  const { database, closeConnection } = useAppContext();
+  const { database} = useAppContext();
   const { theme, setTheme } = useTheme();
 
   const DisconnectHandler = async () => {
     try {
-      await closeConnection();
+      await Close;
     } catch (error) {
     } finally {
       navigate("/connect/clickhouse");

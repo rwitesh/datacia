@@ -1,10 +1,20 @@
-package utils
+package clickhouse
 
 import (
+	"context"
+	"reflect"
 	"regexp"
 	"strings"
-	"reflect"
+	"time"
+
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
+)
+
+const (
+	CONNECT_TIMEOUT   = 5 * time.Second
+	META_TIMEOUT      = 5 * time.Second
+	CHANGE_DB_TIMEOUT = 3 * time.Second
+	QUERY_TIMEOUT     = 30 * time.Second
 )
 
 type QueryType string
@@ -20,9 +30,11 @@ var (
 	commandRegex = regexp.MustCompile(`(?i)^(insert|create|alter|drop|truncate|optimize|grant|revoke|set|attach|detach|rename|use|system|kill)\b`)
 )
 
+func NewTimeoutContext(d time.Duration) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.Background(), d)
+}
 
 func DetectQueryType(query string) QueryType {
-	// Strip leading/trailing spaces and inline comments
 	query = strings.TrimSpace(query)
 	if idx := strings.Index(query, "--"); idx != -1 {
 		query = query[:idx]
@@ -38,8 +50,6 @@ func DetectQueryType(query string) QueryType {
 		return QueryTypeUnknown
 	}
 }
-
-
 
 func ScanDynamicColumns(rows driver.Rows) ([]map[string]interface{}, error) {
 	var response []map[string]interface{}

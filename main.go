@@ -2,7 +2,7 @@ package main
 
 import (
 	"embed"
-	"layerbit-go/pkg/database"
+	"layerbit-go/internal/database/clickhouse"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -16,7 +16,7 @@ var assets embed.FS
 func main() {
 	// Create an instance of the app structure
 	app := NewApp()
-	ch := database.New()
+	ch := clickhouse.New()
 
 	// Create application with options
 	err := wails.Run(&options.App{

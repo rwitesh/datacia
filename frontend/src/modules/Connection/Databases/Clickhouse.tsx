@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArrowLeft, Eye, EyeOff, Save } from "lucide-react"
 import { useState } from "react"
 import { useNavigate } from "react-router"
-import { Connect } from "../../../../wailsjs/go/database/ClickHouse"
+import { Connect } from "@/services/clickhouse"
 import { useAppContext } from "@/modules/Context/AppContext"
 import { toast } from "sonner"
 
@@ -19,7 +19,7 @@ type FormValues = {
   database: string
 }
 
-export const ConnectClickhouse = () => {
+export const ClickhouseConnection = () => {
   const navigate = useNavigate()
   const { setDatabase } = useAppContext()
   const [showPassword, setShowPassword] = useState(false);
@@ -198,4 +198,3 @@ export const ConnectClickhouse = () => {
   )
 }
 
-export default ConnectClickhouse

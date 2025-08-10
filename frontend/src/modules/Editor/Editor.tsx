@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { RunQuery } from "../../../wailsjs/go/database/ClickHouse";
+import { CancelRunningQuery, RunQuery } from "@/services/clickhouse";
 import { QueryResult } from "./QueryResult/QueryResult";
 import { QueryInput } from "./QueryInput/QueryInput";
 import { QueryToolbar } from "./QueryToolbar/QueryToolbar";
@@ -8,7 +8,7 @@ import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
-} from "@/components/ui/resizable"; // ← no .tsx in import
+} from "@/components/ui/resizable";
 
 export const Editor = () => {
   const [sqlQuery, setSqlQuery] = useState("");
@@ -24,12 +24,17 @@ export const Editor = () => {
       const response = await RunQuery(sqlQuery);
       setResults(response);
     } catch (err: any) {
-      setError(err?.message || "Error executing query");
+      setError(err || "Error executing query");
       setResults(null);
     } finally {
       setIsExecuting(false);
     }
   };
+
+  const stopQuery = async () => {
+    await CancelRunningQuery();
+    setIsExecuting(false)
+  }
 
   return (
     <div className="h-full w-full overflow-hidden">
@@ -50,7 +55,7 @@ export const Editor = () => {
         <ResizablePanel minSize={5} className="min-w-0">
           <div className="flex h-full w-full flex-col overflow-hidden">
             <div className="shrink-0 border-b">
-              <QueryToolbar runQuery={runQuery} />
+              <QueryToolbar isExecuting={isExecuting} runQuery={runQuery} stopQuery={stopQuery} />
             </div>
 
             <ResizablePanelGroup direction="vertical" className="flex-1">

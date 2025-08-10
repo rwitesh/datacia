@@ -1,25 +1,30 @@
 import { useEffect, useState } from "react";
 import { RefreshCw, Table } from "lucide-react";
-import { FetchTables } from "../../../../wailsjs/go/database/ClickHouse";
+import { ListTables } from "@/services/clickhouse";
 import { Button } from "@/components/ui/button";
 import { useAppContext } from "@/modules/Context/AppContext";
 
 export function EditorSidebar() {
   const { database, tables = [], setTables } = useAppContext();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string>();
 
-  const loadTables = async () => {
+  const listTables = async () => {
     setLoading(true);
+    setError(undefined);
     try {
-      const result = await FetchTables();
+      const result = await ListTables(database);
       setTables(result || []);
+    } catch (e: any) {
+      setError(e);
+      setTables([]);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadTables();
+    listTables();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [database]);
 
@@ -31,9 +36,9 @@ export function EditorSidebar() {
         <Button
           variant="ghost"
           size="icon"
-          onClick={loadTables}
+          onClick={listTables}
           disabled={loading}
-          className="ml-auto h-6 w-6"
+          className="ml-auto h-6 w-6 cursor-pointer"
         >
           <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
         </Button>
@@ -51,8 +56,17 @@ export function EditorSidebar() {
               <span className="truncate">{table}</span>
             </button>
           ))}
-          {!tables.length && !loading && (
-            <div className="px-2 py-1.5 text-xs text-muted-foreground">No tables</div>
+
+          {!loading && tables.length === 0 && (
+            error ? (
+              <div className="px-2 py-1.5 text-xs text-red-500 bg-transparent">
+                {error}
+              </div>
+            ) : (
+              <div className="px-2 py-1.5 text-xs text-muted-foreground bg-muted rounded-md">
+                No tables found
+              </div>
+            )
           )}
         </div>
       </div>
