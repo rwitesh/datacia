@@ -47,6 +47,8 @@ export const Editor = () => {
     if (database === "") navigate("/connect/clickhouse")
   }, [database])
 
+  console.log(results)
+
   return (
     <div className="h-full w-full flex flex-col">
       <div className="flex-1 min-h-0">
@@ -92,7 +94,7 @@ export const Editor = () => {
         </ResizablePanelGroup>
       </div>
       <div className="shrink-0 border-t">
-        <EditorFooter rowCount={(results && !isExecuting) ? results.length : 0} />
+        <EditorFooter rowCount={results ? results.length : 0} />
       </div>
     </div>
   );

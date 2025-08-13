@@ -2,7 +2,6 @@ package clickhouse
 
 import (
 	"context"
-	"log"
 	"reflect"
 	"regexp"
 	"strings"
@@ -52,13 +51,18 @@ func DetectQueryType(query string) QueryType {
 	}
 }
 
-func ScanDynamicColumns(rows driver.Rows) ([]map[string]interface{}, error) {
+func ScanDynamicColumns(ctx context.Context, rows driver.Rows) ([]map[string]interface{}, error) {
 	var response []map[string]interface{}
 	columns := rows.Columns()
 	colTypes := rows.ColumnTypes()
 
-	var count = 0
 	for rows.Next() {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+		}
+
 		scanTargets, err := prepareScanTargets(colTypes)
 		if err != nil {
 			return nil, err
@@ -80,13 +84,11 @@ func ScanDynamicColumns(rows driver.Rows) ([]map[string]interface{}, error) {
 		}
 
 		response = append(response, rowsEntry)
-		count++
 	}
 
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-	log.Println(count)
 	return response, nil
 }
 

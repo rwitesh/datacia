@@ -117,7 +117,14 @@ func (ch *ClickHouse) ExecuteQuery(sql string) ([]map[string]interface{}, error)
 			return nil, err
 		}
 		defer rows.Close()
-		return ScanDynamicColumns(rows)
+
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+		}
+
+		return ScanDynamicColumns(ctx, rows)
 
 	default:
 		return nil, fmt.Errorf("unsupported or unknown query type")
