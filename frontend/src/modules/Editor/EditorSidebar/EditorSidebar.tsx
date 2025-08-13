@@ -6,7 +6,7 @@ export function EditorSidebar() {
   const {tables, loading, error, refresh} = useEditorContext();
 
   return (
-    <div className="h-full w-full flex flex-col bg-sidebar text-sidebar-foreground">
+    <div className="h-full w-full flex flex-col bg-sidebar text-sidebar-foreground select-none cursor-default">
       <div className="sticky top-0 z-10 flex items-center gap-2 px-3 py-2 border-b border-sidebar-border bg-sidebar">
         <Table className="h-4 w-4" />
         <span className="text-sm font-medium ">Tables</span>

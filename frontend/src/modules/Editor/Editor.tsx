@@ -15,7 +15,7 @@ import { useNavigate } from "react-router";
 
 export const Editor = () => {
   const navigate = useNavigate();
-  const {database} = useAppContext();
+  const { database } = useAppContext();
   const [sqlQuery, setSqlQuery] = useState("");
   const [isExecuting, setIsExecuting] = useState(false);
   const [results, setResults] = useState<any[] | null>(null);
@@ -24,13 +24,13 @@ export const Editor = () => {
   const runQuery = async () => {
     if (!sqlQuery.trim()) return;
     setIsExecuting(true);
+    setResults(null);
     setError(null);
     try {
       const response = await RunQuery(sqlQuery);
       setResults(response);
     } catch (err: any) {
-      setError(err || "Error executing query");
-      setResults(null);
+      setError(prev => prev || err?.message || err || "Error executing query");
     } finally {
       setIsExecuting(false);
     }
@@ -38,10 +38,12 @@ export const Editor = () => {
 
   const stopQuery = async () => {
     await CancelRunningQuery();
-    setIsExecuting(false)
-  }
+    setError("Query execution cancelled");
+    setResults(null);
+    setIsExecuting(false);
+  };
 
-  useEffect(()=> {
+  useEffect(() => {
     if (database === "") navigate("/connect/clickhouse")
   }, [database])
 
@@ -90,7 +92,7 @@ export const Editor = () => {
         </ResizablePanelGroup>
       </div>
       <div className="shrink-0 border-t">
-        <EditorFooter rowCount={results ? results.length : 0} />
+        <EditorFooter rowCount={(results && !isExecuting) ? results.length : 0} />
       </div>
     </div>
   );

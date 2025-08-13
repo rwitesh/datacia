@@ -166,7 +166,7 @@ export const ClickhouseConnection = () => {
               <Button
                 type="button"
                 variant="secondary"
-                className="h-9 text-sm flex items-center gap-1 cursor-pointer"
+                className="text-sm flex items-center gap-1 cursor-pointer"
               >
                 <Save className="w-9 h-9" />
                 Save
@@ -176,14 +176,14 @@ export const ClickhouseConnection = () => {
               <div className="flex gap-2">
                 <Button
                   type="button"
-                  className="h-9 text-sm cursor-pointer"
+                  className="text-sm cursor-pointer"
                   onClick={onTest}
                 >
                   Test
                 </Button>
                 <Button
                   type="submit"
-                  className="h-9 text-sm cursor-pointer"
+                  className="text-sm cursor-pointer"
                   disabled={isSubmitting}
                 >
                   Connect
