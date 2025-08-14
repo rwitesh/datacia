@@ -2,8 +2,14 @@ import { RefreshCw, Table } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEditorContext } from "@/modules/Context/EditorContext";
 
-export function EditorSidebar() {
-  const {tables, loading, error, refresh} = useEditorContext();
+export function EditorSidebar({
+  table,
+  setTable,
+}: {
+  table: string | null;
+  setTable: (value: string) => void;
+}) {
+  const { tables, loading, error, refresh } = useEditorContext();
 
   return (
     <div className="h-full w-full flex flex-col bg-sidebar text-sidebar-foreground select-none cursor-default">
@@ -23,19 +29,23 @@ export function EditorSidebar() {
 
       <div className="flex-1 min-h-0 overflow-y-auto px-2 py-2">
         <div className="space-y-1">
-          {tables.map((table: string) => (
+          {tables.map((t: string) => (
             <button
-              key={table}
-              className="flex w-full items-center gap-2 rounded-md px-2 py-1 text-xs hover:bg-sidebar-accent"
-              title={table}
+              key={t}
+              className={`flex w-full items-center gap-2 rounded-md px-2 py-1 text-xs hover:bg-sidebar-accent ${
+                table === t ? "bg-sidebar-accent" : ""
+              }`}
+              title={t}
+              onClick={() => setTable(t)}
             >
               <Table className="h-3 w-3 opacity-60" />
-              <span className="truncate">{table}</span>
+              <span className="truncate">{t}</span>
             </button>
           ))}
 
-          {!loading && tables.length === 0 && (
-            error ? (
+          {!loading &&
+            tables.length === 0 &&
+            (error ? (
               <div className="px-2 py-1.5 text-xs text-red-500 bg-transparent cursor-default select-none">
                 {error}
               </div>
@@ -43,8 +53,7 @@ export function EditorSidebar() {
               <div className="px-2 py-1.5 text-xs text-muted-foreground bg-muted rounded-md cursor-default select-none">
                 No tables found
               </div>
-            )
-          )}
+            ))}
         </div>
       </div>
     </div>

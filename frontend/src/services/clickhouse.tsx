@@ -6,6 +6,7 @@ import {
   FetchTables as WFetchTables,
   ChangeDatabase as WChangeDatabase,
   CancelRunningQuery as WCancelRunningQuery,
+  FetchTableData as WFetchTableData,
 } from "../../wailsjs/go/clickhouse/ClickHouse";
 
 export async function Connect(host: string, port: number, username: string, password: string, database: string) {
@@ -34,4 +35,8 @@ export async function RunQuery(sql: string): Promise<any[]> {
 
 export async function CancelRunningQuery(): Promise<void> {
   return WCancelRunningQuery();
+}
+
+export async function FetchTableData(table: string): Promise<any[]>{
+  return WFetchTableData(table);
 }

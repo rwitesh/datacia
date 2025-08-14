@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
-import { CancelRunningQuery, RunQuery } from "@/services/clickhouse";
-import { QueryResult } from "./QueryResult/QueryResult";
+import {
+  CancelRunningQuery,
+  RunQuery,
+  FetchTableData,
+} from "@/services/clickhouse";
 import { QueryInput } from "./QueryInput/QueryInput";
 import { QueryToolbar } from "./QueryToolbar/QueryToolbar";
 import { EditorSidebar } from "./EditorSidebar/EditorSidebar";
@@ -12,6 +15,8 @@ import {
 import { EditorFooter } from "./EditorFooter/EditorFooter";
 import { useAppContext } from "../Context/AppContext";
 import { useNavigate } from "react-router";
+import { useQuery } from "@tanstack/react-query";
+import { QueryResult } from "./QueryResult/QueryResult";
 
 export const Editor = () => {
   const navigate = useNavigate();
@@ -20,9 +25,11 @@ export const Editor = () => {
   const [isExecuting, setIsExecuting] = useState(false);
   const [results, setResults] = useState<any[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [selectedTable, setSelectedTable] = useState<string | null>(null);
 
   const runQuery = async () => {
     if (!sqlQuery.trim()) return;
+    setSelectedTable(null);
     setIsExecuting(true);
     setResults(null);
     setError(null);
@@ -30,7 +37,9 @@ export const Editor = () => {
       const response = await RunQuery(sqlQuery);
       setResults(response);
     } catch (err: any) {
-      setError(prev => prev || err?.message || err || "Error executing query");
+      setError(
+        (prev) => prev || err?.message || err || "Error executing query"
+      );
     } finally {
       setIsExecuting(false);
     }
@@ -43,11 +52,30 @@ export const Editor = () => {
     setIsExecuting(false);
   };
 
-  useEffect(() => {
-    if (database === "") navigate("/connect/clickhouse")
-  }, [database])
+  const {
+    data: tableData,
+    isLoading: tableLoading,
+    error: tableError,
+  } = useQuery({
+    queryKey: ["tableData", selectedTable],
+    queryFn: () => FetchTableData(selectedTable as string),
+    enabled: !!selectedTable,
+  });
 
-  console.log(results)
+  useEffect(() => {
+    if (tableData) {
+      setResults(tableData);
+      setError(null);
+    }
+    if (tableError) {
+      setResults(null);
+      setError((tableError as Error).message);
+    }
+  }, [tableData, tableError]);
+
+  useEffect(() => {
+    if (database === "") navigate("/connect/clickhouse");
+  }, [database]);
 
   return (
     <div className="h-full w-full flex flex-col">
@@ -61,7 +89,10 @@ export const Editor = () => {
             className="min-w-0"
           >
             <div className="h-full w-full overflow-hidden">
-              <EditorSidebar />
+              <EditorSidebar
+                table={selectedTable}
+                setTable={setSelectedTable}
+              />
             </div>
           </ResizablePanel>
 
@@ -69,7 +100,8 @@ export const Editor = () => {
           <ResizablePanel className="min-w-0">
             <div className="flex h-full w-full flex-col overflow-hidden">
               <div className="shrink-0 border-b">
-                <QueryToolbar isExecuting={isExecuting} runQuery={runQuery} stopQuery={stopQuery} />
+                <QueryToolbar
+                  isExecuting={isExecuting}
               </div>
 
               <ResizablePanelGroup direction="vertical" className="flex-1">

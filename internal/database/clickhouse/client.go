@@ -17,6 +17,7 @@ type ClickHouseClient interface {
 	ExecuteQuery(query string) ([]map[string]interface{}, error)
 	FetchTables() ([]string, error)
 	FetchDatabases() ([]string, error)
+	FetchTableData(table string) ([]map[string]interface{}, error)
 	ChangeDatabase(database string) error
 	CancelRunningQuery()
 }
@@ -220,4 +221,27 @@ func (ch *ClickHouse) CancelRunningQuery() {
 	if cf != nil {
 		cf()
 	}
+}
+
+func (ch *ClickHouse) FetchTableData(table string) ([]map[string]interface{}, error) {
+	if table == "" {
+		return nil, errors.New("no table selected")
+	}
+
+	if ch.conn == nil {
+		return nil, errors.New("no active connection found")
+	}
+
+	ctx, cancel := NewTimeoutContext(META_TIMEOUT)
+	defer cancel()
+
+	sql := fmt.Sprintf("SELECT * FROM `%s` LIMIT 100", table)
+
+	rows, err := ch.conn.Query(ctx, sql)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	return ScanDynamicColumns(ctx, rows)
 }
