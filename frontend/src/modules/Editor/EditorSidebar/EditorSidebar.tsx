@@ -1,7 +1,6 @@
 import { RefreshCw, Table } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { fetchTables } from "@/services/hooks";
-import { useAppContext } from "@/modules/Context/AppContext";
+import { useEditorContext } from "@/modules/Context/EditorContext";
 
 export function EditorSidebar({
   table,
@@ -10,8 +9,9 @@ export function EditorSidebar({
   table: string | null;
   setTable: (value: string) => void;
 }) {
-  const { database } = useAppContext();
-  const { tables, loading, error, refresh } = fetchTables(database);
+  const {
+    tables: { data, loading, error, refresh },
+  } = useEditorContext();
 
   return (
     <div className="h-full w-full flex flex-col bg-sidebar text-sidebar-foreground select-none cursor-default">
@@ -31,7 +31,7 @@ export function EditorSidebar({
 
       <div className="flex-1 min-h-0 overflow-y-auto px-2 py-2">
         <div className="space-y-1">
-          {tables.map((t: string) => (
+          {data.map((t: string) => (
             <button
               key={t}
               className={`flex w-full items-center gap-2 rounded-md px-2 py-1 text-xs hover:bg-sidebar-accent ${
@@ -46,7 +46,7 @@ export function EditorSidebar({
           ))}
 
           {!loading &&
-            tables.length === 0 &&
+            data.length === 0 &&
             (error ? (
               <div className="px-2 py-1.5 text-xs text-red-500 bg-transparent cursor-default select-none">
                 {error.message}

@@ -1,14 +1,41 @@
 // modules/Context/EditorContext.tsx
-import React, { createContext, useContext, useMemo } from "react";
-import { useQuery, keepPreviousData } from "@tanstack/react-query";
-import { ListTables } from "@/services/clickhouse";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useAppContext } from "./AppContext";
+import { fetchTables } from "@/services/hooks";
+
+export interface Tab {
+  id: string;
+  title: string;
+  sql: string;
+  results: any[] | null;
+  error: string | undefined;
+  isExecuting: boolean;
+}
 
 type EditorContextType = {
-  tables: string[];
-  loading: boolean;
-  error?: string;
-  refresh: () => void;
+  // List of tables
+  tables: {
+    data: string[];
+    loading: boolean;
+    error?: Error | null;
+    refresh: () => void;
+  };
+
+  // Tab management
+  tabs: Tab[];
+  activeTab: Tab | undefined;
+  createTab: (title?: string) => string;
+  closeTab: (tabId: string) => void;
+  setActiveTab: (tabId: string) => void;
+  updateTab: (tabId: string, updates: Partial<Tab>) => void;
+  renameTab: (tabId: string, title: string) => void;
 };
 
 const EditorContext = createContext<EditorContextType | undefined>(undefined);
@@ -16,31 +43,101 @@ const EditorContext = createContext<EditorContextType | undefined>(undefined);
 export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
   const { database } = useAppContext();
 
-  const q = useQuery<string[], Error>({
-    queryKey: ["tables", database ?? ""],
-    queryFn: async () => {
-      if (!database) return [];
-      const rows = await ListTables(database);
-      return rows ?? [];
-    },
-    enabled: !!database,
+  // Fetch list of tables
+  const { tables, loading, error, refresh } = fetchTables(database);
 
-    refetchOnWindowFocus: false,
-    staleTime: 10_000,
-    retry: 2,
-    placeholderData: keepPreviousData,
-  });
+  // Tab Management State
+  const [tabs, setTabs] = useState<Tab[]>([]);
+  const [activeTabId, setActiveTabId] = useState<string | null>(null);
+
+  // Create initial tab
+  useEffect(() => {
+    if (tabs.length === 0) {
+      const initialTabId = createTab("Query 1");
+      setActiveTabId(initialTabId);
+    }
+  }, []);
+
+  const createTab = useCallback(
+    (title?: string): string => {
+      const newId = `tab-${Date.now()}-${Math.random()
+        .toString(36)
+        .substring(2, 9)}`;
+      const tabNumber = tabs.length + 1;
+
+      const newTab: Tab = {
+        id: newId,
+        title: title || `Query ${tabNumber}`,
+        sql: "",
+        results: null,
+        error: undefined,
+        isExecuting: false,
+      };
+      setTabs((prev) => [...prev, newTab]);
+      return newId;
+    },
+    [tabs.length]
+  );
+
+  const closeTab = useCallback(
+    (tabId: string) => {
+      setTabs((prev) => {
+        const filtered = prev.filter((tab) => tab.id !== tabId);
+
+        // If closing a active tab, switch to another tab
+        if (activeTabId === tabId && filtered.length > 0) {
+          const currentIndex = prev.findIndex((tab) => tab.id === tabId);
+          const newActiveIndex = Math.min(currentIndex, filtered.length - 1);
+          setActiveTabId(filtered[newActiveIndex].id);
+        } else if (filtered.length === 0) {
+          const newTabId = createTab("Query 1");
+          setActiveTabId(newTabId);
+        }
+        return filtered;
+      });
+    },
+    [activeTabId, createTab]
+  );
+
+  const setActiveTab = useCallback((tabId: string) => {
+    setActiveTabId(tabId);
+  }, []);
+
+  const updateTab = useCallback((tabId: string, updates: Partial<Tab>) => {
+    setTabs((prev) =>
+      prev.map((tab) => (tab.id === tabId ? { ...tab, ...updates } : tab))
+    );
+  }, []);
+
+  const renameTab = useCallback(
+    (tabId: string, title: string) => {
+      updateTab(tabId, { title });
+    },
+    [updateTab]
+  );
+
+  const activeTab = tabs.find((tab) => tab.id === activeTabId);
 
   const value = useMemo<EditorContextType>(
     () => ({
-      tables: q.data ?? [],
-      loading: q.isFetching,
-      error: q.error ? String(q.error) : undefined,
-      refresh: () => {
-        void q.refetch();
+      // Table list
+      tables: {
+        data: tables,
+        loading,
+        error,
+        refresh,
       },
+
+      // Tab Management
+      tabs,
+      activeTab,
+      createTab,
+      closeTab,
+      setActiveTab,
+      updateTab,
+      renameTab,
     }),
-    [q.data, q.isFetching, q.error, q.refetch]
+    [tables, loading, error, refresh]
   );
 
   return (

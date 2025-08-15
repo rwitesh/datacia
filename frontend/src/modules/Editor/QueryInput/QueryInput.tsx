@@ -6,21 +6,19 @@ import { sql } from "@codemirror/lang-sql";
 import { lineNumbers } from "@codemirror/view";
 import { useEditorContext } from "@/modules/Context/EditorContext";
 
-export function QueryInput({
-  sqlQuery,
-  setSqlQuery,
-}: {
-  sqlQuery: string;
-  setSqlQuery: (value: string) => void;
-}) {
+export function QueryInput() {
   const editorRef = useRef<HTMLDivElement | null>(null);
   const viewRef = useRef<EditorView | null>(null);
 
-  const { tables } = useEditorContext();
+  const {
+    tables: { data },
+    activeTab,
+    updateTab,
+  } = useEditorContext();
 
   const schema = useMemo(() => {
-    return Object.fromEntries((tables || []).map((t) => [t, []]));
-  }, [tables]);
+    return Object.fromEntries((data || []).map((t) => [t, []]));
+  }, [data]);
 
   useEffect(() => {
     if (!editorRef.current) return;
@@ -31,15 +29,15 @@ export function QueryInput({
     }
 
     const state = EditorState.create({
-      doc: sqlQuery,
+      doc: activeTab?.sql,
       extensions: [
         lineNumbers(),
         sql({ upperCaseKeywords: true, schema }),
         autocompletion(),
         closeBrackets(),
         EditorView.updateListener.of((v) => {
-          if (v.docChanged) {
-            setSqlQuery(v.state.doc.toString());
+          if (v.docChanged && activeTab?.id) {
+            updateTab(activeTab.id, { sql: v.state.doc.toString() });
           }
         }),
         EditorView.theme({
@@ -80,26 +78,23 @@ export function QueryInput({
       view.destroy();
       viewRef.current = null;
     };
-  }, [schema, setSqlQuery]);
+  }, [schema, activeTab?.id, updateTab]);
 
   useEffect(() => {
     const view = viewRef.current;
     if (!view) return;
 
     const currentDoc = view.state.doc.toString();
-    if (currentDoc !== sqlQuery) {
+    if (currentDoc !== activeTab?.sql) {
       view.dispatch({
-        changes: { from: 0, to: currentDoc.length, insert: sqlQuery },
+        changes: { from: 0, to: currentDoc.length, insert: activeTab?.sql },
       });
     }
-  }, [sqlQuery]);
+  }, [activeTab?.sql]);
 
   return (
     <div className="h-full w-full">
-      <div
-        ref={editorRef}
-        className="h-full w-full font-mono text-sm"
-      />
+      <div ref={editorRef} className="h-full w-full font-mono text-sm" />
     </div>
   );
 }

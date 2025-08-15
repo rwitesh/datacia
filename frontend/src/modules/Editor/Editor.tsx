@@ -13,15 +13,12 @@ import { useAppContext } from "../Context/AppContext";
 import { useNavigate } from "react-router";
 import { QueryResult } from "./QueryResult/QueryResult";
 import { fetchTableData } from "@/services/hooks";
+import { useEditorContext } from "../Context/EditorContext";
 
 export const Editor = () => {
   const navigate = useNavigate();
   const { database } = useAppContext();
-
-  const [sqlQuery, setSqlQuery] = useState("");
-  const [isExecuting, setIsExecuting] = useState(false);
-  const [queryResults, setQueryResults] = useState<any[] | null>(null);
-  const [error, setError] = useState<string | undefined>(undefined);
+  const { activeTab, updateTab } = useEditorContext();
   const [selectedTable, setSelectedTable] = useState<string | null>(null);
 
   const { tables: tableData, error: tableError } = fetchTableData(
@@ -29,26 +26,39 @@ export const Editor = () => {
   );
 
   const runQuery = async () => {
-    if (!sqlQuery.trim()) return;
+    if (!activeTab || !activeTab.sql.trim()) return;
     setSelectedTable(null); // switching to query mode
-    setIsExecuting(true);
-    setQueryResults(null);
-    setError(undefined);
+
+    updateTab(activeTab.id, {
+      isExecuting: true,
+      results: null,
+      error: undefined,
+    });
+
     try {
-      const response = await RunQuery(sqlQuery);
-      setQueryResults(response);
+      const response = await RunQuery(activeTab.sql);
+      updateTab(activeTab.id, {
+        results: response,
+        isExecuting: false,
+      });
     } catch (err: any) {
-      setError(err?.message || String(err) || "Error executing query");
-    } finally {
-      setIsExecuting(false);
+      updateTab(activeTab.id, {
+        error: err?.message || String(err) || "Error executing query",
+        results: null,
+        isExecuting: false,
+      });
     }
   };
 
   const stopQuery = async () => {
+    if (!activeTab) return;
+
     await CancelRunningQuery();
-    setError("Query execution cancelled");
-    setQueryResults(null);
-    setIsExecuting(false);
+    updateTab(activeTab.id, {
+      error: "Query execution cancelled",
+      results: null,
+      isExecuting: false,
+    });
   };
 
   if (database === "") {
@@ -56,9 +66,14 @@ export const Editor = () => {
     return null;
   }
 
+  if (!activeTab) {
+    return <div>Loading...</div>;
+  }
+
   // Determine what to show in QueryResult
-  const finalResults = selectedTable ? tableData : queryResults;
-  const finalError = selectedTable ? tableError : error;
+  const finalResults = selectedTable ? tableData : activeTab.results;
+  const finalError = selectedTable ? tableError : activeTab.error;
+  const isExecuting = activeTab.isExecuting;
 
   return (
     <div className="h-full w-full flex flex-col">
@@ -99,10 +114,7 @@ export const Editor = () => {
                       className="min-h-0"
                     >
                       <div className="h-full">
-                        <QueryInput
-                          sqlQuery={sqlQuery}
-                          setSqlQuery={setSqlQuery}
-                        />
+                        <QueryInput      />
                       </div>
                     </ResizablePanel>
                     <ResizableHandle />
