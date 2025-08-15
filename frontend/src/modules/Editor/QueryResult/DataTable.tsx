@@ -1,4 +1,4 @@
-import * as React from "react";
+import  {useState, useRef, useMemo, useLayoutEffect} from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -14,8 +14,19 @@ type Props = {
 };
 
 export function DataTable({ columns, data }: Props) {
-  const [columnSizing, setColumnSizing] = React.useState<Record<string, number>>({});
-  const scrollRef = React.useRef<HTMLDivElement | null>(null);
+  const [columnSizing, setColumnSizing] = useState<Record<string, number>>({});
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [containerwidth, setContainerWidth] = useState(0);
+
+  useLayoutEffect(() => {
+    if (!containerRef.current) return;
+    const observer = new ResizeObserver(([entry]) => {
+      setContainerWidth(entry.contentRect.width);
+    })
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, [])
 
   if (!columns.length) {
     return (
@@ -25,7 +36,7 @@ export function DataTable({ columns, data }: Props) {
     );
   }
 
-  const columnDefs = React.useMemo<ColumnDef<any>[]>(() => {
+  const columnDefs = useMemo<ColumnDef<any>[]>(() => {
     return columns.map((colKey) => ({
       accessorKey: colKey,
       header: colKey,
@@ -51,9 +62,17 @@ export function DataTable({ columns, data }: Props) {
 
   const rows = table.getRowModel().rows;
   const headers = table.getFlatHeaders();
-  const colWidths = headers.map((h) => Math.max(40, Math.floor(h.getSize())));
-  const totalWidth = colWidths.reduce((a, b) => a + b, 0);
-  const gridTemplateColumns = React.useMemo(
+  let colWidths = headers.map((h) => Math.max(40, Math.floor(h.getSize())));
+  let totalWidth = colWidths.reduce((a, b) => a + b, 0);
+
+  // Stretch columns proportionally if total width < container width
+  if (containerwidth > totalWidth && colWidths.length > 0) {
+    const extraSpace = containerwidth - totalWidth;
+    const extraPerCol = extraSpace / colWidths.length;
+    colWidths = colWidths.map((w) => w + extraPerCol);
+    totalWidth = containerwidth;
+  }
+  const gridTemplateColumns = useMemo(
     () => colWidths.map((w) => `${w}px`).join(" "),
     [colWidths]
   );
@@ -65,10 +84,15 @@ export function DataTable({ columns, data }: Props) {
     overscan: 10,
   });
 
+  
+
   return (
     <div className="h-full w-full overflow-hidden">
       <div
-        ref={scrollRef}
+        ref={(el) => {
+          scrollRef.current = el;
+          containerRef.current = el;
+        }}
         className="h-full w-full overflow-auto"
         style={{ contain: "strict" }}
       >
