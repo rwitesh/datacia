@@ -19,16 +19,18 @@ export const Editor = () => {
   const navigate = useNavigate();
   const { database } = useAppContext();
   const { activeTab, updateTab } = useEditorContext();
-  const [selectedTable, setSelectedTable] = useState<string | null>(null);
+  const [selectedTable, setSelectedTable] = useState<string | undefined>(
+    undefined
+  );
 
   const { tables: tableData, error: tableError } = fetchTableData(
     selectedTable as string
   );
 
   const runQuery = async () => {
-    if (!activeTab || !activeTab.sql.trim()) return;
-    setSelectedTable(null); // switching to query mode
-
+    if (!activeTab || !activeTab.sql.trim() || activeTab.mode !== "query")
+      return;
+    setSelectedTable(undefined);
     updateTab(activeTab.id, {
       isExecuting: true,
       results: null,
@@ -66,14 +68,12 @@ export const Editor = () => {
     return null;
   }
 
-  if (!activeTab) {
-    return <div>Loading...</div>;
-  }
-
   // Determine what to show in QueryResult
-  const finalResults = selectedTable ? tableData : activeTab.results;
-  const finalError = selectedTable ? tableError : activeTab.error;
-  const isExecuting = activeTab.isExecuting;
+  const finalResults =
+    activeTab?.mode === "query" ? activeTab?.results : tableData;
+  const finalError =
+    activeTab?.mode === "query" ? activeTab?.error : tableError;
+  const isExecuting = activeTab?.isExecuting;
 
   return (
     <div className="h-full w-full flex flex-col">
@@ -105,31 +105,33 @@ export const Editor = () => {
                 />
               </div>
 
-              <ResizablePanelGroup direction="vertical" className="flex-1">
-                {!selectedTable && (
-                  <>
-                    <ResizablePanel
-                      defaultSize={45}
-                      minSize={0}
-                      className="min-h-0"
-                    >
-                      <div className="h-full">
-                        <QueryInput      />
-                      </div>
-                    </ResizablePanel>
-                    <ResizableHandle />
-                  </>
-                )}
-                <ResizablePanel minSize={0} className="min-h-0">
-                  <div className="h-full overflow-hidden">
-                    <QueryResult
-                      isExecuting={isExecuting}
-                      error={finalError}
-                      results={finalResults}
-                    />
-                  </div>
-                </ResizablePanel>
-              </ResizablePanelGroup>
+              {activeTab && (
+                <ResizablePanelGroup direction="vertical" className="flex-1">
+                  {activeTab.mode === "query" && (
+                    <>
+                      <ResizablePanel
+                        defaultSize={45}
+                        minSize={0}
+                        className="min-h-0"
+                      >
+                        <div className="h-full">
+                          <QueryInput />
+                        </div>
+                      </ResizablePanel>
+                      <ResizableHandle />
+                    </>
+                  )}
+                  <ResizablePanel minSize={0} className="min-h-0">
+                    <div className="h-full overflow-hidden">
+                      <QueryResult
+                        isExecuting={isExecuting}
+                        error={finalError}
+                        results={finalResults}
+                      />
+                    </div>
+                  </ResizablePanel>
+                </ResizablePanelGroup>
+              )}
             </div>
           </ResizablePanel>
         </ResizablePanelGroup>

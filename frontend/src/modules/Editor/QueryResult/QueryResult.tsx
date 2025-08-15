@@ -5,9 +5,9 @@ export function QueryResult({
   error,
   results,
 }: {
-  isExecuting: boolean;
+  isExecuting: boolean | undefined;
   error: string | undefined;
-  results: any[] | null;
+  results: any[] | null | undefined;
 }) {
   return (
     <div className="h-full flex flex-col overflow-hidden">

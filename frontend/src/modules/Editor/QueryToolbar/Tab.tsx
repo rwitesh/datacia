@@ -4,7 +4,8 @@ import { X, Plus } from "lucide-react";
 import { useEditorContext } from "@/modules/Context/EditorContext";
 
 export const TabBar = () => {
-  const { tabs, activeTab, createTab, closeTab, setActiveTab, renameTab } = useEditorContext();
+  const { tabs, activeTab, createTab, closeTab, setActiveTab, renameTab } =
+    useEditorContext();
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
 
@@ -54,9 +55,10 @@ export const TabBar = () => {
             key={tab.id}
             className={`
               flex items-center group relative min-w-0 max-w-48
-              ${activeTab?.id === tab.id 
-                ? "bg-background border-b-2 border-b-primary" 
-                : "bg-muted/50 hover:bg-muted"
+              ${
+                activeTab?.id === tab.id
+                  ? "bg-background border-b-2 border-b-primary"
+                  : "bg-muted/50 hover:bg-muted"
               }
             `}
           >
@@ -82,21 +84,19 @@ export const TabBar = () => {
                 </span>
               )}
             </div>
-            
-            {tabs.length > 1 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 mr-1 hover:bg-destructive/20"
-                onClick={(e) => handleCloseTab(e, tab.id)}
-              >
-                <X className="h-3 w-3" />
-              </Button>
-            )}
+
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 mr-1 hover:bg-destructive/20"
+              onClick={(e) => handleCloseTab(e, tab.id)}
+            >
+              <X className="h-3 w-3" />
+            </Button>
           </div>
         ))}
       </div>
-      
+
       <div className="flex items-center px-2 border-l border-border">
         <Button
           variant="ghost"

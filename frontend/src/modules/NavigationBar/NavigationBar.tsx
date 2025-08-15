@@ -2,6 +2,7 @@ import { useLocation} from "react-router"
 import { MenuBar } from "./Menubar"
 import { useAppContext } from "../Context/AppContext";
 import { DatabaseMenuBar } from "./DatabaseMenubar";
+
 export function NavigationBar() {
     const location = useLocation();
     const {database} = useAppContext();

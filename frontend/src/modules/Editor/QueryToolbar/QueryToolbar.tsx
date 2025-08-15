@@ -7,7 +7,7 @@ export function QueryToolbar({
     runQuery,
     stopQuery
 }: {
-    isExecuting: boolean;
+    isExecuting: boolean | undefined;
     runQuery: () => void;
     stopQuery: () => void;
 }) {

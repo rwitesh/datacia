@@ -17,6 +17,7 @@ export interface Tab {
   results: any[] | null;
   error: string | undefined;
   isExecuting: boolean;
+  mode: "query" | "table";
 }
 
 type EditorContextType = {
@@ -31,7 +32,7 @@ type EditorContextType = {
   // Tab management
   tabs: Tab[];
   activeTab: Tab | undefined;
-  createTab: (title?: string) => string;
+  createTab: (title?: string, mode?: "query" | "table") => string;
   closeTab: (tabId: string) => void;
   setActiveTab: (tabId: string) => void;
   updateTab: (tabId: string, updates: Partial<Tab>) => void;
@@ -59,7 +60,7 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const createTab = useCallback(
-    (title?: string): string => {
+    (title?: string, mode: "query" | "table" = "query"): string => {
       const newId = `tab-${Date.now()}-${Math.random()
         .toString(36)
         .substring(2, 9)}`;
@@ -72,8 +73,11 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
         results: null,
         error: undefined,
         isExecuting: false,
+        mode,
       };
+
       setTabs((prev) => [...prev, newTab]);
+      setActiveTabId(newId);
       return newId;
     },
     [tabs.length]

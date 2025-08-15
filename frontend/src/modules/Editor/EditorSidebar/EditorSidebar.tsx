@@ -6,12 +6,17 @@ export function EditorSidebar({
   table,
   setTable,
 }: {
-  table: string | null;
+  table: string | undefined;
   setTable: (value: string) => void;
 }) {
   const {
-    tables: { data, loading, error, refresh },
+    tables: { data, loading, error, refresh }, createTab
   } = useEditorContext();
+
+  const handleTableClick = (table: string) => {
+    createTab(table, "table")
+    setTable(table);
+  };
 
   return (
     <div className="h-full w-full flex flex-col bg-sidebar text-sidebar-foreground select-none cursor-default">
@@ -38,7 +43,7 @@ export function EditorSidebar({
                 table === t ? "bg-sidebar-accent" : ""
               }`}
               title={t}
-              onClick={() => setTable(t)}
+              onClick={() => handleTableClick(t)}
             >
               <Table className="h-3 w-3 opacity-60" />
               <span className="truncate">{t}</span>
