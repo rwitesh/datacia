@@ -6,7 +6,7 @@ export function QueryResult({
   results,
 }: {
   isExecuting: boolean;
-  error: string | null;
+  error: string | undefined;
   results: any[] | null;
 }) {
   return (

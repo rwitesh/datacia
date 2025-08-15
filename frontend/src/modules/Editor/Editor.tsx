@@ -1,9 +1,5 @@
-import { useEffect, useState } from "react";
-import {
-  CancelRunningQuery,
-  RunQuery,
-  FetchTableData,
-} from "@/services/clickhouse";
+import { useState } from "react";
+import { CancelRunningQuery, RunQuery } from "@/services/clickhouse";
 import { QueryInput } from "./QueryInput/QueryInput";
 import { QueryToolbar } from "./QueryToolbar/QueryToolbar";
 import { EditorSidebar } from "./EditorSidebar/EditorSidebar";
@@ -15,31 +11,34 @@ import {
 import { EditorFooter } from "./EditorFooter/EditorFooter";
 import { useAppContext } from "../Context/AppContext";
 import { useNavigate } from "react-router";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { QueryResult } from "./QueryResult/QueryResult";
+import { fetchTableData } from "@/services/hooks";
 
 export const Editor = () => {
   const navigate = useNavigate();
   const { database } = useAppContext();
+
   const [sqlQuery, setSqlQuery] = useState("");
   const [isExecuting, setIsExecuting] = useState(false);
-  const [results, setResults] = useState<any[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [queryResults, setQueryResults] = useState<any[] | null>(null);
+  const [error, setError] = useState<string | undefined>(undefined);
   const [selectedTable, setSelectedTable] = useState<string | null>(null);
+
+  const { tables: tableData, error: tableError } = fetchTableData(
+    selectedTable as string
+  );
 
   const runQuery = async () => {
     if (!sqlQuery.trim()) return;
-    setSelectedTable(null);
+    setSelectedTable(null); // switching to query mode
     setIsExecuting(true);
-    setResults(null);
-    setError(null);
+    setQueryResults(null);
+    setError(undefined);
     try {
       const response = await RunQuery(sqlQuery);
-      setResults(response);
+      setQueryResults(response);
     } catch (err: any) {
-      setError(
-        (prev) => prev || err?.message || err || "Error executing query"
-      );
+      setError(err?.message || String(err) || "Error executing query");
     } finally {
       setIsExecuting(false);
     }
@@ -48,31 +47,18 @@ export const Editor = () => {
   const stopQuery = async () => {
     await CancelRunningQuery();
     setError("Query execution cancelled");
-    setResults(null);
+    setQueryResults(null);
     setIsExecuting(false);
   };
 
-  const { data: tableData, error: tableError } = useQuery({
-    queryKey: ["tableData", selectedTable],
-    queryFn: () => FetchTableData(selectedTable as string),
-    enabled: !!selectedTable,
-    placeholderData: keepPreviousData,
-  });
+  if (database === "") {
+    navigate("/connect/clickhouse");
+    return null;
+  }
 
-  useEffect(() => {
-    if (tableData) {
-      setResults(tableData);
-      setError(null);
-    }
-    if (tableError) {
-      setResults(null);
-      setError((tableError as Error).message);
-    }
-  }, [tableData, tableError]);
-
-  useEffect(() => {
-    if (database === "") navigate("/connect/clickhouse");
-  }, [database]);
+  // Determine what to show in QueryResult
+  const finalResults = selectedTable ? tableData : queryResults;
+  const finalError = selectedTable ? tableError : error;
 
   return (
     <div className="h-full w-full flex flex-col">
@@ -105,7 +91,7 @@ export const Editor = () => {
               </div>
 
               <ResizablePanelGroup direction="vertical" className="flex-1">
-                {!tableData && (
+                {!selectedTable && (
                   <>
                     <ResizablePanel
                       defaultSize={45}
@@ -126,8 +112,8 @@ export const Editor = () => {
                   <div className="h-full overflow-hidden">
                     <QueryResult
                       isExecuting={isExecuting}
-                      error={error}
-                      results={results}
+                      error={finalError}
+                      results={finalResults}
                     />
                   </div>
                 </ResizablePanel>
@@ -137,7 +123,7 @@ export const Editor = () => {
         </ResizablePanelGroup>
       </div>
       <div className="shrink-0 border-t">
-        <EditorFooter rowCount={results ? results.length : 0} />
+        <EditorFooter rowCount={finalResults ? finalResults.length : 0} />
       </div>
     </div>
   );
