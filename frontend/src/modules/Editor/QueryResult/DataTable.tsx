@@ -1,4 +1,4 @@
-import  {useState, useRef, useMemo, useLayoutEffect} from "react";
+import { useState, useRef, useMemo, useLayoutEffect } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -18,15 +18,18 @@ export function DataTable({ columns, data }: Props) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [containerwidth, setContainerWidth] = useState(0);
+  const [containerHeight, setContainerHeight] = useState(0);
 
+  // Track container size
   useLayoutEffect(() => {
     if (!containerRef.current) return;
     const observer = new ResizeObserver(([entry]) => {
       setContainerWidth(entry.contentRect.width);
-    })
+      setContainerHeight(entry.contentRect.height);
+    });
     observer.observe(containerRef.current);
     return () => observer.disconnect();
-  }, [])
+  }, []);
 
   if (!columns.length) {
     return (
@@ -36,6 +39,7 @@ export function DataTable({ columns, data }: Props) {
     );
   }
 
+  // Generate Column Definitions
   const columnDefs = useMemo<ColumnDef<any>[]>(() => {
     return columns.map((colKey) => ({
       accessorKey: colKey,
@@ -45,8 +49,8 @@ export function DataTable({ columns, data }: Props) {
         return value === null
           ? "NULL"
           : typeof value === "object"
-            ? JSON.stringify(value)
-            : String(value);
+          ? JSON.stringify(value)
+          : String(value);
       },
     }));
   }, [columns]);
@@ -64,27 +68,35 @@ export function DataTable({ columns, data }: Props) {
   const headers = table.getFlatHeaders();
   let colWidths = headers.map((h) => Math.max(40, Math.floor(h.getSize())));
   let totalWidth = colWidths.reduce((a, b) => a + b, 0);
+  const rowHeight = 24;
 
-  // Stretch columns proportionally if total width < container width
+  // Stretch columns to fill container proportionally if total width < container width
   if (containerwidth > totalWidth && colWidths.length > 0) {
     const extraSpace = containerwidth - totalWidth;
     const extraPerCol = extraSpace / colWidths.length;
     colWidths = colWidths.map((w) => w + extraPerCol);
     totalWidth = containerwidth;
   }
+
   const gridTemplateColumns = useMemo(
     () => colWidths.map((w) => `${w}px`).join(" "),
     [colWidths]
   );
 
+  // Virtualize Rows
   const rowVirtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => 24,
+    estimateSize: () => rowHeight,
     overscan: 10,
   });
 
-  
+  // Calculate filler rows to fill remaining height
+  const visibleHeight = rowVirtualizer.getTotalSize();
+  const extraRowsCount =
+    containerHeight > visibleHeight
+      ? Math.ceil((containerHeight - visibleHeight) / rowHeight)
+      : 0;
 
   return (
     <div className="h-full w-full overflow-hidden">
@@ -131,7 +143,6 @@ export function DataTable({ columns, data }: Props) {
                 </tr>
               ))}
             </thead>
-
           </table>
         </div>
         <div
@@ -175,6 +186,36 @@ export function DataTable({ columns, data }: Props) {
               </div>
             );
           })}
+
+          {extraRowsCount > 0 &&
+            Array.from({ length: extraRowsCount }).map((_, idx) => {
+              const top = visibleHeight + idx * rowHeight;
+              const isEven = (rows.length + idx) % 2 === 0;
+              return (
+                <div
+                  key={`filler-${idx}`}
+                  role="row"
+                  className={isEven ? "bg-muted" : "bg-background"}
+                  style={{
+                    position: "absolute",
+                    insetInlineStart: 0,
+                    transform: `translateY(${top}px)`,
+                    width: totalWidth,
+                    height: rowHeight,
+                    display: "grid",
+                    gridTemplateColumns,
+                  }}
+                >
+                  {colWidths.map((w, ci) => (
+                    <div
+                      key={`filler-cell-${ci}`}
+                      style={{ width: w }}
+                      className="border-r border-border"
+                    />
+                  ))}
+                </div>
+              );
+            })}
         </div>
       </div>
     </div>
