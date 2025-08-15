@@ -15,7 +15,7 @@ import {
 import { EditorFooter } from "./EditorFooter/EditorFooter";
 import { useAppContext } from "../Context/AppContext";
 import { useNavigate } from "react-router";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { QueryResult } from "./QueryResult/QueryResult";
 
 export const Editor = () => {
@@ -52,14 +52,11 @@ export const Editor = () => {
     setIsExecuting(false);
   };
 
-  const {
-    data: tableData,
-    isLoading: tableLoading,
-    error: tableError,
-  } = useQuery({
+  const { data: tableData, error: tableError } = useQuery({
     queryKey: ["tableData", selectedTable],
     queryFn: () => FetchTableData(selectedTable as string),
     enabled: !!selectedTable,
+    placeholderData: keepPreviousData,
   });
 
   useEffect(() => {
@@ -102,22 +99,36 @@ export const Editor = () => {
               <div className="shrink-0 border-b">
                 <QueryToolbar
                   isExecuting={isExecuting}
+                  runQuery={runQuery}
+                  stopQuery={stopQuery}
+                />
               </div>
 
               <ResizablePanelGroup direction="vertical" className="flex-1">
-                <ResizablePanel
-                  defaultSize={45}
-                  minSize={0}
-                  className="min-h-0"
-                >
-                  <div className="h-full">
-                    <QueryInput sqlQuery={sqlQuery} setSqlQuery={setSqlQuery} />
-                  </div>
-                </ResizablePanel>
-                <ResizableHandle />
+                {!tableData && (
+                  <>
+                    <ResizablePanel
+                      defaultSize={45}
+                      minSize={0}
+                      className="min-h-0"
+                    >
+                      <div className="h-full">
+                        <QueryInput
+                          sqlQuery={sqlQuery}
+                          setSqlQuery={setSqlQuery}
+                        />
+                      </div>
+                    </ResizablePanel>
+                    <ResizableHandle />
+                  </>
+                )}
                 <ResizablePanel minSize={0} className="min-h-0">
                   <div className="h-full overflow-hidden">
-                    <QueryResult isExecuting={isExecuting} error={error} results={results} />
+                    <QueryResult
+                      isExecuting={isExecuting}
+                      error={error}
+                      results={results}
+                    />
                   </div>
                 </ResizablePanel>
               </ResizablePanelGroup>
