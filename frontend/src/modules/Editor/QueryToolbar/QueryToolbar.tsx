@@ -12,14 +12,13 @@ export function QueryToolbar({
   stopQuery: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between p-1 bg-muted/50">
+    <div className="flex items-center justify-between bg-muted/50">
       <TabBar />
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 mx-1">
         {!isExecuting ? (
           <Button
             variant="outline"
-            size="sm"
-            className="p-1 cursor-pointer"
+            className="h-6 p-1 cursor-pointer"
             onClick={runQuery}
           >
             <Play color="limegreen" strokeWidth={2} /> Run
@@ -27,8 +26,7 @@ export function QueryToolbar({
         ) : (
           <Button
             variant="outline"
-            size="sm"
-            className="p-1 cursor-pointer"
+            className="h-6 p-1 cursor-pointer"
             onClick={stopQuery}
           >
             <StopCircle color="limegreen" strokeWidth={2} /> Stop

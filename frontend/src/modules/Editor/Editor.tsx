@@ -97,7 +97,7 @@ export const Editor = () => {
           <ResizableHandle />
           <ResizablePanel className="min-w-0">
             <div className="flex h-full w-full flex-col overflow-hidden">
-              <div className="shrink-0 border-b">
+              <div className="shrink-0">
                 <QueryToolbar
                   isExecuting={isExecuting}
                   runQuery={runQuery}
