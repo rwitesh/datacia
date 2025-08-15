@@ -8,13 +8,14 @@ import {
   MenubarRadioGroup,
   MenubarRadioItem,
 } from "@/components/ui/menubar";
-import { ChangeDatabase, ListDatabases } from "@/services/clickhouse";
+import { ChangeDatabase } from "@/services/clickhouse";
 import { useAppContext } from "@/modules/Context/AppContext";
 import { Database } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { fetchDatabase } from "@/services/hooks";
 
 export function DatabaseMenuBar() {
   const { database, setDatabase } = useAppContext();
+  const { databases } = fetchDatabase();
 
   const changeDatabaseHandler = (db: string) => async () => {
     try {
@@ -24,12 +25,6 @@ export function DatabaseMenuBar() {
       console.error("Failed to change database:", error);
     }
   };
-
-  const { data: databases = [] } = useQuery({
-    queryKey: ["databases"],
-    queryFn: () => ListDatabases(),
-    retry: 3,
-  });
 
   return (
     <Menubar className="border-none bg-background">
