@@ -1,14 +1,13 @@
-import { DataTable } from "./DataTable"
+import { DataTable } from "./DataTable";
+import { useEditorContext } from "@/modules/Context/EditorContext";
 
-export function QueryResult({
-  isExecuting,
-  error,
-  results,
-}: {
-  isExecuting: boolean | undefined;
-  error: string | undefined;
-  results: any[] | null | undefined;
-}) {
+export function QueryResult() {
+  const { activeTab } = useEditorContext();
+
+  if (!activeTab) {
+    return null;
+  }
+  const { isExecuting, error, results } = activeTab;
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
@@ -26,9 +25,13 @@ export function QueryResult({
         ) : (
           <div className="flex justify-center items-center h-full cursor-default select-none">
             {results && results.length === 0 ? (
-              <span className="text-green-600">Query executed successfully</span>
+              <span className="text-green-600">
+                Query executed successfully
+              </span>
             ) : (
-              <span className="text-muted-foreground">Run a query to see results</span>
+              <span className="text-muted-foreground">
+                Run a query to see results
+              </span>
             )}
           </div>
         )}

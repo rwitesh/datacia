@@ -1,25 +1,19 @@
 import { Button } from "@/components/ui/button";
 import { Play, StopCircle } from "lucide-react";
 import { TabBar } from "./Tab";
+import { useEditorContext } from "@/modules/Context/EditorContext";
 
-export function QueryToolbar({
-  isExecuting,
-  runQuery,
-  stopQuery,
-}: {
-  isExecuting: boolean | undefined;
-  runQuery: () => void;
-  stopQuery: () => void;
-}) {
+export function QueryToolbar() {
+  const {activeTab, runQuery, stopQuery} = useEditorContext();
   return (
     <div className="flex items-center justify-between bg-muted/50">
       <TabBar />
       <div className="flex items-center gap-2 mx-1">
-        {!isExecuting ? (
+        {!activeTab?.isExecuting ? (
           <Button
             variant="outline"
             className="h-6 p-1 cursor-pointer"
-            onClick={runQuery}
+            onClick={() => runQuery()}
           >
             <Play color="limegreen" strokeWidth={2} /> Run
           </Button>
@@ -27,7 +21,7 @@ export function QueryToolbar({
           <Button
             variant="outline"
             className="h-6 p-1 cursor-pointer"
-            onClick={stopQuery}
+            onClick={() => stopQuery()}
           >
             <StopCircle color="limegreen" strokeWidth={2} /> Stop
           </Button>

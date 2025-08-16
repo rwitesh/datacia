@@ -26,10 +26,6 @@ export function FetchDatabases() {
   return window['go']['clickhouse']['ClickHouse']['FetchDatabases']();
 }
 
-export function FetchTableData(arg1) {
-  return window['go']['clickhouse']['ClickHouse']['FetchTableData'](arg1);
-}
-
 export function FetchTables(arg1) {
   return window['go']['clickhouse']['ClickHouse']['FetchTables'](arg1);
 }

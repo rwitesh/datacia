@@ -2,20 +2,17 @@ import { RefreshCw, Table } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEditorContext } from "@/modules/Context/EditorContext";
 
-export function EditorSidebar({
-  table,
-  setTable,
-}: {
-  table: string | undefined;
-  setTable: (value: string) => void;
-}) {
+export function EditorSidebar() {
   const {
-    tables: { data, loading, error, refresh }, createTab
+    tables: { data, loading, error, refresh },
+    createTab,
+    runQuery,
   } = useEditorContext();
 
-  const handleTableClick = (table: string) => {
-    createTab(table, "table")
-    setTable(table);
+  const handleTableClick = async (table: string) => {
+    const id = createTab(table, "table");
+    const sql = `SELECT * FROM ${table}`;
+    await runQuery(id, sql);
   };
 
   return (
@@ -39,9 +36,7 @@ export function EditorSidebar({
           {data.map((t: string) => (
             <button
               key={t}
-              className={`flex w-full items-center gap-2 rounded-md px-2 py-1 text-xs hover:bg-sidebar-accent ${
-                table === t ? "bg-sidebar-accent" : ""
-              }`}
+              className={`flex w-full items-center gap-2 rounded-md px-2 py-1 text-xs hover:bg-sidebar-accent`}
               title={t}
               onClick={() => handleTableClick(t)}
             >

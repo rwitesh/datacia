@@ -13,6 +13,4 @@ export function ExecuteQuery(arg1:string):Promise<Array<Record<string, any>>>;
 
 export function FetchDatabases():Promise<Array<string>>;
 
-export function FetchTableData(arg1:string):Promise<Array<Record<string, any>>>;
-
 export function FetchTables(arg1:string):Promise<Array<string>>;
