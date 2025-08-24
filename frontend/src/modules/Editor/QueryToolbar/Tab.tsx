@@ -26,10 +26,6 @@ export const TabBar = () => {
   };
 
   const handleTabDoubleClick = (tabId: string, currentTitle: string) => {
-    if (activeTab?.mode === "table") {
-      return;
-    }
-
     setEditingTabId(tabId);
     setEditValue(currentTitle);
   };

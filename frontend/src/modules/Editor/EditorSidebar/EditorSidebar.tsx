@@ -11,8 +11,7 @@ export function EditorSidebar() {
 
   const handleTableClick = async (table: string) => {
     const tab = createTab(table, "table");
-
-    const sql = `SELECT * FROM ${table} LIMIT ${tab.limit}  OFFSET ${tab.offset}`;
+    const sql = `SELECT * FROM ${tab.table} LIMIT ${tab.limit}  OFFSET ${tab.offset}`;
     await runQuery(tab.id, sql);
   };
 

@@ -12,13 +12,14 @@ import { CancelRunningQuery, RunQuery } from "@/services/clickhouse";
 export interface Tab {
   id: string;
   title: string;
+  table?: string;
   sql: string;
   results: any[] | null;
-  error: string | undefined;
+  error?: string;
   isExecuting: boolean;
   mode: "query" | "table";
-  limit?: number | undefined;
-  offset?: number | undefined;
+  limit?: number;
+  offset?: number;
 }
 
 type EditorContextType = {
@@ -62,6 +63,7 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
       const newTab: Tab = {
         id: newId,
         title: title || `Query ${tabNumber}`,
+        table: mode === 'table' ? title : undefined,
         sql: "",
         results: null,
         error: undefined,

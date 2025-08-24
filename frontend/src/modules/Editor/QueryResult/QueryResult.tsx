@@ -13,9 +13,9 @@ export function QueryResult() {
   const { isExecuting, error, results, limit, offset } = activeTab;
 
   const handlePrev = () => {
-    if (typeof offset === "number" && typeof limit === "number") {
+    if (typeof limit === "number" && typeof offset === "number") {
       const newOffset = Math.max(0, offset - limit);
-      const sql = `SELECT * FROM ${activeTab.title} LIMIT ${limit} OFFSET ${newOffset}`;
+      const sql = `SELECT * FROM ${activeTab.table} LIMIT ${limit} OFFSET ${newOffset}`;
 
       updateTab(activeTab.id, { offset: newOffset });
       runQuery(activeTab.id, sql);
@@ -23,10 +23,9 @@ export function QueryResult() {
   };
 
   const handleNext = () => {
-    if (typeof offset === "number" && typeof limit === "number") {
+    if (typeof limit === "number" && typeof offset === "number") {
       const newOffset = offset + limit;
-      const sql = `SELECT * FROM ${activeTab.title} LIMIT ${limit} OFFSET ${newOffset}`;
-
+      const sql = `SELECT * FROM ${activeTab.table} LIMIT ${limit} OFFSET ${newOffset}`;
       updateTab(activeTab.id, { offset: newOffset });
       runQuery(activeTab.id, sql);
     }
@@ -43,6 +42,13 @@ export function QueryResult() {
     const val = parseInt(e.target.value, 10);
     if (!isNaN(val) && val >= 0) {
       updateTab(activeTab.id, { offset: val });
+    }
+  };
+
+  const handleRefresh = () => {
+    if (typeof limit === "number" && typeof offset === "number") {
+      const sql = `SELECT * FROM ${activeTab.table} LIMIT ${limit} OFFSET ${offset}`;
+      runQuery(activeTab.id, sql);
     }
   };
 
@@ -140,12 +146,7 @@ export function QueryResult() {
             <Button
               size="icon"
               variant="ghost"
-              onClick={() => {
-                if (typeof limit === "number" && typeof offset === "number") {
-                  const sql = `SELECT * FROM ${activeTab.title} LIMIT ${limit} OFFSET ${offset}`;
-                  runQuery(activeTab.id, sql);
-                }
-              }}
+              onClick={handleRefresh}
               disabled={isExecuting}
             >
               <RotateCw className="h-5 w-5" />
