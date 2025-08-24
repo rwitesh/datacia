@@ -63,14 +63,14 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
       const newTab: Tab = {
         id: newId,
         title: title || `Query ${tabNumber}`,
-        table: mode === 'table' ? title : undefined,
+        table: mode === "table" ? title : undefined,
         sql: "",
         results: null,
         error: undefined,
         isExecuting: false,
         mode,
-        limit: mode === 'table' ? 100 : undefined,
-        offset: mode === 'table' ? 0 : undefined
+        limit: mode === "table" ? 100 : undefined,
+        offset: mode === "table" ? 0 : undefined,
       };
 
       setTabs((prev) => [...prev, newTab]);
