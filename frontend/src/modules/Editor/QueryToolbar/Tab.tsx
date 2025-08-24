@@ -4,7 +4,7 @@ import { X, Plus } from "lucide-react";
 import { useEditorContext } from "@/modules/Context/EditorContext";
 
 export const TabBar = () => {
-  const { tabs, activeTab, createTab, closeTab, setActiveTab, renameTab } =
+  const { tabs, activeTab, createTab, closeTab, setActiveTab, updateTab } =
     useEditorContext();
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -32,7 +32,7 @@ export const TabBar = () => {
 
   const handleTitleSubmit = (tabId: string) => {
     if (editValue.trim()) {
-      renameTab(tabId, editValue.trim());
+      updateTab(tabId, {title:editValue.trim()})
     }
     setEditingTabId(null);
     setEditValue("");

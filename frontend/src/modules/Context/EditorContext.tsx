@@ -38,7 +38,6 @@ type EditorContextType = {
   closeTab: (tabId: string) => void;
   setActiveTab: (tabId: string) => void;
   updateTab: (tabId: string, updates: Partial<Tab>) => void;
-  renameTab: (tabId: string, title: string) => void;
 
   // Query execution
   runQuery: (tabId?: string, sql?: string) => Promise<void>;
@@ -109,13 +108,6 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
       prev.map((tab) => (tab.id === tabId ? { ...tab, ...updates } : tab))
     );
   }, []);
-
-  const renameTab = useCallback(
-    (tabId: string, title: string) => {
-      updateTab(tabId, { title });
-    },
-    [updateTab]
-  );
 
   // Query execution functions
   const runQuery = useCallback(
@@ -197,7 +189,6 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
       closeTab,
       setActiveTab,
       updateTab,
-      renameTab,
 
       // Query execution
       runQuery,
@@ -214,7 +205,6 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
       closeTab,
       setActiveTab,
       updateTab,
-      renameTab,
       runQuery,
       stopQuery,
     ]
