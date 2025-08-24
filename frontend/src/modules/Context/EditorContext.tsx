@@ -7,7 +7,7 @@ import React, {
 } from "react";
 import { useAppContext } from "./AppContext";
 import { fetchTables } from "@/services/hooks";
-import { CancelRunningQuery, RunQuery } from "@/services/clickhouse";
+import { Cancel, RunQuery } from "@/services/clickhouse";
 
 export interface Tab {
   id: string;
@@ -154,7 +154,7 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
       if (!targetTabId) return;
 
       try {
-        await CancelRunningQuery();
+        await Cancel();
         updateTab(targetTabId, {
           error: "Query execution cancelled",
           results: null,

@@ -18,7 +18,7 @@ type ClickHouseClient interface {
 	FetchTables() ([]string, error)
 	FetchDatabases() ([]string, error)
 	ChangeDatabase(database string) error
-	CancelRunningQuery()
+	Cancel()
 }
 
 type ClickHouse struct {
@@ -74,7 +74,7 @@ func (ch *ClickHouse) Connect(host string, port uint16, username, password, data
 }
 
 func (ch *ClickHouse) Close() error {
-	ch.CancelRunningQuery()
+	ch.Cancel()
 	if ch.conn == nil {
 		return nil
 	}
@@ -211,7 +211,7 @@ func (ch *ClickHouse) ChangeDatabase(database string) error {
 	return nil
 }
 
-func (ch *ClickHouse) CancelRunningQuery() {
+func (ch *ClickHouse) Cancel() {
 	ch.mu.Lock()
 	cf := ch.cancel
 	ch.cancel = nil
