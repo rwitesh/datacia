@@ -10,6 +10,7 @@ import { useAppContext } from "../Context/AppContext";
 import { useNavigate } from "react-router";
 import { QueryResult } from "./QueryResult/QueryResult";
 import { useEditorContext } from "../Context/EditorContext";
+import { EditorFooter } from "./EditorFooter/EditorFooter";
 
 export const Editor = () => {
   const navigate = useNavigate();
@@ -72,7 +73,7 @@ export const Editor = () => {
         </ResizablePanelGroup>
       </div>
       <div className="shrink-0 border-t">
-        {/* <EditorFooter rowCount={finalResults ? finalResults.length : 0} /> */}
+        <EditorFooter/>
       </div>
     </div>
   );

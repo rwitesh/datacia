@@ -10,8 +10,8 @@ export const TabBar = () => {
   const [editValue, setEditValue] = useState("");
 
   const handleCreateTab = () => {
-    const newTabId = createTab();
-    setActiveTab(newTabId);
+    const newTab = createTab();
+    setActiveTab(newTab.id);
   };
 
   const handleCloseTab = (e: React.MouseEvent, tabId: string) => {
@@ -26,6 +26,10 @@ export const TabBar = () => {
   };
 
   const handleTabDoubleClick = (tabId: string, currentTitle: string) => {
+    if (activeTab?.mode === "table") {
+      return;
+    }
+
     setEditingTabId(tabId);
     setEditValue(currentTitle);
   };
@@ -53,7 +57,7 @@ export const TabBar = () => {
         {tabs.map((tab) => (
           <div
             key={tab.id}
-            className={`flex items-center group relative min-w-32 flex-1 basis-0 border-r ${
+            className={`flex items-center group relative min-w-32 flex-1 basis-0 border-r select-none ${
               activeTab?.id === tab.id
                 ? "bg-background border-b-2 border-b-primary"
                 : "bg-muted/50 hover:bg-muted"

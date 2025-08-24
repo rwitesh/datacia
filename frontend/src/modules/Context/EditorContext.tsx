@@ -17,6 +17,8 @@ export interface Tab {
   error: string | undefined;
   isExecuting: boolean;
   mode: "query" | "table";
+  limit?: number | undefined;
+  offset?: number | undefined;
 }
 
 type EditorContextType = {
@@ -31,7 +33,7 @@ type EditorContextType = {
   // Tab management
   tabs: Tab[];
   activeTab: Tab | undefined;
-  createTab: (title?: string, mode?: "query" | "table") => string;
+  createTab: (title?: string, mode?: "query" | "table") => Tab;
   closeTab: (tabId: string) => void;
   setActiveTab: (tabId: string) => void;
   updateTab: (tabId: string, updates: Partial<Tab>) => void;
@@ -51,7 +53,7 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
 
   const createTab = useCallback(
-    (title?: string, mode: "query" | "table" = "query"): string => {
+    (title?: string, mode: "query" | "table" = "query"): Tab => {
       const newId = `tab-${Date.now()}-${Math.random()
         .toString(36)
         .substring(2, 9)}`;
@@ -65,11 +67,13 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
         error: undefined,
         isExecuting: false,
         mode,
+        limit: mode === 'table' ? 100 : undefined,
+        offset: mode === 'table' ? 0 : undefined
       };
 
       setTabs((prev) => [...prev, newTab]);
       setActiveTabId(newId);
-      return newId;
+      return newTab;
     },
     [tabs.length]
   );
@@ -85,8 +89,8 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
           const newActiveIndex = Math.min(currentIndex, filtered.length - 1);
           setActiveTabId(filtered[newActiveIndex].id);
         } else if (filtered.length === 0) {
-          const newTabId = createTab("Query 1");
-          setActiveTabId(newTabId);
+          const newTab = createTab("Query 1");
+          setActiveTabId(newTab.id);
         }
         return filtered;
       });
