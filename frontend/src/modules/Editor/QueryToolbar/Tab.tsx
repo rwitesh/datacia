@@ -14,9 +14,9 @@ export const TabBar = () => {
     setActiveTab(newTab.id);
   };
 
-  const handleCloseTab = (e: React.MouseEvent, tabId: string) => {
+  const handleCloseTab = async (e: React.MouseEvent, tabId: string) => {
     e.stopPropagation();
-    closeTab(tabId);
+    await closeTab(tabId);
   };
 
   const handleTabClick = (tabId: string) => {

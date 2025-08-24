@@ -81,6 +81,10 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
 
   const closeTab = useCallback(
     (tabId: string) => {
+      stopQuery(tabId).catch((err) => {
+        console.error("Error cancelling query for closed tab:", err);
+      });
+
       setTabs((prev) => {
         const filtered = prev.filter((tab) => tab.id !== tabId);
 
@@ -89,9 +93,6 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
           const currentIndex = prev.findIndex((tab) => tab.id === tabId);
           const newActiveIndex = Math.min(currentIndex, filtered.length - 1);
           setActiveTabId(filtered[newActiveIndex].id);
-        } else if (filtered.length === 0) {
-          const newTab = createTab("Query 1");
-          setActiveTabId(newTab.id);
         }
         return filtered;
       });
