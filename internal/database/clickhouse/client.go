@@ -58,7 +58,13 @@ func (ch *ClickHouse) Connect(host string, port uint16, username, password, data
 		ConnMaxLifetime: 0,
 	})
 	if err != nil {
-		return fmt.Errorf("open ClickHouse: %w", err)
+		return err
+	}
+
+	ctx, cancel := NewTimeoutContext(2 * time.Second)
+	defer cancel()
+	if err := connection.Ping(ctx); err != nil {
+		return err
 	}
 
 	ch.mu.Lock()

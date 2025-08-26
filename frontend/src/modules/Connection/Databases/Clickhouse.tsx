@@ -53,9 +53,7 @@ export const ClickhouseConnection = () => {
       );
       toast.success("Connection test successful");
     } catch (error: any) {
-      toast.error("Connection refused", {
-        description: error,
-      });
+      toast.error(error);
     }
   };
 
@@ -71,9 +69,7 @@ export const ClickhouseConnection = () => {
       setDatabase(data.database);
       navigate("/editor");
     } catch (error: any) {
-      toast.error("Connection refused", {
-        description: error,
-      });
+      toast.error(error);
     }
   };
 
