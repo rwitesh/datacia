@@ -1,3 +1,4 @@
+import type { clickhouse } from "wailsjs/go/models";
 import {
   Connect as WConnect,
   Close as WClose,
@@ -34,7 +35,7 @@ export async function ListTables(database: string): Promise<string[]> {
   return WFetchTables(database);
 }
 
-export async function RunQuery(queryID: string, sql: string): Promise<any[]> {
+export async function RunQuery(queryID: string, sql: string): Promise<clickhouse.QueryResult> {
   return queryID ? WRunQueryWithID(queryID, sql) : WRunQuery(sql);
 }
 
