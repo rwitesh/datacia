@@ -8,6 +8,7 @@ import React, {
 import { useAppContext } from "./AppContext";
 import { fetchTables } from "@/services/hooks";
 import { CancelQuery, RunQuery } from "@/services/clickhouse";
+import { v4 as uuidv4 } from "uuid";
 
 export interface Tab {
   id: string;
@@ -18,6 +19,7 @@ export interface Tab {
   error?: string;
   isExecuting: boolean;
   mode: "query" | "table";
+  queryID?: string;
   limit?: number;
   offset?: number;
 }
@@ -125,14 +127,17 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
         querySQL = currentTab.sql;
       }
 
+      const queryId = uuidv4();
+
       updateTab(targetTabId, {
         isExecuting: true,
+        queryID: queryId,
         results: null,
         error: undefined,
       });
 
       try {
-        const response = await RunQuery(targetTabId, querySQL);
+        const response = await RunQuery(queryId, querySQL);
         updateTab(targetTabId, {
           results: response,
           isExecuting: false,
@@ -153,12 +158,16 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
       const targetTabId = tabId || activeTabId;
       if (!targetTabId) return;
 
+      const targetTab = tabs.find((tab) => tab.id === targetTabId);
+      if (!targetTab || !targetTab.queryID) return;
+
       try {
-        await CancelQuery(targetTabId);
+        await CancelQuery(targetTab.queryID);
         updateTab(targetTabId, {
           error: "Query execution cancelled",
           results: null,
           isExecuting: false,
+          queryID: undefined,
         });
       } catch (err) {
         console.error("Error cancelling query:", err);
@@ -168,7 +177,7 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
         });
       }
     },
-    [activeTabId, updateTab]
+    [activeTabId, tabs, updateTab]
   );
 
   const activeTab = tabs.find((tab) => tab.id === activeTabId);
