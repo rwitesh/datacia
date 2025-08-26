@@ -9,6 +9,8 @@ export function QueryResult() {
   if (!activeTab) return null;
 
   const { isExecuting, error, results } = activeTab;
+  const isReadQuery = results && results.Type === "read";
+  const isCommandQuery = results && results.Type === "command";
 
   return (
     <div className="h-full flex flex-col overflow-hidden relative">
@@ -21,19 +23,17 @@ export function QueryResult() {
           <div className="flex justify-center text-center items-center h-full text-red-500 p-4">
             {error}
           </div>
-        ) : results && results.length > 0 ? (
-          <DataTable columns={Object.keys(results[0])} data={results} />
+        ) : isReadQuery ? (
+          <DataTable columns={results.Columns} data={results.Data ?? []} />
+        ) : isCommandQuery ? (
+          <div className="flex justify-center items-center h-full cursor-default select-none">
+            <span className="text-green-600">Query executed successfully</span>
+          </div>
         ) : (
           <div className="flex justify-center items-center h-full cursor-default select-none">
-            {results && results.length === 0 ? (
-              <span className="text-green-600">
-                Query executed successfully
-              </span>
-            ) : (
-              <span className="text-muted-foreground">
-                Run a query to see results
-              </span>
-            )}
+            <span className="text-muted-foreground">
+              Run a query to see results
+            </span>
           </div>
         )}
       </div>

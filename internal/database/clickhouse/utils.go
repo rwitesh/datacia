@@ -25,6 +25,12 @@ const (
 	QueryTypeUnknown QueryType = "unknown"
 )
 
+type QueryResult struct {
+	Type    QueryType
+	Columns []string
+	Data    []map[string]interface{}
+}
+
 var (
 	readRegex    = regexp.MustCompile(`(?i)^(select|show|describe|explain|with|watch)\b`)
 	commandRegex = regexp.MustCompile(`(?i)^(insert|create|alter|drop|truncate|optimize|grant|revoke|set|attach|detach|rename|use|system|kill)\b`)
@@ -51,7 +57,7 @@ func DetectQueryType(query string) QueryType {
 	}
 }
 
-func ScanDynamicColumns(ctx context.Context, rows driver.Rows) ([]map[string]interface{}, error) {
+func ScanDynamicColumns(ctx context.Context, rows driver.Rows) ([]string, []map[string]interface{}, error) {
 	var response []map[string]interface{}
 	columns := rows.Columns()
 	colTypes := rows.ColumnTypes()
@@ -59,17 +65,17 @@ func ScanDynamicColumns(ctx context.Context, rows driver.Rows) ([]map[string]int
 	for rows.Next() {
 		select {
 		case <-ctx.Done():
-			return nil, ctx.Err()
+			return nil, nil, ctx.Err()
 		default:
 		}
 
 		scanTargets, err := prepareScanTargets(colTypes)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		if err := rows.Scan(scanTargets...); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		rowsEntry := make(map[string]interface{})
@@ -87,9 +93,9 @@ func ScanDynamicColumns(ctx context.Context, rows driver.Rows) ([]map[string]int
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return response, nil
+	return columns, response, nil
 }
 
 func prepareScanTargets(columnTypes []driver.ColumnType) ([]interface{}, error) {

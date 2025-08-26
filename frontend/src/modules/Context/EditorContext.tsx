@@ -9,13 +9,14 @@ import { useAppContext } from "./AppContext";
 import { fetchTables } from "@/services/hooks";
 import { CancelQuery, RunQuery } from "@/services/clickhouse";
 import { v4 as uuidv4 } from "uuid";
+import type { clickhouse } from "wailsjs/go/models";
 
 export interface Tab {
   id: string;
   title: string;
   table?: string;
   sql: string;
-  results: any[] | null;
+  results: clickhouse.QueryResult | null;
   error?: string;
   isExecuting: boolean;
   mode: "query" | "table";

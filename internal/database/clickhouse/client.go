@@ -15,8 +15,8 @@ type ClickHouseClient interface {
 	Connect(host string, port uint16, username, password, database string) error
 	Close() error
 	Ping() error
-	RunQuery(sql string) ([]map[string]interface{}, error)
-	RunQueryWithID(queryId, sql string) ([]map[string]interface{}, error)
+	RunQuery(sql string) (QueryResult, error)
+	RunQueryWithID(queryId, sql string) (QueryResult, error)
 	CancelQuery(queryId string) error
 	FetchTables(database string) ([]string, error)
 	FetchDatabases() ([]string, error)
@@ -109,13 +109,13 @@ func (ch *ClickHouse) Ping() error {
 	return conn.Ping(ctx)
 }
 
-func (ch *ClickHouse) RunQuery(sql string) ([]map[string]interface{}, error) {
+func (ch *ClickHouse) RunQuery(sql string) (QueryResult, error) {
 	ch.mu.RLock()
 	conn := ch.conn
 	ch.mu.RUnlock()
 
 	if conn == nil {
-		return nil, errors.New("no active connection found")
+		return QueryResult{}, errors.New("no active connection found")
 	}
 	ctx, cancel := NewTimeoutContext(QUERY_TIMEOUT)
 	defer cancel()
@@ -123,9 +123,9 @@ func (ch *ClickHouse) RunQuery(sql string) ([]map[string]interface{}, error) {
 	return ch.execute(ctx, conn, sql, "")
 }
 
-func (ch *ClickHouse) RunQueryWithID(queryID, sql string) ([]map[string]interface{}, error) {
+func (ch *ClickHouse) RunQueryWithID(queryID, sql string) (QueryResult, error) {
 	if queryID == "" {
-		return nil, errors.New("queryID cannot be empty")
+		return QueryResult{}, errors.New("queryID cannot be empty")
 	}
 
 	ch.mu.RLock()
@@ -133,11 +133,11 @@ func (ch *ClickHouse) RunQueryWithID(queryID, sql string) ([]map[string]interfac
 	ch.mu.RUnlock()
 
 	if conn == nil {
-		return nil, errors.New("no active connection found")
+		return QueryResult{}, errors.New("no active connection found")
 	}
 
 	if _, exists := ch.activeQueries.Load(queryID); exists {
-		return nil, fmt.Errorf("query with ID %s is already running", queryID)
+		return QueryResult{}, fmt.Errorf("query with ID %s is already running", queryID)
 	}
 
 	ctx, cancel := NewTimeoutContext(QUERY_TIMEOUT)
@@ -148,7 +148,7 @@ func (ch *ClickHouse) RunQueryWithID(queryID, sql string) ([]map[string]interfac
 	return result, err
 }
 
-func (ch *ClickHouse) execute(ctx context.Context, conn driver.Conn, sql string, queryID string) ([]map[string]interface{}, error) {
+func (ch *ClickHouse) execute(ctx context.Context, conn driver.Conn, sql string, queryID string) (QueryResult, error) {
 	queryType := DetectQueryType(sql)
 
 	var queryCtx context.Context
@@ -162,21 +162,26 @@ func (ch *ClickHouse) execute(ctx context.Context, conn driver.Conn, sql string,
 	case QueryTypeCommand:
 		err := conn.Exec(queryCtx, sql)
 		if err != nil {
-			return nil, err
+			return QueryResult{Type: QueryTypeCommand}, err
 		}
-		return []map[string]interface{}{}, nil
+		return QueryResult{Type: QueryTypeCommand}, nil
 
 	case QueryTypeRead:
 		rows, err := conn.Query(queryCtx, sql)
 		if err != nil {
-			return nil, err
+			return QueryResult{Type: QueryTypeRead}, err
 		}
 		defer rows.Close()
 
-		return ScanDynamicColumns(queryCtx, rows)
+		columns, data, err := ScanDynamicColumns(queryCtx, rows)
+		if err != nil {
+			return QueryResult{Type: QueryTypeRead}, err
+		}
+
+		return QueryResult{Type: QueryTypeRead, Columns: columns, Data: data}, nil
 
 	default:
-		return nil, fmt.Errorf("unsupported or unknown query type")
+		return QueryResult{Type: QueryTypeUnknown}, fmt.Errorf("unsupported or unknown query type")
 	}
 }
 
