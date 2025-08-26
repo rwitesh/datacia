@@ -1,27 +1,27 @@
-import { useForm } from "react-hook-form"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeft, Eye, EyeOff, Save } from "lucide-react"
-import { useState } from "react"
-import { useNavigate } from "react-router"
-import { Connect } from "@/services/clickhouse"
-import { useAppContext } from "@/modules/Context/AppContext"
-import { toast } from "sonner"
+import { useForm } from "react-hook-form";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ArrowLeft, Eye, EyeOff, Save } from "lucide-react";
+import { useState } from "react";
+import { useNavigate } from "react-router";
+import { Connect } from "@/services/clickhouse";
+import { useAppContext } from "@/modules/Context/AppContext";
+import { toast } from "sonner";
 
 type FormValues = {
-  connectionName: string
-  host: string
-  port: string
-  username: string
-  password: string
-  database: string
-}
+  connectionName: string;
+  host: string;
+  port: string;
+  username: string;
+  password: string;
+  database: string;
+};
 
 export const ClickhouseConnection = () => {
-  const navigate = useNavigate()
-  const { setDatabase } = useAppContext()
+  const navigate = useNavigate();
+  const { setDatabase } = useAppContext();
   const [showPassword, setShowPassword] = useState(false);
 
   const {
@@ -38,33 +38,44 @@ export const ClickhouseConnection = () => {
       password: "default",
       database: "default",
     },
-  })
+  });
 
   const onTest = async () => {
-    const data = getValues()
+    const data = getValues();
 
     try {
-      await Connect(data.host, Number(data.port), data.username, data.password, data.database)
-      toast.success("Connection test successful")
+      await Connect(
+        data.host,
+        Number(data.port),
+        data.username,
+        data.password,
+        data.database
+      );
+      toast.success("Connection test successful");
     } catch (error: any) {
       toast.error("Connection refused", {
-        description: error
-      })
+        description: error,
+      });
     }
-  }
-
+  };
 
   const onSubmit = async (data: FormValues) => {
     try {
-      await Connect(data.host, Number(data.port), data.username, data.password, data.database)
-      setDatabase(data.database)
-      navigate("/editor")
+      await Connect(
+        data.host,
+        Number(data.port),
+        data.username,
+        data.password,
+        data.database
+      );
+      setDatabase(data.database);
+      navigate("/editor");
     } catch (error: any) {
       toast.error("Connection refused", {
-        description: error
-      })
+        description: error,
+      });
     }
-  }
+  };
 
   return (
     <div className="flex flex-1 min-w-screen items-center justify-center">
@@ -81,7 +92,9 @@ export const ClickhouseConnection = () => {
               Back
             </Button>
           </div>
-          <CardTitle className="mt-2 text-lg cursor-default select-none">Connect to ClickHouse</CardTitle>
+          <CardTitle className="mt-2 text-lg cursor-default select-none">
+            Connect to ClickHouse
+          </CardTitle>
         </CardHeader>
 
         <CardContent>
@@ -139,7 +152,7 @@ export const ClickhouseConnection = () => {
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPassword(prev => !prev)}
+                  onClick={() => setShowPassword((prev) => !prev)}
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   tabIndex={-1}
                 >
@@ -190,11 +203,9 @@ export const ClickhouseConnection = () => {
                 </Button>
               </div>
             </div>
-
           </form>
         </CardContent>
       </Card>
     </div>
-  )
-}
-
+  );
+};

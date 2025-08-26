@@ -11,10 +11,10 @@ import (
 )
 
 const (
-	CONNECT_TIMEOUT   = 5 * time.Second
-	META_TIMEOUT      = 5 * time.Second
-	CHANGE_DB_TIMEOUT = 3 * time.Second
-	QUERY_TIMEOUT     = 30 * time.Second
+	CONNECT_TIMEOUT   = 10 * time.Second
+	META_TIMEOUT      = 10 * time.Second
+	CHANGE_DB_TIMEOUT = 5 * time.Second
+	QUERY_TIMEOUT     = 300 * time.Second
 )
 
 type QueryType string

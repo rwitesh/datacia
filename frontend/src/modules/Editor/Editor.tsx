@@ -6,21 +6,21 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
-import { useAppContext } from "../Context/AppContext";
-import { useNavigate } from "react-router";
+// import { useAppContext } from "../Context/AppContext";
+// import { useNavigate } from "react-router";
 import { QueryResult } from "./QueryResult/QueryResult";
 import { useEditorContext } from "../Context/EditorContext";
 import { EditorFooter } from "./EditorFooter/EditorFooter";
 
 export const Editor = () => {
-  const navigate = useNavigate();
-  const { database } = useAppContext();
+  // const navigate = useNavigate();
+  // const { database } = useAppContext();
   const { activeTab } = useEditorContext();
 
-  if (database === "") {
-    navigate("/connect/clickhouse");
-    return null;
-  }
+  // if (database === "") {
+  //   navigate("/connect/clickhouse");
+  //   return null;
+  // }
 
   return (
     <div className="h-full w-full flex flex-col">

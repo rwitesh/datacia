@@ -1,11 +1,13 @@
 import {
   Connect as WConnect,
   Close as WClose,
-  ExecuteQuery as WExecuteQuery,  
+  Ping as WPing,
+  RunQuery as WRunQuery,
+  RunQueryWithID as WRunQueryWithID,  
   FetchDatabases as WFetchDatabases,
   FetchTables as WFetchTables,
   ChangeDatabase as WChangeDatabase,
-  Cancel as WCancel,
+  CancelQuery as WCancelQuery,
 } from "../../wailsjs/go/clickhouse/ClickHouse";
 
 export async function Connect(host: string, port: number, username: string, password: string, database: string) {
@@ -14,6 +16,10 @@ export async function Connect(host: string, port: number, username: string, pass
 
 export async function Close(): Promise<void> {
   return WClose();
+}
+
+export async function Ping(): Promise<void> {
+  return WPing();
 }
 
 export async function ChangeDatabase(database: string): Promise<void> {
@@ -28,10 +34,10 @@ export async function ListTables(database: string): Promise<string[]> {
   return WFetchTables(database);
 }
 
-export async function RunQuery(sql: string): Promise<any[]> {
-  return WExecuteQuery(sql);
+export async function RunQuery(queryID: string, sql: string): Promise<any[]> {
+  return queryID ? WRunQueryWithID(queryID, sql) : WRunQuery(sql);
 }
 
-export async function Cancel(): Promise<void> {
-  return WCancel();
+export async function CancelQuery(queryID: string): Promise<void> {
+  return WCancelQuery(queryID);
 }
