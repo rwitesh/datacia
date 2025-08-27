@@ -1,5 +1,11 @@
 import { RefreshCw, Table } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { useEditorContext } from "@/modules/Context/EditorContext";
 
 export function EditorSidebar() {
@@ -12,6 +18,12 @@ export function EditorSidebar() {
   const handleTableClick = async (table: string) => {
     const tab = createTab(table, "table");
     const sql = `SELECT * FROM ${tab.table} LIMIT ${tab.limit}  OFFSET ${tab.offset}`;
+    await runQuery(tab.id, sql, true);
+  };
+
+  const handleOpenTableSchema = async (table: string) => {
+    const tab = createTab(table, "table");
+    const sql = `DESCRIBE TABLE ${tab.table}`;
     await runQuery(tab.id, sql);
   };
 
@@ -34,15 +46,32 @@ export function EditorSidebar() {
       <div className="flex-1 min-h-0 overflow-y-auto px-2 py-2">
         <div className="space-y-1">
           {data.map((t: string) => (
-            <button
-              key={t}
-              className={`flex w-full items-center gap-2 rounded-md px-2 py-1 text-xs hover:bg-sidebar-accent`}
-              title={t}
-              onClick={() => handleTableClick(t)}
-            >
-              <Table className="h-3 w-3 opacity-60" />
-              <span className="truncate">{t}</span>
-            </button>
+            <ContextMenu key={t}>
+              <ContextMenuTrigger asChild>
+                <button
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-1 text-xs hover:bg-sidebar-accent"
+                  title={t}
+                  onClick={() => handleTableClick(t)}
+                >
+                  <Table className="h-3 w-3 opacity-60" />
+                  <span className="truncate">{t}</span>
+                </button>
+              </ContextMenuTrigger>
+
+              <ContextMenuContent>
+                <ContextMenuItem onClick={() => handleTableClick(t)}>
+                  Open
+                </ContextMenuItem>
+                <ContextMenuItem onClick={() => handleOpenTableSchema(t)}>
+                  Schema
+                </ContextMenuItem>
+                <ContextMenuItem
+                  onClick={() => navigator.clipboard.writeText(t)}
+                >
+                  Copy name
+                </ContextMenuItem>
+              </ContextMenuContent>
+            </ContextMenu>
           ))}
 
           {!loading &&

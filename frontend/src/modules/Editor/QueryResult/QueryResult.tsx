@@ -24,7 +24,11 @@ export function QueryResult() {
             {error}
           </div>
         ) : isReadQuery ? (
-          <DataTable columns={results.Columns} data={results.Data ?? []} showIndex/>
+          <DataTable
+            columns={results.Columns}
+            data={results.Data ?? []}
+            showIndex
+          />
         ) : isCommandQuery ? (
           <div className="flex justify-center items-center h-full cursor-default select-none">
             <span className="text-green-600">Query executed successfully</span>
@@ -38,7 +42,7 @@ export function QueryResult() {
         )}
       </div>
 
-      {activeTab.mode === "table" && results?.Data && <FloatingBar />}
+      {activeTab.pagination && results?.Data && <FloatingBar />}
     </div>
   );
 }

@@ -9,7 +9,7 @@ import { useAppContext } from "./AppContext";
 import { fetchTables } from "@/services/hooks";
 import { CancelQuery, RunQuery } from "@/services/clickhouse";
 import { v4 as uuidv4 } from "uuid";
-import { QueryResult} from "@/services/clickhouse";
+import { QueryResult } from "@/services/clickhouse";
 
 export interface Tab {
   id: string;
@@ -23,6 +23,7 @@ export interface Tab {
   queryID?: string;
   limit?: number;
   offset?: number;
+  pagination: boolean;
 }
 
 type EditorContextType = {
@@ -43,7 +44,11 @@ type EditorContextType = {
   updateTab: (tabId: string, updates: Partial<Tab>) => void;
 
   // Query execution
-  runQuery: (tabId?: string, sql?: string) => Promise<void>;
+  runQuery: (
+    tabId?: string,
+    sql?: string,
+    pagination?: boolean
+  ) => Promise<void>;
   stopQuery: (tabId?: string) => Promise<void>;
 };
 
@@ -73,6 +78,7 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
         mode,
         limit: mode === "table" ? 250 : undefined,
         offset: mode === "table" ? 0 : undefined,
+        pagination: false,
       };
 
       setTabs((prev) => [...prev, newTab]);
@@ -115,7 +121,7 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
 
   // Query execution functions
   const runQuery = useCallback(
-    async (tabId?: string, sql?: string) => {
+    async (tabId?: string, sql?: string, pagination: boolean = false) => {
       const targetTabId = tabId || activeTabId;
       if (!targetTabId) return;
 
@@ -132,6 +138,7 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
 
       updateTab(targetTabId, {
         isExecuting: true,
+        sql: querySQL,
         queryID: queryId,
         results: null,
         error: undefined,
@@ -142,6 +149,7 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
         updateTab(targetTabId, {
           results: response,
           isExecuting: false,
+          pagination,
         });
       } catch (err: any) {
         updateTab(targetTabId, {
