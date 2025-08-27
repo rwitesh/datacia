@@ -15,7 +15,7 @@ import { fetchDatabase } from "@/services/hooks";
 
 export function DatabaseMenuBar() {
   const { database, setDatabase } = useAppContext();
-  const { databases } = fetchDatabase();
+  const { data: databases = [] } = fetchDatabase();
 
   const changeDatabaseHandler = (db: string) => async () => {
     try {

@@ -6,7 +6,7 @@ import { useEditorContext } from "@/modules/Context/EditorContext";
 export function QueryToolbar() {
   const {activeTab, runQuery, stopQuery} = useEditorContext();
   return (
-    <div className="flex items-center justify-between bg-muted/50">
+    <div className="flex items-center justify-between">
       <TabBar />
       <div className="flex items-center gap-2 mx-1">
         {!activeTab?.isExecuting ? (

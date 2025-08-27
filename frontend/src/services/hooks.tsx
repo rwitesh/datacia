@@ -2,21 +2,15 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { ListDatabases, ListTables } from "./clickhouse";
 
 export function fetchDatabase() {
-  const { data: databases = [] } = useQuery({
+  return useQuery({
     queryKey: ["databases"],
     queryFn: () => ListDatabases(),
     retry: 3,
   });
-  return { databases };
 }
 
 export function fetchTables(database: string) {
-  const {
-    data: tables = [],
-    isLoading,
-    error,
-    refetch,
-  } = useQuery<string[], Error>({
+  return useQuery<string[], Error>({
     queryKey: ["tables", database ?? ""],
     queryFn: async () => {
       if (!database) return [];
@@ -30,14 +24,5 @@ export function fetchTables(database: string) {
     retry: 2,
     placeholderData: keepPreviousData,
   });
-
-  return {
-    tables,
-    loading: isLoading,
-    error,
-    refresh: () => {
-      void refetch();
-    },
-  };
 }
 

@@ -30,9 +30,9 @@ type EditorContextType = {
   // List of tables
   tables: {
     data: string[];
-    loading: boolean;
+    isLoading: boolean;
     error?: Error | null;
-    refresh: () => void;
+    refetch: () => void;
   };
 
   // Tab management
@@ -56,7 +56,7 @@ const EditorContext = createContext<EditorContextType | undefined>(undefined);
 
 export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
   const { database } = useAppContext();
-  const { tables, loading, error, refresh } = fetchTables(database);
+  const { data = [], isLoading, error, refetch} = fetchTables(database);
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
 
@@ -195,10 +195,10 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
     () => ({
       // Table list
       tables: {
-        data: tables,
-        loading,
+        data,
+        isLoading,
         error,
-        refresh,
+        refetch,
       },
 
       // Tab Management
@@ -214,10 +214,10 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
       stopQuery,
     }),
     [
-      tables,
-      loading,
+      data,
+      isLoading,
       error,
-      refresh,
+      refetch,
       tabs,
       activeTab,
       createTab,

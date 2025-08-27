@@ -10,7 +10,7 @@ import { useEditorContext } from "@/modules/Context/EditorContext";
 
 export function EditorSidebar() {
   const {
-    tables: { data, loading, error, refresh },
+    tables: { data, isLoading, error, refetch },
     createTab,
     runQuery,
   } = useEditorContext();
@@ -35,11 +35,11 @@ export function EditorSidebar() {
         <Button
           variant="ghost"
           size="icon"
-          onClick={refresh}
-          disabled={loading}
+          onClick={refetch}
+          disabled={isLoading}
           className="ml-auto h-6 w-6 cursor-pointer"
         >
-          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+          <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
         </Button>
       </div>
 
@@ -59,13 +59,20 @@ export function EditorSidebar() {
               </ContextMenuTrigger>
 
               <ContextMenuContent>
-                <ContextMenuItem onClick={() => handleTableClick(t)}>
+                <ContextMenuItem
+                  className="text-xs"
+                  onClick={() => handleTableClick(t)}
+                >
                   Open
                 </ContextMenuItem>
-                <ContextMenuItem onClick={() => handleOpenTableSchema(t)}>
+                <ContextMenuItem
+                  className="text-xs"
+                  onClick={() => handleOpenTableSchema(t)}
+                >
                   Schema
                 </ContextMenuItem>
                 <ContextMenuItem
+                  className="text-xs"
                   onClick={() => navigator.clipboard.writeText(t)}
                 >
                   Copy name
@@ -74,7 +81,7 @@ export function EditorSidebar() {
             </ContextMenu>
           ))}
 
-          {!loading &&
+          {!isLoading &&
             data.length === 0 &&
             (error ? (
               <div className="px-2 py-1.5 text-xs text-red-500 bg-transparent cursor-default select-none">

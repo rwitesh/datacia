@@ -13,7 +13,7 @@ export function FloatingBar() {
       const newOffset = Math.max(0, offset - limit);
       const sql = `SELECT * FROM ${table} LIMIT ${limit} OFFSET ${newOffset}`;
       updateTab(id, { offset: newOffset });
-      runQuery(id, sql);
+      runQuery(id, sql, true);
     }
   };
 
@@ -22,25 +22,26 @@ export function FloatingBar() {
       const newOffset = offset + limit;
       const sql = `SELECT * FROM ${table} LIMIT ${limit} OFFSET ${newOffset}`;
       updateTab(id, { offset: newOffset });
-      runQuery(id, sql);
+      runQuery(id, sql, true);
     }
   };
 
   const handleRefresh = () => {
     if (typeof limit === "number" && typeof offset === "number") {
       const sql = `SELECT * FROM ${table} LIMIT ${limit} OFFSET ${offset}`;
-      runQuery(id, sql);
+      runQuery(id, sql, true);
     }
   };
 
   return (
-    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 mb-2 select-none cursor-default">
+    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 mb-3 select-none cursor-default">
       <div className="flex items-center gap-3 bg-background border rounded-2xl shadow-lg px-4 py-0">
         <Button
           size="icon"
           variant="ghost"
           onClick={handlePrev}
           disabled={isExecuting || offset === 0}
+          className="cursor-pointer"
         >
           <ChevronLeft className="h-5 w-5" />
         </Button>
@@ -78,6 +79,7 @@ export function FloatingBar() {
           variant="ghost"
           onClick={handleNext}
           disabled={isExecuting}
+          className="cursor-pointer"
         >
           <ChevronRight className="h-5 w-5" />
         </Button>
@@ -87,6 +89,7 @@ export function FloatingBar() {
           variant="ghost"
           onClick={handleRefresh}
           disabled={isExecuting}
+          className="cursor-pointer"
         >
           <RotateCw className="h-5 w-5" />
         </Button>
