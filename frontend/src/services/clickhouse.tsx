@@ -11,6 +11,7 @@ import {
 import { QueryResult } from "../../bindings/layerbit/pkg/clickhouse/models.js";
 import { detectQueryType } from "./utils.js";
 export { QueryResult };
+import {v4 as uuidv4} from 'uuid';
 
 export async function Connect(
   host: string,
@@ -43,11 +44,12 @@ export async function ListTables(database: string): Promise<string[]> {
 }
 
 export async function RunQuery(
-  queryID: string,
-  sql: string
+  sql: string,
+  queryID?: string,
 ): Promise<QueryResult> {
   const t = detectQueryType(sql);
-  return WRunQuery(queryID, t, sql);
+  const id = queryID ?? uuidv4();
+  return WRunQuery(id, t, sql);
 }
 
 export async function CancelQuery(queryID: string): Promise<void> {

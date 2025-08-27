@@ -21,15 +21,19 @@ export function NavigationBar() {
   return (
     <div className="flex cursor-default border-b border-border bg-background w-full justify-end">
       <div className="flex items-center">
-        <Button
-          size="icon"
-          variant="ghost"
-          className="cursor-pointer"
-          onClick={() => Reload()}
-        >
-          <RotateCw className="h-5 w-5" />
-        </Button>
-        {database && <DatabaseMenuBar />}
+        {database && (
+          <>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="cursor-pointer"
+              onClick={() => Reload()}
+            >
+              <RotateCw className="h-5 w-5" />
+            </Button>
+            <DatabaseMenuBar />
+          </>
+        )}
         {location.pathname !== "/" && <MenuBar />}
       </div>
     </div>

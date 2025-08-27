@@ -6,8 +6,7 @@ import React, {
   useState,
 } from "react";
 import { useAppContext } from "./AppContext";
-import { fetchTables } from "@/services/hooks";
-import { CancelQuery, RunQuery } from "@/services/clickhouse";
+import { fetchTables, useCancelQuery, useRunQuery } from "@/services/hooks";
 import { v4 as uuidv4 } from "uuid";
 import { QueryResult } from "@/services/clickhouse";
 
@@ -56,9 +55,12 @@ const EditorContext = createContext<EditorContextType | undefined>(undefined);
 
 export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
   const { database } = useAppContext();
-  const { data = [], isLoading, error, refetch} = fetchTables(database);
+  const { data = [], isLoading, error, refetch } = fetchTables(database);
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
+
+  const runQueryMutation = useRunQuery();
+  const cancelQueryMutation = useCancelQuery();
 
   const createTab = useCallback(
     (title?: string, mode: "query" | "table" = "query"): Tab => {
@@ -144,22 +146,24 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
         error: undefined,
       });
 
-      try {
-        const response = await RunQuery(queryId, querySQL);
-        updateTab(targetTabId, {
-          results: response,
-          isExecuting: false,
-          pagination,
-        });
-      } catch (err: any) {
-        updateTab(targetTabId, {
-          error: err?.message || String(err) || "Error executing query",
-          results: null,
-          isExecuting: false,
-        });
-      }
+      runQueryMutation.mutate( {sql: querySQL, queryId }, {
+        onSuccess: (response) => {
+          updateTab(targetTabId, {
+            results: response,
+            isExecuting: false,
+            pagination,
+          });
+        },
+        onError: (err: any) => {
+          updateTab(targetTabId, {
+            error: err?.message || String(err) || "Error executing query",
+            results: null,
+            isExecuting: false,
+          });
+        },
+      });
     },
-    [activeTabId, tabs, updateTab]
+    [activeTabId, tabs, updateTab, runQueryMutation]
   );
 
   const stopQuery = useCallback(
@@ -168,25 +172,26 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
       if (!targetTabId) return;
 
       const targetTab = tabs.find((tab) => tab.id === targetTabId);
-      if (!targetTab || !targetTab.queryID) return;
+      if (!targetTab?.queryID) return;
 
-      try {
-        await CancelQuery(targetTab.queryID);
-        updateTab(targetTabId, {
-          error: "Query execution cancelled",
-          results: null,
-          isExecuting: false,
-          queryID: undefined,
-        });
-      } catch (err) {
-        console.error("Error cancelling query:", err);
-        updateTab(targetTabId, {
-          error: "Error cancelling query",
-          isExecuting: false,
-        });
-      }
+      cancelQueryMutation.mutate(targetTab.queryID, {
+        onSuccess: () => {
+          updateTab(targetTabId, {
+            error: "Query execution cancelled",
+            results: null,
+            isExecuting: false,
+            queryID: undefined,
+          });
+        },
+        onError: () => {
+          updateTab(targetTabId, {
+            error: "Error cancelling query",
+            isExecuting: false,
+          });
+        },
+      });
     },
-    [activeTabId, tabs, updateTab]
+    [activeTabId, tabs, updateTab, cancelQueryMutation]
   );
 
   const activeTab = tabs.find((tab) => tab.id === activeTabId);

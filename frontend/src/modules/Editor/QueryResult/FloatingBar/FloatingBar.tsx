@@ -1,6 +1,6 @@
 // FloatingBar.tsx
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, RotateCw } from "lucide-react";
+import { ChevronLeft, ChevronRight, RefreshCw} from "lucide-react";
 import { useEditorContext } from "@/modules/Context/EditorContext";
 
 export function FloatingBar() {
@@ -43,7 +43,7 @@ export function FloatingBar() {
           disabled={isExecuting || offset === 0}
           className="cursor-pointer"
         >
-          <ChevronLeft className="h-5 w-5" />
+          <ChevronLeft className="h-4 w-4" />
         </Button>
 
         <label className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -81,7 +81,7 @@ export function FloatingBar() {
           disabled={isExecuting}
           className="cursor-pointer"
         >
-          <ChevronRight className="h-5 w-5" />
+          <ChevronRight className="h-4 w-4" />
         </Button>
 
         <Button
@@ -91,7 +91,7 @@ export function FloatingBar() {
           disabled={isExecuting}
           className="cursor-pointer"
         >
-          <RotateCw className="h-5 w-5" />
+          <RefreshCw className="h-4 w-4" />
         </Button>
       </div>
     </div>

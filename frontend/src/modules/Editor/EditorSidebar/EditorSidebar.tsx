@@ -7,6 +7,7 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { useEditorContext } from "@/modules/Context/EditorContext";
+import { useRunQuery } from "@/services/hooks";
 
 export function EditorSidebar() {
   const {
@@ -14,6 +15,8 @@ export function EditorSidebar() {
     createTab,
     runQuery,
   } = useEditorContext();
+
+  const { mutateAsync } = useRunQuery();
 
   const handleTableClick = async (table: string) => {
     const tab = createTab(table, "table");
@@ -63,19 +66,27 @@ export function EditorSidebar() {
                   className="text-xs"
                   onClick={() => handleTableClick(t)}
                 >
-                  Open
+                  View Data
                 </ContextMenuItem>
                 <ContextMenuItem
                   className="text-xs"
                   onClick={() => handleOpenTableSchema(t)}
                 >
-                  Schema
+                  View Schema
                 </ContextMenuItem>
                 <ContextMenuItem
                   className="text-xs"
                   onClick={() => navigator.clipboard.writeText(t)}
                 >
                   Copy name
+                </ContextMenuItem>
+                <ContextMenuItem
+                  className="text-xs"
+                  onClick={async () =>
+                    await mutateAsync({ sql: `TRUNCATE TABLE ${t}` })
+                  }
+                >
+                  Truncate
                 </ContextMenuItem>
               </ContextMenuContent>
             </ContextMenu>

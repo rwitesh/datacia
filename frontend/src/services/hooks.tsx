@@ -1,5 +1,5 @@
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { ListDatabases, ListTables } from "./clickhouse";
+import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
+import { CancelQuery, ListDatabases, ListTables, RunQuery } from "./clickhouse";
 
 export function fetchDatabase() {
   return useQuery({
@@ -26,3 +26,22 @@ export function fetchTables(database: string) {
   });
 }
 
+export function useRunQuery() {
+  return useMutation({
+    mutationFn: async ({ sql, queryId }: { sql: string; queryId?: string }) => {
+      if (!sql?.trim()) {
+        throw new Error("SQL cannot be empty");
+      }
+      return RunQuery(sql, queryId);
+    },
+  });
+}
+
+export function useCancelQuery() {
+  return useMutation({
+    mutationFn: async (queryId: string) => {
+      if (!queryId) throw new Error("Missing queryId");
+      return CancelQuery(queryId);
+    },
+  });
+}

@@ -42,7 +42,7 @@ export function QueryResult() {
         )}
       </div>
 
-      {activeTab.pagination && results?.Data && <FloatingBar />}
+      {activeTab.pagination && <FloatingBar />}
     </div>
   );
 }
