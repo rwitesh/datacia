@@ -12,9 +12,15 @@ type Props = {
   columns: string[];
   data: Record<string, any>[];
   extraBlankRows?: number;
+  showIndex?: boolean;
 };
 
-export function DataTable({ columns, data, extraBlankRows = 5 }: Props) {
+export function DataTable({
+  columns,
+  data,
+  extraBlankRows = 5,
+  showIndex = false,
+}: Props) {
   const [columnSizing, setColumnSizing] = useState<Record<string, number>>({});
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -43,12 +49,16 @@ export function DataTable({ columns, data, extraBlankRows = 5 }: Props) {
   // Generate Column Definitions
   const columnDefs = useMemo<ColumnDef<any>[]>(() => {
     return [
-      {
-        accessorKey: "_index",
-        header: "",
-        cell: (info) => info.row.index + 1,
-        size: 20
-      },
+      ...(showIndex
+        ? [
+            {
+              accessorKey: "_index",
+              header: "",
+              cell: (info: any) => info.row.index + 1,
+              size: 20,
+            },
+          ]
+        : []),
       ...columns.map((colKey) => ({
         accessorKey: colKey,
         header: colKey,

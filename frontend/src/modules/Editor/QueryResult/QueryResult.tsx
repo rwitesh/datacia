@@ -24,7 +24,7 @@ export function QueryResult() {
             {error}
           </div>
         ) : isReadQuery ? (
-          <DataTable columns={results.Columns} data={results.Data ?? []} />
+          <DataTable columns={results.Columns} data={results.Data ?? []} showIndex/>
         ) : isCommandQuery ? (
           <div className="flex justify-center items-center h-full cursor-default select-none">
             <span className="text-green-600">Query executed successfully</span>

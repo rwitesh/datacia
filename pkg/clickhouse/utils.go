@@ -3,8 +3,6 @@ package clickhouse
 import (
 	"context"
 	"reflect"
-	"regexp"
-	"strings"
 	"time"
 
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
@@ -31,30 +29,8 @@ type QueryResult struct {
 	Data    []map[string]interface{}
 }
 
-var (
-	readRegex    = regexp.MustCompile(`(?i)^(select|show|describe|explain|with|watch)\b`)
-	commandRegex = regexp.MustCompile(`(?i)^(insert|create|alter|drop|truncate|optimize|grant|revoke|set|attach|detach|rename|use|system|kill)\b`)
-)
-
 func NewTimeoutContext(d time.Duration) (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), d)
-}
-
-func DetectQueryType(query string) QueryType {
-	query = strings.TrimSpace(query)
-	if idx := strings.Index(query, "--"); idx != -1 {
-		query = query[:idx]
-	}
-	query = strings.TrimSpace(query)
-
-	switch {
-	case readRegex.MatchString(query):
-		return QueryTypeRead
-	case commandRegex.MatchString(query):
-		return QueryTypeCommand
-	default:
-		return QueryTypeUnknown
-	}
 }
 
 func ScanDynamicColumns(ctx context.Context, rows driver.Rows) ([]string, []map[string]interface{}, error) {

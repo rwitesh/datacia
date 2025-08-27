@@ -41,14 +41,8 @@ export function Ping(): $CancellablePromise<void> {
     return $Call.ByID(2055821513);
 }
 
-export function RunQuery(sql: string): $CancellablePromise<$models.QueryResult> {
-    return $Call.ByID(2149697238, sql).then(($result: any) => {
-        return $$createType1($result);
-    });
-}
-
-export function RunQueryWithID(queryID: string, sql: string): $CancellablePromise<$models.QueryResult> {
-    return $Call.ByID(2519740511, queryID, sql).then(($result: any) => {
+export function RunQuery(queryID: string, queryType: string, sql: string): $CancellablePromise<$models.QueryResult> {
+    return $Call.ByID(2149697238, queryID, queryType, sql).then(($result: any) => {
         return $$createType1($result);
     });
 }

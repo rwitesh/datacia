@@ -9,14 +9,14 @@ import (
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
+	"github.com/google/uuid"
 )
 
 type ClickHouseClient interface {
 	Connect(host string, port uint16, username, password, database string) error
 	Close() error
 	Ping() error
-	RunQuery(sql string) (QueryResult, error)
-	RunQueryWithID(queryId, sql string) (QueryResult, error)
+	RunQuery(queryId, queryType, sql string) (QueryResult, error)
 	CancelQuery(queryId string) error
 	FetchTables(database string) ([]string, error)
 	FetchDatabases() ([]string, error)
@@ -109,25 +109,12 @@ func (ch *ClickHouse) Ping() error {
 	return conn.Ping(ctx)
 }
 
-func (ch *ClickHouse) RunQuery(sql string) (QueryResult, error) {
-	ch.mu.RLock()
-	conn := ch.conn
-	ch.mu.RUnlock()
-
-	if conn == nil {
-		return QueryResult{}, errors.New("no active connection found")
-	}
-	ctx, cancel := NewTimeoutContext(QUERY_TIMEOUT)
-	defer cancel()
-
-	return ch.execute(ctx, conn, sql, "")
-}
-
-func (ch *ClickHouse) RunQueryWithID(queryID, sql string) (QueryResult, error) {
+func (ch *ClickHouse) RunQuery(queryID, queryType, sql string) (QueryResult, error) {
 	if queryID == "" {
-		return QueryResult{}, errors.New("queryID cannot be empty")
+		queryID = uuid.NewString()
 	}
 
+	// Grab connection under read lock
 	ch.mu.RLock()
 	conn := ch.conn
 	ch.mu.RUnlock()
@@ -142,15 +129,22 @@ func (ch *ClickHouse) RunQueryWithID(queryID, sql string) (QueryResult, error) {
 
 	ctx, cancel := NewTimeoutContext(QUERY_TIMEOUT)
 	ch.activeQueries.Store(queryID, cancel)
+	defer func() {
+		cancel()
+		ch.activeQueries.Delete(queryID)
+	}()
 
-	result, err := ch.execute(ctx, conn, sql, queryID)
-	ch.activeQueries.Delete(queryID)
-	return result, err
+	switch QueryType(queryType) {
+	case QueryTypeCommand:
+		return ch.execute(ctx, conn, sql, queryID)
+	case QueryTypeRead:
+		return ch.query(ctx, conn, sql, queryID)
+	default:
+		return QueryResult{Type: QueryTypeUnknown}, fmt.Errorf("unsupported query type: %s", queryType)
+	}
 }
 
 func (ch *ClickHouse) execute(ctx context.Context, conn driver.Conn, sql string, queryID string) (QueryResult, error) {
-	queryType := DetectQueryType(sql)
-
 	var queryCtx context.Context
 	if queryID != "" {
 		queryCtx = clickhouse.Context(ctx, clickhouse.WithQueryID(queryID))
@@ -158,31 +152,32 @@ func (ch *ClickHouse) execute(ctx context.Context, conn driver.Conn, sql string,
 		queryCtx = ctx
 	}
 
-	switch queryType {
-	case QueryTypeCommand:
-		err := conn.Exec(queryCtx, sql)
-		if err != nil {
-			return QueryResult{Type: QueryTypeCommand}, err
-		}
-		return QueryResult{Type: QueryTypeCommand}, nil
-
-	case QueryTypeRead:
-		rows, err := conn.Query(queryCtx, sql)
-		if err != nil {
-			return QueryResult{Type: QueryTypeRead}, err
-		}
-		defer rows.Close()
-
-		columns, data, err := ScanDynamicColumns(queryCtx, rows)
-		if err != nil {
-			return QueryResult{Type: QueryTypeRead}, err
-		}
-
-		return QueryResult{Type: QueryTypeRead, Columns: columns, Data: data}, nil
-
-	default:
-		return QueryResult{Type: QueryTypeUnknown}, fmt.Errorf("unsupported or unknown query type")
+	err := conn.Exec(queryCtx, sql)
+	if err != nil {
+		return QueryResult{Type: QueryTypeCommand}, err
 	}
+	return QueryResult{Type: QueryTypeCommand}, nil
+}
+func (ch *ClickHouse) query(ctx context.Context, conn driver.Conn, sql string, queryID string) (QueryResult, error) {
+	var queryCtx context.Context
+	if queryID != "" {
+		queryCtx = clickhouse.Context(ctx, clickhouse.WithQueryID(queryID))
+	} else {
+		queryCtx = ctx
+	}
+
+	rows, err := conn.Query(queryCtx, sql)
+	if err != nil {
+		return QueryResult{Type: QueryTypeRead}, err
+	}
+	defer rows.Close()
+
+	columns, data, err := ScanDynamicColumns(queryCtx, rows)
+	if err != nil {
+		return QueryResult{Type: QueryTypeRead}, err
+	}
+
+	return QueryResult{Type: QueryTypeRead, Columns: columns, Data: data}, nil
 }
 
 func (ch *ClickHouse) CancelQuery(queryID string) error {
