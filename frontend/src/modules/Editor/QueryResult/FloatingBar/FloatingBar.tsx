@@ -4,9 +4,9 @@ import { ChevronLeft, ChevronRight, RotateCw } from "lucide-react";
 import { useEditorContext } from "@/modules/Context/EditorContext";
 
 export function FloatingBar() {
-  const {activeTab,  runQuery, updateTab } = useEditorContext();
-  if (!activeTab) return null; 
-  const { id, table, limit, offset, isExecuting} = activeTab;
+  const { activeTab, runQuery, updateTab } = useEditorContext();
+  if (!activeTab) return null;
+  const { id, table, limit, offset, isExecuting } = activeTab;
 
   const handlePrev = () => {
     if (typeof limit === "number" && typeof offset === "number") {
@@ -35,7 +35,7 @@ export function FloatingBar() {
 
   return (
     <div className="absolute bottom-0 left-1/2 -translate-x-1/2 mb-2 select-none cursor-default">
-      <div className="flex items-center gap-3 bg-background border rounded-2xl shadow-lg px-4 py-2">
+      <div className="flex items-center gap-3 bg-background border rounded-2xl shadow-lg px-4 py-0">
         <Button
           size="icon"
           variant="ghost"
