@@ -1,4 +1,3 @@
-import type { clickhouse } from "wailsjs/go/models";
 import {
   Connect as WConnect,
   Close as WClose,
@@ -9,7 +8,10 @@ import {
   FetchTables as WFetchTables,
   ChangeDatabase as WChangeDatabase,
   CancelQuery as WCancelQuery,
-} from "../../wailsjs/go/clickhouse/ClickHouse";
+} from "../../bindings/layerbit/pkg/clickhouse/clickhouse.js";
+import {QueryResult} from "../../bindings/layerbit/pkg/clickhouse/models.js"
+
+export {QueryResult};
 
 export async function Connect(host: string, port: number, username: string, password: string, database: string) {
   return WConnect(host, port, username, password, database);
@@ -35,7 +37,7 @@ export async function ListTables(database: string): Promise<string[]> {
   return WFetchTables(database);
 }
 
-export async function RunQuery(queryID: string, sql: string): Promise<clickhouse.QueryResult> {
+export async function RunQuery(queryID: string, sql: string): Promise<QueryResult> {
   return queryID ? WRunQueryWithID(queryID, sql) : WRunQuery(sql);
 }
 
