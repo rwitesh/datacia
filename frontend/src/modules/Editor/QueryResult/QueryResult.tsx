@@ -38,7 +38,7 @@ export function QueryResult() {
         )}
       </div>
 
-      {activeTab.mode === "table" && <FloatingBar />}
+      {activeTab.mode === "table" && results?.Data && <FloatingBar />}
     </div>
   );
 }

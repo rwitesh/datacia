@@ -35,7 +35,7 @@ function App() {
             >
               <NavigationBar />
             </div>
-            <Toaster position="top-center" richColors />
+            <Toaster position="top-center" richColors closeButton/>
             <div className="flex-1 overflow-hidden">
               <Routes>
                 <Route path="/" element={<Home />} />
