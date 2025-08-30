@@ -1,7 +1,7 @@
 // FloatingBar.tsx
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, RefreshCw} from "lucide-react";
-import { useEditorContext } from "@/modules/Context/EditorContext";
+import { useEditorContext } from "@/modules/Context/Editor/Index";
 
 export function FloatingBar() {
   const { activeTab, runQuery, updateTab } = useEditorContext();

@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Play, StopCircle } from "lucide-react";
 import { TabBar } from "./Tab";
-import { useEditorContext } from "@/modules/Context/EditorContext";
+import { useEditorContext } from "@/modules/Context/Editor/Index";
 
 export function QueryToolbar() {
   const {activeTab, runQuery, stopQuery} = useEditorContext();

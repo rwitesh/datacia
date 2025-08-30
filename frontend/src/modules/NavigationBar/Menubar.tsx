@@ -14,9 +14,9 @@ import {
 } from "@/components/ui/menubar";
 import { useNavigate } from "react-router";
 import { useTheme, type Theme } from "@/components/theme/theme-provider";
-import { useAppContext } from "../Context/AppContext";
+import { useAppContext } from "../Context/App/Index";
 import { Bolt } from "lucide-react";
-import { Close } from "@/services/clickhouse"
+import { Close } from "@/services/clickhouse";
 
 export function MenuBar() {
   const navigate = useNavigate();
@@ -26,8 +26,13 @@ export function MenuBar() {
   const DisconnectHandler = async () => {
     try {
       await Close;
-      setDatabase("")
-    } catch (error) {
+      setDatabase("");
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.error("Error disconnecting:", error.message);
+      } else {
+        console.error("Unknown error disconnecting:", error);
+      }
     } finally {
       navigate("/connect/clickhouse");
     }
@@ -36,37 +41,58 @@ export function MenuBar() {
   return (
     <Menubar className="border-none bg-background">
       <MenubarMenu>
-        <MenubarTrigger className="cursor-pointer"><Bolt size={18} /></MenubarTrigger>
+        <MenubarTrigger className="cursor-pointer">
+          <Bolt size={18} />
+        </MenubarTrigger>
         <MenubarContent className="bg-white dark:bg-zinc-900 min-w-[180px]">
-          <MenubarLabel className="text-xs text-muted-foreground px-2 cursor-default select-none">Settings</MenubarLabel>
+          <MenubarLabel className="text-xs text-muted-foreground px-2 cursor-default select-none">
+            Settings
+          </MenubarLabel>
           <MenubarSeparator />
 
-          <MenubarSub >
-            <MenubarSubTrigger className="cursor-pointer text-xs">Appearance</MenubarSubTrigger>
+          <MenubarSub>
+            <MenubarSubTrigger className="cursor-pointer text-xs">
+              Appearance
+            </MenubarSubTrigger>
             <MenubarSubContent>
               <MenubarRadioGroup
                 value={theme}
                 onValueChange={(val) => setTheme(val as Theme)}
               >
-                <MenubarRadioItem className="cursor-pointer text-xs" value="light">
+                <MenubarRadioItem
+                  className="cursor-pointer text-xs"
+                  value="light"
+                >
                   Light
                 </MenubarRadioItem>
-                <MenubarRadioItem className="cursor-pointer text-xs" value="dark">
+                <MenubarRadioItem
+                  className="cursor-pointer text-xs"
+                  value="dark"
+                >
                   Dark
                 </MenubarRadioItem>
-                <MenubarRadioItem className="cursor-pointer text-xs" value="system">
+                <MenubarRadioItem
+                  className="cursor-pointer text-xs"
+                  value="system"
+                >
                   System
                 </MenubarRadioItem>
               </MenubarRadioGroup>
             </MenubarSubContent>
           </MenubarSub>
-          {
-            database ?
-              <>
-                <MenubarSeparator />
-                <MenubarItem className="cursor-pointer text-xs" onClick={DisconnectHandler}>Disconnect</MenubarItem>
-              </> : <></>
-          }
+          {database ? (
+            <>
+              <MenubarSeparator />
+              <MenubarItem
+                className="cursor-pointer text-xs"
+                onClick={DisconnectHandler}
+              >
+                Disconnect
+              </MenubarItem>
+            </>
+          ) : (
+            <></>
+          )}
         </MenubarContent>
       </MenubarMenu>
     </Menubar>

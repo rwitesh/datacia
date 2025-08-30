@@ -6,10 +6,10 @@ import { DatabaseList } from "@/modules/Connection/ConnectionList";
 import { ClickhouseConnection } from "@/modules/Connection/Databases/Clickhouse";
 import { Editor } from "@/modules/Editor/Editor";
 import { ConnectionLayout } from "@/modules/Connection/Layout";
-import { AppProvider } from "./modules/Context/AppContext";
+import { AppProvider } from "./modules/Context/App/Provider";
 import { NavigationBar } from "./modules/NavigationBar/NavigationBar";
 import { Toaster } from "sonner";
-import { EditorProvider } from "./modules/Context/EditorContext";
+import { EditorProvider } from "./modules/Context/Editor/Provider";
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query'
 
 const queryClient = new QueryClient({

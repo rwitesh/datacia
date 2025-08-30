@@ -5,12 +5,16 @@ import {
   flexRender,
   type ColumnDef,
   type ColumnResizeMode,
+  type CellContext,
+  type HeaderContext,
 } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
+type DataRow = Record<string, unknown>;
+
 type Props = {
   columns: string[];
-  data: Record<string, any>[];
+  data: DataRow[];
   extraBlankRows?: number;
   showIndex?: boolean;
 };
@@ -38,41 +42,35 @@ export function DataTable({
     return () => observer.disconnect();
   }, []);
 
-  if (!columns.length) {
-    return (
-      <div className="p-3 text-muted-foreground text-xs">
-        No columns to display.
-      </div>
-    );
-  }
+  // Generate Column Definitions 
+  const columnDefs = useMemo<ColumnDef<DataRow>[]>(() => {
+    const baseColumns = columns.map((colKey) => ({
+      accessorKey: colKey,
+      header: colKey,
+      cell: (info: CellContext<DataRow, unknown>) => {
+        const value = info.getValue();
+        return value === null
+          ? "NULL"
+          : typeof value === "object"
+          ? JSON.stringify(value)
+          : String(value);
+      },
+    }));
 
-  // Generate Column Definitions
-  const columnDefs = useMemo<ColumnDef<any>[]>(() => {
-    return [
-      ...(showIndex
-        ? [
-            {
-              accessorKey: "_index",
-              header: "",
-              cell: (info: any) => info.row.index + 1,
-              size: 20,
-            },
-          ]
-        : []),
-      ...columns.map((colKey) => ({
-        accessorKey: colKey,
-        header: colKey,
-        cell: (info: any) => {
-          const value = info.getValue();
-          return value === null
-            ? "NULL"
-            : typeof value === "object"
-            ? JSON.stringify(value)
-            : String(value);
+    if (showIndex) {
+      return [
+        {
+          accessorKey: "_index",
+          header: "",
+          cell: (info: CellContext<DataRow, unknown>) => info.row.index + 1,
+          size: 20,
         },
-      })),
-    ];
-  }, [columns]);
+        ...baseColumns,
+      ];
+    }
+
+    return baseColumns;
+  }, [columns, showIndex]);
 
   const table = useReactTable({
     data,
@@ -121,6 +119,14 @@ export function DataTable({
       ? Math.ceil((containerHeight - visibleHeight) / rowHeight)
       : 0;
 
+  if (!columns.length) {
+    return (
+      <div className="p-3 text-muted-foreground text-xs">
+        No columns to display.
+      </div>
+    );
+  }
+
   return (
     <div className="h-full w-full overflow-hidden">
       <div
@@ -150,7 +156,7 @@ export function DataTable({
                         <span className="overflow-hidden text-ellipsis whitespace-nowrap">
                           {flexRender(
                             header.column.columnDef.header,
-                            header.getContext()
+                            header.getContext() as HeaderContext<DataRow, unknown>
                           )}
                         </span>
                       </div>

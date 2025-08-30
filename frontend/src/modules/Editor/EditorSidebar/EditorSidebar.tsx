@@ -7,8 +7,8 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import { useEditorContext } from "@/modules/Context/EditorContext";
-import { useRunQuery } from "@/services/hooks";
+import { useEditorContext } from "@/modules/Context/Editor/Index";
+// import { useRunQuery } from "@/services/hooks";
 
 export function EditorSidebar() {
   const {
@@ -17,7 +17,7 @@ export function EditorSidebar() {
     runQuery,
   } = useEditorContext();
 
-  const { mutateAsync } = useRunQuery();
+  // const { mutateAsync } = useRunQuery();
 
   const handleTableClick = async (table: string) => {
     const tab = createTab(table, "table");

@@ -9,7 +9,7 @@ import {
 // import { useAppContext } from "../Context/AppContext";
 // import { useNavigate } from "react-router";
 import { QueryResult } from "./QueryResult/QueryResult";
-import { useEditorContext } from "../Context/EditorContext";
+import { useEditorContext } from "../Context/Editor/Index";
 import { EditorFooter } from "./EditorFooter/EditorFooter";
 
 export const Editor = () => {

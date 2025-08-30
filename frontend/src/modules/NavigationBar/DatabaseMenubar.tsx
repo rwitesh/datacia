@@ -9,13 +9,13 @@ import {
   MenubarRadioItem,
 } from "@/components/ui/menubar";
 import { ChangeDatabase } from "@/services/clickhouse";
-import { useAppContext } from "@/modules/Context/AppContext";
+import { useAppContext } from "@/modules/Context/App/Index";
 import { Database } from "lucide-react";
-import { fetchDatabase } from "@/services/hooks";
+import { useDatabase } from "@/services/hooks";
 
 export function DatabaseMenuBar() {
   const { database, setDatabase } = useAppContext();
-  const { data: databases = [] } = fetchDatabase();
+  const { data: databases = [] } = useDatabase();
 
   const changeDatabaseHandler = (db: string) => async () => {
     try {

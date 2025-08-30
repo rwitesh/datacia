@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { X, Plus } from "lucide-react";
-import { useEditorContext } from "@/modules/Context/EditorContext";
+import { useEditorContext } from "@/modules/Context/Editor/Index";
 
 export const TabBar = () => {
   const { tabs, activeTab, createTab, closeTab, setActiveTab, updateTab } =

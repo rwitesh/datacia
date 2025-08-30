@@ -4,7 +4,7 @@ import { EditorState } from "@codemirror/state";
 import { autocompletion, closeBrackets } from "@codemirror/autocomplete";
 import { sql } from "@codemirror/lang-sql";
 import { lineNumbers } from "@codemirror/view";
-import { useEditorContext } from "@/modules/Context/EditorContext";
+import { useEditorContext } from "@/modules/Context/Editor/Index";
 
 export function QueryInput() {
   const editorRef = useRef<HTMLDivElement | null>(null);
@@ -78,7 +78,7 @@ export function QueryInput() {
       view.destroy();
       viewRef.current = null;
     };
-  }, [schema, activeTab?.id, updateTab]);
+  }, [schema, activeTab, updateTab]);
 
   useEffect(() => {
     const view = viewRef.current;

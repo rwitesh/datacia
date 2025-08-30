@@ -1,5 +1,5 @@
 // QueryResult.tsx
-import { useEditorContext } from "@/modules/Context/EditorContext";
+import { useEditorContext } from "@/modules/Context/Editor/Index";
 import { DataTable } from "./DataTable/DataTable";
 import { FloatingBar } from "./FloatingBar/FloatingBar";
 
