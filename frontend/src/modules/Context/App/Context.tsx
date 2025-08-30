@@ -1,8 +1,15 @@
 import { createContext } from "react";
 
-export type AppContextType = {
+export type Metadata = {
   database: string;
-  setDatabase: React.Dispatch<React.SetStateAction<string>>;
+  host: string;
+  port: number;
+  username: string;
+};
+
+export type AppContextType = {
+  metadata: Metadata | null;
+  setMetadata: React.Dispatch<React.SetStateAction<Metadata | null>>;
 };
 
 export const AppContext = createContext<AppContextType | undefined>(undefined);

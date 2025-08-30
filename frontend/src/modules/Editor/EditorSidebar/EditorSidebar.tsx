@@ -1,5 +1,4 @@
-import { RefreshCw, Table } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import {Table } from "lucide-react";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -12,7 +11,7 @@ import { useEditorContext } from "@/modules/Context/Editor/Index";
 
 export function EditorSidebar() {
   const {
-    tables: { data, isLoading, error, refetch },
+    tables: { data, isLoading, error},
     createTab,
     runQuery,
   } = useEditorContext();
@@ -36,15 +35,6 @@ export function EditorSidebar() {
       <div className="sticky top-0 z-10 flex items-center gap-2 px-3 py-2 border-b border-sidebar-border bg-sidebar">
         <Table className="h-4 w-4" />
         <span className="text-sm font-medium ">Tables</span>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={refetch}
-          disabled={isLoading}
-          className="ml-auto h-6 w-6 cursor-pointer"
-        >
-          <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
-        </Button>
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto px-2 py-2">

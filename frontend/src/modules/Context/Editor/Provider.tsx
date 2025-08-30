@@ -5,8 +5,8 @@ import { v4 as uuidv4 } from "uuid";
 import { EditorContext, type Tab } from "./Context";
 
 export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
-  const { database } = useAppContext();
-  const { data = [], isLoading, error, refetch } = useTables(database);
+  const { metadata } = useAppContext();
+  const { data = [], isLoading, error, refetch } = useTables(metadata?.database);
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
 

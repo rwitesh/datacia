@@ -9,18 +9,17 @@ import {
   MenubarRadioItem,
 } from "@/components/ui/menubar";
 import { ChangeDatabase } from "@/services/clickhouse";
-import { useAppContext } from "@/modules/Context/App/Index";
 import { Database } from "lucide-react";
 import { useDatabase } from "@/services/hooks";
+import { useAppContext } from "../Context/App/Index";
 
 export function DatabaseMenuBar() {
-  const { database, setDatabase } = useAppContext();
+  const {metadata} = useAppContext();
   const { data: databases = [] } = useDatabase();
 
   const changeDatabaseHandler = (db: string) => async () => {
     try {
       await ChangeDatabase(db);
-      setDatabase(db);
     } catch (error) {
       console.error("Failed to change database:", error);
     }
@@ -38,7 +37,7 @@ export function DatabaseMenuBar() {
           </MenubarLabel>
           <MenubarSeparator />
           <MenubarRadioGroup
-            value={database}
+            value={metadata?.database}
             onValueChange={(db) => changeDatabaseHandler(db)()}
           >
             {databases.map((db) => (

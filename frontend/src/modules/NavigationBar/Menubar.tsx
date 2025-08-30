@@ -14,19 +14,18 @@ import {
 } from "@/components/ui/menubar";
 import { useNavigate } from "react-router";
 import { useTheme, type Theme } from "@/components/theme/theme-provider";
-import { useAppContext } from "../Context/App/Index";
 import { Bolt } from "lucide-react";
 import { Close } from "@/services/clickhouse";
+import { useAppContext } from "../Context/App/Index";
 
 export function MenuBar() {
   const navigate = useNavigate();
-  const { database, setDatabase } = useAppContext();
   const { theme, setTheme } = useTheme();
+  const { metadata } = useAppContext();
 
   const DisconnectHandler = async () => {
     try {
       await Close;
-      setDatabase("");
     } catch (error: unknown) {
       if (error instanceof Error) {
         console.error("Error disconnecting:", error.message);
@@ -34,7 +33,7 @@ export function MenuBar() {
         console.error("Unknown error disconnecting:", error);
       }
     } finally {
-      navigate("/connect/clickhouse");
+      navigate("/");
     }
   };
 
@@ -80,7 +79,7 @@ export function MenuBar() {
               </MenubarRadioGroup>
             </MenubarSubContent>
           </MenubarSub>
-          {database ? (
+          {metadata ? (
             <>
               <MenubarSeparator />
               <MenubarItem

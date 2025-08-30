@@ -3,6 +3,7 @@ package main
 import (
 	"embed"
 	_ "embed"
+	"layerbit/pkg"
 	"layerbit/pkg/clickhouse"
 	"log"
 	"time"
@@ -14,13 +15,9 @@ import (
 var assets embed.FS
 
 func main() {
-
 	app := application.New(application.Options{
 		Name:        "LayerBit",
 		Description: "A demo of using raw HTML & CSS",
-		Services: []application.Service{
-			application.NewService(&clickhouse.ClickHouse{}),
-		},
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),
 		},
@@ -28,6 +25,12 @@ func main() {
 			ApplicationShouldTerminateAfterLastWindowClosed: true,
 		},
 	})
+
+	myApp := pkg.NewApp()
+	app.RegisterService(application.NewService(myApp))
+
+	chService := clickhouse.New(app)
+	app.RegisterService(application.NewService(chService))
 
 	app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title: "LayerBit",

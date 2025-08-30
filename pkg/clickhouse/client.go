@@ -10,6 +10,7 @@ import (
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"github.com/google/uuid"
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 type ClickHouseClient interface {
@@ -26,6 +27,7 @@ type ClickHouseClient interface {
 var _ ClickHouseClient = (*ClickHouse)(nil)
 
 type ClickHouse struct {
+	app           *application.App
 	conn          driver.Conn
 	host          string
 	port          uint16
@@ -36,7 +38,11 @@ type ClickHouse struct {
 	mu            sync.RWMutex
 }
 
-func New() *ClickHouse { return &ClickHouse{} }
+func New(app *application.App) *ClickHouse {
+	return &ClickHouse{
+		app: app,
+	}
+}
 
 func (ch *ClickHouse) Connect(host string, port uint16, username, password, database string) error {
 	connection, err := clickhouse.Open(&clickhouse.Options{
@@ -78,6 +84,15 @@ func (ch *ClickHouse) Connect(host string, port uint16, username, password, data
 	ch.password = password
 	ch.database = database
 	ch.mu.Unlock()
+
+	meta := map[string]interface{}{
+		"host":     host,
+		"port":     port,
+		"username": username,
+		"database": database,
+	}
+
+	ch.app.Event.Emit("clickhouse:connected", meta)
 	return nil
 }
 

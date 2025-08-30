@@ -9,7 +9,7 @@ export function useDatabase() {
   });
 }
 
-export function useTables(database: string) {
+export function useTables(database?: string) {
   return useQuery<string[], Error>({
     queryKey: ["tables", database ?? ""],
     queryFn: async () => {

@@ -8,10 +8,19 @@ import {
   ChangeDatabase as WChangeDatabase,
   CancelQuery as WCancelQuery,
 } from "../../bindings/layerbit/pkg/clickhouse/clickhouse.js";
+import {OpenWindow as WOpenWindow, CloseWindow as WCloseWindow} from "../../bindings/layerbit/pkg/app.ts"
 import { QueryResult } from "../../bindings/layerbit/pkg/clickhouse/models.js";
 import { detectQueryType } from "./utils.js";
-export { QueryResult };
+export { QueryResult};
 import {v4 as uuidv4} from 'uuid';
+
+
+export async function OpenWindow(name: string, title: string, url: string): Promise<void> {
+  return WOpenWindow(name, title, url);
+}
+export async function CloseWindow(name: string): Promise<void> {
+  return WCloseWindow(name);
+}
 
 export async function Connect(
   host: string,
