@@ -1,6 +1,6 @@
 import "./App.css";
 import { ThemeProvider } from "@/components/theme/theme-provider";
-import { BrowserRouter, Routes, Route} from "react-router";
+import { Routes, Route, HashRouter} from "react-router";
 import { Home } from "@/modules/Home/Home";
 import { DatabaseList } from "@/modules/Connection/ConnectionList";
 import { ClickhouseConnection } from "@/modules/Connection/Databases/Clickhouse";
@@ -27,7 +27,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
         <AppProvider>
-          <BrowserRouter>
+          <HashRouter basename="/">
             <div className="h-screen w-screen flex flex-col overflow-hidden">
               <div className="shrink-0">
                 <NavigationBar />
@@ -55,7 +55,7 @@ function App() {
                 </Routes>
               </div>
             </div>
-          </BrowserRouter>
+          </HashRouter>
         </AppProvider>
       </ThemeProvider>
     </QueryClientProvider>

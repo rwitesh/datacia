@@ -39,7 +39,7 @@ export const Home = () => {
         <Button
           size="lg"
           className="px-8 text-base cursor-pointer"
-          onClick={() => OpenWindow("connect", "titles", "/connect/clickhouse")}
+          onClick={() => OpenWindow("connect", "titles", "#/connect/clickhouse")}
         >
           Get Started
         </Button>

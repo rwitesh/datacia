@@ -42,20 +42,21 @@ export function DataTable({
     return () => observer.disconnect();
   }, []);
 
-  // Generate Column Definitions 
+  // Generate Column Definitions
   const columnDefs = useMemo<ColumnDef<DataRow>[]>(() => {
-    const baseColumns = columns.map((colKey) => ({
-      accessorKey: colKey,
-      header: colKey,
-      cell: (info: CellContext<DataRow, unknown>) => {
-        const value = info.getValue();
-        return value === null
-          ? "NULL"
-          : typeof value === "object"
-          ? JSON.stringify(value)
-          : String(value);
-      },
-    }));
+    const baseColumns = columns.map((colKey) => {
+      return {
+        id: colKey,
+        accessorFn: (row: DataRow) => row[colKey],
+        header: colKey,
+        cell: (info: CellContext<DataRow, unknown>) => {
+          const value = info.getValue();
+          if (value === null || value === undefined) return "NULL";
+          if (typeof value === "object") return JSON.stringify(value);
+          return String(value);
+        },
+      };
+    });
 
     if (showIndex) {
       return [
@@ -156,7 +157,10 @@ export function DataTable({
                         <span className="overflow-hidden text-ellipsis whitespace-nowrap">
                           {flexRender(
                             header.column.columnDef.header,
-                            header.getContext() as HeaderContext<DataRow, unknown>
+                            header.getContext() as HeaderContext<
+                              DataRow,
+                              unknown
+                            >
                           )}
                         </span>
                       </div>
