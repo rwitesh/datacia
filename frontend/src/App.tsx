@@ -30,8 +30,7 @@ function App() {
         <BrowserRouter>
           <div className="h-screen w-screen flex flex-col overflow-hidden">
             <div
-              style={{ ["--wails-draggable" as any]: "drag" }}
-              className="shrink-0 "
+              className="shrink-0"
             >
               <NavigationBar />
             </div>

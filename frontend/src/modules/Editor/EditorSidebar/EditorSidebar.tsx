@@ -4,6 +4,7 @@ import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
+  ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { useEditorContext } from "@/modules/Context/EditorContext";
@@ -80,14 +81,11 @@ export function EditorSidebar() {
                 >
                   Copy name
                 </ContextMenuItem>
-                <ContextMenuItem
-                  className="text-xs"
-                  onClick={async () =>
-                    await mutateAsync({ sql: `TRUNCATE TABLE ${t}` })
-                  }
-                >
-                  Truncate
-                </ContextMenuItem>
+                <ContextMenuSeparator />
+                <ContextMenuItem className="text-xs">Rename</ContextMenuItem>
+                <ContextMenuItem className="text-xs">Clone</ContextMenuItem>
+                <ContextMenuItem className="text-xs">Truncate</ContextMenuItem>
+                <ContextMenuItem className="text-xs">Drop</ContextMenuItem>
               </ContextMenuContent>
             </ContextMenu>
           ))}

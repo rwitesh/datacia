@@ -52,8 +52,12 @@ export const ClickhouseConnection = () => {
         data.database
       );
       toast.success("Connection test successful");
-    } catch (error: any) {
-      toast.error(error);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error(String(error));
+      }
     }
   };
 
@@ -68,8 +72,12 @@ export const ClickhouseConnection = () => {
       );
       setDatabase(data.database);
       navigate("/editor");
-    } catch (error: any) {
-      toast.error(error);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error(String(error));
+      }
     }
   };
 

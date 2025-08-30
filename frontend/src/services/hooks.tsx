@@ -1,7 +1,7 @@
 import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
 import { CancelQuery, ListDatabases, ListTables, RunQuery } from "./clickhouse";
 
-export function fetchDatabase() {
+export function useDatabase() {
   return useQuery({
     queryKey: ["databases"],
     queryFn: () => ListDatabases(),
@@ -9,7 +9,7 @@ export function fetchDatabase() {
   });
 }
 
-export function fetchTables(database: string) {
+export function useTables(database: string) {
   return useQuery<string[], Error>({
     queryKey: ["tables", database ?? ""],
     queryFn: async () => {
