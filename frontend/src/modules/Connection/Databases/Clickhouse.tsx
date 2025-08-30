@@ -6,8 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Eye, EyeOff, Save } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { Connect } from "@/services/clickhouse";
-import { useAppContext } from "@/modules/Context/AppContext";
+import { CloseWindow, Connect } from "@/services/clickhouse";
 import { toast } from "sonner";
 
 type FormValues = {
@@ -21,7 +20,6 @@ type FormValues = {
 
 export const ClickhouseConnection = () => {
   const navigate = useNavigate();
-  const { setDatabase } = useAppContext();
   const [showPassword, setShowPassword] = useState(false);
 
   const {
@@ -52,8 +50,12 @@ export const ClickhouseConnection = () => {
         data.database
       );
       toast.success("Connection test successful");
-    } catch (error: any) {
-      toast.error(error);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error(String(error));
+      }
     }
   };
 
@@ -66,15 +68,19 @@ export const ClickhouseConnection = () => {
         data.password,
         data.database
       );
-      setDatabase(data.database);
-      navigate("/editor");
-    } catch (error: any) {
-      toast.error(error);
+
+      CloseWindow("connect");
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error(String(error));
+      }
     }
   };
 
   return (
-    <div className="flex flex-1 min-w-screen items-center justify-center">
+    <div className="flex flex-1 min-h-screen w-screen items-center justify-center">
       <Card className={`transition-all duration-300 shadow-md w-full max-w-md`}>
         <CardHeader>
           <div className="flex items-center justify-between">

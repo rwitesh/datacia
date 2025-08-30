@@ -1,5 +1,5 @@
 // QueryResult.tsx
-import { useEditorContext } from "@/modules/Context/EditorContext";
+import { useEditorContext } from "@/modules/Context/Editor/Index";
 import { DataTable } from "./DataTable/DataTable";
 import { FloatingBar } from "./FloatingBar/FloatingBar";
 
@@ -24,7 +24,11 @@ export function QueryResult() {
             {error}
           </div>
         ) : isReadQuery ? (
-          <DataTable columns={results.Columns} data={results.Data ?? []} />
+          <DataTable
+            columns={results.Columns}
+            data={results.Data ?? []}
+            showIndex
+          />
         ) : isCommandQuery ? (
           <div className="flex justify-center items-center h-full cursor-default select-none">
             <span className="text-green-600">Query executed successfully</span>
@@ -38,7 +42,7 @@ export function QueryResult() {
         )}
       </div>
 
-      {activeTab.mode === "table" && results?.Data && <FloatingBar />}
+      {activeTab.pagination && <FloatingBar />}
     </div>
   );
 }

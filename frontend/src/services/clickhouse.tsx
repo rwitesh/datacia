@@ -1,17 +1,34 @@
-import type { clickhouse } from "wailsjs/go/models";
 import {
   Connect as WConnect,
   Close as WClose,
   Ping as WPing,
   RunQuery as WRunQuery,
-  RunQueryWithID as WRunQueryWithID,  
   FetchDatabases as WFetchDatabases,
   FetchTables as WFetchTables,
   ChangeDatabase as WChangeDatabase,
   CancelQuery as WCancelQuery,
-} from "../../wailsjs/go/clickhouse/ClickHouse";
+} from "../../bindings/layerbit/pkg/clickhouse/clickhouse.js";
+import {OpenWindow as WOpenWindow, CloseWindow as WCloseWindow} from "../../bindings/layerbit/pkg/app.ts"
+import { QueryResult } from "../../bindings/layerbit/pkg/clickhouse/models.js";
+import { detectQueryType } from "./utils.js";
+export { QueryResult};
+import {v4 as uuidv4} from 'uuid';
 
-export async function Connect(host: string, port: number, username: string, password: string, database: string) {
+
+export async function OpenWindow(name: string, title: string, url: string): Promise<void> {
+  return WOpenWindow(name, title, url);
+}
+export async function CloseWindow(name: string): Promise<void> {
+  return WCloseWindow(name);
+}
+
+export async function Connect(
+  host: string,
+  port: number,
+  username: string,
+  password: string,
+  database: string
+) {
   return WConnect(host, port, username, password, database);
 }
 
@@ -35,8 +52,13 @@ export async function ListTables(database: string): Promise<string[]> {
   return WFetchTables(database);
 }
 
-export async function RunQuery(queryID: string, sql: string): Promise<clickhouse.QueryResult> {
-  return queryID ? WRunQueryWithID(queryID, sql) : WRunQuery(sql);
+export async function RunQuery(
+  sql: string,
+  queryID?: string,
+): Promise<QueryResult> {
+  const t = detectQueryType(sql);
+  const id = queryID ?? uuidv4();
+  return WRunQuery(id, t, sql);
 }
 
 export async function CancelQuery(queryID: string): Promise<void> {

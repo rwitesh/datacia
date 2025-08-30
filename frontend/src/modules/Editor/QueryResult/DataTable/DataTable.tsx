@@ -5,15 +5,26 @@ import {
   flexRender,
   type ColumnDef,
   type ColumnResizeMode,
+  type CellContext,
+  type HeaderContext,
 } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
+type DataRow = Record<string, unknown>;
+
 type Props = {
   columns: string[];
-  data: Record<string, any>[];
+  data: DataRow[];
+  extraBlankRows?: number;
+  showIndex?: boolean;
 };
 
-export function DataTable({ columns, data }: Props) {
+export function DataTable({
+  columns,
+  data,
+  extraBlankRows = 5,
+  showIndex = false,
+}: Props) {
   const [columnSizing, setColumnSizing] = useState<Record<string, number>>({});
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -31,29 +42,36 @@ export function DataTable({ columns, data }: Props) {
     return () => observer.disconnect();
   }, []);
 
-  if (!columns.length) {
-    return (
-      <div className="p-3 text-muted-foreground text-xs">
-        No columns to display.
-      </div>
-    );
-  }
-
   // Generate Column Definitions
-  const columnDefs = useMemo<ColumnDef<any>[]>(() => {
-    return columns.map((colKey) => ({
-      accessorKey: colKey,
-      header: colKey,
-      cell: (info) => {
-        const value = info.getValue();
-        return value === null
-          ? "NULL"
-          : typeof value === "object"
-          ? JSON.stringify(value)
-          : String(value);
-      },
-    }));
-  }, [columns]);
+  const columnDefs = useMemo<ColumnDef<DataRow>[]>(() => {
+    const baseColumns = columns.map((colKey) => {
+      return {
+        id: colKey,
+        accessorFn: (row: DataRow) => row[colKey],
+        header: colKey,
+        cell: (info: CellContext<DataRow, unknown>) => {
+          const value = info.getValue();
+          if (value === null || value === undefined) return "NULL";
+          if (typeof value === "object") return JSON.stringify(value);
+          return String(value);
+        },
+      };
+    });
+
+    if (showIndex) {
+      return [
+        {
+          accessorKey: "_index",
+          header: "",
+          cell: (info: CellContext<DataRow, unknown>) => info.row.index + 1,
+          size: 20,
+        },
+        ...baseColumns,
+      ];
+    }
+
+    return baseColumns;
+  }, [columns, showIndex]);
 
   const table = useReactTable({
     data,
@@ -62,6 +80,7 @@ export function DataTable({ columns, data }: Props) {
     columnResizeMode: "onChange" as ColumnResizeMode,
     state: { columnSizing },
     onColumnSizingChange: setColumnSizing,
+    enableMultiRowSelection: true,
   });
 
   const rows = table.getRowModel().rows;
@@ -83,20 +102,31 @@ export function DataTable({ columns, data }: Props) {
     [colWidths]
   );
 
-  // Virtualize Rows
+  // Calculate total rows including extra blank rows
+  const totalRows = rows.length + extraBlankRows;
+
+  // Virtualize Rows (including extra blank rows)
   const rowVirtualizer = useVirtualizer({
-    count: rows.length,
+    count: totalRows,
     getScrollElement: () => scrollRef.current,
     estimateSize: () => rowHeight,
     overscan: 10,
   });
 
-  // Calculate filler rows to fill remaining height
+  // Calculate additional filler rows to fill remaining height (beyond the guaranteed extra blank rows)
   const visibleHeight = rowVirtualizer.getTotalSize();
-  const extraRowsCount =
+  const additionalFillerRows =
     containerHeight > visibleHeight
       ? Math.ceil((containerHeight - visibleHeight) / rowHeight)
       : 0;
+
+  if (!columns.length) {
+    return (
+      <div className="p-3 text-muted-foreground text-xs">
+        No columns to display.
+      </div>
+    );
+  }
 
   return (
     <div className="h-full w-full overflow-hidden">
@@ -127,7 +157,10 @@ export function DataTable({ columns, data }: Props) {
                         <span className="overflow-hidden text-ellipsis whitespace-nowrap">
                           {flexRender(
                             header.column.columnDef.header,
-                            header.getContext()
+                            header.getContext() as HeaderContext<
+                              DataRow,
+                              unknown
+                            >
                           )}
                         </span>
                       </div>
@@ -147,15 +180,20 @@ export function DataTable({ columns, data }: Props) {
         </div>
         <div
           className="relative"
-          style={{ width: totalWidth, height: rowVirtualizer.getTotalSize() }}
+          style={{
+            width: totalWidth,
+            height:
+              rowVirtualizer.getTotalSize() + additionalFillerRows * rowHeight,
+          }}
         >
           {rowVirtualizer.getVirtualItems().map((vi) => {
-            const row = rows[vi.index];
+            const isDataRow = vi.index < rows.length;
+            const row = isDataRow ? rows[vi.index] : null;
             const even = vi.index % 2 === 0;
 
             return (
               <div
-                key={row.id}
+                key={isDataRow ? row!.id : `blank-row-${vi.index}`}
                 role="row"
                 className={`${even ? "bg-muted" : "bg-background"}`}
                 style={{
@@ -168,29 +206,45 @@ export function DataTable({ columns, data }: Props) {
                   gridTemplateColumns,
                 }}
               >
-                {row.getVisibleCells().map((cell, ci) => (
-                  <div
-                    key={cell.id}
-                    role="cell"
-                    className="relative border-r border-border px-2"
-                    style={{ width: colWidths[ci] }}
-                  >
-                    <div className="overflow-hidden text-ellipsis whitespace-nowrap text-xs h-full flex items-center cursor-default select-none">
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </div>
-                  </div>
-                ))}
+                {isDataRow
+                  ? // Render data row
+                    row!.getVisibleCells().map((cell, ci) => (
+                      <div
+                        key={cell.id}
+                        role="cell"
+                        className="relative border-r border-border px-2"
+                        style={{ width: colWidths[ci] }}
+                      >
+                        <div className="overflow-hidden text-ellipsis whitespace-nowrap text-xs h-full flex items-center cursor-default select-none">
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  : // Render blank row
+                    colWidths.map((w, ci) => (
+                      <div
+                        key={`blank-cell-${vi.index}-${ci}`}
+                        role="cell"
+                        className="relative border-r border-border px-2"
+                        style={{ width: w }}
+                      >
+                        <div className="h-full flex items-center cursor-default select-none">
+                          {/* Empty content for blank rows */}
+                        </div>
+                      </div>
+                    ))}
               </div>
             );
           })}
 
-          {extraRowsCount > 0 &&
-            Array.from({ length: extraRowsCount }).map((_, idx) => {
-              const top = visibleHeight + idx * rowHeight;
-              const isEven = (rows.length + idx) % 2 === 0;
+          {/* Additional filler rows to fill remaining container height */}
+          {additionalFillerRows > 0 &&
+            Array.from({ length: additionalFillerRows }).map((_, idx) => {
+              const top = rowVirtualizer.getTotalSize() + idx * rowHeight;
+              const isEven = (totalRows + idx) % 2 === 0;
               return (
                 <div
                   key={`filler-${idx}`}

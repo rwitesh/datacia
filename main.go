@@ -2,46 +2,60 @@ package main
 
 import (
 	"embed"
-	"layerbit-go/internal/database/clickhouse"
+	_ "embed"
+	"layerbit/pkg"
+	"layerbit/pkg/clickhouse"
+	"log"
+	"time"
 
-	"github.com/wailsapp/wails/v2"
-	"github.com/wailsapp/wails/v2/pkg/options"
-	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
-	"github.com/wailsapp/wails/v2/pkg/options/mac"
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 //go:embed all:frontend/dist
 var assets embed.FS
 
 func main() {
-	// Create an instance of the app structure
-	app := NewApp()
-	ch := clickhouse.New()
-
-	// Create application with options
-	err := wails.Run(&options.App{
-		Title:  "LayerBit",
-		Width:  1024,
-		Height: 768,
-
-		AssetServer: &assetserver.Options{
-			Assets: assets,
+	app := application.New(application.Options{
+		Name:        "LayerBit",
+		Description: "A demo of using raw HTML & CSS",
+		Assets: application.AssetOptions{
+			Handler: application.AssetFileServerFS(assets),
 		},
-		BackgroundColour: &options.RGBA{R: 27, G: 38, B: 54, A: 1},
-
-		OnStartup: app.startup,
-		Bind: []interface{}{
-			app,
-			ch,
-		},
-		Mac: &mac.Options{
-			WindowIsTranslucent:  true,
-			WebviewIsTransparent: true,
-			TitleBar:             mac.TitleBarHiddenInset(),
+		Mac: application.MacOptions{
+			ApplicationShouldTerminateAfterLastWindowClosed: true,
 		},
 	})
 
+	myApp := pkg.NewApp()
+	app.RegisterService(application.NewService(myApp))
+
+	chService := clickhouse.New(app)
+	app.RegisterService(application.NewService(chService))
+
+	app.Window.NewWithOptions(application.WebviewWindowOptions{
+		Title: "LayerBit",
+		URL:   "/",
+		Mac: application.MacWindow{
+			InvisibleTitleBarHeight: 50,
+			Backdrop:                application.MacBackdropTranslucent,
+			TitleBar:                application.MacTitleBarHiddenInset,
+		},
+		BackgroundColour: application.NewRGB(27, 38, 54),
+		Width:            1024,
+		Height:           768,
+	})
+
+	go func() {
+		for {
+			now := time.Now().Format(time.RFC1123)
+			app.Event.Emit("time", now)
+			time.Sleep(time.Second)
+		}
+	}()
+
+	err := app.Run()
+
 	if err != nil {
-		println("Error:", err.Error())
+		log.Fatal(err)
 	}
 }
