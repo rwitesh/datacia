@@ -78,7 +78,7 @@ export function QueryInput() {
       view.destroy();
       viewRef.current = null;
     };
-  }, [schema, activeTab, updateTab]);
+  }, [schema, activeTab?.id, updateTab]);
 
   useEffect(() => {
     const view = viewRef.current;

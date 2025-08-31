@@ -6,9 +6,9 @@
 import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
 
 export function CloseWindow(name: string): $CancellablePromise<void> {
-    return $Call.ByID(2690931107, name);
+    return $Call.ByID(1346031404, name);
 }
 
-export function OpenWindow(name: string, title: string, url: string): $CancellablePromise<void> {
-    return $Call.ByID(1749610257, name, title, url);
+export function OpenWindow(name: string, title: string, url: string, width: number, height: number): $CancellablePromise<void> {
+    return $Call.ByID(3392659024, name, title, url, width, height);
 }

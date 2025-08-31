@@ -1,6 +1,8 @@
-package pkg
+package runtime
 
 import (
+	"errors"
+
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -9,11 +11,15 @@ type App struct {
 }
 
 // Constructor to pass the app reference
-func NewApp() *App {
-	return &App{app: application.Get()}
+func New() (*App, error) {
+	instance := application.Get()
+	if instance == nil {
+		return nil, errors.New("failed to get application instance")
+	}
+	return &App{app: instance}, nil
 }
 
-func (a *App) OpenWindow(name, title, url string) {
+func (a *App) OpenWindow(name, title, url string, width, height int) {
 	a.app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Name:  name,
 		Title: title,
@@ -24,6 +30,8 @@ func (a *App) OpenWindow(name, title, url string) {
 			TitleBar:                application.MacTitleBarHiddenInset,
 		},
 		BackgroundColour: application.NewRGB(27, 38, 54),
+		Width:            width,
+		Height:           height,
 	})
 }
 
