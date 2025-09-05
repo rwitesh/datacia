@@ -10,27 +10,24 @@ import (
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"github.com/google/uuid"
-	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 type ClickHouseClient interface {
-	Connect(host string, port uint16, username, password, database string) error
+	Connect(host, port, username, password, database string, test bool) (map[string]interface{}, error)
 	Close() error
 	Ping() error
 	RunQuery(queryId, queryType, sql string) (QueryResult, error)
 	CancelQuery(queryId string) error
-	FetchTables(database string) ([]string, error)
+	FetchTables() ([]string, error)
 	FetchDatabases() ([]string, error)
-	ChangeDatabase(database string) error
 }
 
 var _ ClickHouseClient = (*ClickHouse)(nil)
 
 type ClickHouse struct {
-	app           *application.App
 	conn          driver.Conn
 	host          string
-	port          uint16
+	port          string
 	username      string
 	password      string
 	database      string
@@ -38,15 +35,13 @@ type ClickHouse struct {
 	mu            sync.RWMutex
 }
 
-func New(app *application.App) *ClickHouse {
-	return &ClickHouse{
-		app: app,
-	}
+func New() *ClickHouse {
+	return &ClickHouse{}
 }
 
-func (ch *ClickHouse) Connect(host string, port uint16, username, password, database string) error {
+func (ch *ClickHouse) Connect(host, port, username, password, database string, test bool) (map[string]interface{}, error) {
 	connection, err := clickhouse.Open(&clickhouse.Options{
-		Addr: []string{fmt.Sprintf("%s:%d", host, port)},
+		Addr: []string{fmt.Sprintf("%s:%s", host, port)},
 		Auth: clickhouse.Auth{
 			Database: database,
 			Username: username,
@@ -64,36 +59,40 @@ func (ch *ClickHouse) Connect(host string, port uint16, username, password, data
 		ConnMaxLifetime: 0,
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	ctx, cancel := NewTimeoutContext(2 * time.Second)
 	defer cancel()
 	if err := connection.Ping(ctx); err != nil {
-		return err
+		return nil, err
 	}
 
-	ch.mu.Lock()
-	if ch.conn != nil {
-		_ = ch.conn.Close()
-	}
-	ch.conn = connection
-	ch.host = host
-	ch.port = port
-	ch.username = username
-	ch.password = password
-	ch.database = database
-	ch.mu.Unlock()
+	meta := map[string]interface{}{}
+	if !test {
 
-	meta := map[string]interface{}{
-		"host":     host,
-		"port":     port,
-		"username": username,
-		"database": database,
+		ch.mu.Lock()
+		if ch.conn != nil {
+			_ = ch.conn.Close()
+		}
+		ch.conn = connection
+		ch.host = host
+		ch.port = port
+		ch.username = username
+		ch.password = password
+		ch.database = database
+		ch.mu.Unlock()
+
+		meta = map[string]interface{}{
+			"host":     host,
+			"port":     port,
+			"username": username,
+			"database": database,
+			"password": password,
+		}
 	}
 
-	ch.app.Event.Emit("clickhouse:connected", meta)
-	return nil
+	return meta, nil
 }
 
 func (ch *ClickHouse) Close() error {
@@ -106,7 +105,12 @@ func (ch *ClickHouse) Close() error {
 		return nil
 	}
 
-	return ch.conn.Close()
+	err := ch.conn.Close()
+	if err != nil {
+		return err
+	}
+	ch.conn = nil
+	return nil
 }
 
 func (ch *ClickHouse) Ping() error {
@@ -173,6 +177,7 @@ func (ch *ClickHouse) execute(ctx context.Context, conn driver.Conn, sql string,
 	}
 	return QueryResult{Type: QueryTypeCommand}, nil
 }
+
 func (ch *ClickHouse) query(ctx context.Context, conn driver.Conn, sql string, queryID string) (QueryResult, error) {
 	var queryCtx context.Context
 	if queryID != "" {
@@ -229,11 +234,7 @@ func (ch *ClickHouse) killQueryOnServer(queryID string) error {
 	return nil
 }
 
-func (ch *ClickHouse) FetchTables(database string) ([]string, error) {
-	if database == "" {
-		return nil, errors.New("database name is required")
-	}
-
+func (ch *ClickHouse) FetchTables() ([]string, error) {
 	ch.mu.RLock()
 	conn := ch.conn
 	ch.mu.RUnlock()
@@ -252,7 +253,7 @@ func (ch *ClickHouse) FetchTables(database string) ([]string, error) {
 	ctx, cancel := NewTimeoutContext(META_TIMEOUT)
 	defer cancel()
 
-	rows, err := conn.Query(ctx, sql, clickhouse.Named("db", database))
+	rows, err := conn.Query(ctx, sql, clickhouse.Named("db", ch.database))
 	if err != nil {
 		return nil, err
 	}
@@ -304,6 +305,14 @@ func (ch *ClickHouse) FetchDatabases() ([]string, error) {
 	return out, rows.Err()
 }
 
-func (ch *ClickHouse) ChangeDatabase(database string) error {
-	return ch.Connect(ch.host, ch.port, ch.username, ch.password, database)
-}
+// func (ch *ClickHouse) SaveConnection(name string, config map[string]string) error {
+// 	return ch.engine.SaveConnection(name, config)
+// }
+
+// func (ch *ClickHouse) ListConnections() []string {
+// 	connections, err := ch.engine.ListConnections()
+// 	if err != nil {
+// 		return []string{}
+// 	}
+// 	return connections
+// }

@@ -1,24 +1,23 @@
 import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
-import { CancelQuery, ListDatabases, ListTables, RunQuery } from "./clickhouse";
+import { RunQuery } from "./clickhouse";
+import { ListConnections, LoadConnection } from "../../bindings/layerbit/pkg/remote/engine";
+import { FetchTables, CancelQuery, FetchDatabases } from "../../bindings/layerbit/pkg/clickhouse/clickhouse";
 
 export function useDatabase() {
   return useQuery({
     queryKey: ["databases"],
-    queryFn: () => ListDatabases(),
+    queryFn: () => FetchDatabases(),
     retry: 3,
   });
 }
 
-export function useTables(database?: string) {
+export function useTables() {
   return useQuery<string[], Error>({
-    queryKey: ["tables", database ?? ""],
+    queryKey: ["tables"],
     queryFn: async () => {
-      if (!database) return [];
-      const rows = await ListTables(database);
+      const rows = await FetchTables();
       return rows ?? [];
     },
-    enabled: !!database,
-
     refetchOnWindowFocus: false,
     staleTime: 10_000,
     retry: 2,
@@ -43,5 +42,22 @@ export function useCancelQuery() {
       if (!queryId) throw new Error("Missing queryId");
       return CancelQuery(queryId);
     },
+  });
+}
+
+export function useFetchConnections() {
+  return useQuery({
+    queryKey: ["connections"],
+    queryFn: () => ListConnections(),
+    retry: 3,
+  });
+}
+
+export function useFetchConnectionByName(name: string) {
+  return useQuery({
+    queryKey: ["connection", name],
+    queryFn: () => LoadConnection(name),
+    enabled: !!name,
+    retry: 3,
   });
 }

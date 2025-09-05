@@ -2,8 +2,10 @@ package main
 
 import (
 	"embed"
+	"layerbit/internal/constants"
+	"layerbit/internal/db"
 	"layerbit/pkg/clickhouse"
-	"layerbit/pkg/runtime"
+	"layerbit/pkg/remote"
 	"log"
 	"time"
 
@@ -22,21 +24,50 @@ func main() {
 			Handler: application.AssetFileServerFS(assets),
 		},
 		Mac: application.MacOptions{
-			ApplicationShouldTerminateAfterLastWindowClosed: true,
+			ApplicationShouldTerminateAfterLastWindowClosed: false,
 		},
 	})
 
-	rt, err := runtime.New()
+	db := db.Open("layerbit")
+
+	chService := clickhouse.New()
+
+	e, err := remote.New(app, db, chService)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	chService := clickhouse.New(app)
-
-	app.RegisterService(application.NewService(rt))
+	app.RegisterService(application.NewService(e))
 	app.RegisterService(application.NewService(chService))
 
-	rt.OpenWindow("main", "LayerBit", "/", 1024, 768)
+	e.App.Window.NewWithOptions(application.WebviewWindowOptions{
+		Name:  "connection",
+		Title: "LayerBit",
+		URL:   "/",
+		Mac: application.MacWindow{
+			InvisibleTitleBarHeight: 50,
+			Backdrop:                application.MacBackdropTranslucent,
+			TitleBar:                application.MacTitleBarHiddenInset,
+		},
+		BackgroundColour: application.NewRGB(27, 38, 54),
+		Width:            constants.CONNECTION_WINDOW_WIDTH,
+		Height:           constants.CONNECTION_WINDOW_HEIGHT,
+	})
+
+	e.App.Window.NewWithOptions(application.WebviewWindowOptions{
+		Name:  "editor",
+		Title: "LayerBit",
+		URL:   "#/editor",
+		Mac: application.MacWindow{
+			InvisibleTitleBarHeight: 50,
+			Backdrop:                application.MacBackdropTranslucent,
+			TitleBar:                application.MacTitleBarHiddenInset,
+		},
+		BackgroundColour: application.NewRGB(27, 38, 54),
+		Width:            constants.EDITOR_WINDOW_WIDTH,
+		Height:           constants.EDITOR_WINDOW_HEIGHT,
+		Hidden:           true,
+	})
 
 	go func() {
 		for {

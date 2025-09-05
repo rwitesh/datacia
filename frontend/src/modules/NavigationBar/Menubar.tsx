@@ -12,28 +12,24 @@ import {
   MenubarRadioGroup,
   MenubarRadioItem,
 } from "@/components/ui/menubar";
-import { useNavigate } from "react-router";
 import { useTheme, type Theme } from "@/components/theme/theme-provider";
 import { Bolt } from "lucide-react";
-import { Close } from "@/services/clickhouse";
+import { CloseCurrentConnection as Close } from "@/services/common";
 import { useAppContext } from "../Context/App/Index";
 
 export function MenuBar() {
-  const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
   const { metadata } = useAppContext();
 
   const DisconnectHandler = async () => {
     try {
-      await Close;
+      await Close();
     } catch (error: unknown) {
       if (error instanceof Error) {
         console.error("Error disconnecting:", error.message);
       } else {
         console.error("Unknown error disconnecting:", error);
       }
-    } finally {
-      navigate("/");
     }
   };
 
@@ -79,7 +75,8 @@ export function MenuBar() {
               </MenubarRadioGroup>
             </MenubarSubContent>
           </MenubarSub>
-          {metadata ? (
+
+          {metadata?.database ? (
             <>
               <MenubarSeparator />
               <MenubarItem

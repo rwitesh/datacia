@@ -2,6 +2,8 @@ package clickhouse
 
 import (
 	"context"
+	"fmt"
+	"math"
 	"reflect"
 	"time"
 
@@ -59,12 +61,11 @@ func ScanDynamicColumns(ctx context.Context, rows driver.Rows) ([]string, []map[
 			val := scanTargets[i]
 			rv := reflect.ValueOf(val)
 			if rv.Kind() == reflect.Ptr && !rv.IsNil() {
-				rowsEntry[col] = rv.Elem().Interface()
+				rowsEntry[col] = normalizeValue(rv.Elem().Interface())
 			} else {
 				rowsEntry[col] = nil
 			}
 		}
-
 		response = append(response, rowsEntry)
 	}
 
@@ -81,4 +82,48 @@ func prepareScanTargets(columnTypes []driver.ColumnType) ([]interface{}, error) 
 		scanTargets[i] = reflect.New(scanType).Interface()
 	}
 	return scanTargets, nil
+}
+
+func normalizeValue(v interface{}) interface{} {
+	switch val := v.(type) {
+	case float32:
+		return normalizeFloat(float64(val))
+	case float64:
+		return normalizeFloat(val)
+
+	case complex64, complex128:
+		return fmt.Sprintf("%v", val)
+	}
+
+	rv := reflect.ValueOf(v)
+	switch rv.Kind() {
+	case reflect.Map:
+		m := make(map[string]interface{}, rv.Len())
+		for _, key := range rv.MapKeys() {
+			m[fmt.Sprintf("%v", key.Interface())] = normalizeValue(rv.MapIndex(key).Interface())
+		}
+		return m
+
+	case reflect.Slice, reflect.Array:
+		out := make([]interface{}, rv.Len())
+		for i := 0; i < rv.Len(); i++ {
+			out[i] = normalizeValue(rv.Index(i).Interface())
+		}
+		return out
+	}
+
+	return v
+}
+
+func normalizeFloat(f float64) interface{} {
+	switch {
+	case math.IsNaN(f):
+		return "NaN"
+	case math.IsInf(f, +1):
+		return "Infinity"
+	case math.IsInf(f, -1):
+		return "-Infinity"
+	default:
+		return f
+	}
 }

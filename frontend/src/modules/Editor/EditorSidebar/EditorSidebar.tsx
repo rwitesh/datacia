@@ -15,7 +15,6 @@ export function EditorSidebar() {
     createTab,
     runQuery,
   } = useEditorContext();
-
   // const { mutateAsync } = useRunQuery();
 
   const handleTableClick = async (table: string) => {

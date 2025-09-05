@@ -13,27 +13,25 @@ export function CancelQuery(queryID: string): $CancellablePromise<void> {
     return $Call.ByID(4191521193, queryID);
 }
 
-export function ChangeDatabase(database: string): $CancellablePromise<void> {
-    return $Call.ByID(3780644656, database);
-}
-
 export function Close(): $CancellablePromise<void> {
     return $Call.ByID(2976765539);
 }
 
-export function Connect(host: string, port: number, username: string, password: string, database: string): $CancellablePromise<void> {
-    return $Call.ByID(391955001, host, port, username, password, database);
-}
-
-export function FetchDatabases(): $CancellablePromise<string[]> {
-    return $Call.ByID(273294719).then(($result: any) => {
+export function Connect(host: string, port: string, username: string, password: string, database: string, test: boolean): $CancellablePromise<{ [_: string]: any }> {
+    return $Call.ByID(391955001, host, port, username, password, database, test).then(($result: any) => {
         return $$createType0($result);
     });
 }
 
-export function FetchTables(database: string): $CancellablePromise<string[]> {
-    return $Call.ByID(2656946722, database).then(($result: any) => {
-        return $$createType0($result);
+export function FetchDatabases(): $CancellablePromise<string[]> {
+    return $Call.ByID(273294719).then(($result: any) => {
+        return $$createType1($result);
+    });
+}
+
+export function FetchTables(): $CancellablePromise<string[]> {
+    return $Call.ByID(2656946722).then(($result: any) => {
+        return $$createType1($result);
     });
 }
 
@@ -43,10 +41,11 @@ export function Ping(): $CancellablePromise<void> {
 
 export function RunQuery(queryID: string, queryType: string, sql: string): $CancellablePromise<$models.QueryResult> {
     return $Call.ByID(2149697238, queryID, queryType, sql).then(($result: any) => {
-        return $$createType1($result);
+        return $$createType2($result);
     });
 }
 
 // Private type creation functions
-const $$createType0 = $Create.Array($Create.Any);
-const $$createType1 = $models.QueryResult.createFrom;
+const $$createType0 = $Create.Map($Create.Any, $Create.Any);
+const $$createType1 = $Create.Array($Create.Any);
+const $$createType2 = $models.QueryResult.createFrom;

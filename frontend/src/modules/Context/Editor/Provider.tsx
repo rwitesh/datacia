@@ -1,12 +1,11 @@
-import React, { useCallback, useMemo, useState } from "react";
-import { useAppContext } from "../App/Index";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useTables, useCancelQuery, useRunQuery } from "@/services/hooks";
 import { v4 as uuidv4 } from "uuid";
 import { EditorContext, type Tab } from "./Context";
+import { GetTabData, SyncData } from "@/services/common";
 
 export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
-  const { metadata } = useAppContext();
-  const { data = [], isLoading, error, refetch } = useTables(metadata?.database);
+  const { data = [], isLoading, error, refetch } = useTables();
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
 
@@ -98,6 +97,19 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
 
   const setActiveTab = useCallback((tabId: string) => {
     setActiveTabId(tabId);
+  }, []);
+
+  useEffect(() => {
+    SyncData(activeTabId ?? "", JSON.stringify(tabs));
+  }, [tabs, activeTabId]);
+  
+  useEffect(() => {
+    GetTabData().then((res) => {
+      if (res) {
+        setActiveTabId(res[0]);
+        setTabs(JSON.parse(res[1]));
+      }
+    });
   }, []);
 
   const runQuery = useCallback(
