@@ -11,6 +11,7 @@ import {
 import { QueryResult } from "./QueryResult/QueryResult";
 import { useEditorContext } from "../Context/Editor/Index";
 import { EditorFooter } from "./EditorFooter/EditorFooter";
+import { NavigationBar } from "../NavigationBar/NavigationBar";
 
 export const Editor = () => {
   // const navigate = useNavigate();
@@ -23,7 +24,10 @@ export const Editor = () => {
   // }
 
   return (
-    <div className="h-full w-full flex flex-col">
+    <div className="h-full w-full flex flex-col bg-background">
+      <div className="shrink-0">
+        <NavigationBar />
+      </div>
       <div className="flex-1 min-h-0">
         <ResizablePanelGroup direction="horizontal" className="h-full w-full">
           <ResizablePanel
@@ -73,7 +77,7 @@ export const Editor = () => {
         </ResizablePanelGroup>
       </div>
       <div className="shrink-0 border-t">
-        <EditorFooter/>
+        <EditorFooter />
       </div>
     </div>
   );

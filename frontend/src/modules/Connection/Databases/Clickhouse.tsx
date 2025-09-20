@@ -251,175 +251,182 @@ export const ClickhouseConnection: React.FC = () => {
 
   const alertVariantForStatus = (s: Status) => {
     if (!s) return "default";
-    return s.kind === "error" ? "destructive" : "default";
+    return s.kind === "error" ? "destructive" : "success";
   };
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Top: fixed alert slot */}
-      <div className="mb-3" aria-live="polite" role="status">
-        <div className="min-h-24">
-          {hasFormErrors ? (
-            <Alert
-              variant="destructive"
-              className="min-h-28 h-full flex items-start gap-3"
-            >
-              <Terminal className="w-5 h-5 mt-1" />
-              <div className="flex-1">
-                <AlertTitle>Please fix the following</AlertTitle>
-                <AlertDescription>
-                  <ul className="ml-4 list-disc text-xs">
-                    {formErrorEntries.map(([field, err]) => (
-                      <li key={String(field)}>
-                        <strong>{fieldLabels[field]}:</strong>{" "}
-                        {err?.message ?? "Invalid value"}
-                      </li>
-                    ))}
-                  </ul>
-                </AlertDescription>
-              </div>
-            </Alert>
-          ) : isError ? (
-            <Alert
-              variant="destructive"
-              className="min-h-28 flex items-center gap-3"
-            >
-              <Terminal className="w-5 h-5" />
-              <div className="flex-1">
-                <AlertTitle>Failed to load saved connection</AlertTitle>
-                <AlertDescription>
-                  Unable to fetch saved connection
-                  {connectionNameParam ? ` (name: ${connectionNameParam})` : ""}
-                  .
-                </AlertDescription>
-              </div>
-            </Alert>
-          ) : status ? (
-            <Alert
-              variant={alertVariantForStatus(status)}
-              className="min-h-28 flex items-center gap-3"
-            >
-              <Terminal className="w-5 h-5" />
-              <div className="flex-1">
-                <AlertTitle>{status.title}</AlertTitle>
-                {status.description && (
-                  <AlertDescription className="text-xs">
-                    {status.description}
-                  </AlertDescription>
-                )}
-              </div>
-              {/* small dismiss */}
-              <button
-                type="button"
-                aria-label="Dismiss message"
-                onClick={() => setStatus(null)}
-                className="ml-2 p-1 rounded hover:bg-muted"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </Alert>
-          ) : (
-            <Alert variant="default" className="min-h-28 flex items-center gap-3">
-              <Terminal className="w-5 h-5" />
-              <div className="flex-1">
-                <AlertTitle>Connection info</AlertTitle>
-                <AlertDescription className="text-xs">
-                  Enter connection details.
-                </AlertDescription>
-              </div>
-            </Alert>
-          )}
-        </div>
-      </div>
-
-      {/* Form */}
+    <div className="h-full flex flex-col justify-between">
       <div>
-        <form
-          className="space-y-3 text-sm"
-          onSubmit={(e) => e.preventDefault()}
-        >
-          <div className="space-y-1">
-            <Label htmlFor="connectionName">Connection Name</Label>
-            <Input
-              id="connectionName"
-              disabled={loading}
-              {...register("connectionName")}
-              placeholder="e.g., Local ClickHouse"
-              className="h-6 px-2 text-sm"
-            />
+        {/* Top: fixed alert slot */}
+        <div className="mb-3" aria-live="polite" role="status">
+          <div className="min-h-24">
+            {hasFormErrors ? (
+              <Alert
+                variant="destructive"
+                className="min-h-28 h-full flex items-start gap-3"
+              >
+                <Terminal className="w-5 h-5 mt-1" />
+                <div className="flex-1">
+                  <AlertTitle>Please fix the following</AlertTitle>
+                  <AlertDescription>
+                    <ul className="ml-4 list-disc text-xs">
+                      {formErrorEntries.map(([field, err]) => (
+                        <li key={String(field)}>
+                          <strong>{fieldLabels[field]}:</strong>{" "}
+                          {err?.message ?? "Invalid value"}
+                        </li>
+                      ))}
+                    </ul>
+                  </AlertDescription>
+                </div>
+              </Alert>
+            ) : isError ? (
+              <Alert
+                variant="destructive"
+                className="min-h-28 flex items-center gap-3"
+              >
+                <Terminal className="w-5 h-5" />
+                <div className="flex-1">
+                  <AlertTitle>Failed to load saved connection</AlertTitle>
+                  <AlertDescription>
+                    Unable to fetch saved connection
+                    {connectionNameParam
+                      ? ` (name: ${connectionNameParam})`
+                      : ""}
+                    .
+                  </AlertDescription>
+                </div>
+              </Alert>
+            ) : status ? (
+              <Alert
+                variant={alertVariantForStatus(status)}
+                className="min-h-28 flex items-center gap-3"
+              >
+                <Terminal className="w-5 h-5" />
+                <div className="flex-1">
+                  <AlertTitle>{status.title}</AlertTitle>
+                  {status.description && (
+                    <AlertDescription className="text-xs">
+                      {status.description}
+                    </AlertDescription>
+                  )}
+                </div>
+                {/* small dismiss */}
+                <button
+                  type="button"
+                  aria-label="Dismiss message"
+                  onClick={() => setStatus(null)}
+                  className="ml-2 p-1 rounded hover:bg-muted"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </Alert>
+            ) : (
+              <Alert
+                variant="default"
+                className="min-h-28 flex items-center gap-3"
+              >
+                <Terminal className="w-5 h-5" />
+                <div className="flex-1">
+                  <AlertTitle>{connectionNameParam ? connectionNameParam : "New Connection"}</AlertTitle>
+                  <AlertDescription className="text-xs">
+                    Enter connection details.
+                  </AlertDescription>
+                </div>
+              </Alert>
+            )}
           </div>
+        </div>
 
-          <div className="flex gap-2">
-            <div className="flex-1 space-y-1">
-              <Label htmlFor="host">Host</Label>
+        {/* Form */}
+        <div>
+          <form
+            className="space-y-3 text-sm"
+            onSubmit={(e) => e.preventDefault()}
+          >
+            <div className="space-y-1">
+              <Label htmlFor="connectionName">Connection Name</Label>
               <Input
-                id="host"
+                id="connectionName"
                 disabled={loading}
-                {...register("host")}
-                placeholder="http://localhost"
+                {...register("connectionName")}
+                placeholder="e.g., Local ClickHouse"
                 className="h-6 px-2 text-sm"
               />
             </div>
 
-            <div className="w-24 space-y-1">
-              <Label htmlFor="port">Port</Label>
+            <div className="flex gap-2">
+              <div className="flex-1 space-y-1">
+                <Label htmlFor="host">Host</Label>
+                <Input
+                  id="host"
+                  disabled={loading}
+                  {...register("host")}
+                  placeholder="http://localhost"
+                  className="h-6 px-2 text-sm"
+                />
+              </div>
+
+              <div className="w-24 space-y-1">
+                <Label htmlFor="port">Port</Label>
+                <Input
+                  id="port"
+                  disabled={loading}
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  {...register("port")}
+                  className="h-6 px-2 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="username">Username</Label>
               <Input
-                id="port"
+                id="username"
                 disabled={loading}
-                inputMode="numeric"
-                pattern="[0-9]*"
-                {...register("port")}
-                className="h-6 px-2 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                {...register("username")}
+                className="h-6 px-2 text-sm"
               />
             </div>
-          </div>
 
-          <div className="space-y-1">
-            <Label htmlFor="username">Username</Label>
-            <Input
-              id="username"
-              disabled={loading}
-              {...register("username")}
-              className="h-6 px-2 text-sm"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <Label htmlFor="password">Password</Label>
-            <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                disabled={loading}
-                {...register("password")}
-                className="h-6 px-2 pr-8 text-sm"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((p) => !p)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                tabIndex={-1}
-                aria-label={showPassword ? "Hide password" : "Show password"}
-              >
-                {showPassword ? (
-                  <EyeOff className="w-4 h-4" />
-                ) : (
-                  <Eye className="w-4 h-4" />
-                )}
-              </button>
+            <div className="space-y-1">
+              <Label htmlFor="password">Password</Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  disabled={loading}
+                  {...register("password")}
+                  className="h-6 px-2 pr-8 text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((p) => !p)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  tabIndex={-1}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
             </div>
-          </div>
 
-          <div className="space-y-1">
-            <Label htmlFor="database">Database</Label>
-            <Input
-              id="database"
-              disabled={loading}
-              {...register("database")}
-              className="h-6 px-2 text-sm"
-            />
-          </div>
-        </form>
+            <div className="space-y-1">
+              <Label htmlFor="database">Database</Label>
+              <Input
+                id="database"
+                disabled={loading}
+                {...register("database")}
+                className="h-6 px-2 text-sm"
+              />
+            </div>
+          </form>
+        </div>
       </div>
 
       {/* Buttons */}
@@ -427,7 +434,7 @@ export const ClickhouseConnection: React.FC = () => {
         <Button
           type="button"
           variant="secondary"
-          className="h-6 text-sm flex items-center gap-1"
+          className="h-6 text-sm flex items-center gap-1 "
           onClick={onSave}
           disabled={loading || isSubmitting}
         >
@@ -438,6 +445,7 @@ export const ClickhouseConnection: React.FC = () => {
         <div className="flex gap-2">
           <Button
             type="button"
+            variant="secondary"
             className="h-6 text-sm"
             onClick={onTest}
             disabled={loading || isSubmitting}
@@ -446,6 +454,7 @@ export const ClickhouseConnection: React.FC = () => {
           </Button>
           <Button
             type="button"
+            variant="secondary"
             className="h-6 text-sm"
             onClick={onSubmit}
             disabled={isSubmitting || loading}

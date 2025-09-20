@@ -12,7 +12,6 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     username: "",
     password: "",
   });
-
   const reload = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["databases"] });
     if (metadata?.database) {

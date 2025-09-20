@@ -5,6 +5,7 @@ import { autocompletion, closeBrackets } from "@codemirror/autocomplete";
 import { sql } from "@codemirror/lang-sql";
 import { lineNumbers } from "@codemirror/view";
 import { useEditorContext } from "@/modules/Context/Editor/Index";
+import { ClickhouseDialect } from "./sql";
 
 export function QueryInput() {
   const editorRef = useRef<HTMLDivElement | null>(null);
@@ -32,7 +33,7 @@ export function QueryInput() {
       doc: activeTab?.sql,
       extensions: [
         lineNumbers(),
-        sql({ upperCaseKeywords: true, schema }),
+        sql({ dialect: ClickhouseDialect, schema }),
         autocompletion(),
         closeBrackets(),
         EditorView.updateListener.of((v) => {

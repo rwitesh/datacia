@@ -49,9 +49,11 @@ func main() {
 			Backdrop:                application.MacBackdropTranslucent,
 			TitleBar:                application.MacTitleBarHiddenInset,
 		},
-		BackgroundColour: application.NewRGB(27, 38, 54),
-		Width:            constants.CONNECTION_WINDOW_WIDTH,
-		Height:           constants.CONNECTION_WINDOW_HEIGHT,
+		BackgroundColour:    application.NewRGB(27, 38, 54),
+		Width:               constants.CONNECTION_WINDOW_WIDTH,
+		Height:              constants.CONNECTION_WINDOW_HEIGHT,
+		DisableResize:       true,
+		MaximiseButtonState: application.ButtonHidden,
 	})
 
 	e.App.Window.NewWithOptions(application.WebviewWindowOptions{

@@ -7,6 +7,8 @@ import {
   type ColumnResizeMode,
   type CellContext,
   type HeaderContext,
+  getSortedRowModel,
+  type SortingState,
 } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
@@ -16,20 +18,19 @@ type Props = {
   columns: string[];
   data: DataRow[];
   extraBlankRows?: number;
-  showIndex?: boolean;
 };
 
 export function DataTable({
   columns,
   data,
   extraBlankRows = 5,
-  showIndex = false,
 }: Props) {
   const [columnSizing, setColumnSizing] = useState<Record<string, number>>({});
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [containerwidth, setContainerWidth] = useState(0);
   const [containerHeight, setContainerHeight] = useState(0);
+  const [sorting, setSorting] = useState<SortingState>([]);
 
   // Track container size
   useLayoutEffect(() => {
@@ -58,28 +59,19 @@ export function DataTable({
       };
     });
 
-    if (showIndex) {
-      return [
-        {
-          accessorKey: "_index",
-          header: "",
-          cell: (info: CellContext<DataRow, unknown>) => info.row.index + 1,
-          size: 20,
-        },
-        ...baseColumns,
-      ];
-    }
 
     return baseColumns;
-  }, [columns, showIndex]);
+  }, [columns]);
 
   const table = useReactTable({
     data,
     columns: columnDefs,
     getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
     columnResizeMode: "onChange" as ColumnResizeMode,
-    state: { columnSizing },
+    state: { columnSizing, sorting },
     onColumnSizingChange: setColumnSizing,
+    onSortingChange: setSorting,
     enableMultiRowSelection: true,
   });
 
@@ -152,8 +144,9 @@ export function DataTable({
                       colSpan={header.colSpan}
                       style={{ width: colWidths[i] }}
                       className="relative border border-border bg-muted px-2 py-1 font-medium"
+                      onClick={header.column.getToggleSortingHandler()}
                     >
-                      <div className="flex items-center justify-center h-full">
+                      <div className="flex items-center justify-center h-full gap-2">
                         <span className="overflow-hidden text-ellipsis whitespace-nowrap">
                           {flexRender(
                             header.column.columnDef.header,
@@ -163,6 +156,16 @@ export function DataTable({
                             >
                           )}
                         </span>
+                        {header.column.getCanSort() && (
+                          <span>
+                            {header.column.getIsSorted() === "asc" && (
+                              <span>▲</span>
+                            )}
+                            {header.column.getIsSorted() === "desc" && (
+                              <span>▼</span>
+                            )}
+                          </span>
+                        )}
                       </div>
                       {header.column.getCanResize() && (
                         <div

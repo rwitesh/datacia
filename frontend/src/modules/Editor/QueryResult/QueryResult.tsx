@@ -27,7 +27,6 @@ export function QueryResult() {
           <DataTable
             columns={results.Columns}
             data={results.Data ?? []}
-            showIndex
           />
         ) : isCommandQuery ? (
           <div className="flex justify-center items-center h-full cursor-default select-none">
