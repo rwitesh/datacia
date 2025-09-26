@@ -3,7 +3,11 @@ import { useEditorContext } from "@/modules/Context/Editor/Index";
 import { DataTable } from "./DataTable/DataTable";
 import { FloatingBar } from "./FloatingBar/FloatingBar";
 
-export function QueryResult() {
+type QueryResultProps = {
+  onSelectionChange: (selected: Array<Record<string, unknown>>) => void;
+};
+
+export function QueryResult({onSelectionChange}: QueryResultProps) {
   const { activeTab } = useEditorContext();
 
   if (!activeTab) return null;
@@ -27,7 +31,7 @@ export function QueryResult() {
           <DataTable
             columns={results.Columns}
             data={results.Data ?? []}
-            showIndex
+            onSelectionChange={onSelectionChange}
           />
         ) : isCommandQuery ? (
           <div className="flex justify-center items-center h-full cursor-default select-none">

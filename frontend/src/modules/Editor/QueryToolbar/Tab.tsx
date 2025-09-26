@@ -48,7 +48,7 @@ export const TabBar = () => {
   };
 
   return (
-    <div className="flex items-center bg-muted/30 overflow-hidden">
+    <div className="flex items-center overflow-hidden">
       <div className="flex items-center overflow-x-auto flex-1 scrollbar-thin">
         {tabs.map((tab) => (
           <div

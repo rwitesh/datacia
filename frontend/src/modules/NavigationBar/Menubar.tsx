@@ -15,11 +15,9 @@ import {
 import { useTheme, type Theme } from "@/components/theme/theme-provider";
 import { Bolt } from "lucide-react";
 import { CloseCurrentConnection as Close } from "@/services/common";
-import { useAppContext } from "../Context/App/Index";
 
 export function MenuBar() {
   const { theme, setTheme } = useTheme();
-  const { metadata } = useAppContext();
 
   const DisconnectHandler = async () => {
     try {
@@ -34,7 +32,7 @@ export function MenuBar() {
   };
 
   return (
-    <Menubar className="border-none bg-background">
+    <Menubar className="border-none bg-transparent">
       <MenubarMenu>
         <MenubarTrigger className="cursor-pointer">
           <Bolt size={18} />
@@ -75,20 +73,13 @@ export function MenuBar() {
               </MenubarRadioGroup>
             </MenubarSubContent>
           </MenubarSub>
-
-          {metadata?.database ? (
-            <>
-              <MenubarSeparator />
-              <MenubarItem
-                className="cursor-pointer text-xs"
-                onClick={DisconnectHandler}
-              >
-                Disconnect
-              </MenubarItem>
-            </>
-          ) : (
-            <></>
-          )}
+          <MenubarSeparator />
+          <MenubarItem
+            className="cursor-pointer text-xs"
+            onClick={DisconnectHandler}
+          >
+            Disconnect
+          </MenubarItem>
         </MenubarContent>
       </MenubarMenu>
     </Menubar>

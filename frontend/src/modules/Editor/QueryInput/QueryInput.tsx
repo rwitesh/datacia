@@ -5,6 +5,7 @@ import { autocompletion, closeBrackets } from "@codemirror/autocomplete";
 import { sql } from "@codemirror/lang-sql";
 import { lineNumbers } from "@codemirror/view";
 import { useEditorContext } from "@/modules/Context/Editor/Index";
+import { ClickhouseDialect } from "./sql";
 
 export function QueryInput() {
   const editorRef = useRef<HTMLDivElement | null>(null);
@@ -16,12 +17,14 @@ export function QueryInput() {
     updateTab,
   } = useEditorContext();
 
+  const tabId = useMemo(() => activeTab?.id, [activeTab?.id]);
+
   const schema = useMemo(() => {
     return Object.fromEntries((data || []).map((t) => [t, []]));
   }, [data]);
 
   useEffect(() => {
-    if (!editorRef.current) return;
+    if (!editorRef.current || !schema || !tabId) return;
 
     if (viewRef.current) {
       viewRef.current.destroy();
@@ -29,16 +32,16 @@ export function QueryInput() {
     }
 
     const state = EditorState.create({
-      doc: activeTab?.sql,
       extensions: [
         lineNumbers(),
-        sql({ upperCaseKeywords: true, schema }),
+        sql({ dialect: ClickhouseDialect, schema }),
         autocompletion(),
         closeBrackets(),
         EditorView.updateListener.of((v) => {
-          if (v.docChanged && activeTab?.id) {
-            updateTab(activeTab.id, { sql: v.state.doc.toString() });
+          if (v.docChanged && tabId) {
+            updateTab(tabId, { sql: v.state.doc.toString() });
           }
+        
         }),
         EditorView.theme({
           "&": {
@@ -55,7 +58,7 @@ export function QueryInput() {
             backgroundColor: "var(--background)",
           },
           ".cm-lineNumbers": {
-            backgroundColor: "var(--background)",
+            backgroundColor: "var(--card)",
           },
           ".cm-content": {
             caretColor: "var(--foreground)",
@@ -78,7 +81,7 @@ export function QueryInput() {
       view.destroy();
       viewRef.current = null;
     };
-  }, [schema, activeTab?.id, updateTab]);
+  }, [schema, tabId, updateTab]);
 
   useEffect(() => {
     const view = viewRef.current;
@@ -90,11 +93,14 @@ export function QueryInput() {
         changes: { from: 0, to: currentDoc.length, insert: activeTab?.sql },
       });
     }
-  }, [activeTab?.sql]);
+  }, [activeTab]);
 
   return (
     <div className="h-full w-full">
-      <div ref={editorRef} className="h-full w-full font-mono text-sm" />
+      <div
+        ref={editorRef}
+        className="h-full w-full font-mono text-sm bg-card"
+      />
     </div>
   );
 }

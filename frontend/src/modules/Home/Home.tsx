@@ -46,13 +46,12 @@ export const Home = () => {
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : String(error));
     }
-
   };
 
   return (
-    <div className="flex min-h-screen min-w-screen">
+    <div className="flex min-h-screen min-w-screen select-none cursor-default">
       {/* Left panel: saved connections */}
-      <div className="w-1/3 p-3 flex flex-col">
+      <div className="w-1/3 p-3 flex flex-col mt-12">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-sm font-semibold">Connections</h3>
 
@@ -63,7 +62,7 @@ export const Home = () => {
                 <Plus size={14} />
               </MenubarTrigger>
               <MenubarContent className="bg-white dark:bg-zinc-900 min-w-[150px]">
-                <MenubarLabel className="text-[10px] text-muted-foreground px-2 cursor-default select-none">
+                <MenubarLabel className="text-[10px] text-muted-foreground px-2 cursor-default">
                   Add Connection
                 </MenubarLabel>
                 <MenubarSeparator />
@@ -87,7 +86,7 @@ export const Home = () => {
             {savedConnections.map((name) => (
               <li
                 key={name}
-                className="flex items-center justify-between rounded hover:bg-muted"
+                className="flex items-center justify-between rounded select-none px-1"
               >
                 <div className="flex items-center gap-1 min-w-0">
                   <Database className="h-3 w-3 shrink-0 text-muted-foreground" />
@@ -97,7 +96,7 @@ export const Home = () => {
                 {/* Per-connection menu */}
                 <Menubar className="border-none bg-transparent h-min">
                   <MenubarMenu>
-                    <MenubarTrigger className="cursor-pointer p-0.5 rounded hover:bg-accent">
+                    <MenubarTrigger className="cursor-pointer p-0.5 rounded">
                       <MoreHorizontal className="w-3.5 h-3.5" />
                     </MenubarTrigger>
                     <MenubarContent className="bg-white dark:bg-zinc-900 min-w-[120px]">
@@ -141,7 +140,7 @@ export const Home = () => {
         )}
       </div>
 
-      <div className="flex-1 p-3">
+      <div className="flex-1 p-3 bg-background border-l border-muted">
         <Outlet />
       </div>
     </div>

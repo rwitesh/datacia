@@ -6,7 +6,6 @@ import { Home } from "@/modules/Home/Home";
 import { ClickhouseConnection } from "@/modules/Connection/Databases/Clickhouse";
 import { Editor } from "@/modules/Editor/Editor";
 import { AppProvider } from "./modules/Context/App/Provider";
-import { NavigationBar } from "./modules/NavigationBar/NavigationBar";
 import { Toaster } from "sonner";
 import { EditorProvider } from "./modules/Context/Editor/Provider";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -20,11 +19,7 @@ function App() {
         <AppProvider>
           <HashRouter basename="/">
             <div className="h-screen w-screen flex flex-col overflow-hidden">
-              <div className="shrink-0">
-                <NavigationBar />
-              </div>
               <Toaster position="top-center" richColors closeButton />
-              <div className="flex-1 overflow-hidden">
                 <Routes>
                   <Route path="/" element={<Home />}>
                     <Route
@@ -43,7 +38,6 @@ function App() {
                   />
                 </Routes>
               </div>
-            </div>
           </HashRouter>
         </AppProvider>
       </ThemeProvider>
