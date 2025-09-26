@@ -32,7 +32,7 @@ export function MenuBar() {
   };
 
   return (
-    <Menubar className="border-none bg-background">
+    <Menubar className="border-none bg-transparent">
       <MenubarMenu>
         <MenubarTrigger className="cursor-pointer">
           <Bolt size={18} />

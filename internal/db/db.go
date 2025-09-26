@@ -54,8 +54,6 @@ func Open(appName string) *Store {
 	if err != nil {
 		log.Fatalf("failed to create connections table: %v", err)
 	}
-
-	log.Printf("DB opened at %s", dbPath)
 	return &Store{db: db}
 }
 

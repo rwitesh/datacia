@@ -6,28 +6,31 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
-// import { useAppContext } from "../Context/AppContext";
-// import { useNavigate } from "react-router";
 import { QueryResult } from "./QueryResult/QueryResult";
 import { useEditorContext } from "../Context/Editor/Index";
 import { EditorFooter } from "./EditorFooter/EditorFooter";
 import { NavigationBar } from "../NavigationBar/NavigationBar";
+import { DataView } from "./DataView/DataView";
+import { useState, useCallback } from "react";
+import { ChevronLeft, ChevronRight, Copy } from "lucide-react";
 
 export const Editor = () => {
-  // const navigate = useNavigate();
-  // const { database } = useAppContext();
   const { activeTab } = useEditorContext();
+  const [isDataViewOpen, setIsDataViewOpen] = useState(true);
 
-  // if (database === "") {
-  //   navigate("/connect/clickhouse");
-  //   return null;
-  // }
+  // Selected Data
+  const [selectedData, setSelectedData] = useState<
+    Array<Record<string, unknown>>
+  >([]);
+
+  const handleCopy = useCallback(() => {
+    navigator.clipboard
+      .writeText(JSON.stringify(selectedData, null, 2))
+      .catch((err) => console.error("Copy failed:", err));
+  }, [selectedData]);
 
   return (
-    <div className="h-full w-full flex flex-col bg-background">
-      <div className="shrink-0">
-        <NavigationBar />
-      </div>
+    <div className="h-full w-full flex flex-col bg-card">
       <div className="flex-1 min-h-0">
         <ResizablePanelGroup direction="horizontal" className="h-full w-full">
           <ResizablePanel
@@ -35,42 +38,99 @@ export const Editor = () => {
             minSize={0}
             maxSize={100}
             collapsible
-            className="min-w-0"
+            className="min-w-30"
           >
             <div className="h-full w-full overflow-hidden">
               <EditorSidebar />
             </div>
           </ResizablePanel>
-
           <ResizableHandle />
           <ResizablePanel className="min-w-0">
             <div className="flex h-full w-full flex-col overflow-hidden">
               <div className="shrink-0">
+                <NavigationBar />
                 <QueryToolbar />
               </div>
-
               {activeTab && (
-                <ResizablePanelGroup direction="vertical" className="flex-1">
-                  {activeTab.mode === "query" && (
-                    <>
-                      <ResizablePanel
-                        defaultSize={45}
-                        minSize={0}
-                        className="min-h-0"
+                <div className="flex-1 min-h-0">
+                  <ResizablePanelGroup
+                    direction="horizontal"
+                    className="h-full w-full"
+                  >
+                    {/* Main Query Editor Area */}
+                    <ResizablePanel className="min-w-0">
+                      <ResizablePanelGroup
+                        direction="vertical"
+                        className="h-full"
                       >
-                        <div className="h-full">
-                          <QueryInput />
-                        </div>
-                      </ResizablePanel>
-                      <ResizableHandle />
-                    </>
-                  )}
-                  <ResizablePanel minSize={0} className="min-h-0">
-                    <div className="h-full overflow-hidden">
-                      <QueryResult />
+                        {activeTab.mode === "query" && (
+                          <>
+                            <ResizablePanel
+                              defaultSize={45}
+                              minSize={0}
+                              className="min-h-0"
+                            >
+                              <div className="h-full">
+                                <QueryInput />
+                              </div>
+                            </ResizablePanel>
+                            <ResizableHandle />
+                          </>
+                        )}
+                        <ResizablePanel minSize={0} className="min-h-0">
+                          <div className="h-full overflow-hidden">
+                            <QueryResult onSelectionChange={setSelectedData} />
+                          </div>
+                        </ResizablePanel>
+                      </ResizablePanelGroup>
+                    </ResizablePanel>
+
+                    {/* DataView Sidebar Toggle Button */}
+                    <div className="relative">
+                      <button
+                        onClick={() => setIsDataViewOpen(!isDataViewOpen)}
+                        className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-border hover:bg-border/80 rounded-l-md p-1 transition-colors"
+                        style={{ marginLeft: isDataViewOpen ? "0" : "-24px" }}
+                      >
+                        {isDataViewOpen ? (
+                          <ChevronRight className="h-4 w-4" />
+                        ) : (
+                          <ChevronLeft className="h-4 w-4" />
+                        )}
+                      </button>
                     </div>
-                  </ResizablePanel>
-                </ResizablePanelGroup>
+
+                    {/* DataView Sidebar */}
+                    {isDataViewOpen && (
+                      <>
+                        <ResizableHandle />
+                        <ResizablePanel
+                          defaultSize={25}
+                          minSize={15}
+                          maxSize={50}
+                          className="min-w-60"
+                        >
+                          <div className="relative h-full w-full overflow-hidden border-l">
+                            {/* Header */}
+                            <div className="flex items-center justify-between p-2 border-b bg-muted/50">
+                              <h3 className="text-sm font-medium">Data View</h3>
+                              <button
+                                onClick={handleCopy}
+                                className="flex items-center gap-1 px-2 py-1 text-xs rounded bg-background shadow hover:bg-accent transition-colors"
+                              >
+                                <Copy className="h-4 w-4" />
+                                Copy
+                              </button>
+                            </div>
+
+                            {/* Body */}
+                            <DataView selectedData={selectedData} />
+                          </div>
+                        </ResizablePanel>
+                      </>
+                    )}
+                  </ResizablePanelGroup>
+                </div>
               )}
             </div>
           </ResizablePanel>

@@ -30,8 +30,8 @@ export function EditorSidebar() {
   };
 
   return (
-    <div className="h-full w-full flex flex-col bg-sidebar text-sidebar-foreground select-none cursor-default">
-      <div className="sticky top-0 z-10 flex items-center gap-2 px-3 py-2 border-b border-sidebar-border bg-sidebar">
+    <div className="h-full w-full flex flex-col select-none cursor-default pt-12 bg-sidebar">
+      <div className="sticky top-0 z-10 flex items-center gap-2 px-3 py-2 border-b border-sidebar-border">
         <Table className="h-4 w-4" />
         <span className="text-sm font-medium ">Tables</span>
       </div>

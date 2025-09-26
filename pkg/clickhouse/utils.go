@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/ClickHouse/clickhouse-go/v2/lib/chcol"
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 )
 
@@ -90,9 +91,14 @@ func normalizeValue(v interface{}) interface{} {
 		return normalizeFloat(float64(val))
 	case float64:
 		return normalizeFloat(val)
-
 	case complex64, complex128:
 		return fmt.Sprintf("%v", val)
+	case chcol.JSON:
+		value, err := val.Value()
+		if err != nil {
+			return nil
+		}
+		return normalizeValue(value)
 	}
 
 	rv := reflect.ValueOf(v)

@@ -9,7 +9,7 @@ export function NavigationBar() {
   const location = useLocation();
   const { reload} = useAppContext();
   return (
-    <div className="flex cursor-default border-b border-border bg-background w-full justify-end">
+    <div className="flex cursor-default border-b border-border  bg-transparent w-full justify-end">
       <div className="flex items-center">
         {location.pathname === "/editor" ? (
           <>

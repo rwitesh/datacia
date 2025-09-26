@@ -51,7 +51,7 @@ export const Home = () => {
   return (
     <div className="flex min-h-screen min-w-screen select-none cursor-default">
       {/* Left panel: saved connections */}
-      <div className="w-1/3 p-3 flex flex-col mt-6">
+      <div className="w-1/3 p-3 flex flex-col mt-12">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-sm font-semibold">Connections</h3>
 

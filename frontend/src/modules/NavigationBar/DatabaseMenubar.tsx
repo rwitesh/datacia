@@ -34,7 +34,7 @@ export function DatabaseMenuBar() {
   };
 
   return (
-    <Menubar className="border-none bg-background">
+    <Menubar className="border-none bg-transparent">
       <MenubarMenu>
         <MenubarTrigger
           className="cursor-pointer"
