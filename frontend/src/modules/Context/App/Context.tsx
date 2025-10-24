@@ -1,6 +1,8 @@
+import type { DatabaseEngine } from "@/modules/Connection/utils/types";
 import { createContext } from "react";
 
 export type Metadata = {
+  engine: DatabaseEngine;
   database: string;
   host: string;
   port: string;
@@ -9,8 +11,8 @@ export type Metadata = {
 };
 
 export type AppContextType = {
-  metadata: Metadata;
-  setMetadata: React.Dispatch<React.SetStateAction<Metadata>>;
+  metadata: Metadata | null;
+  setMetadata: React.Dispatch<React.SetStateAction<Metadata | null>>;
   reload: () => void;
 };
 

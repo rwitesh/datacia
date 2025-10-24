@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/adrg/xdg"
+	"github.com/google/uuid"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -26,68 +27,29 @@ func Open(appName string) *Store {
 		log.Fatalf("failed to open db: %v", err)
 	}
 
-	if err := db.Ping(); err != nil {
+	if err = db.Ping(); err != nil {
 		log.Fatalf("failed to ping db: %v", err)
-	}
-
-	// Schema: tabs
-	_, err = db.Exec(`
-		CREATE TABLE IF NOT EXISTS tabs (
-			id TEXT PRIMARY KEY,
-			content TEXT NOT NULL,
-			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-		)
-	`)
-	if err != nil {
-		log.Fatalf("failed to create tabs table: %v", err)
 	}
 
 	// Schema: connections
 	_, err = db.Exec(`
 		CREATE TABLE IF NOT EXISTS connections (
-			name TEXT PRIMARY KEY,
+			id TEXT PRIMARY KEY, 
+			name TEXT NOT NULL UNIQUE,
 			config TEXT NOT NULL,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		)
 	`)
 	if err != nil {
 		log.Fatalf("failed to create connections table: %v", err)
 	}
+
 	return &Store{db: db}
 }
 
 func (s *Store) Close() error {
 	return s.db.Close()
-}
-
-func (s *Store) StoreTab(tabID string, content string) error {
-	_, err := s.db.Exec(`
-		INSERT INTO tabs (id, content, created_at, updated_at)
-		VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-		ON CONFLICT(id) DO UPDATE SET
-			content = excluded.content,
-			updated_at = CURRENT_TIMESTAMP
-	`, tabID, content)
-	return err
-}
-
-func (s *Store) GetTabs() (string, string, error) {
-	row := s.db.QueryRow(`
-		SELECT id, content
-		FROM tabs
-		ORDER BY updated_at DESC
-		LIMIT 1
-	`)
-
-	var id, content string
-	if err := row.Scan(&id, &content); err != nil {
-		if err == sql.ErrNoRows {
-			return "", "", nil
-		}
-		return "", "", err
-	}
-	return id, content, nil
 }
 
 func (s *Store) SaveConnection(name string, config map[string]string) error {
@@ -96,53 +58,68 @@ func (s *Store) SaveConnection(name string, config map[string]string) error {
 		return err
 	}
 
+	id := uuid.New().String()
+
 	_, err = s.db.Exec(`
-		INSERT INTO connections (name, config, updated_at)
-		VALUES (?, ?, CURRENT_TIMESTAMP)
-		ON CONFLICT(name) DO UPDATE SET
-			config = excluded.config,
-			updated_at = CURRENT_TIMESTAMP
-	`, name, string(data))
+		INSERT INTO connections (id, name, config, created_at, updated_at)
+		VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+	`, id, name, string(data))
 	return err
 }
 
-func (s *Store) LoadConnection(name string) (map[string]string, error) {
-	row := s.db.QueryRow(`SELECT config FROM connections WHERE name = ?`, name)
-	var raw string
-	if err := row.Scan(&raw); err != nil {
+func (s *Store) UpdateConnection(id, name string, config map[string]string) error {
+	data, err := json.Marshal(config)
+	if err != nil {
+		return err
+	}
+
+	_, err = s.db.Exec(`
+		UPDATE connections
+		SET name = ?, config = ?, updated_at = CURRENT_TIMESTAMP
+		WHERE id = ?
+	`, name, string(data), id)
+	return err
+}
+
+func (s *Store) LoadConnection(id string) (map[string]string, error) {
+	row := s.db.QueryRow(`SELECT name, config FROM connections WHERE id = ?`, id)
+
+	var name, raw string
+	if err := row.Scan(&name, &raw); err != nil {
 		if err == sql.ErrNoRows {
 			return map[string]string{}, nil
 		}
-		return nil, err
+		return map[string]string{}, err
 	}
 
 	var cfg map[string]string
 	if err := json.Unmarshal([]byte(raw), &cfg); err != nil {
-		return nil, err
+		return map[string]string{}, err
 	}
+	cfg["name"] = name
 	return cfg, nil
 }
 
-func (s *Store) ListConnections() ([]string, error) {
-	rows, err := s.db.Query(`SELECT name FROM connections ORDER BY updated_at DESC`)
+func (s *Store) ListConnections() (map[string]string, error) {
+	rows, err := s.db.Query(`SELECT id, name FROM connections ORDER BY updated_at DESC`)
 	if err != nil {
-		return nil, err
+		return map[string]string{}, err
 	}
 	defer rows.Close()
 
-	var names []string
+	var connections = map[string]string{}
 	for rows.Next() {
-		var name string
-		if err := rows.Scan(&name); err != nil {
-			return nil, err
+		var id, name string
+		if err := rows.Scan(&id, &name); err != nil {
+			return map[string]string{}, err
 		}
-		names = append(names, name)
+		connections[id] = name
 	}
-	return names, rows.Err()
+	return connections, rows.Err()
 }
 
-func (s *Store) DeleteConnection(name string) (bool, error) {
-	result, err := s.db.Exec(`DELETE FROM connections WHERE name = ?`, name)
+func (s *Store) DeleteConnection(id string) (bool, error) {
+	result, err := s.db.Exec(`DELETE FROM connections WHERE id = ?`, id)
 	if err != nil {
 		return false, err
 	}
@@ -151,6 +128,5 @@ func (s *Store) DeleteConnection(name string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-
 	return affected > 0, nil
 }

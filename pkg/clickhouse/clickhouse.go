@@ -90,6 +90,9 @@ func (ch *ClickHouse) Connect(host, port, username, password, database string, t
 			"database": database,
 			"password": password,
 		}
+	} else {
+		// if test=true → close right away (don’t keep state)
+		_ = connection.Close()
 	}
 
 	return meta, nil

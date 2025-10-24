@@ -1,8 +1,9 @@
 package remote
 
 import (
-	"layerbit/internal/db"
-	"layerbit/pkg/clickhouse"
+	"layerbits/internal/db"
+	"layerbits/pkg/clickhouse"
+	"layerbits/pkg/postgres"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
@@ -10,11 +11,12 @@ import (
 type Engine struct {
 	App        *application.App
 	store      *db.Store
-	Connection *clickhouse.ClickHouse
+	ClickHouse *clickhouse.ClickHouse
+	Postgres   *postgres.Postgres
 }
 
-func New(instance *application.App, db *db.Store, ch *clickhouse.ClickHouse) (*Engine, error) {
-	return &Engine{App: instance, store: db, Connection: ch}, nil
+func New(instance *application.App, db *db.Store, ch *clickhouse.ClickHouse, pg *postgres.Postgres) (*Engine, error) {
+	return &Engine{App: instance, store: db, ClickHouse: ch, Postgres: pg}, nil
 }
 
 func (e *Engine) OpenEditor() {
@@ -41,32 +43,43 @@ func (e *Engine) CloseEditor() {
 	// e.App.Window.Current().SetURL("/").SetSize(650, 450).Center()
 }
 
-func (e *Engine) Sync(activeTabId string, data string) {
-	e.store.StoreTab(activeTabId, data)
-}
-
-func (e *Engine) GetTabs() (string, string, error) {
-	return e.store.GetTabs()
-}
-
-func (e *Engine) CreateNewConnection(host, port, username, password, database string, test bool, openEditor bool) error {
-	metadata, err := e.Connection.Connect(host, port, username, password, database, test)
-	if err != nil {
-		return err
+func (e *Engine) CreateNewConnection(engine, host, port, username, password, database string, test bool, openEditor bool) error {
+	var eventName = "database:connected"
+	if engine == "clickhouse" {
+		metadata, err := e.ClickHouse.Connect(host, port, username, password, database, test)
+		if err != nil {
+			return err
+		}
+		if openEditor {
+			e.OpenEditor()
+		}
+		e.App.Event.Emit(eventName, metadata)
+		return nil
+	} else if engine == "postgres" {
+		metadata, err := e.Postgres.Connect(host, port, username, password, database, test)
+		if err != nil {
+			return err
+		}
+		if openEditor {
+			e.OpenEditor()
+		}
+		e.App.Event.Emit(eventName, metadata)
+		return nil
 	}
-	if openEditor {
-		e.OpenEditor()
-	}
-	e.App.Event.Emit("clickhouse:connected", metadata)
 	return nil
 }
 
-func (e *Engine) EstablishConnection(name string) error {
-	config, err := e.store.LoadConnection(name)
+func (e *Engine) UpdateConnection(id, name string, config map[string]string) error {
+	return e.store.UpdateConnection(id, name, config)
+}
+
+func (e *Engine) EstablishConnection(id string) error {
+	config, err := e.store.LoadConnection(id)
 	if err != nil {
 		return err
 	}
 	err = e.CreateNewConnection(
+		config["engine"],
 		config["host"],
 		config["port"],
 		config["username"],
@@ -81,12 +94,16 @@ func (e *Engine) EstablishConnection(name string) error {
 	return nil
 }
 
-func (e *Engine) ChangeDatabase(host, port, username, password, database string) error {
-	return e.CreateNewConnection(host, port, username, password, database, false, false)
+func (e *Engine) ChangeDatabase(engine, host, port, username, password, database string) error {
+	return e.CreateNewConnection(engine, host, port, username, password, database, false, false)
 }
 
 func (e *Engine) CloseCurrentConnection() error {
-	err := e.Connection.Close()
+	err := e.ClickHouse.Close()
+	if err != nil {
+		return err
+	}
+	err = e.Postgres.Close()
 	if err != nil {
 		return err
 	}
@@ -98,14 +115,14 @@ func (e *Engine) SaveConnection(name string, config map[string]string) error {
 	return e.store.SaveConnection(name, config)
 }
 
-func (e *Engine) LoadConnection(name string) (map[string]string, error) {
-	return e.store.LoadConnection(name)
+func (e *Engine) LoadConnection(id string) (map[string]string, error) {
+	return e.store.LoadConnection(id)
 }
 
-func (e *Engine) ListConnections() ([]string, error) {
+func (e *Engine) ListConnections() (map[string]string, error) {
 	return e.store.ListConnections()
 }
 
-func (e *Engine) DeleteConnection(name string) (bool, error) {
-	return e.store.DeleteConnection(name)
+func (e *Engine) DeleteConnection(id string) (bool, error) {
+	return e.store.DeleteConnection(id)
 }

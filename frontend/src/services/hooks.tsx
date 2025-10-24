@@ -1,7 +1,7 @@
 import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
 import { RunQuery } from "./clickhouse";
-import { ListConnections, LoadConnection } from "../../bindings/layerbit/pkg/remote/engine";
-import { FetchTables, CancelQuery, FetchDatabases } from "../../bindings/layerbit/pkg/clickhouse/clickhouse";
+import { ListConnections, LoadConnection } from "../../bindings/layerbits/pkg/remote/engine";
+import { FetchTables, CancelQuery, FetchDatabases } from "../../bindings/layerbits/pkg/clickhouse/clickhouse";
 
 export function useDatabase() {
   return useQuery({
@@ -46,18 +46,18 @@ export function useCancelQuery() {
 }
 
 export function useFetchConnections() {
-  return useQuery({
+  return useQuery<Record<string, string>, Error>({
     queryKey: ["connections"],
     queryFn: () => ListConnections(),
     retry: 3,
   });
 }
 
-export function useFetchConnectionByName(name: string) {
+export function useFetchConnectionById(id: string) {
   return useQuery({
-    queryKey: ["connection", name],
-    queryFn: () => LoadConnection(name),
-    enabled: !!name,
+    queryKey: ["connection", id],
+    queryFn: () => LoadConnection(id),
+    enabled: !!id,
     retry: 3,
   });
 }

@@ -5,13 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 
 export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const queryClient = useQueryClient();
-  const [metadata, setMetadata] = useState<Metadata>({
-    database: "",
-    host: "",
-    port: "",
-    username: "",
-    password: "",
-  });
+  const [metadata, setMetadata] = useState<Metadata | null>(null);
   const reload = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["databases"] });
     if (metadata?.database) {
@@ -19,10 +13,10 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
         queryKey: ["tables"],
       });
     }
-  }, [queryClient, metadata.database]);
+  }, [queryClient, metadata?.database]);
 
   useEffect(() => {
-    const unsub = Events.On("clickhouse:connected", (ev) => {
+    const unsub = Events.On("database:connected", (ev) => {
       const meta = ev.data[0];
       setMetadata(meta);
       reload();

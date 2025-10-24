@@ -1,9 +1,8 @@
-import {Table } from "lucide-react";
+import { Table } from "lucide-react";
 import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
-  ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { useEditorContext } from "@/modules/Context/Editor/Index";
@@ -11,7 +10,7 @@ import { useEditorContext } from "@/modules/Context/Editor/Index";
 
 export function EditorSidebar() {
   const {
-    tables: { data, isLoading, error},
+    tables: { data, isLoading = true, error },
     createTab,
     runQuery,
   } = useEditorContext();
@@ -70,16 +69,18 @@ export function EditorSidebar() {
                 >
                   Copy name
                 </ContextMenuItem>
-                <ContextMenuSeparator />
-                <ContextMenuItem className="text-xs">Rename</ContextMenuItem>
-                <ContextMenuItem className="text-xs">Clone</ContextMenuItem>
-                <ContextMenuItem className="text-xs">Truncate</ContextMenuItem>
-                <ContextMenuItem className="text-xs">Drop</ContextMenuItem>
               </ContextMenuContent>
             </ContextMenu>
           ))}
 
-          {!isLoading &&
+          {isLoading ? (
+            <>
+              {" "}
+              <div className="px-2 py-1.5 text-xs text-muted-foreground bg-muted rounded-md cursor-default select-none">
+                Loading...
+              </div>
+            </>
+          ) : (
             data.length === 0 &&
             (error ? (
               <div className="px-2 py-1.5 text-xs text-red-500 bg-transparent cursor-default select-none">
@@ -89,7 +90,8 @@ export function EditorSidebar() {
               <div className="px-2 py-1.5 text-xs text-muted-foreground bg-muted rounded-md cursor-default select-none">
                 No tables found
               </div>
-            ))}
+            ))
+          )}
         </div>
       </div>
     </div>

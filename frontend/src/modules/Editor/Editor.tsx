@@ -16,7 +16,7 @@ import { ChevronLeft, ChevronRight, Copy } from "lucide-react";
 
 export const Editor = () => {
   const { activeTab } = useEditorContext();
-  const [isDataViewOpen, setIsDataViewOpen] = useState(true);
+  const [isDataViewOpen, setIsDataViewOpen] = useState(false);
 
   // Selected Data
   const [selectedData, setSelectedData] = useState<

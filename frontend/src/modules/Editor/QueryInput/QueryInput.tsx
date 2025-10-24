@@ -2,8 +2,9 @@ import { useEffect, useMemo, useRef } from "react";
 import { EditorView } from "codemirror";
 import { EditorState } from "@codemirror/state";
 import { autocompletion, closeBrackets } from "@codemirror/autocomplete";
+import { defaultKeymap, history, historyKeymap} from "@codemirror/commands";
 import { sql } from "@codemirror/lang-sql";
-import { lineNumbers } from "@codemirror/view";
+import { keymap, lineNumbers } from "@codemirror/view";
 import { useEditorContext } from "@/modules/Context/Editor/Index";
 import { ClickhouseDialect } from "./sql";
 
@@ -37,6 +38,8 @@ export function QueryInput() {
         sql({ dialect: ClickhouseDialect, schema }),
         autocompletion(),
         closeBrackets(),
+        history(),
+        keymap.of([...historyKeymap, ...defaultKeymap]),
         EditorView.updateListener.of((v) => {
           if (v.docChanged && tabId) {
             updateTab(tabId, { sql: v.state.doc.toString() });

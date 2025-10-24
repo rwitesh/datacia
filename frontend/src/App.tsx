@@ -1,9 +1,8 @@
 import "./App.css";
 import { ThemeProvider } from "@/components/theme/theme-provider";
-// ⬇️ use react-router-dom
 import { Routes, Route, HashRouter } from "react-router";
 import { Home } from "@/modules/Home/Home";
-import { ClickhouseConnection } from "@/modules/Connection/Databases/Clickhouse";
+import { DatabaseConnection } from "@/modules/Connection/Connection";
 import { Editor } from "@/modules/Editor/Editor";
 import { AppProvider } from "./modules/Context/App/Provider";
 import { Toaster } from "sonner";
@@ -20,24 +19,20 @@ function App() {
           <HashRouter basename="/">
             <div className="h-screen w-screen flex flex-col overflow-hidden">
               <Toaster position="top-center" richColors closeButton />
-                <Routes>
-                  <Route path="/" element={<Home />}>
-                    <Route
-                      path="connect/clickhouse"
-                      element={<ClickhouseConnection />}
-                    />
-                  </Route>
-
-                  <Route
-                    path="/editor"
-                    element={
-                      <EditorProvider>
-                        <Editor />
-                      </EditorProvider>
-                    }
-                  />
-                </Routes>
-              </div>
+              <Routes>
+                <Route path="/" element={<Home />}>
+                  <Route path="connect" element={<DatabaseConnection />} />
+                </Route>
+                <Route
+                  path="/editor"
+                  element={
+                    <EditorProvider>
+                      <Editor />
+                    </EditorProvider>
+                  }
+                />
+              </Routes>
+            </div>
           </HashRouter>
         </AppProvider>
       </ThemeProvider>

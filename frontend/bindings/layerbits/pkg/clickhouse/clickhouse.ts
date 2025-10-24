@@ -10,37 +10,37 @@ import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Cr
 import * as $models from "./models.js";
 
 export function CancelQuery(queryID: string): $CancellablePromise<void> {
-    return $Call.ByID(4191521193, queryID);
+    return $Call.ByID(699207098, queryID);
 }
 
 export function Close(): $CancellablePromise<void> {
-    return $Call.ByID(2976765539);
+    return $Call.ByID(1055739592);
 }
 
 export function Connect(host: string, port: string, username: string, password: string, database: string, test: boolean): $CancellablePromise<{ [_: string]: any }> {
-    return $Call.ByID(391955001, host, port, username, password, database, test).then(($result: any) => {
+    return $Call.ByID(3309058090, host, port, username, password, database, test).then(($result: any) => {
         return $$createType0($result);
     });
 }
 
 export function FetchDatabases(): $CancellablePromise<string[]> {
-    return $Call.ByID(273294719).then(($result: any) => {
+    return $Call.ByID(4174821302).then(($result: any) => {
         return $$createType1($result);
     });
 }
 
 export function FetchTables(): $CancellablePromise<string[]> {
-    return $Call.ByID(2656946722).then(($result: any) => {
+    return $Call.ByID(2694591561).then(($result: any) => {
         return $$createType1($result);
     });
 }
 
 export function Ping(): $CancellablePromise<void> {
-    return $Call.ByID(2055821513);
+    return $Call.ByID(2510294060);
 }
 
 export function RunQuery(queryID: string, queryType: string, sql: string): $CancellablePromise<$models.QueryResult> {
-    return $Call.ByID(2149697238, queryID, queryType, sql).then(($result: any) => {
+    return $Call.ByID(3775273159, queryID, queryType, sql).then(($result: any) => {
         return $$createType2($result);
     });
 }

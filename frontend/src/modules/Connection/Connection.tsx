@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useForm, type FieldError } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
-import * as yup from "yup";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -12,60 +11,48 @@ import {
   CreateNewConnection as Connect,
   TestNewConnection as Test,
   SaveConnection,
+  UpdateConnection,
 } from "@/services/common";
-import { useFetchConnectionByName } from "@/services/hooks";
+import { useFetchConnectionById } from "@/services/hooks";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { DEFAULT_PORTS, ENGINE_LABELS, FIELD_LABELS } from "./utils/constants";
+import type { DatabaseEngine, FormValues, Status } from "./utils/types";
+import { postgres, clickhouse } from "./utils/types";
+import {
+  validateForSave,
+  validateForTestConnect,
+  validationSchema,
+} from "./utils/validation";
 
-type FormValues = {
-  connectionName: string;
-  host: string;
-  port: string;
-  username: string;
-  password: string;
-  database: string;
+// Helper function to validate engine type
+const isValidEngine = (engine: string): engine is DatabaseEngine => {
+  return [postgres, clickhouse].includes(engine);
 };
 
-const schema = yup
-  .object({
-    connectionName: yup.string().default(""),
-    host: yup.string().default(""),
-    port: yup.string().default(""),
-    username: yup.string().default(""),
-    password: yup.string().default(""),
-    database: yup.string().default(""),
-  })
-  .required();
-
-type Status =
-  | {
-      kind: "success";
-      title: string;
-      description?: string;
-    }
-  | {
-      kind: "error";
-      title: string;
-      description?: string;
-    }
-  | {
-      kind: "info";
-      title: string;
-      description?: string;
-    }
-  | null;
-
-export const ClickhouseConnection: React.FC = () => {
+export const DatabaseConnection: React.FC = () => {
   const location = useLocation();
   const queryClient = useQueryClient();
   const [showPassword, setShowPassword] = useState(false);
   const [status, setStatus] = useState<Status>(null);
 
-  const connectionNameParam = useMemo(() => {
+  const connectionIdParam = useMemo(() => {
     try {
       const p = new URLSearchParams(location.search);
-      return p.get("name") ?? "";
+      return p.get("id") ?? "";
     } catch {
       return "";
+    }
+  }, [location.search]);
+
+  const engineParam = useMemo(() => {
+    try {
+      const p = new URLSearchParams(location.search);
+      const engine = p.get("engine");
+      return isValidEngine(engine || "")
+        ? (engine as DatabaseEngine)
+        : "clickhouse";
+    } catch {
+      return "clickhouse" as DatabaseEngine;
     }
   }, [location.search]);
 
@@ -74,7 +61,17 @@ export const ClickhouseConnection: React.FC = () => {
     isLoading: isFetchingConnection,
     isFetching,
     isError,
-  } = useFetchConnectionByName(connectionNameParam);
+  } = useFetchConnectionById(connectionIdParam);
+
+  // Determine the actual engine to use: prioritize backend, fallback to URL param
+  const resolvedEngine = useMemo(() => {
+    if (connectionIdParam && fetched?.engine) {
+      // If we're editing an existing connection, use backend engine
+      return isValidEngine(fetched.engine) ? fetched.engine : engineParam;
+    }
+    // For new connections or when backend data is unavailable, use URL param
+    return engineParam;
+  }, [connectionIdParam, fetched?.engine, engineParam]);
 
   const {
     register,
@@ -82,13 +79,15 @@ export const ClickhouseConnection: React.FC = () => {
     reset,
     setError,
     clearErrors,
-    formState: { isSubmitting, errors },
+    setValue,
     watch,
+    formState: { isSubmitting, errors },
   } = useForm<FormValues>({
-    resolver: yupResolver(schema),
+    resolver: yupResolver(validationSchema),
     mode: "onChange",
     defaultValues: {
       connectionName: "",
+      engine: resolvedEngine,
       host: "",
       port: "",
       username: "",
@@ -97,28 +96,47 @@ export const ClickhouseConnection: React.FC = () => {
     },
   });
 
+  const currentEngine = watch("engine");
+  const currentPort = watch("port");
+  const currentConnectionName = watch("connectionName");
+
+  // Auto-update port when engine changes (only if port is empty or matches previous engine's default)
   useEffect(() => {
-    if (connectionNameParam && fetched) {
+    const defaultPort = DEFAULT_PORTS[currentEngine];
+    const isDefaultPort = Object.values(DEFAULT_PORTS).includes(currentPort);
+
+    if (!currentPort || isDefaultPort) {
+      setValue("port", defaultPort);
+    }
+  }, [currentEngine, setValue, currentPort]);
+
+  // Reset form when fetched data or connection ID changes
+  useEffect(() => {
+    if (connectionIdParam && fetched) {
+      // For existing connections, use backend data with resolved engine
       reset({
-        connectionName: connectionNameParam || "",
+        connectionName: fetched.name || "",
+        engine: resolvedEngine,
         host: fetched.host || "",
-        port: fetched.port || "",
+        port: fetched.port || DEFAULT_PORTS[resolvedEngine],
         username: fetched.username || "",
         password: fetched.password || "",
         database: fetched.database || "",
       });
-    } else if (!connectionNameParam) {
+    } else if (!connectionIdParam) {
+      // For new connections, all fields should be blank/default
       reset({
         connectionName: "",
+        engine: resolvedEngine,
         host: "",
-        port: "",
+        port: DEFAULT_PORTS[resolvedEngine],
         username: "",
         password: "",
         database: "",
       });
     }
     setStatus(null);
-  }, [fetched, reset, connectionNameParam]);
+  }, [fetched, reset, connectionIdParam, resolvedEngine]);
 
   useEffect(() => {
     const subscription = watch(() => {
@@ -128,27 +146,7 @@ export const ClickhouseConnection: React.FC = () => {
   }, [watch, status]);
 
   const loading = isFetchingConnection || isFetching;
-  const isUpdate = Boolean(connectionNameParam);
-
-  const validateForSave = (values: FormValues) => {
-    const errs: Partial<Record<keyof FormValues, string>> = {};
-    if (!values.connectionName?.trim())
-      errs.connectionName = "Connection name is required";
-    if (!values.host?.trim()) errs.host = "Host is required";
-    if (!values.port?.trim()) errs.port = "Port is required";
-    if (!values.username?.trim()) errs.username = "Username is required";
-    if (!values.database?.trim()) errs.database = "Database is required";
-    return errs;
-  };
-
-  const validateForTestConnect = (values: FormValues) => {
-    const errs: Partial<Record<keyof FormValues, string>> = {};
-    if (!values.host?.trim()) errs.host = "Host is required";
-    if (!values.port?.trim()) errs.port = "Port is required";
-    if (!values.username?.trim()) errs.username = "Username is required";
-    if (!values.database?.trim()) errs.database = "Database is required";
-    return errs;
-  };
+  const isUpdate = Boolean(connectionIdParam);
 
   const applyValidationErrors = (
     validationErrors: Partial<Record<keyof FormValues, string>>
@@ -166,13 +164,25 @@ export const ClickhouseConnection: React.FC = () => {
     if (Object.keys(validationErrors).length > 0) return;
 
     try {
-      await SaveConnection(values.connectionName, {
+      const config = {
+        engine: values.engine,
         host: values.host,
         port: values.port,
         username: values.username,
         password: values.password,
         database: values.database,
-      });
+      };
+
+      if (isUpdate) {
+        await UpdateConnection(
+          connectionIdParam,
+          values.connectionName,
+          config
+        );
+      } else {
+        await SaveConnection(values.connectionName, config);
+      }
+
       queryClient.invalidateQueries({ queryKey: ["connections"] });
       setStatus({
         kind: "success",
@@ -195,6 +205,7 @@ export const ClickhouseConnection: React.FC = () => {
 
     try {
       await Test(
+        values.engine,
         values.host,
         values.port,
         values.username,
@@ -219,6 +230,7 @@ export const ClickhouseConnection: React.FC = () => {
 
     try {
       await Connect(
+        values.engine,
         values.host,
         values.port,
         values.username,
@@ -234,15 +246,6 @@ export const ClickhouseConnection: React.FC = () => {
     }
   };
 
-  const fieldLabels: Record<keyof FormValues, string> = {
-    connectionName: "Connection Name",
-    host: "Host",
-    port: "Port",
-    username: "Username",
-    password: "Password",
-    database: "Database",
-  };
-
   const formErrorEntries = Object.entries(errors).filter(
     ([, v]) => v !== undefined
   ) as [keyof FormValues, FieldError][];
@@ -254,10 +257,26 @@ export const ClickhouseConnection: React.FC = () => {
     return s.kind === "error" ? "destructive" : "success";
   };
 
+  const getHostPlaceholder = (engine: DatabaseEngine) => {
+    switch (engine) {
+      case clickhouse:
+        return "http://localhost";
+      case postgres:
+        return "localhost";
+      default:
+        return "localhost";
+    }
+  };
+
+  // Get display name for alert title
+  const displayName =
+    currentConnectionName ||
+    (connectionIdParam && fetched?.connectionName) ||
+    "New Connection";
+
   return (
     <div className="h-full flex flex-col justify-between">
       <div>
-        {/* Top: fixed alert slot */}
         <div className="mb-3" aria-live="polite" role="status">
           <div className="min-h-24">
             {hasFormErrors ? (
@@ -272,7 +291,7 @@ export const ClickhouseConnection: React.FC = () => {
                     <ul className="ml-4 list-disc text-xs">
                       {formErrorEntries.map(([field, err]) => (
                         <li key={String(field)}>
-                          <strong>{fieldLabels[field]}:</strong>{" "}
+                          <strong>{FIELD_LABELS[field]}:</strong>{" "}
                           {err?.message ?? "Invalid value"}
                         </li>
                       ))}
@@ -290,10 +309,7 @@ export const ClickhouseConnection: React.FC = () => {
                   <AlertTitle>Failed to load saved connection</AlertTitle>
                   <AlertDescription>
                     Unable to fetch saved connection
-                    {connectionNameParam
-                      ? ` (name: ${connectionNameParam})`
-                      : ""}
-                    .
+                    {fetched?.connectionName && ` "${fetched.connectionName}"`}.
                   </AlertDescription>
                 </div>
               </Alert>
@@ -311,7 +327,6 @@ export const ClickhouseConnection: React.FC = () => {
                     </AlertDescription>
                   )}
                 </div>
-                {/* small dismiss */}
                 <button
                   type="button"
                   aria-label="Dismiss message"
@@ -328,9 +343,9 @@ export const ClickhouseConnection: React.FC = () => {
               >
                 <Terminal className="w-5 h-5" />
                 <div className="flex-1">
-                  <AlertTitle>{connectionNameParam ? connectionNameParam : "New Connection"}</AlertTitle>
+                  <AlertTitle>{displayName}</AlertTitle>
                   <AlertDescription className="text-xs">
-                    Enter connection details.
+                    Enter connection details for {ENGINE_LABELS[currentEngine]}.
                   </AlertDescription>
                 </div>
               </Alert>
@@ -340,19 +355,28 @@ export const ClickhouseConnection: React.FC = () => {
 
         {/* Form */}
         <div>
-          <form
-            className="space-y-3 text-sm"
-            onSubmit={(e) => e.preventDefault()}
-          >
+          <div className="space-y-3 text-sm">
             <div className="space-y-1">
               <Label htmlFor="connectionName">Connection Name</Label>
               <Input
                 id="connectionName"
                 disabled={loading}
                 {...register("connectionName")}
-                placeholder="e.g., Local ClickHouse"
+                placeholder="e.g., Production Database"
                 className="h-6 px-2 text-sm"
               />
+            </div>
+
+            <div className="space-y-1">
+              <Label
+                htmlFor="engine-display"
+                className="text-muted-foreground text-xs"
+              >
+                Database Engine
+              </Label>
+              <div className="h-6 px-2 text-sm bg-muted/30 rounded border flex items-center text-muted-foreground">
+                {ENGINE_LABELS[currentEngine]}
+              </div>
             </div>
 
             <div className="flex gap-2">
@@ -362,7 +386,7 @@ export const ClickhouseConnection: React.FC = () => {
                   id="host"
                   disabled={loading}
                   {...register("host")}
-                  placeholder="http://localhost"
+                  placeholder={getHostPlaceholder(currentEngine)}
                   className="h-6 px-2 text-sm"
                 />
               </div>
@@ -425,7 +449,7 @@ export const ClickhouseConnection: React.FC = () => {
                 className="h-6 px-2 text-sm"
               />
             </div>
-          </form>
+          </div>
         </div>
       </div>
 
@@ -434,7 +458,7 @@ export const ClickhouseConnection: React.FC = () => {
         <Button
           type="button"
           variant="secondary"
-          className="h-6 text-sm flex items-center gap-1 "
+          className="h-6 text-sm flex items-center gap-1"
           onClick={onSave}
           disabled={loading || isSubmitting}
         >

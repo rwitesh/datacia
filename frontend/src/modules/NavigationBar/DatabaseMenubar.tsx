@@ -20,13 +20,16 @@ export function DatabaseMenuBar() {
 
   const changeDatabaseHandler = (db: string) => async () => {
     try {
-      await ChangeDatabase(
+      if(metadata) {
+        await ChangeDatabase(
+        metadata.engine,
         metadata.host,
         metadata.port,
         metadata.username,
         metadata.password,
         db
       );
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : String(error));
       console.error("Failed to change database:", error);

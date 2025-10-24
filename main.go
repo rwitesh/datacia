@@ -2,10 +2,11 @@ package main
 
 import (
 	"embed"
-	"layerbit/internal/constants"
-	"layerbit/internal/db"
-	"layerbit/pkg/clickhouse"
-	"layerbit/pkg/remote"
+	"layerbits/internal/constants"
+	"layerbits/internal/db"
+	"layerbits/pkg/clickhouse"
+	"layerbits/pkg/postgres"
+	"layerbits/pkg/remote"
 	"log"
 	"time"
 
@@ -18,8 +19,8 @@ var assets embed.FS
 func main() {
 
 	app := application.New(application.Options{
-		Name:        "LayerBit",
-		Description: "A demo of using raw HTML & CSS",
+		Name:        "LayerBits",
+		Description: "",
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),
 		},
@@ -28,11 +29,12 @@ func main() {
 		},
 	})
 
-	db := db.Open("layerbit")
+	db := db.Open("layerbits")
 
 	chService := clickhouse.New()
+	postgresService := postgres.New()
 
-	e, err := remote.New(app, db, chService)
+	e, err := remote.New(app, db, chService, postgresService)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -42,7 +44,7 @@ func main() {
 
 	e.App.Window.NewWithOptions(application.WebviewWindowOptions{
 		Name:  "connection",
-		Title: "LayerBit",
+		Title: "LayerBits",
 		URL:   "/",
 		Mac: application.MacWindow{
 			InvisibleTitleBarHeight: 50,
@@ -58,7 +60,7 @@ func main() {
 
 	e.App.Window.NewWithOptions(application.WebviewWindowOptions{
 		Name:  "editor",
-		Title: "LayerBit",
+		Title: "LayerBits",
 		URL:   "#/editor",
 		Mac: application.MacWindow{
 			InvisibleTitleBarHeight: 50,
