@@ -3,7 +3,7 @@ export const clickhouse = "clickhouse";
 
 export type DatabaseEngine = typeof postgres | typeof clickhouse;
 
-export type FormValues = {
+export interface FormValues {
   connectionName: string;
   engine: DatabaseEngine;
   host: string;
@@ -11,22 +11,44 @@ export type FormValues = {
   username: string;
   password: string;
   database: string;
-};
+}
 
-export type Status =
-  | {
-      kind: "success";
-      title: string;
-      description?: string;
-    }
-  | {
-      kind: "error";
-      title: string;
-      description?: string;
-    }
-  | {
-      kind: "info";
-      title: string;
-      description?: string;
-    }
-  | null;
+export interface ConnectionConfig {
+  engine: DatabaseEngine;
+  host: string;
+  port: string;
+  username: string;
+  password: string;
+  database: string;
+}
+
+export interface FetchedConnection {
+  id?: string;
+  name?: string;
+  connectionName?: string;
+  engine?: string;
+  host?: string;
+  port?: string;
+  username?: string;
+  password?: string;
+  database?: string;
+}
+
+export type StatusKind = "success" | "error" | "info";
+
+export interface StatusMessage {
+  kind: StatusKind;
+  title: string;
+  description?: string;
+}
+
+export type Status = StatusMessage | null;
+
+export type ValidationErrors = Partial<Record<keyof FormValues, string>>;
+
+export interface ConnectionFormState {
+  isLoading: boolean;
+  isSubmitting: boolean;
+  hasErrors: boolean;
+  status: Status;
+}
