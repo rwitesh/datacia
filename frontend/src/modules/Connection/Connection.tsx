@@ -1,0 +1,101 @@
+import React, { useMemo } from "react";
+import { type FieldError } from "react-hook-form";
+import { useFetchConnectionById } from "@/services/hooks";
+import { useConnectionParams } from "./hooks/useConnectionParams";
+import { useConnectionForm } from "./hooks/useConnectionForm";
+import { ConnectionAlert } from "./components/ConnectionAlert";
+import { ConnectionForm } from "./components/ConnectionForm";
+import { ConnectionActions } from "./components/ConnectionActions";
+import type { DatabaseEngine, FormValues } from "./utils/types";
+import { postgres, clickhouse } from "./utils/types";
+
+// Helper function to validate engine type
+const isValidEngine = (engine: string): engine is DatabaseEngine => {
+  return [postgres, clickhouse].includes(engine);
+};
+
+export const DatabaseConnection: React.FC = () => {
+  const { connectionId, engineParam } = useConnectionParams();
+
+  const {
+    data: fetchedData,
+    isLoading: isFetchingConnection,
+    isFetching,
+    isError,
+  } = useFetchConnectionById(connectionId);
+
+  // Determine the actual engine to use: prioritize backend, fallback to URL param
+  const resolvedEngine = useMemo(() => {
+    if (connectionId && fetchedData?.engine) {
+      return isValidEngine(fetchedData.engine) ? fetchedData.engine : engineParam;
+    }
+    return engineParam;
+  }, [connectionId, fetchedData?.engine, engineParam]);
+
+  const {
+    form,
+    register,
+    status,
+    setStatus,
+    currentEngine,
+    currentConnectionName,
+    handleSave,
+    handleTest,
+    handleConnect,
+  } = useConnectionForm({
+    resolvedEngine,
+    connectionId,
+    fetchedData,
+  });
+
+  const loading = isFetchingConnection || isFetching;
+  const isUpdate = Boolean(connectionId);
+
+  // Process form errors for display
+  const formErrorEntries = Object.entries(form.formState.errors).filter(
+    ([, v]) => v !== undefined
+  ) as [keyof FormValues, FieldError][];
+  const hasFormErrors = formErrorEntries.length > 0;
+
+  // Get display name for alert title
+  const displayName =
+    currentConnectionName ||
+    (connectionId && fetchedData?.connectionName) ||
+    "New Connection";
+
+  return (
+    <div className="h-full flex flex-col justify-between">
+      <div>
+        <div className="mb-3" aria-live="polite" role="status">
+          <div className="min-h-24">
+            <ConnectionAlert
+              hasFormErrors={hasFormErrors}
+              formErrorEntries={formErrorEntries}
+              isError={isError}
+              fetchedConnectionName={fetchedData?.connectionName}
+              status={status}
+              displayName={displayName}
+              currentEngine={currentEngine}
+              onDismissStatus={() => setStatus(null)}
+            />
+          </div>
+        </div>
+
+        <ConnectionForm
+          register={register}
+          currentEngine={currentEngine}
+          loading={loading}
+        />
+      </div>
+
+      <ConnectionActions
+        isUpdate={isUpdate}
+        loading={loading}
+        isSubmitting={form.formState.isSubmitting}
+        onSave={handleSave}
+        onTest={handleTest}
+        onConnect={handleConnect}
+      />
+    </div>
+  );
+};

@@ -1,5 +1,7 @@
-import { useNavigate, Outlet } from "react-router";
+import { useNavigate, Outlet} from "react-router";
 import { DeleteConnection, EstablishConnection } from "@/services/common";
+import ClickhouseIcon from "@/assets/clickhouse.svg";
+import PostgreSQLIcon from "@/assets/postgres.svg";
 import {
   Plus,
   MoreHorizontal,
@@ -24,14 +26,14 @@ export const Home = () => {
   const navigate = useNavigate();
 
   const {
-    data: savedConnections = [],
+    data: savedConnections = {},
     isLoading,
     isError,
     refetch,
   } = useFetchConnections();
 
-  const handleDelete = (name: string) => {
-    DeleteConnection(name)
+  const handleDelete = (id: string) => {
+    DeleteConnection(id)
       .then((res: boolean) => {
         if (res) refetch();
       })
@@ -48,13 +50,16 @@ export const Home = () => {
     }
   };
 
+  const handleEdit = (id: string) => {
+    navigate(`/connect?id=${encodeURIComponent(id)}`);
+  };
+
   return (
     <div className="flex min-h-screen min-w-screen select-none cursor-default">
       {/* Left panel: saved connections */}
       <div className="w-1/3 p-3 flex flex-col mt-12">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-sm font-semibold">Connections</h3>
-
           {/* + button with dropdown */}
           <Menubar className="border-none bg-transparent h-0">
             <MenubarMenu>
@@ -68,8 +73,16 @@ export const Home = () => {
                 <MenubarSeparator />
                 <MenubarItem
                   className="cursor-pointer text-[11px]"
-                  onClick={() => navigate("/connect/clickhouse")}
+                  onClick={() => navigate("/connect?engine=postgres")}
                 >
+                   <img src={PostgreSQLIcon} width={11} height={11} className="mr-1" />
+                  PostgreSQL
+                </MenubarItem>
+                <MenubarItem
+                  className="cursor-pointer text-[11px]"
+                  onClick={() => navigate("/connect?engine=clickhouse")}
+                >
+                  <img src={ClickhouseIcon} width={11} height={11} className="mr-1" />
                   ClickHouse
                 </MenubarItem>
               </MenubarContent>
@@ -81,11 +94,11 @@ export const Home = () => {
           <div className="text-xs text-muted-foreground">Loading…</div>
         ) : isError ? (
           <div className="text-xs text-red-500">Failed to load connections</div>
-        ) : savedConnections.length > 0 ? (
+        ) : Object.keys(savedConnections).length > 0 ? (
           <ul className="text-xs">
-            {savedConnections.map((name) => (
+            {Object.entries(savedConnections).map(([id, name]) => (
               <li
-                key={name}
+                key={id}
                 className="flex items-center justify-between rounded select-none px-1"
               >
                 <div className="flex items-center gap-1 min-w-0">
@@ -102,27 +115,21 @@ export const Home = () => {
                     <MenubarContent className="bg-white dark:bg-zinc-900 min-w-[120px]">
                       <MenubarItem
                         className="cursor-pointer text-[11px]"
-                        onClick={() => handleConnect(name)}
+                        onClick={() => handleConnect(id)}
                       >
                         <Plug className="w-3 h-3 mr-1" />
                         Connect
                       </MenubarItem>
                       <MenubarItem
                         className="cursor-pointer text-[11px]"
-                        onClick={() =>
-                          navigate(
-                            `/connect/clickhouse?name=${encodeURIComponent(
-                              name
-                            )}`
-                          )
-                        }
+                        onClick={() => handleEdit(id)}
                       >
                         <Pencil className="w-3 h-3 mr-1" />
                         Edit
                       </MenubarItem>
                       <MenubarItem
                         className="cursor-pointer text-[11px] text-red-500"
-                        onClick={() => handleDelete(name)}
+                        onClick={() => handleDelete(id)}
                       >
                         <Trash2 className="w-3 h-3 mr-1" />
                         Delete

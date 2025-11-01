@@ -12,7 +12,7 @@ export function QueryToolbar() {
         {!activeTab?.isExecuting ? (
           <Button
             variant="outline"
-            className="h-6 p-1 cursor-pointer"
+            className="h-6 p-1 cursor-pointer select-none"
             onClick={() => runQuery()}
           >
             <Play color="limegreen" strokeWidth={2} /> Run
@@ -20,7 +20,7 @@ export function QueryToolbar() {
         ) : (
           <Button
             variant="outline"
-            className="h-6 p-1 cursor-pointer"
+            className="h-6 p-1 cursor-pointer select-none"
             onClick={() => stopQuery()}
           >
             <StopCircle color="limegreen" strokeWidth={2} /> Stop

@@ -8,25 +8,26 @@ import {
   MenubarRadioGroup,
   MenubarRadioItem,
 } from "@/components/ui/menubar";
-import { ChangeDatabase } from "@/services/common";
+import { ChangeDatabaseByName } from "@/services/common";
 import { Database } from "lucide-react";
 import { useDatabase } from "@/services/hooks";
-import { useAppContext } from "../Context/App/Index";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 export function DatabaseMenuBar() {
-  const { metadata } = useAppContext();
-  const { data: databases = [] } = useDatabase();
+  const { data: databaseInfo } = useDatabase();
+  const queryClient = useQueryClient();
+  const databases = databaseInfo?.databases || [];
+  const currentDatabase = databaseInfo?.currentDatabase || "";
 
   const changeDatabaseHandler = (db: string) => async () => {
     try {
-      await ChangeDatabase(
-        metadata.host,
-        metadata.port,
-        metadata.username,
-        metadata.password,
-        db
-      );
+        await ChangeDatabaseByName(db);
+        // Invalidate the databases query to refresh the current database
+        await queryClient.invalidateQueries({ queryKey: ["databases"] });
+        // Also invalidate tables query as it depends on the current database
+        await queryClient.invalidateQueries({ queryKey: ["tables"] });
+        console.log(currentDatabase, db)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : String(error));
       console.error("Failed to change database:", error);
@@ -44,8 +45,8 @@ export function DatabaseMenuBar() {
             size={16}
             className={
               databases.length === 0
-                ? "opacity-40 grayscale" 
-                : "text-foreground" 
+                ? "opacity-40 grayscale"
+                : "text-foreground"
             }
           />
         </MenubarTrigger>
@@ -55,7 +56,7 @@ export function DatabaseMenuBar() {
           </MenubarLabel>
           <MenubarSeparator />
           <MenubarRadioGroup
-            value={metadata?.database}
+            value={currentDatabase}
             onValueChange={(db) => changeDatabaseHandler(db)()}
           >
             {databases.map((db) => (

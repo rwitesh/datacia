@@ -18,20 +18,6 @@ const (
 	QUERY_TIMEOUT     = 300 * time.Second
 )
 
-type QueryType string
-
-const (
-	QueryTypeRead    QueryType = "read"
-	QueryTypeCommand QueryType = "command"
-	QueryTypeUnknown QueryType = "unknown"
-)
-
-type QueryResult struct {
-	Type    QueryType
-	Columns []string
-	Data    []map[string]interface{}
-}
-
 func NewTimeoutContext(d time.Duration) (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), d)
 }

@@ -5,8 +5,3 @@ import * as ClickHouse from "./clickhouse.js";
 export {
     ClickHouse
 };
-
-export {
-    QueryResult,
-    QueryType
-} from "./models.js";

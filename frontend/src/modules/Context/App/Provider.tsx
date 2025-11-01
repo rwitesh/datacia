@@ -1,42 +1,20 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { AppContext, type Metadata } from "./Context";
-import { Events } from "@wailsio/runtime";
+import React from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { AppContext } from "./Context";
 
 export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const queryClient = useQueryClient();
-  const [metadata, setMetadata] = useState<Metadata>({
-    database: "",
-    host: "",
-    port: "",
-    username: "",
-    password: "",
-  });
-  const reload = useCallback(() => {
+
+  const reload = () => {
+    // Invalidate cache for tables, databases, and connections
+    queryClient.invalidateQueries({ queryKey: ["tables"] });
     queryClient.invalidateQueries({ queryKey: ["databases"] });
-    if (metadata?.database) {
-      queryClient.invalidateQueries({
-        queryKey: ["tables"],
-      });
-    }
-  }, [queryClient, metadata.database]);
+    queryClient.invalidateQueries({ queryKey: ["connections"] });
+  };
 
-  useEffect(() => {
-    const unsub = Events.On("clickhouse:connected", (ev) => {
-      const meta = ev.data[0];
-      setMetadata(meta);
-      reload();
-    });
-
-    return () => {
-      unsub();
-    };
-  }, [reload]);
-
-  const value = useMemo(
-    () => ({ metadata, setMetadata, reload }),
-    [metadata, setMetadata, reload]
-  );
+  const value = {
+    reload,
+  };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };

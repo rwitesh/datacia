@@ -13,8 +13,8 @@ export function QueryResult({onSelectionChange}: QueryResultProps) {
   if (!activeTab) return null;
 
   const { isExecuting, error, results } = activeTab;
-  const isReadQuery = results && results.Type === "read";
-  const isCommandQuery = results && results.Type === "command";
+  const isReadQuery = results && results.type === "read";
+  const isCommandQuery = results && results.type === "command";
 
   return (
     <div className="h-full flex flex-col overflow-hidden relative">
@@ -29,8 +29,8 @@ export function QueryResult({onSelectionChange}: QueryResultProps) {
           </div>
         ) : isReadQuery ? (
           <DataTable
-            columns={results.Columns}
-            data={results.Data ?? []}
+            columns={results.columns}
+            data={results.data ?? []}
             onSelectionChange={onSelectionChange}
           />
         ) : isCommandQuery ? (
