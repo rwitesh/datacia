@@ -5,7 +5,3 @@ import * as Postgres from "./postgres.js";
 export {
     Postgres
 };
-
-export {
-    DatabaseInfo
-} from "./models.js";

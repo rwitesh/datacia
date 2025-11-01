@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"layerbits/pkg/common"
 	"sync"
 	"time"
 
@@ -12,19 +13,14 @@ import (
 	"github.com/google/uuid"
 )
 
-type DatabaseInfo struct {
-	Databases       []string `json:"databases"`
-	CurrentDatabase string   `json:"currentDatabase"`
-}
-
 type ClickHouseClient interface {
 	Connect(host, port, username, password, database string, test bool) error
 	Close() error
 	Ping() error
-	RunQuery(queryId, queryType, sql string) (QueryResult, error)
+	RunQuery(queryId, queryType, sql string) (common.QueryResult, error)
 	CancelQuery(queryId string) error
 	ListTables() ([]string, error)
-	ListDatabases() (DatabaseInfo, error)
+	ListDatabases() (common.DatabaseInfo, error)
 	GetConnectionInfo() (map[string]string, error)
 }
 
@@ -127,7 +123,7 @@ func (ch *ClickHouse) Ping() error {
 	return conn.Ping(ctx)
 }
 
-func (ch *ClickHouse) RunQuery(queryID, queryType, sql string) (QueryResult, error) {
+func (ch *ClickHouse) RunQuery(queryID, queryType, sql string) (common.QueryResult, error) {
 	if queryID == "" {
 		queryID = uuid.NewString()
 	}
@@ -138,11 +134,11 @@ func (ch *ClickHouse) RunQuery(queryID, queryType, sql string) (QueryResult, err
 	ch.mu.RUnlock()
 
 	if conn == nil {
-		return QueryResult{}, errors.New("no active connection found")
+		return common.QueryResult{}, errors.New("no active connection found")
 	}
 
 	if _, exists := ch.activeQueries.Load(queryID); exists {
-		return QueryResult{}, fmt.Errorf("query with ID %s is already running", queryID)
+		return common.QueryResult{}, fmt.Errorf("query with ID %s is already running", queryID)
 	}
 
 	ctx, cancel := NewTimeoutContext(QUERY_TIMEOUT)
@@ -152,17 +148,17 @@ func (ch *ClickHouse) RunQuery(queryID, queryType, sql string) (QueryResult, err
 		ch.activeQueries.Delete(queryID)
 	}()
 
-	switch QueryType(queryType) {
-	case QueryTypeCommand:
+	switch common.QueryType(queryType) {
+	case common.QueryTypeCommand:
 		return ch.execute(ctx, conn, sql, queryID)
-	case QueryTypeRead:
+	case common.QueryTypeRead:
 		return ch.query(ctx, conn, sql, queryID)
 	default:
-		return QueryResult{Type: QueryTypeUnknown}, fmt.Errorf("unsupported query type: %s", queryType)
+		return common.QueryResult{Type: common.QueryTypeUnknown}, fmt.Errorf("unsupported query type: %s", queryType)
 	}
 }
 
-func (ch *ClickHouse) execute(ctx context.Context, conn driver.Conn, sql string, queryID string) (QueryResult, error) {
+func (ch *ClickHouse) execute(ctx context.Context, conn driver.Conn, sql string, queryID string) (common.QueryResult, error) {
 	var queryCtx context.Context
 	if queryID != "" {
 		queryCtx = clickhouse.Context(ctx, clickhouse.WithQueryID(queryID))
@@ -172,12 +168,12 @@ func (ch *ClickHouse) execute(ctx context.Context, conn driver.Conn, sql string,
 
 	err := conn.Exec(queryCtx, sql)
 	if err != nil {
-		return QueryResult{Type: QueryTypeCommand}, err
+		return common.QueryResult{Type: common.QueryTypeCommand}, err
 	}
-	return QueryResult{Type: QueryTypeCommand}, nil
+	return common.QueryResult{Type: common.QueryTypeCommand}, nil
 }
 
-func (ch *ClickHouse) query(ctx context.Context, conn driver.Conn, sql string, queryID string) (QueryResult, error) {
+func (ch *ClickHouse) query(ctx context.Context, conn driver.Conn, sql string, queryID string) (common.QueryResult, error) {
 	var queryCtx context.Context
 	if queryID != "" {
 		queryCtx = clickhouse.Context(ctx, clickhouse.WithQueryID(queryID))
@@ -187,16 +183,16 @@ func (ch *ClickHouse) query(ctx context.Context, conn driver.Conn, sql string, q
 
 	rows, err := conn.Query(queryCtx, sql)
 	if err != nil {
-		return QueryResult{Type: QueryTypeRead}, err
+		return common.QueryResult{Type: common.QueryTypeRead}, err
 	}
 	defer rows.Close()
 
 	columns, data, err := ScanDynamicColumns(queryCtx, rows)
 	if err != nil {
-		return QueryResult{Type: QueryTypeRead}, err
+		return common.QueryResult{Type: common.QueryTypeRead}, err
 	}
 
-	return QueryResult{Type: QueryTypeRead, Columns: columns, Data: data}, nil
+	return common.QueryResult{Type: common.QueryTypeRead, Columns: columns, Data: data}, nil
 }
 
 func (ch *ClickHouse) CancelQuery(queryID string) error {
@@ -269,14 +265,14 @@ func (ch *ClickHouse) ListTables() ([]string, error) {
 	return out, rows.Err()
 }
 
-func (ch *ClickHouse) ListDatabases() (DatabaseInfo, error) {
+func (ch *ClickHouse) ListDatabases() (common.DatabaseInfo, error) {
 	ch.mu.RLock()
 	conn := ch.conn
 	currentDB := ch.database
 	ch.mu.RUnlock()
 
 	if conn == nil {
-		return DatabaseInfo{}, errors.New("no active connection found")
+		return common.DatabaseInfo{}, errors.New("no active connection found")
 	}
 
 	const sql = `
@@ -290,7 +286,7 @@ func (ch *ClickHouse) ListDatabases() (DatabaseInfo, error) {
 
 	rows, err := conn.Query(ctx, sql)
 	if err != nil {
-		return DatabaseInfo{}, err
+		return common.DatabaseInfo{}, err
 	}
 	defer rows.Close()
 
@@ -298,16 +294,16 @@ func (ch *ClickHouse) ListDatabases() (DatabaseInfo, error) {
 	for rows.Next() {
 		var name string
 		if err := rows.Scan(&name); err != nil {
-			return DatabaseInfo{}, err
+			return common.DatabaseInfo{}, err
 		}
 		databases = append(databases, name)
 	}
 
 	if err := rows.Err(); err != nil {
-		return DatabaseInfo{}, err
+		return common.DatabaseInfo{}, err
 	}
 
-	return DatabaseInfo{
+	return common.DatabaseInfo{
 		Databases:       databases,
 		CurrentDatabase: currentDB,
 	}, nil

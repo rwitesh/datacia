@@ -35,20 +35,20 @@ export class DatabaseInfo {
 }
 
 export class QueryResult {
-    "Type": QueryType;
-    "Columns": string[];
-    "Data": { [_: string]: any }[];
+    "type": QueryType;
+    "columns": string[];
+    "data": { [_: string]: any }[];
 
     /** Creates a new QueryResult instance. */
     constructor($$source: Partial<QueryResult> = {}) {
-        if (!("Type" in $$source)) {
-            this["Type"] = QueryType.$zero;
+        if (!("type" in $$source)) {
+            this["type"] = QueryType.$zero;
         }
-        if (!("Columns" in $$source)) {
-            this["Columns"] = [];
+        if (!("columns" in $$source)) {
+            this["columns"] = [];
         }
-        if (!("Data" in $$source)) {
-            this["Data"] = [];
+        if (!("data" in $$source)) {
+            this["data"] = [];
         }
 
         Object.assign(this, $$source);
@@ -61,11 +61,11 @@ export class QueryResult {
         const $$createField1_0 = $$createType0;
         const $$createField2_0 = $$createType2;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        if ("Columns" in $$parsedSource) {
-            $$parsedSource["Columns"] = $$createField1_0($$parsedSource["Columns"]);
+        if ("columns" in $$parsedSource) {
+            $$parsedSource["columns"] = $$createField1_0($$parsedSource["columns"]);
         }
-        if ("Data" in $$parsedSource) {
-            $$parsedSource["Data"] = $$createField2_0($$parsedSource["Data"]);
+        if ("data" in $$parsedSource) {
+            $$parsedSource["data"] = $$createField2_0($$parsedSource["data"]);
         }
         return new QueryResult($$parsedSource as Partial<QueryResult>);
     }

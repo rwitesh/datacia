@@ -7,7 +7,7 @@ import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Cr
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import * as $models from "./models.js";
+import * as common$0 from "../common/models.js";
 
 export function CancelQuery(queryID: string): $CancellablePromise<void> {
     return $Call.ByID(699207098, queryID);
@@ -27,7 +27,7 @@ export function GetConnectionInfo(): $CancellablePromise<{ [_: string]: string }
     });
 }
 
-export function ListDatabases(): $CancellablePromise<$models.DatabaseInfo> {
+export function ListDatabases(): $CancellablePromise<common$0.DatabaseInfo> {
     return $Call.ByID(3592341254).then(($result: any) => {
         return $$createType1($result);
     });
@@ -43,7 +43,7 @@ export function Ping(): $CancellablePromise<void> {
     return $Call.ByID(2510294060);
 }
 
-export function RunQuery(queryID: string, queryType: string, sql: string): $CancellablePromise<$models.QueryResult> {
+export function RunQuery(queryID: string, queryType: string, sql: string): $CancellablePromise<common$0.QueryResult> {
     return $Call.ByID(3775273159, queryID, queryType, sql).then(($result: any) => {
         return $$createType3($result);
     });
@@ -51,6 +51,6 @@ export function RunQuery(queryID: string, queryType: string, sql: string): $Canc
 
 // Private type creation functions
 const $$createType0 = $Create.Map($Create.Any, $Create.Any);
-const $$createType1 = $models.DatabaseInfo.createFrom;
+const $$createType1 = common$0.DatabaseInfo.createFrom;
 const $$createType2 = $Create.Array($Create.Any);
-const $$createType3 = $models.QueryResult.createFrom;
+const $$createType3 = common$0.QueryResult.createFrom;

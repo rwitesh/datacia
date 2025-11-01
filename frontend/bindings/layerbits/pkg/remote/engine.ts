@@ -5,6 +5,14 @@
 // @ts-ignore: Unused imports
 import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as common$0 from "../common/models.js";
+
+export function CancelQuery(queryId: string): $CancellablePromise<void> {
+    return $Call.ByID(947070718, queryId);
+}
+
 export function ChangeDatabase(engine: string, host: string, port: string, username: string, password: string, database: string): $CancellablePromise<void> {
     return $Call.ByID(925138269, engine, host, port, username, password, database);
 }
@@ -65,6 +73,12 @@ export function OpenEditor(): $CancellablePromise<void> {
     return $Call.ByID(968614393);
 }
 
+export function RunQuery(queryId: string, queryType: string, sql: string): $CancellablePromise<common$0.QueryResult> {
+    return $Call.ByID(1277753707, queryId, queryType, sql).then(($result: any) => {
+        return $$createType2($result);
+    });
+}
+
 export function SaveConnection(name: string, config: { [_: string]: string }): $CancellablePromise<void> {
     return $Call.ByID(2078362505, name, config);
 }
@@ -76,3 +90,4 @@ export function UpdateConnection(id: string, name: string, config: { [_: string]
 // Private type creation functions
 const $$createType0 = $Create.Map($Create.Any, $Create.Any);
 const $$createType1 = $Create.Array($Create.Any);
+const $$createType2 = common$0.QueryResult.createFrom;

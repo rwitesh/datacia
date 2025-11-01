@@ -1,7 +1,7 @@
 import {
   RunQuery as WRunQuery,
-} from "../../bindings/layerbits/pkg/clickhouse/clickhouse.js";
-import { QueryResult } from "../../bindings/layerbits/pkg/clickhouse/models.js";
+} from "../../bindings/layerbits/pkg/remote/engine.js";
+import { QueryResult } from "../../bindings/layerbits/pkg/common/models.js";
 import { detectQueryType } from "./utils.js";
 export { QueryResult };
 import { v4 as uuidv4 } from "uuid";

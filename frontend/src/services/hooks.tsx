@@ -4,10 +4,8 @@ import {
   LoadConnection,
   ListDatabases,
   ListTables,
-} from "../../bindings/layerbits/pkg/remote/engine";
-import {
   CancelQuery,
-} from "../../bindings/layerbits/pkg/clickhouse/clickhouse";
+} from "../../bindings/layerbits/pkg/remote/engine";
 import { RunQuery } from "./database";
 
 export function useDatabase() {

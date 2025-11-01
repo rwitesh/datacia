@@ -4,6 +4,7 @@ import (
 	"errors"
 	"layerbits/internal/db"
 	"layerbits/pkg/clickhouse"
+	"layerbits/pkg/common"
 	"layerbits/pkg/postgres"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -103,14 +104,14 @@ func (e *Engine) GetCurrentConnectionInfo() (map[string]string, error) {
 			return info, nil
 		}
 	}
-	
+
 	// Try PostgreSQL
 	if e.Postgres != nil {
 		if info, err := e.Postgres.GetConnectionInfo(); err == nil {
 			return info, nil
 		}
 	}
-	
+
 	return nil, errors.New("no active connection found")
 }
 
@@ -119,7 +120,7 @@ func (e *Engine) ChangeDatabaseByName(database string) error {
 	if err != nil {
 		return err
 	}
-	
+
 	return e.ChangeDatabase(
 		connInfo["engine"],
 		connInfo["host"],
@@ -166,15 +167,51 @@ func (e *Engine) ListDatabases() (interface{}, error) {
 			return e.ClickHouse.ListDatabases()
 		}
 	}
-	
+
 	// Try PostgreSQL
 	if e.Postgres != nil {
 		if info, err := e.Postgres.GetConnectionInfo(); err == nil && info["engine"] == "postgres" {
 			return e.Postgres.ListDatabases()
 		}
 	}
-	
+
 	return nil, errors.New("no active database connection found")
+}
+
+func (e *Engine) RunQuery(queryId, queryType, sql string) (common.QueryResult, error) {
+	// Try ClickHouse first
+	if e.ClickHouse != nil {
+		if info, err := e.ClickHouse.GetConnectionInfo(); err == nil && info["engine"] == "clickhouse" {
+			return e.ClickHouse.RunQuery(queryId, queryType, sql)
+		}
+	}
+
+	// Try PostgreSQL
+	if e.Postgres != nil {
+		if info, err := e.Postgres.GetConnectionInfo(); err == nil && info["engine"] == "postgres" {
+			return e.Postgres.RunQuery(queryId, queryType, sql)
+		}
+	}
+
+	return common.QueryResult{}, errors.New("no active database connection found")
+}
+
+func (e *Engine) CancelQuery(queryId string) error {
+	// Try ClickHouse first
+	if e.ClickHouse != nil {
+		if info, err := e.ClickHouse.GetConnectionInfo(); err == nil && info["engine"] == "clickhouse" {
+			return e.ClickHouse.CancelQuery(queryId)
+		}
+	}
+
+	// Try PostgreSQL
+	if e.Postgres != nil {
+		if info, err := e.Postgres.GetConnectionInfo(); err == nil && info["engine"] == "postgres" {
+			return e.Postgres.CancelQuery(queryId)
+		}
+	}
+
+	return errors.New("no active database connection found")
 }
 
 func (e *Engine) ListTables() ([]string, error) {
@@ -184,13 +221,13 @@ func (e *Engine) ListTables() ([]string, error) {
 			return e.ClickHouse.ListTables()
 		}
 	}
-	
+
 	// Try PostgreSQL
 	if e.Postgres != nil {
 		if info, err := e.Postgres.GetConnectionInfo(); err == nil && info["engine"] == "postgres" {
 			return e.Postgres.ListTables()
 		}
 	}
-	
+
 	return nil, errors.New("no active database connection found")
 }
