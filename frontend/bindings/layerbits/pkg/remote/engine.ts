@@ -9,6 +9,10 @@ export function ChangeDatabase(engine: string, host: string, port: string, usern
     return $Call.ByID(925138269, engine, host, port, username, password, database);
 }
 
+export function ChangeDatabaseByName(database: string): $CancellablePromise<void> {
+    return $Call.ByID(2372300919, database);
+}
+
 export function CloseCurrentConnection(): $CancellablePromise<void> {
     return $Call.ByID(1369563845);
 }
@@ -29,9 +33,25 @@ export function EstablishConnection(id: string): $CancellablePromise<void> {
     return $Call.ByID(2922443375, id);
 }
 
+export function GetCurrentConnectionInfo(): $CancellablePromise<{ [_: string]: string }> {
+    return $Call.ByID(4012409965).then(($result: any) => {
+        return $$createType0($result);
+    });
+}
+
 export function ListConnections(): $CancellablePromise<{ [_: string]: string }> {
     return $Call.ByID(1956322481).then(($result: any) => {
         return $$createType0($result);
+    });
+}
+
+export function ListDatabases(): $CancellablePromise<any> {
+    return $Call.ByID(613611802);
+}
+
+export function ListTables(): $CancellablePromise<string[]> {
+    return $Call.ByID(1596120565).then(($result: any) => {
+        return $$createType1($result);
     });
 }
 
@@ -55,3 +75,4 @@ export function UpdateConnection(id: string, name: string, config: { [_: string]
 
 // Private type creation functions
 const $$createType0 = $Create.Map($Create.Any, $Create.Any);
+const $$createType1 = $Create.Array($Create.Any);

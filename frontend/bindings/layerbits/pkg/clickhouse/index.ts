@@ -7,6 +7,7 @@ export {
 };
 
 export {
+    DatabaseInfo,
     QueryResult,
     QueryType
 } from "./models.js";

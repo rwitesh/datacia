@@ -12,14 +12,20 @@ import (
 	"github.com/google/uuid"
 )
 
+type DatabaseInfo struct {
+	Databases       []string `json:"databases"`
+	CurrentDatabase string   `json:"currentDatabase"`
+}
+
 type ClickHouseClient interface {
-	Connect(host, port, username, password, database string, test bool) (map[string]interface{}, error)
+	Connect(host, port, username, password, database string, test bool) error
 	Close() error
 	Ping() error
 	RunQuery(queryId, queryType, sql string) (QueryResult, error)
 	CancelQuery(queryId string) error
-	FetchTables() ([]string, error)
-	FetchDatabases() ([]string, error)
+	ListTables() ([]string, error)
+	ListDatabases() (DatabaseInfo, error)
+	GetConnectionInfo() (map[string]string, error)
 }
 
 var _ ClickHouseClient = (*ClickHouse)(nil)
@@ -39,7 +45,7 @@ func New() *ClickHouse {
 	return &ClickHouse{}
 }
 
-func (ch *ClickHouse) Connect(host, port, username, password, database string, test bool) (map[string]interface{}, error) {
+func (ch *ClickHouse) Connect(host, port, username, password, database string, test bool) error {
 	connection, err := clickhouse.Open(&clickhouse.Options{
 		Addr: []string{fmt.Sprintf("%s:%s", host, port)},
 		Auth: clickhouse.Auth{
@@ -59,18 +65,16 @@ func (ch *ClickHouse) Connect(host, port, username, password, database string, t
 		ConnMaxLifetime: 0,
 	})
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	ctx, cancel := NewTimeoutContext(2 * time.Second)
 	defer cancel()
 	if err := connection.Ping(ctx); err != nil {
-		return nil, err
+		return err
 	}
 
-	meta := map[string]interface{}{}
 	if !test {
-
 		ch.mu.Lock()
 		if ch.conn != nil {
 			_ = ch.conn.Close()
@@ -82,20 +86,12 @@ func (ch *ClickHouse) Connect(host, port, username, password, database string, t
 		ch.password = password
 		ch.database = database
 		ch.mu.Unlock()
-
-		meta = map[string]interface{}{
-			"host":     host,
-			"port":     port,
-			"username": username,
-			"database": database,
-			"password": password,
-		}
 	} else {
-		// if test=true → close right away (don’t keep state)
+		// if test=true → close right away (don't keep state)
 		_ = connection.Close()
 	}
 
-	return meta, nil
+	return nil
 }
 
 func (ch *ClickHouse) Close() error {
@@ -237,7 +233,7 @@ func (ch *ClickHouse) killQueryOnServer(queryID string) error {
 	return nil
 }
 
-func (ch *ClickHouse) FetchTables() ([]string, error) {
+func (ch *ClickHouse) ListTables() ([]string, error) {
 	ch.mu.RLock()
 	conn := ch.conn
 	ch.mu.RUnlock()
@@ -273,13 +269,14 @@ func (ch *ClickHouse) FetchTables() ([]string, error) {
 	return out, rows.Err()
 }
 
-func (ch *ClickHouse) FetchDatabases() ([]string, error) {
+func (ch *ClickHouse) ListDatabases() (DatabaseInfo, error) {
 	ch.mu.RLock()
 	conn := ch.conn
+	currentDB := ch.database
 	ch.mu.RUnlock()
 
 	if conn == nil {
-		return nil, errors.New("no active connection found")
+		return DatabaseInfo{}, errors.New("no active connection found")
 	}
 
 	const sql = `
@@ -293,19 +290,45 @@ func (ch *ClickHouse) FetchDatabases() ([]string, error) {
 
 	rows, err := conn.Query(ctx, sql)
 	if err != nil {
-		return nil, err
+		return DatabaseInfo{}, err
 	}
 	defer rows.Close()
 
-	var out []string
+	var databases []string
 	for rows.Next() {
 		var name string
 		if err := rows.Scan(&name); err != nil {
-			return nil, err
+			return DatabaseInfo{}, err
 		}
-		out = append(out, name)
+		databases = append(databases, name)
 	}
-	return out, rows.Err()
+
+	if err := rows.Err(); err != nil {
+		return DatabaseInfo{}, err
+	}
+
+	return DatabaseInfo{
+		Databases:       databases,
+		CurrentDatabase: currentDB,
+	}, nil
+}
+
+func (ch *ClickHouse) GetConnectionInfo() (map[string]string, error) {
+	ch.mu.RLock()
+	defer ch.mu.RUnlock()
+
+	if ch.conn == nil {
+		return nil, errors.New("no active connection found")
+	}
+
+	return map[string]string{
+		"engine":   "clickhouse",
+		"host":     ch.host,
+		"port":     ch.port,
+		"username": ch.username,
+		"password": ch.password,
+		"database": ch.database,
+	}, nil
 }
 
 // func (ch *ClickHouse) SaveConnection(name string, config map[string]string) error {

@@ -1,5 +1,5 @@
 import { createContext } from "react";
-import type { QueryResult } from "@/services/clickhouse";
+import type { QueryResult } from "@/services/database";
 
 export interface Tab {
   id: string;

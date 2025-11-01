@@ -1,12 +1,19 @@
 import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
-import { RunQuery } from "./clickhouse";
-import { ListConnections, LoadConnection } from "../../bindings/layerbits/pkg/remote/engine";
-import { FetchTables, CancelQuery, FetchDatabases } from "../../bindings/layerbits/pkg/clickhouse/clickhouse";
+import {
+  ListConnections,
+  LoadConnection,
+  ListDatabases,
+  ListTables,
+} from "../../bindings/layerbits/pkg/remote/engine";
+import {
+  CancelQuery,
+} from "../../bindings/layerbits/pkg/clickhouse/clickhouse";
+import { RunQuery } from "./database";
 
 export function useDatabase() {
   return useQuery({
     queryKey: ["databases"],
-    queryFn: () => FetchDatabases(),
+    queryFn: () => ListDatabases(),
     retry: 3,
   });
 }
@@ -14,10 +21,7 @@ export function useDatabase() {
 export function useTables() {
   return useQuery<string[], Error>({
     queryKey: ["tables"],
-    queryFn: async () => {
-      const rows = await FetchTables();
-      return rows ?? [];
-    },
+    queryFn: () => ListTables(),
     refetchOnWindowFocus: false,
     staleTime: 10_000,
     retry: 2,
