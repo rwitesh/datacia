@@ -15,13 +15,17 @@ import {
 import { useTheme, type Theme } from "@/components/theme/theme-provider";
 import { Bolt } from "lucide-react";
 import { CloseCurrentConnection as Close } from "@/services/common";
+import { useNavigate } from "react-router";
 
 export function MenuBar() {
   const { theme, setTheme } = useTheme();
+  const navigate = useNavigate();
 
   const DisconnectHandler = async () => {
     try {
       await Close();
+      // Redirect to home after successful disconnection
+      navigate("/");
     } catch (error: unknown) {
       if (error instanceof Error) {
         console.error("Error disconnecting:", error.message);

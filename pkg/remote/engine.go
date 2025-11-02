@@ -2,6 +2,7 @@ package remote
 
 import (
 	"errors"
+	"fmt"
 	"layerbits/internal/db"
 	"layerbits/pkg/clickhouse"
 	"layerbits/pkg/common"
@@ -15,49 +16,48 @@ type UIController interface {
 
 type Engine struct {
 	store        *db.Store
-	ClickHouse   *clickhouse.ClickHouse
-	Postgres     *postgres.Postgres
+	activeClient DatabaseClient
 	uiController UIController
 }
 
 func New(uiController UIController) (*Engine, error) {
 	store := db.Open("layerbits")
-	chService := clickhouse.New()
-	postgresService := postgres.New()
 
 	return &Engine{
 		store:        store,
-		ClickHouse:   chService,
-		Postgres:     postgresService,
 		uiController: uiController,
 	}, nil
 }
 
-func (e *Engine) CreateNewConnection(engine, host, port, username, password, database string, test bool) error {
-	switch engine {
+// getDBClient creates a new database client instance based on the engine type
+func getDBClient(engineType string) (DatabaseClient, error) {
+	switch engineType {
 	case "clickhouse":
-		err := e.ClickHouse.Connect(host, port, username, password, database, test)
-		if err != nil {
-			return err
-		}
-
-		if e.uiController != nil {
-			e.uiController.OpenEditor()
-		}
-		return nil
+		return clickhouse.New(), nil
 	case "postgres":
-		err := e.Postgres.Connect(host, port, username, password, database, test)
-		if err != nil {
-			return err
-		}
-
-		if e.uiController != nil {
-			e.uiController.OpenEditor()
-		}
-		return nil
+		return postgres.New(), nil
 	default:
-		return nil
+		return nil, fmt.Errorf("unsupported engine type: %s", engineType)
 	}
+}
+
+func (e *Engine) CreateNewConnection(engine, host, port, username, password, database string, test bool) error {
+	dbClient, err := getDBClient(engine)
+	if err != nil {
+		return err
+	}
+
+	if err := dbClient.Connect(host, port, username, password, database, test); err != nil {
+		return err
+	}
+
+	e.activeClient = dbClient
+
+	if e.uiController != nil {
+		e.uiController.OpenEditor()
+	}
+
+	return nil
 }
 func (e *Engine) UpdateConnection(id, name string, config map[string]string) error {
 	return e.store.UpdateConnection(id, name, config)
@@ -88,19 +88,10 @@ func (e *Engine) ChangeDatabase(engine, host, port, username, password, database
 }
 
 func (e *Engine) GetCurrentConnectionInfo() (map[string]string, error) {
-	if e.ClickHouse != nil {
-		if info, err := e.ClickHouse.GetConnectionInfo(); err == nil {
-			return info, nil
-		}
+	if e.activeClient == nil {
+		return nil, errors.New("no active connection found")
 	}
-
-	if e.Postgres != nil {
-		if info, err := e.Postgres.GetConnectionInfo(); err == nil {
-			return info, nil
-		}
-	}
-
-	return nil, errors.New("no active connection found")
+	return e.activeClient.GetConnectionInfo()
 }
 
 func (e *Engine) ChangeDatabaseByName(database string) error {
@@ -120,19 +111,18 @@ func (e *Engine) ChangeDatabaseByName(database string) error {
 }
 
 func (e *Engine) CloseCurrentConnection() error {
-	err := e.ClickHouse.Close()
-	if err != nil {
-		return err
+	if e.activeClient == nil {
+		return errors.New("no active database connection found")
 	}
-	err = e.Postgres.Close()
-	if err != nil {
-		return err
-	}
-	// Trigger UI to close editor when connection is closed
+
+	err := e.activeClient.Close()
+	e.activeClient = nil
+
 	if e.uiController != nil {
 		e.uiController.CloseEditor()
 	}
-	return nil
+
+	return err
 }
 
 func (e *Engine) SaveConnection(name string, config map[string]string) error {
@@ -152,65 +142,30 @@ func (e *Engine) DeleteConnection(id string) (bool, error) {
 }
 
 func (e *Engine) ListDatabases() (interface{}, error) {
-	if e.ClickHouse != nil {
-		if info, err := e.ClickHouse.GetConnectionInfo(); err == nil && info["engine"] == "clickhouse" {
-			return e.ClickHouse.ListDatabases()
-		}
+	if e.activeClient == nil {
+		return nil, errors.New("no active database connection found")
 	}
-
-	if e.Postgres != nil {
-		if info, err := e.Postgres.GetConnectionInfo(); err == nil && info["engine"] == "postgres" {
-			return e.Postgres.ListDatabases()
-		}
-	}
-
-	return nil, errors.New("no active database connection found")
+	result, err := e.activeClient.ListDatabases()
+	return result, err
 }
 
 func (e *Engine) RunQuery(queryId, queryType, sql string) (common.QueryResult, error) {
-	if e.ClickHouse != nil {
-		if info, err := e.ClickHouse.GetConnectionInfo(); err == nil && info["engine"] == "clickhouse" {
-			return e.ClickHouse.RunQuery(queryId, queryType, sql)
-		}
+	if e.activeClient == nil {
+		return common.QueryResult{}, errors.New("no active database connection found")
 	}
-
-	if e.Postgres != nil {
-		if info, err := e.Postgres.GetConnectionInfo(); err == nil && info["engine"] == "postgres" {
-			return e.Postgres.RunQuery(queryId, queryType, sql)
-		}
-	}
-
-	return common.QueryResult{}, errors.New("no active database connection found")
+	return e.activeClient.RunQuery(queryId, queryType, sql)
 }
 
 func (e *Engine) CancelQuery(queryId string) error {
-	if e.ClickHouse != nil {
-		if info, err := e.ClickHouse.GetConnectionInfo(); err == nil && info["engine"] == "clickhouse" {
-			return e.ClickHouse.CancelQuery(queryId)
-		}
+	if e.activeClient == nil {
+		return errors.New("no active database connection found")
 	}
-
-	if e.Postgres != nil {
-		if info, err := e.Postgres.GetConnectionInfo(); err == nil && info["engine"] == "postgres" {
-			return e.Postgres.CancelQuery(queryId)
-		}
-	}
-
-	return errors.New("no active database connection found")
+	return e.activeClient.CancelQuery(queryId)
 }
 
 func (e *Engine) ListTables() ([]string, error) {
-	if e.ClickHouse != nil {
-		if info, err := e.ClickHouse.GetConnectionInfo(); err == nil && info["engine"] == "clickhouse" {
-			return e.ClickHouse.ListTables()
-		}
+	if e.activeClient == nil {
+		return nil, errors.New("no active database connection found")
 	}
-
-	if e.Postgres != nil {
-		if info, err := e.Postgres.GetConnectionInfo(); err == nil && info["engine"] == "postgres" {
-			return e.Postgres.ListTables()
-		}
-	}
-
-	return nil, errors.New("no active database connection found")
+	return e.activeClient.ListTables()
 }

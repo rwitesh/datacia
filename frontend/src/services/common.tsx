@@ -3,11 +3,11 @@ import { SaveConnection as WSaveConnection, DeleteConnection as WDeleteConnectio
 
 
 export const CreateNewConnection = (engine: DatabaseEngine, host: string, port: string, username: string, password: string, database: string) => {
-  return WCreateNewConnection(engine, host, port, username, password, database, false, true);
+  return WCreateNewConnection(engine, host, port, username, password, database, false);
 };
 
 export const TestNewConnection = (engine: DatabaseEngine, host: string, port: string, username: string, password: string, database: string) => {
-  return WCreateNewConnection(engine, host, port, username, password, database, true, false);
+  return WCreateNewConnection(engine, host, port, username, password, database, true);
 };
 
 export const ChangeDatabase = (engine: DatabaseEngine, host: string, port: string, username: string, password: string, database: string) => {

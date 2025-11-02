@@ -11,17 +11,28 @@ import { useEditorContext } from "../Context/Editor/Index";
 import { EditorFooter } from "./EditorFooter/EditorFooter";
 import { NavigationBar } from "../NavigationBar/NavigationBar";
 import { DataView } from "./DataView/DataView";
-import { useState, useCallback } from "react";
+import { LoadingOverlay } from "@/components/ui/loading-overlay";
+import { useState, useCallback, useEffect } from "react";
 import { ChevronLeft, ChevronRight, Copy } from "lucide-react";
 
 export const Editor = () => {
-  const { activeTab } = useEditorContext();
+  const { activeTab, tables } = useEditorContext();
   const [isDataViewOpen, setIsDataViewOpen] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   // Selected Data
   const [selectedData, setSelectedData] = useState<
     Array<Record<string, unknown>>
   >([]);
+
+  // Handle initial loading state
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsInitialLoading(false);
+    }, 1500); // Show loading for 1.5 seconds
+
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleCopy = useCallback(() => {
     navigator.clipboard
@@ -30,7 +41,14 @@ export const Editor = () => {
   }, [selectedData]);
 
   return (
-    <div className="h-full w-full flex flex-col bg-card">
+    <div className="h-full w-full flex flex-col bg-card relative">
+      {/* Loading Overlay */}
+      <LoadingOverlay 
+        isVisible={isInitialLoading || tables.isLoading}
+      >
+        Initializing Editor...
+      </LoadingOverlay>
+
       <div className="flex-1 min-h-0">
         <ResizablePanelGroup direction="horizontal" className="h-full w-full">
           <ResizablePanel

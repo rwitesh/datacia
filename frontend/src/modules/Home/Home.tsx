@@ -21,9 +21,11 @@ import {
 } from "@/components/ui/menubar";
 import { useFetchConnections } from "@/services/hooks";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 export const Home = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const {
     data: savedConnections = {},
@@ -45,6 +47,11 @@ export const Home = () => {
   const handleConnect = async (name: string) => {
     try {
       await EstablishConnection(name);
+      // Redirect to editor after successful connection
+      navigate("/editor");
+      queryClient.invalidateQueries({ queryKey: ["databases"] });
+      queryClient.invalidateQueries({ queryKey: ["tables"] });
+
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : String(error));
     }

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router";
 import {
   CreateNewConnection as Connect,
   TestNewConnection as Test,
@@ -38,6 +39,8 @@ export const useConnectionForm = ({
   fetchedData 
 }: UseConnectionFormProps) => {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+
   const [status, setStatus] = useState<Status>(null);
 
   const form = useForm<FormValues>({
@@ -191,6 +194,9 @@ export const useConnectionForm = ({
       // Invalidate database-related queries after successful connection
       queryClient.invalidateQueries({ queryKey: ["databases"] });
       queryClient.invalidateQueries({ queryKey: ["tables"] });
+
+      // Redirect to editor after successful connection
+      navigate("/editor");
 
     } catch (err: unknown) {
       setStatus({

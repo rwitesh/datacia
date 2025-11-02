@@ -90,7 +90,6 @@ func (a *App) GetWindow() *application.WebviewWindow {
 
 func (a *App) OpenEditor() {
 	if a.window != nil {
-		a.window.SetURL("#/editor")
 		a.window.SetSize(constants.EDITOR_WINDOW_WIDTH, constants.EDITOR_WINDOW_HEIGHT)
 		a.window.Center()
 		a.window.SetResizable(true)
@@ -100,7 +99,6 @@ func (a *App) OpenEditor() {
 
 func (a *App) CloseEditor() {
 	if a.window != nil {
-		a.window.SetURL("/")
 		a.window.SetSize(constants.CONNECTION_WINDOW_WIDTH, constants.CONNECTION_WINDOW_HEIGHT)
 		a.window.Center()
 		a.window.SetResizable(false)

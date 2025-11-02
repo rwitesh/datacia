@@ -14,7 +14,6 @@ import (
 )
 
 type PostgresClient interface {
-	Connect(host, port, username, password, database string, test bool) error
 	Close() error
 	Ping() error
 	RunQuery(queryId, queryType, sql string) (common.QueryResult, error)

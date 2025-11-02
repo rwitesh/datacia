@@ -4,9 +4,20 @@ import (
 	"layerbits/pkg/common"
 )
 
-// DatabaseEngine defines the interface for database connection management
-// and query operations with compile-time type checking
-type DatabaseEngine interface {
+// DatabaseClient defines the common interface that individual database engines must implement
+type DatabaseClient interface {
+	Connect(host, port, username, password, database string, test bool) error
+	Close() error
+	GetConnectionInfo() (map[string]string, error)
+	ListDatabases() (common.DatabaseInfo, error)
+	ListTables() ([]string, error)
+	RunQuery(queryId, queryType, sql string) (common.QueryResult, error)
+	CancelQuery(queryId string) error
+}
+
+// RemoteEngine defines the interface for the high-level remote engine that manages
+// database connections and provides additional functionality like connection storage
+type RemoteEngine interface {
 	// Connection Management
 	CreateNewConnection(engine, host, port, username, password, database string, test bool) error
 	EstablishConnection(id string) error
@@ -31,5 +42,5 @@ type DatabaseEngine interface {
 	CancelQuery(queryId string) error
 }
 
-// Compile-time check to ensure Engine implements DatabaseEngine interface
-var _ DatabaseEngine = (*Engine)(nil)
+// Compile-time check to ensure Engine implements RemoteEngine interface
+var _ RemoteEngine = (*Engine)(nil)
