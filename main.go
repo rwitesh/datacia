@@ -40,8 +40,6 @@ func main() {
 	}
 
 	app.RegisterService(application.NewService(e))
-	app.RegisterService(application.NewService(chService))
-	app.RegisterService(application.NewService(postgresService))
 
 	e.App.Window.NewWithOptions(application.WebviewWindowOptions{
 		Name:  "connection",

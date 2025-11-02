@@ -27,18 +27,14 @@ type ClickHouseClient interface {
 var _ ClickHouseClient = (*ClickHouse)(nil)
 
 type ClickHouse struct {
-	conn          driver.Conn
-	host          string
-	port          string
-	username      string
-	password      string
-	database      string
-	activeQueries sync.Map
-	mu            sync.RWMutex
+	conn driver.Conn
+	*common.ConnectionState
 }
 
 func New() *ClickHouse {
-	return &ClickHouse{}
+	return &ClickHouse{
+		ConnectionState: &common.ConnectionState{},
+	}
 }
 
 func (ch *ClickHouse) Connect(host, port, username, password, database string, test bool) error {
@@ -64,24 +60,24 @@ func (ch *ClickHouse) Connect(host, port, username, password, database string, t
 		return err
 	}
 
-	ctx, cancel := NewTimeoutContext(2 * time.Second)
+	ctx, cancel := common.NewTimeoutContext(2 * time.Second)
 	defer cancel()
 	if err := connection.Ping(ctx); err != nil {
 		return err
 	}
 
 	if !test {
-		ch.mu.Lock()
+		ch.Mu.Lock()
 		if ch.conn != nil {
 			_ = ch.conn.Close()
 		}
 		ch.conn = connection
-		ch.host = host
-		ch.port = port
-		ch.username = username
-		ch.password = password
-		ch.database = database
-		ch.mu.Unlock()
+		ch.Host = host
+		ch.Port = port
+		ch.Username = username
+		ch.Password = password
+		ch.Database = database
+		ch.Mu.Unlock()
 	} else {
 		// if test=true → close right away (don't keep state)
 		_ = connection.Close()
@@ -91,10 +87,10 @@ func (ch *ClickHouse) Connect(host, port, username, password, database string, t
 }
 
 func (ch *ClickHouse) Close() error {
-	ch.activeQueries = sync.Map{}
+	ch.ActiveQueries = sync.Map{}
 
-	ch.mu.Lock()
-	defer ch.mu.Unlock()
+	ch.Mu.Lock()
+	defer ch.Mu.Unlock()
 
 	if ch.conn == nil {
 		return nil
@@ -109,9 +105,9 @@ func (ch *ClickHouse) Close() error {
 }
 
 func (ch *ClickHouse) Ping() error {
-	ch.mu.RLock()
+	ch.Mu.RLock()
 	conn := ch.conn
-	ch.mu.RUnlock()
+	ch.Mu.RUnlock()
 
 	if conn == nil {
 		return errors.New("no active connection found")
@@ -129,23 +125,23 @@ func (ch *ClickHouse) RunQuery(queryID, queryType, sql string) (common.QueryResu
 	}
 
 	// Grab connection under read lock
-	ch.mu.RLock()
+	ch.Mu.RLock()
 	conn := ch.conn
-	ch.mu.RUnlock()
+	ch.Mu.RUnlock()
 
 	if conn == nil {
 		return common.QueryResult{}, errors.New("no active connection found")
 	}
 
-	if _, exists := ch.activeQueries.Load(queryID); exists {
+	if _, exists := ch.ActiveQueries.Load(queryID); exists {
 		return common.QueryResult{}, fmt.Errorf("query with ID %s is already running", queryID)
 	}
 
-	ctx, cancel := NewTimeoutContext(QUERY_TIMEOUT)
-	ch.activeQueries.Store(queryID, cancel)
+	ctx, cancel := common.NewTimeoutContext(common.QUERY_TIMEOUT)
+	ch.ActiveQueries.Store(queryID, cancel)
 	defer func() {
 		cancel()
-		ch.activeQueries.Delete(queryID)
+		ch.ActiveQueries.Delete(queryID)
 	}()
 
 	switch common.QueryType(queryType) {
@@ -201,7 +197,7 @@ func (ch *ClickHouse) CancelQuery(queryID string) error {
 	}
 
 	// First try context cancellation
-	if val, exists := ch.activeQueries.LoadAndDelete(queryID); exists {
+	if val, exists := ch.ActiveQueries.LoadAndDelete(queryID); exists {
 		if cancelFunc, ok := val.(context.CancelFunc); ok {
 			cancelFunc()
 		}
@@ -212,15 +208,15 @@ func (ch *ClickHouse) CancelQuery(queryID string) error {
 }
 
 func (ch *ClickHouse) killQueryOnServer(queryID string) error {
-	ch.mu.RLock()
+	ch.Mu.RLock()
 	conn := ch.conn
-	ch.mu.RUnlock()
+	ch.Mu.RUnlock()
 
 	if conn == nil {
 		return errors.New("no active connection found")
 	}
 
-	ctx, cancel := NewTimeoutContext(3 * time.Second)
+	ctx, cancel := common.NewTimeoutContext(3 * time.Second)
 	defer cancel()
 
 	killSQL := fmt.Sprintf("KILL QUERY WHERE query_id = '%s'", queryID)
@@ -230,9 +226,9 @@ func (ch *ClickHouse) killQueryOnServer(queryID string) error {
 }
 
 func (ch *ClickHouse) ListTables() ([]string, error) {
-	ch.mu.RLock()
+	ch.Mu.RLock()
 	conn := ch.conn
-	ch.mu.RUnlock()
+	ch.Mu.RUnlock()
 
 	if conn == nil {
 		return nil, errors.New("no active connection found")
@@ -245,31 +241,35 @@ func (ch *ClickHouse) ListTables() ([]string, error) {
 		ORDER BY name
 	`
 
-	ctx, cancel := NewTimeoutContext(META_TIMEOUT)
+	ctx, cancel := common.NewTimeoutContext(common.META_TIMEOUT)
 	defer cancel()
 
-	rows, err := conn.Query(ctx, sql, clickhouse.Named("db", ch.database))
+	rows, err := conn.Query(ctx, sql, clickhouse.Named("db", ch.Database))
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var out []string
+	var tables []string
 	for rows.Next() {
 		var name string
 		if err := rows.Scan(&name); err != nil {
 			return nil, err
 		}
-		out = append(out, name)
+		tables = append(tables, name)
 	}
-	return out, rows.Err()
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return tables, nil
 }
 
 func (ch *ClickHouse) ListDatabases() (common.DatabaseInfo, error) {
-	ch.mu.RLock()
+	ch.Mu.RLock()
 	conn := ch.conn
-	currentDB := ch.database
-	ch.mu.RUnlock()
+	currentDB := ch.Database
+	ch.Mu.RUnlock()
 
 	if conn == nil {
 		return common.DatabaseInfo{}, errors.New("no active connection found")
@@ -281,7 +281,7 @@ func (ch *ClickHouse) ListDatabases() (common.DatabaseInfo, error) {
 		ORDER BY name
 	`
 
-	ctx, cancel := NewTimeoutContext(META_TIMEOUT)
+	ctx, cancel := common.NewTimeoutContext(common.META_TIMEOUT)
 	defer cancel()
 
 	rows, err := conn.Query(ctx, sql)
@@ -310,8 +310,8 @@ func (ch *ClickHouse) ListDatabases() (common.DatabaseInfo, error) {
 }
 
 func (ch *ClickHouse) GetConnectionInfo() (map[string]string, error) {
-	ch.mu.RLock()
-	defer ch.mu.RUnlock()
+	ch.Mu.RLock()
+	defer ch.Mu.RUnlock()
 
 	if ch.conn == nil {
 		return nil, errors.New("no active connection found")
@@ -319,11 +319,11 @@ func (ch *ClickHouse) GetConnectionInfo() (map[string]string, error) {
 
 	return map[string]string{
 		"engine":   "clickhouse",
-		"host":     ch.host,
-		"port":     ch.port,
-		"username": ch.username,
-		"password": ch.password,
-		"database": ch.database,
+		"host":     ch.Host,
+		"port":     ch.Port,
+		"username": ch.Username,
+		"password": ch.Password,
+		"database": ch.Database,
 	}, nil
 }
 

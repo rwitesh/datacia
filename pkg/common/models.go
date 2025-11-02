@@ -2,6 +2,7 @@ package common
 
 import (
 	"context"
+	"sync"
 	"time"
 )
 
@@ -22,6 +23,17 @@ type QueryResult struct {
 type DatabaseInfo struct {
 	Databases       []string `json:"databases"`
 	CurrentDatabase string   `json:"currentDatabase"`
+}
+
+// ConnectionState holds common connection state for database clients
+type ConnectionState struct {
+	Host          string
+	Port          string
+	Username      string
+	Password      string
+	Database      string
+	ActiveQueries sync.Map
+	Mu            sync.RWMutex
 }
 
 // DatabaseClient defines the common interface for all database implementations

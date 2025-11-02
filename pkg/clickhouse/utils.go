@@ -5,22 +5,10 @@ import (
 	"fmt"
 	"math"
 	"reflect"
-	"time"
 
 	"github.com/ClickHouse/clickhouse-go/v2/lib/chcol"
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 )
-
-const (
-	CONNECT_TIMEOUT   = 10 * time.Second
-	META_TIMEOUT      = 10 * time.Second
-	CHANGE_DB_TIMEOUT = 5 * time.Second
-	QUERY_TIMEOUT     = 300 * time.Second
-)
-
-func NewTimeoutContext(d time.Duration) (context.Context, context.CancelFunc) {
-	return context.WithTimeout(context.Background(), d)
-}
 
 func ScanDynamicColumns(ctx context.Context, rows driver.Rows) ([]string, []map[string]interface{}, error) {
 	var response []map[string]interface{}

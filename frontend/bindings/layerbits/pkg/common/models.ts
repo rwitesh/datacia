@@ -5,35 +5,6 @@
 // @ts-ignore: Unused imports
 import { Create as $Create } from "@wailsio/runtime";
 
-export class DatabaseInfo {
-    "databases": string[];
-    "currentDatabase": string;
-
-    /** Creates a new DatabaseInfo instance. */
-    constructor($$source: Partial<DatabaseInfo> = {}) {
-        if (!("databases" in $$source)) {
-            this["databases"] = [];
-        }
-        if (!("currentDatabase" in $$source)) {
-            this["currentDatabase"] = "";
-        }
-
-        Object.assign(this, $$source);
-    }
-
-    /**
-     * Creates a new DatabaseInfo instance from a string or object.
-     */
-    static createFrom($$source: any = {}): DatabaseInfo {
-        const $$createField0_0 = $$createType0;
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        if ("databases" in $$parsedSource) {
-            $$parsedSource["databases"] = $$createField0_0($$parsedSource["databases"]);
-        }
-        return new DatabaseInfo($$parsedSource as Partial<DatabaseInfo>);
-    }
-}
-
 export class QueryResult {
     "type": QueryType;
     "columns": string[];

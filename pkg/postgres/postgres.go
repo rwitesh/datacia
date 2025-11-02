@@ -27,18 +27,14 @@ type PostgresClient interface {
 var _ PostgresClient = (*Postgres)(nil)
 
 type Postgres struct {
-	pool          *pgxpool.Pool
-	host          string
-	port          string
-	username      string
-	password      string
-	database      string
-	activeQueries sync.Map
-	mu            sync.RWMutex
+	pool *pgxpool.Pool
+	*common.ConnectionState
 }
 
 func New() *Postgres {
-	return &Postgres{}
+	return &Postgres{
+		ConnectionState: &common.ConnectionState{},
+	}
 }
 
 func (p *Postgres) Connect(host, port, username, password, database string, test bool) error {
@@ -73,17 +69,17 @@ func (p *Postgres) Connect(host, port, username, password, database string, test
 	}
 
 	if !test {
-		p.mu.Lock()
+		p.Mu.Lock()
 		if p.pool != nil {
 			p.pool.Close()
 		}
 		p.pool = pool
-		p.host = host
-		p.port = port
-		p.username = username
-		p.password = password
-		p.database = database
-		p.mu.Unlock()
+		p.Host = host
+		p.Port = port
+		p.Username = username
+		p.Password = password
+		p.Database = database
+		p.Mu.Unlock()
 	} else {
 		// if test=true → close right away (don't keep state)
 		pool.Close()
@@ -93,10 +89,10 @@ func (p *Postgres) Connect(host, port, username, password, database string, test
 }
 
 func (p *Postgres) Close() error {
-	p.activeQueries = sync.Map{} // reset
+	p.ActiveQueries = sync.Map{} // reset
 
-	p.mu.Lock()
-	defer p.mu.Unlock()
+	p.Mu.Lock()
+	defer p.Mu.Unlock()
 
 	if p.pool == nil {
 		return nil
@@ -108,9 +104,9 @@ func (p *Postgres) Close() error {
 }
 
 func (p *Postgres) Ping() error {
-	p.mu.RLock()
+	p.Mu.RLock()
 	pool := p.pool
-	p.mu.RUnlock()
+	p.Mu.RUnlock()
 
 	if pool == nil {
 		return errors.New("no active connection pool found")
@@ -128,23 +124,23 @@ func (p *Postgres) RunQuery(queryID, queryType, sql string) (common.QueryResult,
 	}
 
 	// Grab pool under read lock
-	p.mu.RLock()
+	p.Mu.RLock()
 	pool := p.pool
-	p.mu.RUnlock()
+	p.Mu.RUnlock()
 
 	if pool == nil {
 		return common.QueryResult{}, errors.New("no active connection pool found")
 	}
 
-	if _, exists := p.activeQueries.Load(queryID); exists {
+	if _, exists := p.ActiveQueries.Load(queryID); exists {
 		return common.QueryResult{}, fmt.Errorf("query with ID %s is already running", queryID)
 	}
 
 	ctx, cancel := common.NewTimeoutContext(common.QUERY_TIMEOUT)
-	p.activeQueries.Store(queryID, cancel)
+	p.ActiveQueries.Store(queryID, cancel)
 	defer func() {
 		cancel()
-		p.activeQueries.Delete(queryID)
+		p.ActiveQueries.Delete(queryID)
 	}()
 
 	// Acquire a connection from the pool
@@ -218,10 +214,10 @@ func (p *Postgres) query(ctx context.Context, conn *pgx.Conn, sql string) (commo
 }
 
 func (p *Postgres) CancelQuery(queryID string) error {
-	if cancelFunc, exists := p.activeQueries.Load(queryID); exists {
+	if cancelFunc, exists := p.ActiveQueries.Load(queryID); exists {
 		if cancel, ok := cancelFunc.(context.CancelFunc); ok {
 			cancel()
-			p.activeQueries.Delete(queryID)
+			p.ActiveQueries.Delete(queryID)
 			return nil
 		}
 	}
@@ -229,9 +225,9 @@ func (p *Postgres) CancelQuery(queryID string) error {
 }
 
 func (p *Postgres) ListDatabases() (common.DatabaseInfo, error) {
-	p.mu.RLock()
+	p.Mu.RLock()
 	pool := p.pool
-	p.mu.RUnlock()
+	p.Mu.RUnlock()
 
 	if pool == nil {
 		return common.DatabaseInfo{}, errors.New("no active connection pool found")
@@ -255,11 +251,11 @@ func (p *Postgres) ListDatabases() (common.DatabaseInfo, error) {
 
 	var databases []string
 	for rows.Next() {
-		var dbName string
-		if err := rows.Scan(&dbName); err != nil {
+		var name string
+		if err := rows.Scan(&name); err != nil {
 			return common.DatabaseInfo{}, fmt.Errorf("failed to scan database name: %w", err)
 		}
-		databases = append(databases, dbName)
+		databases = append(databases, name)
 	}
 
 	if err := rows.Err(); err != nil {
@@ -268,20 +264,20 @@ func (p *Postgres) ListDatabases() (common.DatabaseInfo, error) {
 
 	return common.DatabaseInfo{
 		Databases:       databases,
-		CurrentDatabase: p.database,
+		CurrentDatabase: p.Database,
 	}, nil
 }
 
 func (p *Postgres) ListTables() ([]string, error) {
-	p.mu.RLock()
+	p.Mu.RLock()
 	pool := p.pool
-	p.mu.RUnlock()
+	p.Mu.RUnlock()
 
 	if pool == nil {
 		return nil, errors.New("no active connection pool found")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	// Acquire a connection from the pool
@@ -291,31 +287,31 @@ func (p *Postgres) ListTables() ([]string, error) {
 	}
 	defer conn.Release()
 
-	rows, err := conn.Query(ctx, "SELECT tablename FROM pg_tables WHERE schemaname = 'public';")
+	rows, err := conn.Query(ctx, "SELECT tablename FROM pg_tables WHERE schemaname = 'public'")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to list tables: %w", err)
 	}
 	defer rows.Close()
 
 	var tables []string
 	for rows.Next() {
-		var tablename string
-		if err := rows.Scan(&tablename); err != nil {
-			return nil, err
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return nil, fmt.Errorf("failed to scan table name: %w", err)
 		}
-		tables = append(tables, tablename)
+		tables = append(tables, name)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error iterating over rows: %w", err)
 	}
 
 	return tables, nil
 }
 
 func (p *Postgres) GetConnectionInfo() (map[string]string, error) {
-	p.mu.RLock()
-	defer p.mu.RUnlock()
+	p.Mu.RLock()
+	defer p.Mu.RUnlock()
 
 	if p.pool == nil {
 		return nil, errors.New("no active connection pool found")
@@ -323,10 +319,10 @@ func (p *Postgres) GetConnectionInfo() (map[string]string, error) {
 
 	return map[string]string{
 		"engine":   "postgres",
-		"host":     p.host,
-		"port":     p.port,
-		"username": p.username,
-		"password": p.password,
-		"database": p.database,
+		"host":     p.Host,
+		"port":     p.Port,
+		"username": p.Username,
+		"password": p.Password,
+		"database": p.Database,
 	}, nil
 }
