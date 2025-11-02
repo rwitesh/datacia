@@ -8,7 +8,7 @@ import (
 // and query operations with compile-time type checking
 type DatabaseEngine interface {
 	// Connection Management
-	CreateNewConnection(engine, host, port, username, password, database string, test bool, openEditor bool) error
+	CreateNewConnection(engine, host, port, username, password, database string, test bool) error
 	EstablishConnection(id string) error
 	ChangeDatabase(engine, host, port, username, password, database string) error
 	ChangeDatabaseByName(database string) error
@@ -29,10 +29,6 @@ type DatabaseEngine interface {
 	// Query Operations
 	RunQuery(queryId, queryType, sql string) (common.QueryResult, error)
 	CancelQuery(queryId string) error
-
-	// UI Management
-	OpenEditor()
-	CloseEditor()
 }
 
 // Compile-time check to ensure Engine implements DatabaseEngine interface

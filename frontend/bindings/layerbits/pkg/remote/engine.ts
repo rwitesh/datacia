@@ -25,12 +25,8 @@ export function CloseCurrentConnection(): $CancellablePromise<void> {
     return $Call.ByID(1369563845);
 }
 
-export function CloseEditor(): $CancellablePromise<void> {
-    return $Call.ByID(2329887941);
-}
-
-export function CreateNewConnection(engine: string, host: string, port: string, username: string, password: string, database: string, test: boolean, openEditor: boolean): $CancellablePromise<void> {
-    return $Call.ByID(4213280126, engine, host, port, username, password, database, test, openEditor);
+export function CreateNewConnection(engine: string, host: string, port: string, username: string, password: string, database: string, test: boolean): $CancellablePromise<void> {
+    return $Call.ByID(4213280126, engine, host, port, username, password, database, test);
 }
 
 export function DeleteConnection(id: string): $CancellablePromise<boolean> {
@@ -67,10 +63,6 @@ export function LoadConnection(id: string): $CancellablePromise<{ [_: string]: s
     return $Call.ByID(3070839588, id).then(($result: any) => {
         return $$createType0($result);
     });
-}
-
-export function OpenEditor(): $CancellablePromise<void> {
-    return $Call.ByID(968614393);
 }
 
 export function RunQuery(queryId: string, queryType: string, sql: string): $CancellablePromise<common$0.QueryResult> {

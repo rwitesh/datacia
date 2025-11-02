@@ -191,6 +191,7 @@ export const useConnectionForm = ({
       // Invalidate database-related queries after successful connection
       queryClient.invalidateQueries({ queryKey: ["databases"] });
       queryClient.invalidateQueries({ queryKey: ["tables"] });
+
     } catch (err: unknown) {
       setStatus({
         kind: "error",
