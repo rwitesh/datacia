@@ -10,9 +10,9 @@ interface ConnectionActionsProps {
   onSave: () => void;
   onTest: () => void;
   onConnect: () => void;
-  saveMutation: UseMutationResult<unknown, Error, void, unknown>;
-  testMutation: UseMutationResult<unknown, Error, void, unknown>;
-  connectMutation: UseMutationResult<unknown, Error, void, unknown>;
+  saveMutation: UseMutationResult<void, Error, void, unknown>;
+  testMutation: UseMutationResult<void, Error, void, unknown>;
+  connectMutation: UseMutationResult<void, Error, void, unknown>;
 }
 
 export const ConnectionActions: React.FC<ConnectionActionsProps> = ({

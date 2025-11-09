@@ -143,7 +143,7 @@ export const useConnectionForm = ({
     });
   };
 
-  const saveMutation = useMutation({
+  const saveMutation = useMutation<void, Error, void, unknown>({
     mutationFn: async () => {
       const values = getValues();
       const config: Record<string, string> = {
@@ -196,7 +196,7 @@ export const useConnectionForm = ({
     },
   });
 
-  const testMutation = useMutation({
+  const testMutation = useMutation<void, Error, void, unknown>({
     mutationFn: async () => {
       const values = getValues();
       await Test(
@@ -232,7 +232,7 @@ export const useConnectionForm = ({
     },
   });
 
-  const connectMutation = useMutation({
+  const connectMutation = useMutation<void, Error, void, unknown>({
     mutationFn: async () => {
       const values = getValues();
       await Connect(

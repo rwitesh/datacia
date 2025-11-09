@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
 import { type FieldError } from "react-hook-form";
-import { X } from "lucide-react";
+import { Check, Copy, X } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ENGINE_LABELS, FIELD_LABELS } from "../utils/constants";
 import type { DatabaseEngine, FormValues, Status } from "../utils/types";
@@ -71,6 +71,49 @@ export const ConnectionAlert: React.FC<ConnectionAlertProps> = ({
     const isInfo = status.kind === "info";
     const isError = status.kind === "error";
     const hasDescription = isError && status.description;
+    
+    const CopyButton: React.FC<{ description: string }> = ({ description }) => {
+      const [copied, setCopied] = useState(false);
+
+      const handleCopy = async () => {
+        try {
+          await navigator.clipboard.writeText(description);
+          setCopied(true);
+        } catch {
+          // Silently fail
+        }
+      };
+
+      const handleKeyDown: React.KeyboardEventHandler<HTMLButtonElement> = (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          handleCopy();
+        }
+      };
+
+      return (
+        <button
+          type="button"
+          aria-label="Copy error message"
+          title={copied ? "Copied!" : "Copy to clipboard"}
+          onClick={handleCopy}
+          onPointerLeave={() => setCopied(false)}
+          onBlur={() => setCopied(false)}
+          onKeyDown={handleKeyDown}
+          className="p-1.5 rounded hover:bg-muted/50 flex-shrink-0 transition-colors"
+        >
+          {copied ? (
+            <Check className="w-3.5 h-3.5 text-green-500" />
+          ) : (
+            <Copy className="w-3.5 h-3.5 text-muted-foreground" />
+          )}
+          <span aria-live="polite" className="sr-only">
+            {copied ? "Copied to clipboard" : "Copy error message"}
+          </span>
+        </button>
+      );
+    };
+
     return (
       <Alert variant={getAlertVariant(status)} className={`min-h-28 flex gap-3 transition-all duration-500 ease-in-out ${hasDescription ? "items-start" : "items-center"}`}>
         {isInfo && (
@@ -97,8 +140,11 @@ export const ConnectionAlert: React.FC<ConnectionAlertProps> = ({
           </div>
           {status.kind === "error" && status.description && (
             <AlertDescription className="mt-2 animate-in fade-in slide-in-from-top-2 duration-500">
-              <div className="text-red-400 font-mono text-xs overflow-x-auto">
-                <div className="whitespace-pre-wrap break-words">{status.description}</div>
+              <div className="flex items-start gap-2">
+                <div className="flex-1 text-red-400 font-mono text-xs overflow-x-auto">
+                  <div className="whitespace-pre-wrap break-words">{status.description}</div>
+                </div>
+                <CopyButton description={status.description} />
               </div>
             </AlertDescription>
           )}
