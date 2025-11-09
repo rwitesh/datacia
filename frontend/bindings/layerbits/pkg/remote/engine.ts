@@ -7,6 +7,9 @@ import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Cr
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/application/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as common$0 from "../common/models.js";
 
 export function CancelQuery(queryId: string): $CancellablePromise<void> {
@@ -27,6 +30,10 @@ export function CloseCurrentConnection(): $CancellablePromise<void> {
 
 export function CreateNewConnection(engine: string, host: string, port: string, username: string, password: string, database: string, test: boolean): $CancellablePromise<void> {
     return $Call.ByID(4213280126, engine, host, port, username, password, database, test);
+}
+
+export function CreateNewConnectionWithSSH(engine: string, host: string, port: string, username: string, password: string, database: string, useSSH: string, sshHost: string, sshPort: string, sshUsername: string, sshPassword: string, sshKeyPath: string, test: boolean): $CancellablePromise<void> {
+    return $Call.ByID(4262270784, engine, host, port, username, password, database, useSSH, sshHost, sshPort, sshUsername, sshPassword, sshKeyPath, test);
 }
 
 export function DeleteConnection(id: string): $CancellablePromise<boolean> {
@@ -73,6 +80,21 @@ export function RunQuery(queryId: string, queryType: string, sql: string): $Canc
 
 export function SaveConnection(name: string, config: { [_: string]: string }): $CancellablePromise<void> {
     return $Call.ByID(2078362505, name, config);
+}
+
+/**
+ * SelectSSHKeyFile opens a file dialog to select an SSH private key file
+ * Returns the selected file path, or an error if cancelled or failed
+ */
+export function SelectSSHKeyFile(): $CancellablePromise<string> {
+    return $Call.ByID(1094887375);
+}
+
+/**
+ * SetApplication sets the Wails application instance for file dialogs
+ */
+export function SetApplication(app: application$0.App | null): $CancellablePromise<void> {
+    return $Call.ByID(2828316614, app);
 }
 
 export function UpdateConnection(id: string, name: string, config: { [_: string]: string }): $CancellablePromise<void> {

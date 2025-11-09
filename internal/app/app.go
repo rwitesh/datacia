@@ -51,6 +51,7 @@ func (a *App) Initialize(assets embed.FS) error {
 	}
 
 	a.dbEngine = dbEngine
+	dbEngine.SetApplication(a.wailsApp)
 
 	a.wailsApp.RegisterService(application.NewService(dbEngine))
 

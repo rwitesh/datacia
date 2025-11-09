@@ -35,6 +35,8 @@ export const DatabaseConnection: React.FC = () => {
   const {
     form,
     register,
+    watch,
+    setValue,
     status,
     setStatus,
     currentEngine,
@@ -42,6 +44,7 @@ export const DatabaseConnection: React.FC = () => {
     handleSave,
     handleTest,
     handleConnect,
+    handleSelectSSHKey,
   } = useConnectionForm({
     resolvedEngine,
     connectionId,
@@ -64,38 +67,43 @@ export const DatabaseConnection: React.FC = () => {
     "New Connection";
 
   return (
-    <div className="h-full flex flex-col justify-between">
-      <div>
-        <div className="mb-3" aria-live="polite" role="status">
-          <div className="min-h-24">
-            <ConnectionAlert
-              hasFormErrors={hasFormErrors}
-              formErrorEntries={formErrorEntries}
-              isError={isError}
-              fetchedConnectionName={fetchedData?.connectionName}
-              status={status}
-              displayName={displayName}
-              currentEngine={currentEngine}
-              onDismissStatus={() => setStatus(null)}
-            />
-          </div>
+    <div className="h-full flex flex-col">
+      <div className="mb-3 flex-shrink-0" aria-live="polite" role="status">
+        <div className="min-h-24">
+          <ConnectionAlert
+            hasFormErrors={hasFormErrors}
+            formErrorEntries={formErrorEntries}
+            isError={isError}
+            fetchedConnectionName={fetchedData?.connectionName}
+            status={status}
+            displayName={displayName}
+            currentEngine={currentEngine}
+            onDismissStatus={() => setStatus(null)}
+          />
         </div>
+      </div>
 
+      <div className="flex-1 px-4 overflow-y-auto min-h-0">
         <ConnectionForm
           register={register}
+          watch={watch}
+          setValue={setValue}
           currentEngine={currentEngine}
           loading={loading}
+          onSelectSSHKey={handleSelectSSHKey}
         />
       </div>
 
-      <ConnectionActions
-        isUpdate={isUpdate}
-        loading={loading}
-        isSubmitting={form.formState.isSubmitting}
-        onSave={handleSave}
-        onTest={handleTest}
-        onConnect={handleConnect}
-      />
+      <div className="flex-shrink-0 mt-3">
+        <ConnectionActions
+          isUpdate={isUpdate}
+          loading={loading}
+          isSubmitting={form.formState.isSubmitting}
+          onSave={handleSave}
+          onTest={handleTest}
+          onConnect={handleConnect}
+        />
+      </div>
     </div>
   );
 };

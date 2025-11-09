@@ -8,6 +8,7 @@ import {
   TestNewConnection as Test,
   SaveConnection,
   UpdateConnection,
+  SelectSSHKeyFile,
 } from "@/services/common";
 import { DEFAULT_PORTS } from "../utils/constants";
 import type { DatabaseEngine, FormValues, Status } from "../utils/types";
@@ -25,6 +26,12 @@ interface FetchedConnectionData {
   password?: string;
   database?: string;
   connectionName?: string;
+  useSSH?: string;
+  sshHost?: string;
+  sshPort?: string;
+  sshUsername?: string;
+  sshPassword?: string;
+  sshKeyPath?: string;
 }
 
 interface UseConnectionFormProps {
@@ -54,6 +61,13 @@ export const useConnectionForm = ({
       username: "",
       password: "",
       database: "",
+      useSSH: false,
+      sshHost: "",
+      sshPort: "",
+      sshUsername: "",
+      sshPassword: "",
+      useSSHKey: false,
+      sshKeyPath: "",
     },
   });
 
@@ -83,6 +97,13 @@ export const useConnectionForm = ({
         username: fetchedData.username || "",
         password: fetchedData.password || "",
         database: fetchedData.database || "",
+        useSSH: fetchedData.useSSH === "true" || false,
+        sshHost: fetchedData.sshHost || "",
+        sshPort: fetchedData.sshPort || "",
+        sshUsername: fetchedData.sshUsername || "",
+        sshPassword: fetchedData.sshPassword || "",
+        useSSHKey: !!fetchedData.sshKeyPath,
+        sshKeyPath: fetchedData.sshKeyPath || "",
       });
     } else if (!connectionId) {
       reset({
@@ -93,6 +114,13 @@ export const useConnectionForm = ({
         username: "",
         password: "",
         database: "",
+        useSSH: false,
+        sshHost: "",
+        sshPort: "",
+        sshUsername: "",
+        sshPassword: "",
+        useSSHKey: false,
+        sshKeyPath: "",
       });
     }
     setStatus(null);
@@ -122,7 +150,7 @@ export const useConnectionForm = ({
     if (Object.keys(validationErrors).length > 0) return;
 
     try {
-      const config = {
+      const config: Record<string, string> = {
         engine: values.engine,
         host: values.host,
         port: values.port,
@@ -130,6 +158,18 @@ export const useConnectionForm = ({
         password: values.password,
         database: values.database,
       };
+
+      if (values.useSSH) {
+        config.useSSH = "true";
+        config.sshHost = values.sshHost;
+        config.sshPort = values.sshPort || "22";
+        config.sshUsername = values.sshUsername;
+        if (values.useSSHKey) {
+          config.sshKeyPath = values.sshKeyPath;
+        } else {
+          config.sshPassword = values.sshPassword;
+        }
+      }
 
       if (connectionId) {
         await UpdateConnection(connectionId, values.connectionName, config);
@@ -164,7 +204,13 @@ export const useConnectionForm = ({
         values.port,
         values.username,
         values.password,
-        values.database
+        values.database,
+        values.useSSH ? "true" : "",
+        values.sshHost,
+        values.sshPort,
+        values.sshUsername,
+        values.sshPassword,
+        values.useSSHKey ? values.sshKeyPath : ""
       );
       setStatus({ kind: "success", title: "Connection test successful" });
     } catch (err: unknown) {
@@ -189,7 +235,13 @@ export const useConnectionForm = ({
         values.port,
         values.username,
         values.password,
-        values.database
+        values.database,
+        values.useSSH ? "true" : "",
+        values.sshHost,
+        values.sshPort,
+        values.sshUsername,
+        values.sshPassword,
+        values.useSSHKey ? values.sshKeyPath : ""
       );
       // Invalidate database-related queries after successful connection
       queryClient.invalidateQueries({ queryKey: ["databases"] });
@@ -207,9 +259,21 @@ export const useConnectionForm = ({
     }
   };
 
+  const handleSelectSSHKey = async (): Promise<string | null> => {
+    try {
+      const path = await SelectSSHKeyFile();
+      return path;
+    } catch (error) {
+      console.error("Failed to select SSH key:", error);
+      return null;
+    }
+  };
+
   return {
     form,
     register,
+    watch,
+    setValue,
     status,
     setStatus,
     currentEngine,
@@ -217,5 +281,6 @@ export const useConnectionForm = ({
     handleSave,
     handleTest,
     handleConnect,
+    handleSelectSSHKey,
   };
 };
