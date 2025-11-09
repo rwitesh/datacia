@@ -29,7 +29,7 @@ type RemoteEngine interface {
 	// Connection Storage
 	SaveConnection(name string, config map[string]string) error
 	LoadConnection(id string) (map[string]string, error)
-	ListConnections() (map[string]string, error)
+	ListConnections() (map[string]common.ConnectionInfo, error)
 	UpdateConnection(id, name string, config map[string]string) error
 	DeleteConnection(id string) (bool, error)
 

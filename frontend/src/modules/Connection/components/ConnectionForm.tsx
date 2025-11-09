@@ -16,17 +16,6 @@ interface ConnectionFormProps {
   onSelectSSHKey: () => Promise<string | null>;
 }
 
-const getHostPlaceholder = (engine: DatabaseEngine) => {
-  switch (engine) {
-    case "clickhouse":
-      return "http://localhost";
-    case "postgres":
-      return "localhost";
-    default:
-      return "localhost";
-  }
-};
-
 export const ConnectionForm: React.FC<ConnectionFormProps> = ({
   register,
   watch,
@@ -92,7 +81,7 @@ export const ConnectionForm: React.FC<ConnectionFormProps> = ({
             id="host"
             disabled={loading}
             {...register("host")}
-            placeholder={getHostPlaceholder(currentEngine)}
+            placeholder="localhost"
             className="h-6 px-2 text-sm"
           />
         </div>
@@ -171,10 +160,10 @@ export const ConnectionForm: React.FC<ConnectionFormProps> = ({
         </div>
 
         {useSSH && (
-          <div className="mt-3 space-y-3 pl-6 border-l-2">
+          <div className="mt-3 space-y-3 pl-2 border-l-2">
             <div className="flex gap-2">
               <div className="flex-1 space-y-1">
-                <Label htmlFor="sshHost">SSH Host</Label>
+                <Label htmlFor="sshHost">Server</Label>
                 <Input
                   id="sshHost"
                   disabled={loading}
@@ -185,7 +174,7 @@ export const ConnectionForm: React.FC<ConnectionFormProps> = ({
               </div>
 
               <div className="w-24 space-y-1">
-                <Label htmlFor="sshPort">SSH Port</Label>
+                <Label htmlFor="sshPort">Port</Label>
                 <Input
                   id="sshPort"
                   disabled={loading}
@@ -199,7 +188,7 @@ export const ConnectionForm: React.FC<ConnectionFormProps> = ({
             </div>
 
             <div className="space-y-1">
-              <Label htmlFor="sshUsername">SSH Username</Label>
+              <Label htmlFor="sshUsername">User</Label>
               <Input
                 id="sshUsername"
                 disabled={loading}
@@ -266,7 +255,7 @@ export const ConnectionForm: React.FC<ConnectionFormProps> = ({
               </div>
             ) : (
               <div className="space-y-1">
-                <Label htmlFor="sshPassword">SSH Password</Label>
+                <Label htmlFor="sshPassword">Password</Label>
                 <div className="relative">
                   <Input
                     id="sshPassword"

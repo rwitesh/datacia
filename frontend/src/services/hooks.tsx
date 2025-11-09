@@ -6,6 +6,7 @@ import {
   ListTables,
   CancelQuery,
 } from "../../bindings/layerbits/pkg/remote/engine";
+import type { ConnectionInfo } from "../../bindings/layerbits/pkg/common";
 import { RunQuery } from "./database";
 
 export function useDatabase() {
@@ -48,7 +49,7 @@ export function useCancelQuery() {
 }
 
 export function useFetchConnections() {
-  return useQuery<Record<string, string>, Error>({
+  return useQuery<Record<string, ConnectionInfo>, Error>({
     queryKey: ["connections"],
     queryFn: () => ListConnections(),
     retry: 3,

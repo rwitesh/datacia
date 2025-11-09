@@ -3,12 +3,12 @@ package remote
 import (
 	"errors"
 	"fmt"
-	"net"
 	"layerbits/internal/db"
 	"layerbits/pkg/clickhouse"
 	"layerbits/pkg/common"
 	"layerbits/pkg/postgres"
 	"layerbits/pkg/ssh"
+	"net"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
@@ -132,7 +132,7 @@ func (e *Engine) EstablishConnection(id string) error {
 	if err != nil {
 		return err
 	}
-	
+
 	// Extract SSH parameters if present
 	useSSH := config["useSSH"]
 	sshHost := config["sshHost"]
@@ -140,7 +140,7 @@ func (e *Engine) EstablishConnection(id string) error {
 	sshUsername := config["sshUsername"]
 	sshPassword := config["sshPassword"]
 	sshKeyPath := config["sshKeyPath"]
-	
+
 	err = e.CreateNewConnectionWithSSH(
 		config["engine"],
 		config["host"],
@@ -218,7 +218,7 @@ func (e *Engine) LoadConnection(id string) (map[string]string, error) {
 	return e.store.LoadConnection(id)
 }
 
-func (e *Engine) ListConnections() (map[string]string, error) {
+func (e *Engine) ListConnections() (map[string]common.ConnectionInfo, error) {
 	return e.store.ListConnections()
 }
 

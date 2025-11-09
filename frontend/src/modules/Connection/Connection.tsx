@@ -45,6 +45,9 @@ export const DatabaseConnection: React.FC = () => {
     handleTest,
     handleConnect,
     handleSelectSSHKey,
+    saveMutation,
+    testMutation,
+    connectMutation,
   } = useConnectionForm({
     resolvedEngine,
     connectionId,
@@ -83,7 +86,7 @@ export const DatabaseConnection: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex-1 px-4 overflow-y-auto min-h-0">
+      <div className="flex-1 px-2 overflow-y-auto min-h-0">
         <ConnectionForm
           register={register}
           watch={watch}
@@ -102,6 +105,9 @@ export const DatabaseConnection: React.FC = () => {
           onSave={handleSave}
           onTest={handleTest}
           onConnect={handleConnect}
+          saveMutation={saveMutation}
+          testMutation={testMutation}
+          connectMutation={connectMutation}
         />
       </div>
     </div>

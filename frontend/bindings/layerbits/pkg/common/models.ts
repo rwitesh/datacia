@@ -5,6 +5,34 @@
 // @ts-ignore: Unused imports
 import { Create as $Create } from "@wailsio/runtime";
 
+/**
+ * ConnectionInfo represents a connection list item with name and engine
+ */
+export class ConnectionInfo {
+    "name": string;
+    "engine": string;
+
+    /** Creates a new ConnectionInfo instance. */
+    constructor($$source: Partial<ConnectionInfo> = {}) {
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("engine" in $$source)) {
+            this["engine"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ConnectionInfo instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ConnectionInfo {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new ConnectionInfo($$parsedSource as Partial<ConnectionInfo>);
+    }
+}
+
 export class QueryResult {
     "type": QueryType;
     "columns": string[];

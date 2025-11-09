@@ -50,9 +50,9 @@ export function GetCurrentConnectionInfo(): $CancellablePromise<{ [_: string]: s
     });
 }
 
-export function ListConnections(): $CancellablePromise<{ [_: string]: string }> {
+export function ListConnections(): $CancellablePromise<{ [_: string]: common$0.ConnectionInfo }> {
     return $Call.ByID(1956322481).then(($result: any) => {
-        return $$createType0($result);
+        return $$createType2($result);
     });
 }
 
@@ -62,7 +62,7 @@ export function ListDatabases(): $CancellablePromise<any> {
 
 export function ListTables(): $CancellablePromise<string[]> {
     return $Call.ByID(1596120565).then(($result: any) => {
-        return $$createType1($result);
+        return $$createType3($result);
     });
 }
 
@@ -74,7 +74,7 @@ export function LoadConnection(id: string): $CancellablePromise<{ [_: string]: s
 
 export function RunQuery(queryId: string, queryType: string, sql: string): $CancellablePromise<common$0.QueryResult> {
     return $Call.ByID(1277753707, queryId, queryType, sql).then(($result: any) => {
-        return $$createType2($result);
+        return $$createType4($result);
     });
 }
 
@@ -103,5 +103,7 @@ export function UpdateConnection(id: string, name: string, config: { [_: string]
 
 // Private type creation functions
 const $$createType0 = $Create.Map($Create.Any, $Create.Any);
-const $$createType1 = $Create.Array($Create.Any);
-const $$createType2 = common$0.QueryResult.createFrom;
+const $$createType1 = common$0.ConnectionInfo.createFrom;
+const $$createType2 = $Create.Map($Create.Any, $$createType1);
+const $$createType3 = $Create.Array($Create.Any);
+const $$createType4 = common$0.QueryResult.createFrom;

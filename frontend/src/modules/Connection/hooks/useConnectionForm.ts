@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 import {
   CreateNewConnection as Connect,
@@ -143,13 +143,9 @@ export const useConnectionForm = ({
     });
   };
 
-  const handleSave = async () => {
-    const values = getValues();
-    const validationErrors = validateForSave(values);
-    applyValidationErrors(validationErrors);
-    if (Object.keys(validationErrors).length > 0) return;
-
-    try {
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      const values = getValues();
       const config: Record<string, string> = {
         engine: values.engine,
         host: values.host,
@@ -178,26 +174,31 @@ export const useConnectionForm = ({
       }
 
       queryClient.invalidateQueries({ queryKey: ["connections"] });
+    },
+    onMutate: () => {
+      setStatus({
+        kind: "info",
+        title: connectionId ? "Updating connection..." : "Saving connection...",
+      });
+    },
+    onSuccess: () => {
       setStatus({
         kind: "success",
         title: connectionId ? "Connection updated" : "Connection saved",
       });
-    } catch (err: unknown) {
+    },
+    onError: (err: unknown) => {
       setStatus({
         kind: "error",
         title: "Save failed",
         description: err instanceof Error ? err.message : String(err),
       });
-    }
-  };
+    },
+  });
 
-  const handleTest = async () => {
-    const values = getValues();
-    const validationErrors = validateForTestConnect(values);
-    applyValidationErrors(validationErrors);
-    if (Object.keys(validationErrors).length > 0) return;
-
-    try {
+  const testMutation = useMutation({
+    mutationFn: async () => {
+      const values = getValues();
       await Test(
         values.engine,
         values.host,
@@ -212,23 +213,28 @@ export const useConnectionForm = ({
         values.sshPassword,
         values.useSSHKey ? values.sshKeyPath : ""
       );
+    },
+    onMutate: () => {
+      setStatus({
+        kind: "info",
+        title: "Testing connection...",
+      });
+    },
+    onSuccess: () => {
       setStatus({ kind: "success", title: "Connection test successful" });
-    } catch (err: unknown) {
+    },
+    onError: (err: unknown) => {
       setStatus({
         kind: "error",
         title: "Connection test failed",
         description: err instanceof Error ? err.message : String(err),
       });
-    }
-  };
+    },
+  });
 
-  const handleConnect = async () => {
-    const values = getValues();
-    const validationErrors = validateForTestConnect(values);
-    applyValidationErrors(validationErrors);
-    if (Object.keys(validationErrors).length > 0) return;
-
-    try {
+  const connectMutation = useMutation({
+    mutationFn: async () => {
+      const values = getValues();
       await Connect(
         values.engine,
         values.host,
@@ -243,20 +249,52 @@ export const useConnectionForm = ({
         values.sshPassword,
         values.useSSHKey ? values.sshKeyPath : ""
       );
+
       // Invalidate database-related queries after successful connection
       queryClient.invalidateQueries({ queryKey: ["databases"] });
       queryClient.invalidateQueries({ queryKey: ["tables"] });
-
+    },
+    onMutate: () => {
+      setStatus({
+        kind: "info",
+        title: "Connecting...",
+      });
+    },
+    onSuccess: () => {
       // Redirect to editor after successful connection
       navigate("/editor");
-
-    } catch (err: unknown) {
+    },
+    onError: (err: unknown) => {
       setStatus({
         kind: "error",
         title: "Connection failed",
         description: err instanceof Error ? err.message : String(err),
       });
-    }
+    },
+  });
+
+  const handleSave = () => {
+    const values = getValues();
+    const validationErrors = validateForSave(values);
+    applyValidationErrors(validationErrors);
+    if (Object.keys(validationErrors).length > 0) return;
+    saveMutation.mutate();
+  };
+
+  const handleTest = () => {
+    const values = getValues();
+    const validationErrors = validateForTestConnect(values);
+    applyValidationErrors(validationErrors);
+    if (Object.keys(validationErrors).length > 0) return;
+    testMutation.mutate();
+  };
+
+  const handleConnect = () => {
+    const values = getValues();
+    const validationErrors = validateForTestConnect(values);
+    applyValidationErrors(validationErrors);
+    if (Object.keys(validationErrors).length > 0) return;
+    connectMutation.mutate();
   };
 
   const handleSelectSSHKey = async (): Promise<string | null> => {
@@ -282,5 +320,8 @@ export const useConnectionForm = ({
     handleTest,
     handleConnect,
     handleSelectSSHKey,
+    saveMutation,
+    testMutation,
+    connectMutation,
   };
 };

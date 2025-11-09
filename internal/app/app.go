@@ -71,7 +71,6 @@ func (a *App) CreateMainWindow() error {
 		BackgroundColour: application.NewRGB(27, 38, 54),
 		Width:            constants.CONNECTION_WINDOW_WIDTH,
 		Height:           constants.CONNECTION_WINDOW_HEIGHT,
-		DisableResize:    true,
 	})
 
 	if a.window == nil {
