@@ -1,4 +1,4 @@
-import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
+import {useMutation, useQuery } from "@tanstack/react-query";
 import {
   ListConnections,
   LoadConnection,
@@ -6,6 +6,7 @@ import {
   ListTables,
   CancelQuery,
 } from "../../bindings/layerbits/pkg/remote/engine";
+import type { ConnectionInfo } from "../../bindings/layerbits/pkg/common";
 import { RunQuery } from "./database";
 
 export function useDatabase() {
@@ -21,9 +22,7 @@ export function useTables() {
     queryKey: ["tables"],
     queryFn: () => ListTables(),
     refetchOnWindowFocus: false,
-    staleTime: 10_000,
-    retry: 2,
-    placeholderData: keepPreviousData,
+    retry: 2
   });
 }
 
@@ -48,7 +47,7 @@ export function useCancelQuery() {
 }
 
 export function useFetchConnections() {
-  return useQuery<Record<string, string>, Error>({
+  return useQuery<Record<string, ConnectionInfo>, Error>({
     queryKey: ["connections"],
     queryFn: () => ListConnections(),
     retry: 3,

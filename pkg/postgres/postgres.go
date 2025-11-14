@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"layerbits/pkg/common"
 	"sync"
 	"time"
@@ -37,10 +38,14 @@ func New() *Postgres {
 }
 
 func (p *Postgres) Connect(host, port, username, password, database string, test bool) error {
-	dsn := fmt.Sprintf(
-		"postgres://%s:%s@%s:%s/%s",
-		username, password, host, port, database,
-	)
+	// Construct DSN with proper URL encoding for username, password, and database
+	u := &url.URL{
+		Scheme: "postgres",
+		User:   url.UserPassword(username, password),
+		Host:   fmt.Sprintf("%s:%s", host, port),
+		Path:   "/" + database,
+	}
+	dsn := u.String()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

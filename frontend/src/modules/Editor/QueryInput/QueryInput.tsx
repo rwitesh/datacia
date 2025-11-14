@@ -35,6 +35,7 @@ export function QueryInput() {
     const state = EditorState.create({
       extensions: [
         lineNumbers(),
+        EditorView.lineWrapping,
         sql({ dialect: ClickhouseDialect, schema }),
         autocompletion(),
         closeBrackets(),

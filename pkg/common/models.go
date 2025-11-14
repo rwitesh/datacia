@@ -25,6 +25,12 @@ type DatabaseInfo struct {
 	CurrentDatabase string   `json:"currentDatabase"`
 }
 
+// ConnectionInfo represents a connection list item with name and engine
+type ConnectionInfo struct {
+	Name   string `json:"name"`
+	Engine string `json:"engine"`
+}
+
 // ConnectionState holds common connection state for database clients
 type ConnectionState struct {
 	Host          string

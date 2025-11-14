@@ -103,15 +103,26 @@ export const Home = () => {
           <div className="text-xs text-red-500">Failed to load connections</div>
         ) : Object.keys(savedConnections).length > 0 ? (
           <ul className="text-xs">
-            {Object.entries(savedConnections).map(([id, name]) => (
-              <li
-                key={id}
-                className="flex items-center justify-between rounded select-none px-1"
-              >
-                <div className="flex items-center gap-1 min-w-0">
-                  <Database className="h-3 w-3 shrink-0 text-muted-foreground" />
-                  <span className="truncate">{name}</span>
-                </div>
+            {Object.entries(savedConnections).map(([id, connectionInfo]) => {
+              const getConnectionIcon = (engine: string) => {
+                if (engine === "clickhouse") {
+                  return <img src={ClickhouseIcon} width={12} height={12} className="shrink-0" alt="ClickHouse" />;
+                } else if (engine === "postgres") {
+                  return <img src={PostgreSQLIcon} width={12} height={12} className="shrink-0" alt="PostgreSQL" />;
+                } else {
+                  return <Database className="h-3 w-3 shrink-0 text-muted-foreground" />;
+                }
+              };
+
+              return (
+                <li
+                  key={id}
+                  className="flex items-center justify-between rounded select-none px-1"
+                >
+                  <div className="flex items-center gap-1 min-w-0">
+                    {getConnectionIcon(connectionInfo.engine)}
+                    <span className="truncate">{connectionInfo.name}</span>
+                  </div>
 
                 {/* Per-connection menu */}
                 <Menubar className="border-none bg-transparent h-min">
@@ -144,8 +155,9 @@ export const Home = () => {
                     </MenubarContent>
                   </MenubarMenu>
                 </Menubar>
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
         ) : (
           <div className="flex-1 flex justify-center text-muted-foreground text-xs">

@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 import {
   CreateNewConnection as Connect,
   TestNewConnection as Test,
   SaveConnection,
   UpdateConnection,
+  SelectSSHKeyFile,
 } from "@/services/common";
 import { DEFAULT_PORTS } from "../utils/constants";
 import type { DatabaseEngine, FormValues, Status } from "../utils/types";
@@ -25,6 +26,12 @@ interface FetchedConnectionData {
   password?: string;
   database?: string;
   connectionName?: string;
+  useSSH?: string;
+  sshHost?: string;
+  sshPort?: string;
+  sshUsername?: string;
+  sshPassword?: string;
+  sshKeyPath?: string;
 }
 
 interface UseConnectionFormProps {
@@ -54,6 +61,13 @@ export const useConnectionForm = ({
       username: "",
       password: "",
       database: "",
+      useSSH: false,
+      sshHost: "",
+      sshPort: "",
+      sshUsername: "",
+      sshPassword: "",
+      useSSHKey: false,
+      sshKeyPath: "",
     },
   });
 
@@ -83,6 +97,13 @@ export const useConnectionForm = ({
         username: fetchedData.username || "",
         password: fetchedData.password || "",
         database: fetchedData.database || "",
+        useSSH: fetchedData.useSSH === "true" || false,
+        sshHost: fetchedData.sshHost || "",
+        sshPort: fetchedData.sshPort || "",
+        sshUsername: fetchedData.sshUsername || "",
+        sshPassword: fetchedData.sshPassword || "",
+        useSSHKey: !!fetchedData.sshKeyPath,
+        sshKeyPath: fetchedData.sshKeyPath || "",
       });
     } else if (!connectionId) {
       reset({
@@ -93,6 +114,13 @@ export const useConnectionForm = ({
         username: "",
         password: "",
         database: "",
+        useSSH: false,
+        sshHost: "",
+        sshPort: "",
+        sshUsername: "",
+        sshPassword: "",
+        useSSHKey: false,
+        sshKeyPath: "",
       });
     }
     setStatus(null);
@@ -115,14 +143,10 @@ export const useConnectionForm = ({
     });
   };
 
-  const handleSave = async () => {
-    const values = getValues();
-    const validationErrors = validateForSave(values);
-    applyValidationErrors(validationErrors);
-    if (Object.keys(validationErrors).length > 0) return;
-
-    try {
-      const config = {
+  const saveMutation = useMutation<void, Error, void, unknown>({
+    mutationFn: async () => {
+      const values = getValues();
+      const config: Record<string, string> = {
         engine: values.engine,
         host: values.host,
         port: values.port,
@@ -131,6 +155,18 @@ export const useConnectionForm = ({
         database: values.database,
       };
 
+      if (values.useSSH) {
+        config.useSSH = "true";
+        config.sshHost = values.sshHost;
+        config.sshPort = values.sshPort || "22";
+        config.sshUsername = values.sshUsername;
+        if (values.useSSHKey) {
+          config.sshKeyPath = values.sshKeyPath;
+        } else {
+          config.sshPassword = values.sshPassword;
+        }
+      }
+
       if (connectionId) {
         await UpdateConnection(connectionId, values.connectionName, config);
       } else {
@@ -138,78 +174,144 @@ export const useConnectionForm = ({
       }
 
       queryClient.invalidateQueries({ queryKey: ["connections"] });
+    },
+    onMutate: () => {
+      setStatus({
+        kind: "info",
+        title: connectionId ? "Updating connection..." : "Saving connection...",
+      });
+    },
+    onSuccess: () => {
       setStatus({
         kind: "success",
         title: connectionId ? "Connection updated" : "Connection saved",
       });
-    } catch (err: unknown) {
+    },
+    onError: (err: unknown) => {
       setStatus({
         kind: "error",
         title: "Save failed",
         description: err instanceof Error ? err.message : String(err),
       });
-    }
-  };
+    },
+  });
 
-  const handleTest = async () => {
-    const values = getValues();
-    const validationErrors = validateForTestConnect(values);
-    applyValidationErrors(validationErrors);
-    if (Object.keys(validationErrors).length > 0) return;
-
-    try {
+  const testMutation = useMutation<void, Error, void, unknown>({
+    mutationFn: async () => {
+      const values = getValues();
       await Test(
         values.engine,
         values.host,
         values.port,
         values.username,
         values.password,
-        values.database
+        values.database,
+        values.useSSH ? "true" : "",
+        values.sshHost,
+        values.sshPort,
+        values.sshUsername,
+        values.sshPassword,
+        values.useSSHKey ? values.sshKeyPath : ""
       );
+    },
+    onMutate: () => {
+      setStatus({
+        kind: "info",
+        title: "Testing connection...",
+      });
+    },
+    onSuccess: () => {
       setStatus({ kind: "success", title: "Connection test successful" });
-    } catch (err: unknown) {
+    },
+    onError: (err: unknown) => {
       setStatus({
         kind: "error",
         title: "Connection test failed",
         description: err instanceof Error ? err.message : String(err),
       });
-    }
-  };
+    },
+  });
 
-  const handleConnect = async () => {
-    const values = getValues();
-    const validationErrors = validateForTestConnect(values);
-    applyValidationErrors(validationErrors);
-    if (Object.keys(validationErrors).length > 0) return;
-
-    try {
+  const connectMutation = useMutation<void, Error, void, unknown>({
+    mutationFn: async () => {
+      const values = getValues();
       await Connect(
         values.engine,
         values.host,
         values.port,
         values.username,
         values.password,
-        values.database
+        values.database,
+        values.useSSH ? "true" : "",
+        values.sshHost,
+        values.sshPort,
+        values.sshUsername,
+        values.sshPassword,
+        values.useSSHKey ? values.sshKeyPath : ""
       );
+
       // Invalidate database-related queries after successful connection
       queryClient.invalidateQueries({ queryKey: ["databases"] });
       queryClient.invalidateQueries({ queryKey: ["tables"] });
-
+    },
+    onMutate: () => {
+      setStatus({
+        kind: "info",
+        title: "Connecting...",
+      });
+    },
+    onSuccess: () => {
       // Redirect to editor after successful connection
       navigate("/editor");
-
-    } catch (err: unknown) {
+    },
+    onError: (err: unknown) => {
       setStatus({
         kind: "error",
         title: "Connection failed",
         description: err instanceof Error ? err.message : String(err),
       });
+    },
+  });
+
+  const handleSave = () => {
+    const values = getValues();
+    const validationErrors = validateForSave(values);
+    applyValidationErrors(validationErrors);
+    if (Object.keys(validationErrors).length > 0) return;
+    saveMutation.mutate();
+  };
+
+  const handleTest = () => {
+    const values = getValues();
+    const validationErrors = validateForTestConnect(values);
+    applyValidationErrors(validationErrors);
+    if (Object.keys(validationErrors).length > 0) return;
+    testMutation.mutate();
+  };
+
+  const handleConnect = () => {
+    const values = getValues();
+    const validationErrors = validateForTestConnect(values);
+    applyValidationErrors(validationErrors);
+    if (Object.keys(validationErrors).length > 0) return;
+    connectMutation.mutate();
+  };
+
+  const handleSelectSSHKey = async (): Promise<string | null> => {
+    try {
+      const path = await SelectSSHKeyFile();
+      return path;
+    } catch (error) {
+      console.error("Failed to select SSH key:", error);
+      return null;
     }
   };
 
   return {
     form,
     register,
+    watch,
+    setValue,
     status,
     setStatus,
     currentEngine,
@@ -217,5 +319,9 @@ export const useConnectionForm = ({
     handleSave,
     handleTest,
     handleConnect,
+    handleSelectSSHKey,
+    saveMutation,
+    testMutation,
+    connectMutation,
   };
 };

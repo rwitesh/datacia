@@ -6,6 +6,8 @@ import (
 	"log"
 	"path/filepath"
 
+	"layerbits/pkg/common"
+
 	"github.com/adrg/xdg"
 	"github.com/google/uuid"
 	_ "github.com/mattn/go-sqlite3"
@@ -100,20 +102,32 @@ func (s *Store) LoadConnection(id string) (map[string]string, error) {
 	return cfg, nil
 }
 
-func (s *Store) ListConnections() (map[string]string, error) {
-	rows, err := s.db.Query(`SELECT id, name FROM connections ORDER BY updated_at DESC`)
+func (s *Store) ListConnections() (map[string]common.ConnectionInfo, error) {
+	// bring id, name, engine from config
+	rows, err := s.db.Query(`SELECT id, name, config FROM connections ORDER BY updated_at DESC`)
 	if err != nil {
-		return map[string]string{}, err
+		return map[string]common.ConnectionInfo{}, err
 	}
 	defer rows.Close()
 
-	var connections = map[string]string{}
+	var connections = map[string]common.ConnectionInfo{}
 	for rows.Next() {
-		var id, name string
-		if err := rows.Scan(&id, &name); err != nil {
-			return map[string]string{}, err
+		var id, name, rawConfig string
+		if err := rows.Scan(&id, &name, &rawConfig); err != nil {
+			return map[string]common.ConnectionInfo{}, err
 		}
-		connections[id] = name
+
+		// Parse JSON config to extract engine
+		var cfg map[string]string
+		engine := ""
+		if err := json.Unmarshal([]byte(rawConfig), &cfg); err == nil {
+			engine = cfg["engine"]
+		}
+
+		connections[id] = common.ConnectionInfo{
+			Name:   name,
+			Engine: engine,
+		}
 	}
 	return connections, rows.Err()
 }

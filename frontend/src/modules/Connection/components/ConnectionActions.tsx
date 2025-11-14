@@ -1,6 +1,7 @@
 import React from "react";
 import { Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import type { UseMutationResult } from "@tanstack/react-query";
 
 interface ConnectionActionsProps {
   isUpdate: boolean;
@@ -9,6 +10,9 @@ interface ConnectionActionsProps {
   onSave: () => void;
   onTest: () => void;
   onConnect: () => void;
+  saveMutation: UseMutationResult<void, Error, void, unknown>;
+  testMutation: UseMutationResult<void, Error, void, unknown>;
+  connectMutation: UseMutationResult<void, Error, void, unknown>;
 }
 
 export const ConnectionActions: React.FC<ConnectionActionsProps> = ({
@@ -18,8 +22,15 @@ export const ConnectionActions: React.FC<ConnectionActionsProps> = ({
   onSave,
   onTest,
   onConnect,
+  saveMutation,
+  testMutation,
+  connectMutation,
 }) => {
-  const isDisabled = loading || isSubmitting;
+  const isSaving = saveMutation.isPending;
+  const isTesting = testMutation.isPending;
+  const isConnecting = connectMutation.isPending;
+  const isAnyMutationPending = isSaving || isTesting || isConnecting;
+  const isDisabled = loading || isSubmitting || isAnyMutationPending;
 
   return (
     <div className="flex justify-between items-center gap-2 pt-4">
@@ -31,7 +42,7 @@ export const ConnectionActions: React.FC<ConnectionActionsProps> = ({
         disabled={isDisabled}
       >
         <Save className="w-4 h-4" />
-        {isUpdate ? "Update" : "Save"}
+        {isSaving ? (isUpdate ? "Updating..." : "Saving...") : isUpdate ? "Update" : "Save"}
       </Button>
 
       <div className="flex gap-2">
@@ -42,7 +53,7 @@ export const ConnectionActions: React.FC<ConnectionActionsProps> = ({
           onClick={onTest}
           disabled={isDisabled}
         >
-          Test
+          {isTesting ? "Testing..." : "Test"}
         </Button>
         <Button
           type="button"
@@ -51,7 +62,7 @@ export const ConnectionActions: React.FC<ConnectionActionsProps> = ({
           onClick={onConnect}
           disabled={isDisabled}
         >
-          Connect
+          {isConnecting ? "Connecting..." : "Connect"}
         </Button>
       </div>
     </div>

@@ -1,13 +1,17 @@
 import type { DatabaseEngine } from "@/modules/Connection/utils/types.tsx";
-import { SaveConnection as WSaveConnection, DeleteConnection as WDeleteConnection, CreateNewConnection as WCreateNewConnection, CloseCurrentConnection as WCloseCurrentConnection, EstablishConnection as WEstablishConnection, ChangeDatabase as WChangeDatabase, ChangeDatabaseByName as WChangeDatabaseByName, UpdateConnection as WUpdateConnection} from "../../bindings/layerbits/pkg/remote/engine.ts";
+import { SaveConnection as WSaveConnection, DeleteConnection as WDeleteConnection, CreateNewConnectionWithSSH as WCreateNewConnectionWithSSH, CloseCurrentConnection as WCloseCurrentConnection, EstablishConnection as WEstablishConnection, ChangeDatabase as WChangeDatabase, ChangeDatabaseByName as WChangeDatabaseByName, UpdateConnection as WUpdateConnection, SelectSSHKeyFile as WSelectSSHKeyFile} from "../../bindings/layerbits/pkg/remote/engine.ts";
 
 
-export const CreateNewConnection = (engine: DatabaseEngine, host: string, port: string, username: string, password: string, database: string) => {
-  return WCreateNewConnection(engine, host, port, username, password, database, false);
+export const CreateNewConnection = (engine: DatabaseEngine, host: string, port: string, username: string, password: string, database: string, useSSH: string = "", sshHost: string = "", sshPort: string = "", sshUsername: string = "", sshPassword: string = "", sshKeyPath: string = "") => {
+  return WCreateNewConnectionWithSSH(engine, host, port, username, password, database, useSSH, sshHost, sshPort, sshUsername, sshPassword, sshKeyPath, false);
 };
 
-export const TestNewConnection = (engine: DatabaseEngine, host: string, port: string, username: string, password: string, database: string) => {
-  return WCreateNewConnection(engine, host, port, username, password, database, true);
+export const TestNewConnection = (engine: DatabaseEngine, host: string, port: string, username: string, password: string, database: string, useSSH: string = "", sshHost: string = "", sshPort: string = "", sshUsername: string = "", sshPassword: string = "", sshKeyPath: string = "") => {
+  return WCreateNewConnectionWithSSH(engine, host, port, username, password, database, useSSH, sshHost, sshPort, sshUsername, sshPassword, sshKeyPath, true);
+};
+
+export const SelectSSHKeyFile = () => {
+  return WSelectSSHKeyFile();
 };
 
 export const ChangeDatabase = (engine: DatabaseEngine, host: string, port: string, username: string, password: string, database: string) => {

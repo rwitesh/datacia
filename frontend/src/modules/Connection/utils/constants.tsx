@@ -21,4 +21,11 @@ export const FIELD_LABELS: Record<keyof FormValues, string> = {
   username: "Username",
   password: "Password",
   database: "Database",
+  useSSH: "Use SSH",
+  sshHost: "SSH Host",
+  sshPort: "SSH Port",
+  sshUsername: "SSH Username",
+  sshPassword: "SSH Password",
+  useSSHKey: "Use SSH Key",
+  sshKeyPath: "SSH Key Path",
 };

@@ -7,6 +7,9 @@ import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Cr
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/application/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as common$0 from "../common/models.js";
 
 export function CancelQuery(queryId: string): $CancellablePromise<void> {
@@ -29,6 +32,10 @@ export function CreateNewConnection(engine: string, host: string, port: string, 
     return $Call.ByID(4213280126, engine, host, port, username, password, database, test);
 }
 
+export function CreateNewConnectionWithSSH(engine: string, host: string, port: string, username: string, password: string, database: string, useSSH: string, sshHost: string, sshPort: string, sshUsername: string, sshPassword: string, sshKeyPath: string, test: boolean): $CancellablePromise<void> {
+    return $Call.ByID(4262270784, engine, host, port, username, password, database, useSSH, sshHost, sshPort, sshUsername, sshPassword, sshKeyPath, test);
+}
+
 export function DeleteConnection(id: string): $CancellablePromise<boolean> {
     return $Call.ByID(122424499, id);
 }
@@ -43,9 +50,9 @@ export function GetCurrentConnectionInfo(): $CancellablePromise<{ [_: string]: s
     });
 }
 
-export function ListConnections(): $CancellablePromise<{ [_: string]: string }> {
+export function ListConnections(): $CancellablePromise<{ [_: string]: common$0.ConnectionInfo }> {
     return $Call.ByID(1956322481).then(($result: any) => {
-        return $$createType0($result);
+        return $$createType2($result);
     });
 }
 
@@ -55,7 +62,7 @@ export function ListDatabases(): $CancellablePromise<any> {
 
 export function ListTables(): $CancellablePromise<string[]> {
     return $Call.ByID(1596120565).then(($result: any) => {
-        return $$createType1($result);
+        return $$createType3($result);
     });
 }
 
@@ -67,12 +74,27 @@ export function LoadConnection(id: string): $CancellablePromise<{ [_: string]: s
 
 export function RunQuery(queryId: string, queryType: string, sql: string): $CancellablePromise<common$0.QueryResult> {
     return $Call.ByID(1277753707, queryId, queryType, sql).then(($result: any) => {
-        return $$createType2($result);
+        return $$createType4($result);
     });
 }
 
 export function SaveConnection(name: string, config: { [_: string]: string }): $CancellablePromise<void> {
     return $Call.ByID(2078362505, name, config);
+}
+
+/**
+ * SelectSSHKeyFile opens a file dialog to select an SSH private key file
+ * Returns the selected file path, or an error if cancelled or failed
+ */
+export function SelectSSHKeyFile(): $CancellablePromise<string> {
+    return $Call.ByID(1094887375);
+}
+
+/**
+ * SetApplication sets the Wails application instance for file dialogs
+ */
+export function SetApplication(app: application$0.App | null): $CancellablePromise<void> {
+    return $Call.ByID(2828316614, app);
 }
 
 export function UpdateConnection(id: string, name: string, config: { [_: string]: string }): $CancellablePromise<void> {
@@ -81,5 +103,7 @@ export function UpdateConnection(id: string, name: string, config: { [_: string]
 
 // Private type creation functions
 const $$createType0 = $Create.Map($Create.Any, $Create.Any);
-const $$createType1 = $Create.Array($Create.Any);
-const $$createType2 = common$0.QueryResult.createFrom;
+const $$createType1 = common$0.ConnectionInfo.createFrom;
+const $$createType2 = $Create.Map($Create.Any, $$createType1);
+const $$createType3 = $Create.Array($Create.Any);
+const $$createType4 = common$0.QueryResult.createFrom;

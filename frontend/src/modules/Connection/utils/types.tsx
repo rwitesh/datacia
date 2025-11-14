@@ -11,6 +11,13 @@ export interface FormValues {
   username: string;
   password: string;
   database: string;
+  useSSH: boolean;
+  sshHost: string;
+  sshPort: string;
+  sshUsername: string;
+  sshPassword: string;
+  useSSHKey: boolean;
+  sshKeyPath: string;
 }
 
 export interface ConnectionConfig {
@@ -20,6 +27,12 @@ export interface ConnectionConfig {
   username: string;
   password: string;
   database: string;
+  useSSH?: string;
+  sshHost?: string;
+  sshPort?: string;
+  sshUsername?: string;
+  sshPassword?: string;
+  sshKeyPath?: string;
 }
 
 export interface FetchedConnection {
