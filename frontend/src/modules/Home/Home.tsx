@@ -22,9 +22,11 @@ import {
 import { useFetchConnections } from "@/services/hooks";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAppContext } from "../Context/App/Index";
 
 export const Home = () => {
   const navigate = useNavigate();
+  const { setEngine } = useAppContext();
   const queryClient = useQueryClient();
 
   const {
@@ -44,9 +46,11 @@ export const Home = () => {
       });
   };
 
-  const handleConnect = async (id: string) => {
+  const handleConnect = async (id: string, engine: string) => {
     try {
       await EstablishConnection(id);
+      // Set engine in context
+      setEngine(engine);
       // Redirect to editor after successful connection
       queryClient.invalidateQueries({ queryKey: ["databases"] });
       queryClient.invalidateQueries({ queryKey: ["tables"] });
@@ -133,7 +137,7 @@ export const Home = () => {
                     <MenubarContent className="bg-white dark:bg-zinc-900 min-w-[120px]">
                       <MenubarItem
                         className="cursor-pointer text-[11px]"
-                        onClick={() => handleConnect(id)}
+                        onClick={() => handleConnect(id, connectionInfo.engine)}
                       >
                         <Plug className="w-3 h-3 mr-1" />
                         Connect

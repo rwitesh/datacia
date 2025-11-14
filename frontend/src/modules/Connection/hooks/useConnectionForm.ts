@@ -265,7 +265,6 @@ export const useConnectionForm = ({
     onSuccess: () => {
       // Store connected engine in app context
         const engine = getValues().engine;
-        console.log(engine)
         setEngine(engine);
         navigate("/editor");
     },

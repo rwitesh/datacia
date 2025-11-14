@@ -2,8 +2,8 @@ import { useEffect, useMemo, useRef } from "react";
 import { EditorView } from "codemirror";
 import { EditorState } from "@codemirror/state";
 import { autocompletion, closeBrackets } from "@codemirror/autocomplete";
-import { defaultKeymap, history, historyKeymap} from "@codemirror/commands";
-import { sql } from "@codemirror/lang-sql";
+import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
+import { PostgreSQL, sql, SQLDialect, StandardSQL } from "@codemirror/lang-sql";
 import { keymap, lineNumbers } from "@codemirror/view";
 import { useEditorContext } from "@/modules/Context/Editor/Index";
 import { ClickhouseDialect } from "./sql";
@@ -14,7 +14,6 @@ export function QueryInput() {
   const viewRef = useRef<EditorView | null>(null);
 
   const { engine } = useAppContext();
-  console.log(engine);
 
   const {
     tables: { data },
@@ -36,11 +35,20 @@ export function QueryInput() {
       viewRef.current = null;
     }
 
+    let dialect: SQLDialect;
+    if (engine === "clickhouse") {
+      dialect = ClickhouseDialect;
+    } else if (engine === "postgresql") {
+      dialect = PostgreSQL;
+    } else {
+      dialect = StandardSQL;
+    }
+
     const state = EditorState.create({
       extensions: [
         lineNumbers(),
         EditorView.lineWrapping,
-        sql({ dialect: ClickhouseDialect, schema }),
+        sql({ dialect, schema }),
         autocompletion(),
         closeBrackets(),
         history(),
@@ -49,7 +57,6 @@ export function QueryInput() {
           if (v.docChanged && tabId) {
             updateTab(tabId, { sql: v.state.doc.toString() });
           }
-        
         }),
         EditorView.theme({
           "&": {
