@@ -1,4 +1,4 @@
-import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
+import {useMutation, useQuery } from "@tanstack/react-query";
 import {
   ListConnections,
   LoadConnection,
@@ -22,9 +22,7 @@ export function useTables() {
     queryKey: ["tables"],
     queryFn: () => ListTables(),
     refetchOnWindowFocus: false,
-    staleTime: 10_000,
-    retry: 2,
-    placeholderData: keepPreviousData,
+    retry: 2
   });
 }
 

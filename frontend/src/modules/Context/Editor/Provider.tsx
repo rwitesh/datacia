@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from "uuid";
 import { EditorContext, type Tab } from "./Context";
 
 export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
-  const { data = [], isLoading, error, refetch } = useTables();
+  const { data = [], isLoading, isFetching,  error, refetch } = useTables();
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
 
@@ -154,7 +154,7 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
 
   const value = useMemo(
     () => ({
-      tables: { data, isLoading, error, refetch },
+      tables: { data, isLoading, isFetching, error, refetch },
       tabs,
       activeTab,
       createTab,
@@ -167,6 +167,7 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
     [
       data,
       isLoading,
+      isFetching,
       error,
       refetch,
       tabs,

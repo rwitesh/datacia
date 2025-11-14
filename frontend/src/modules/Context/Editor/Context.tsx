@@ -21,6 +21,7 @@ export type EditorContextType = {
   tables: {
     data: string[];
     isLoading: boolean;
+    isFetching: boolean;
     error?: Error | null;
     refetch: () => void;
   };
