@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
+import { useAppContext } from "@/modules/Context/App/Index";
 import {
   CreateNewConnection as Connect,
   TestNewConnection as Test,
@@ -47,6 +48,7 @@ export const useConnectionForm = ({
 }: UseConnectionFormProps) => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { setEngine } = useAppContext();
 
   const [status, setStatus] = useState<Status>(null);
 
@@ -261,8 +263,11 @@ export const useConnectionForm = ({
       });
     },
     onSuccess: () => {
-      // Redirect to editor after successful connection
-      navigate("/editor");
+      // Store connected engine in app context
+        const engine = getValues().engine;
+        console.log(engine)
+        setEngine(engine);
+        navigate("/editor");
     },
     onError: (err: unknown) => {
       setStatus({

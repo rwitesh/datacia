@@ -44,13 +44,13 @@ export const Home = () => {
       });
   };
 
-  const handleConnect = async (name: string) => {
+  const handleConnect = async (id: string) => {
     try {
-      await EstablishConnection(name);
+      await EstablishConnection(id);
       // Redirect to editor after successful connection
-      navigate("/editor");
       queryClient.invalidateQueries({ queryKey: ["databases"] });
       queryClient.invalidateQueries({ queryKey: ["tables"] });
+      navigate("/editor");
 
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : String(error));

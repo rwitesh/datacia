@@ -7,10 +7,14 @@ import { sql } from "@codemirror/lang-sql";
 import { keymap, lineNumbers } from "@codemirror/view";
 import { useEditorContext } from "@/modules/Context/Editor/Index";
 import { ClickhouseDialect } from "./sql";
+import { useAppContext } from "@/modules/Context/App/Index";
 
 export function QueryInput() {
   const editorRef = useRef<HTMLDivElement | null>(null);
   const viewRef = useRef<EditorView | null>(null);
+
+  const { engine } = useAppContext();
+  console.log(engine);
 
   const {
     tables: { data },

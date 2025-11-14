@@ -22,8 +22,8 @@ export const ChangeDatabaseByName = (database: string) => {
   return WChangeDatabaseByName(database);
 }
 
-export const EstablishConnection = (name: string) => {
-  return WEstablishConnection(name);
+export const EstablishConnection = (id: string) => {
+  return WEstablishConnection(id);
 }
 
 export const CloseCurrentConnection = () => {

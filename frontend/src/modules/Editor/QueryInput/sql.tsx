@@ -10,3 +10,4 @@ export const ClickhouseDialect = SQLDialect.define({
   backslashEscapes: true,
   doubleQuotedStrings: false,
 });
+ 

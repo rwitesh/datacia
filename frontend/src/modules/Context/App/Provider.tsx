@@ -1,9 +1,11 @@
-import React from "react";
+import React, { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AppContext } from "./Context";
+import type { DatabaseEngine } from "@/modules/Connection/utils/types";
 
 export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const queryClient = useQueryClient();
+  const [engine, setEngine] = useState<DatabaseEngine | null>(null);
 
   const reload = () => {
     // Invalidate cache for tables, databases, and connections
@@ -14,6 +16,8 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
 
   const value = {
     reload,
+    engine,
+    setEngine,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
