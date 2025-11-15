@@ -1,5 +1,5 @@
 import { useNavigate, Outlet} from "react-router";
-import { DeleteConnection, EstablishConnection } from "@/services/common";
+import { DeleteConnection } from "@/services/common";
 import ClickhouseIcon from "@/assets/clickhouse.svg";
 import PostgreSQLIcon from "@/assets/postgres.svg";
 import {
@@ -20,14 +20,13 @@ import {
   MenubarSeparator,
 } from "@/components/ui/menubar";
 import { useFetchConnections } from "@/services/hooks";
-import { toast } from "sonner";
-import { useQueryClient } from "@tanstack/react-query";
-import { useAppContext } from "../Context/App/Index";
+import { useConnectDatabase } from "@/modules/Connection/hooks/useConnectDatabase";
+ 
 
 export const Home = () => {
   const navigate = useNavigate();
-  const { setEngine } = useAppContext();
-  const queryClient = useQueryClient();
+  
+  const connectMutation = useConnectDatabase();
 
   const {
     data: savedConnections = {},
@@ -46,19 +45,8 @@ export const Home = () => {
       });
   };
 
-  const handleConnect = async (id: string, engine: string) => {
-    try {
-      await EstablishConnection(id);
-      // Set engine in context
-      setEngine(engine);
-      // Redirect to editor after successful connection
-      queryClient.invalidateQueries({ queryKey: ["databases"] });
-      queryClient.invalidateQueries({ queryKey: ["tables"] });
-      navigate("/editor");
-
-    } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : String(error));
-    }
+  const handleConnect = (id: string, engine: string) => {
+    connectMutation.mutate({ id, engine });
   };
 
   const handleEdit = (id: string) => {

@@ -2,10 +2,8 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
-import { useNavigate } from "react-router";
-import { useAppContext } from "@/modules/Context/App/Index";
+ 
 import {
-  CreateNewConnection as Connect,
   TestNewConnection as Test,
   SaveConnection,
   UpdateConnection,
@@ -18,6 +16,7 @@ import {
   validateForTestConnect,
   validationSchema,
 } from "../utils/validation";
+import { useConnectDatabase } from "./useConnectDatabase";
 interface FetchedConnectionData {
   name?: string;
   engine?: string;
@@ -47,8 +46,7 @@ export const useConnectionForm = ({
   fetchedData 
 }: UseConnectionFormProps) => {
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
-  const { setEngine } = useAppContext();
+  
 
   const [status, setStatus] = useState<Status>(null);
 
@@ -234,48 +232,7 @@ export const useConnectionForm = ({
     },
   });
 
-  const connectMutation = useMutation<void, Error, void, unknown>({
-    mutationFn: async () => {
-      const values = getValues();
-      await Connect(
-        values.engine,
-        values.host,
-        values.port,
-        values.username,
-        values.password,
-        values.database,
-        values.useSSH ? "true" : "",
-        values.sshHost,
-        values.sshPort,
-        values.sshUsername,
-        values.sshPassword,
-        values.useSSHKey ? values.sshKeyPath : ""
-      );
-
-      // Invalidate database-related queries after successful connection
-      queryClient.invalidateQueries({ queryKey: ["databases"] });
-      queryClient.invalidateQueries({ queryKey: ["tables"] });
-    },
-    onMutate: () => {
-      setStatus({
-        kind: "info",
-        title: "Connecting...",
-      });
-    },
-    onSuccess: () => {
-      // Store connected engine in app context
-        const engine = getValues().engine;
-        setEngine(engine);
-        navigate("/editor");
-    },
-    onError: (err: unknown) => {
-      setStatus({
-        kind: "error",
-        title: "Connection failed",
-        description: err instanceof Error ? err.message : String(err),
-      });
-    },
-  });
+  const connectMutation = useConnectDatabase({ setStatus });
 
   const handleSave = () => {
     const values = getValues();
@@ -298,7 +255,7 @@ export const useConnectionForm = ({
     const validationErrors = validateForTestConnect(values);
     applyValidationErrors(validationErrors);
     if (Object.keys(validationErrors).length > 0) return;
-    connectMutation.mutate();
+    connectMutation.mutate({ values });
   };
 
   const handleSelectSSHKey = async (): Promise<string | null> => {
