@@ -6,27 +6,90 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { useEditorContext } from "@/modules/Context/Editor/Index";
-// import { useRunQuery } from "@/services/hooks";
+import { useGetTableData, useGetTableSchema } from "@/services/hooks";
 
 export function EditorSidebar() {
   const {
     tables: { data, isLoading, isFetching, error },
     createTab,
-    runQuery,
+    updateTab,
   } = useEditorContext();
 
-  // const { mutateAsync } = useRunQuery();
+  const getTableDataMutation = useGetTableData();
+  const getTableSchemaMutation = useGetTableSchema();
 
   const handleTableClick = async (table: string) => {
     const tab = createTab(table, "table");
-    const sql = `SELECT * FROM ${tab.table} LIMIT ${tab.limit}  OFFSET ${tab.offset}`;
-    await runQuery(tab.id, sql, true);
+    if (!tab.table || tab.limit === undefined || tab.offset === undefined) {
+      return;
+    }
+
+    updateTab(tab.id, {
+      isExecuting: true,
+      results: null,
+      error: undefined,
+    });
+
+    getTableDataMutation.mutate(
+      {
+        table: tab.table,
+        limit: tab.limit,
+        offset: tab.offset,
+      },
+      {
+        onSuccess: (response) => {
+          updateTab(tab.id, {
+            results: response,
+            isExecuting: false,
+            pagination: true,
+          });
+        },
+        onError: (err: unknown) => {
+          const message =
+            err instanceof Error
+              ? err.message
+              : String(err) || "Error fetching table data";
+          updateTab(tab.id, {
+            error: message,
+            results: null,
+            isExecuting: false,
+          });
+        },
+      }
+    );
   };
 
   const handleOpenTableSchema = async (table: string) => {
     const tab = createTab(table, "table");
-    const sql = `DESCRIBE TABLE ${tab.table}`;
-    await runQuery(tab.id, sql);
+    if (!tab.table) {
+      return;
+    }
+
+    updateTab(tab.id, {
+      isExecuting: true,
+      results: null,
+      error: undefined,
+    });
+
+    getTableSchemaMutation.mutate(tab.table, {
+      onSuccess: (response) => {
+        updateTab(tab.id, {
+          results: response,
+          isExecuting: false,
+        });
+      },
+      onError: (err: unknown) => {
+        const message =
+          err instanceof Error
+            ? err.message
+            : String(err) || "Error fetching table schema";
+        updateTab(tab.id, {
+          error: message,
+          results: null,
+          isExecuting: false,
+        });
+      },
+    });
   };
 
   return (

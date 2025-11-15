@@ -327,6 +327,63 @@ func (ch *ClickHouse) GetConnectionInfo() (map[string]string, error) {
 	}, nil
 }
 
+func (ch *ClickHouse) GetTableData(table string, limit, offset int) (common.QueryResult, error) {
+	ch.Mu.RLock()
+	conn := ch.conn
+	ch.Mu.RUnlock()
+
+	if conn == nil {
+		return common.QueryResult{}, errors.New("no active connection found")
+	}
+
+	ctx, cancel := common.NewTimeoutContext(common.QUERY_TIMEOUT)
+	defer cancel()
+
+	// Use backticks for table name escaping in ClickHouse
+	sql := fmt.Sprintf("SELECT * FROM `%s` LIMIT %d OFFSET %d", table, limit, offset)
+	return ch.query(ctx, conn, sql, "")
+}
+
+func (ch *ClickHouse) GetTableSchema(table string) (common.QueryResult, error) {
+	ch.Mu.RLock()
+	conn := ch.conn
+	currentDB := ch.Database
+	ch.Mu.RUnlock()
+
+	if conn == nil {
+		return common.QueryResult{}, errors.New("no active connection found")
+	}
+
+	ctx, cancel := common.NewTimeoutContext(common.META_TIMEOUT)
+	defer cancel()
+
+	// Query system.columns for table schema
+	sql := `
+		SELECT 
+			*
+		FROM system.columns
+		WHERE database = {db:String} AND table = {table:String}
+		ORDER BY position
+	`
+
+	rows, err := conn.Query(ctx, sql, clickhouse.Named("db", currentDB), clickhouse.Named("table", table))
+	if err != nil {
+		return common.QueryResult{Type: common.QueryTypeRead}, err
+	}
+	defer rows.Close()
+
+	columns, data, err := ScanDynamicColumns(ctx, rows)
+	if err != nil {
+		return common.QueryResult{Type: common.QueryTypeRead}, err
+	}
+
+	return common.QueryResult{
+		Type:    common.QueryTypeRead,
+		Columns: columns,
+		Data:    data,
+	}, nil
+}
+
 // func (ch *ClickHouse) SaveConnection(name string, config map[string]string) error {
 // 	return ch.engine.SaveConnection(name, config)
 // }

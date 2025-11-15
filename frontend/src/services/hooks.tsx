@@ -7,7 +7,7 @@ import {
   CancelQuery,
 } from "../../bindings/layerbits/pkg/remote/engine";
 import type { ConnectionInfo } from "../../bindings/layerbits/pkg/common";
-import { RunQuery } from "./database";
+import { RunQuery, GetTableData, GetTableSchema } from "./database";
 
 export function useDatabase() {
   return useQuery({
@@ -60,5 +60,35 @@ export function useFetchConnectionById(id: string) {
     queryFn: () => LoadConnection(id),
     enabled: !!id,
     retry: 3,
+  });
+}
+
+export function useGetTableData() {
+  return useMutation({
+    mutationFn: async ({
+      table,
+      limit,
+      offset,
+    }: {
+      table: string;
+      limit: number;
+      offset: number;
+    }) => {
+      if (!table?.trim()) {
+        throw new Error("Table name cannot be empty");
+      }
+      return GetTableData(table, limit, offset);
+    },
+  });
+}
+
+export function useGetTableSchema() {
+  return useMutation({
+    mutationFn: async (table: string) => {
+      if (!table?.trim()) {
+        throw new Error("Table name cannot be empty");
+      }
+      return GetTableSchema(table);
+    },
   });
 }

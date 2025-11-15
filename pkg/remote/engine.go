@@ -255,6 +255,20 @@ func (e *Engine) ListTables() ([]string, error) {
 	return e.activeClient.ListTables()
 }
 
+func (e *Engine) GetTableData(table string, limit, offset int) (common.QueryResult, error) {
+	if e.activeClient == nil {
+		return common.QueryResult{}, errors.New("no active database connection found")
+	}
+	return e.activeClient.GetTableData(table, limit, offset)
+}
+
+func (e *Engine) GetTableSchema(table string) (common.QueryResult, error) {
+	if e.activeClient == nil {
+		return common.QueryResult{}, errors.New("no active database connection found")
+	}
+	return e.activeClient.GetTableSchema(table)
+}
+
 // SelectSSHKeyFile opens a file dialog to select an SSH private key file
 // Returns the selected file path, or an error if cancelled or failed
 func (e *Engine) SelectSSHKeyFile() (string, error) {

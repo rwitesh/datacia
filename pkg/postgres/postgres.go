@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/url"
 	"layerbits/pkg/common"
+	"net/url"
 	"sync"
 	"time"
 
@@ -328,5 +328,101 @@ func (p *Postgres) GetConnectionInfo() (map[string]string, error) {
 		"username": p.Username,
 		"password": p.Password,
 		"database": p.Database,
+	}, nil
+}
+
+func (p *Postgres) GetTableData(table string, limit, offset int) (common.QueryResult, error) {
+	p.Mu.RLock()
+	pool := p.pool
+	p.Mu.RUnlock()
+
+	if pool == nil {
+		return common.QueryResult{}, errors.New("no active connection pool found")
+	}
+
+	ctx, cancel := common.NewTimeoutContext(common.QUERY_TIMEOUT)
+	defer cancel()
+
+	// Acquire a connection from the pool
+	conn, err := pool.Acquire(ctx)
+	if err != nil {
+		return common.QueryResult{}, fmt.Errorf("failed to acquire connection: %w", err)
+	}
+	defer conn.Release()
+
+	// Use proper SQL escaping for table name
+	sql := fmt.Sprintf(`SELECT * FROM "%s" LIMIT %d OFFSET %d`, table, limit, offset)
+	return p.query(ctx, conn.Conn(), sql)
+}
+
+func (p *Postgres) GetTableSchema(table string) (common.QueryResult, error) {
+	p.Mu.RLock()
+	pool := p.pool
+	p.Mu.RUnlock()
+
+	if pool == nil {
+		return common.QueryResult{}, errors.New("no active connection pool found")
+	}
+
+	ctx, cancel := common.NewTimeoutContext(common.META_TIMEOUT)
+	defer cancel()
+
+	// Acquire a connection from the pool
+	conn, err := pool.Acquire(ctx)
+	if err != nil {
+		return common.QueryResult{}, fmt.Errorf("failed to acquire connection: %w", err)
+	}
+	defer conn.Release()
+
+	// Query information_schema.columns for table schema
+	sql := `
+		SELECT 
+			*
+		FROM information_schema.columns
+		WHERE table_schema = 'public' AND table_name = $1
+		ORDER BY ordinal_position
+	`
+
+	rows, err := conn.Conn().Query(ctx, sql, table)
+	if err != nil {
+		return common.QueryResult{Type: common.QueryTypeRead}, err
+	}
+	defer rows.Close()
+
+	columns := make([]string, len(rows.FieldDescriptions()))
+	for i, fd := range rows.FieldDescriptions() {
+		columns[i] = fd.Name
+	}
+
+	var data []map[string]interface{}
+	for rows.Next() {
+		select {
+		case <-ctx.Done():
+			return common.QueryResult{Type: common.QueryTypeRead}, ctx.Err()
+		default:
+		}
+
+		values, err := rows.Values()
+		if err != nil {
+			return common.QueryResult{Type: common.QueryTypeRead}, err
+		}
+
+		row := make(map[string]interface{})
+		for i, col := range columns {
+			if i < len(values) {
+				row[col] = values[i]
+			}
+		}
+		data = append(data, row)
+	}
+
+	if err := rows.Err(); err != nil {
+		return common.QueryResult{Type: common.QueryTypeRead}, err
+	}
+
+	return common.QueryResult{
+		Type:    common.QueryTypeRead,
+		Columns: columns,
+		Data:    data,
 	}, nil
 }

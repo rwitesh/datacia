@@ -13,6 +13,8 @@ type DatabaseClient interface {
 	ListTables() ([]string, error)
 	RunQuery(queryId, queryType, sql string) (common.QueryResult, error)
 	CancelQuery(queryId string) error
+	GetTableData(table string, limit, offset int) (common.QueryResult, error)
+	GetTableSchema(table string) (common.QueryResult, error)
 }
 
 // RemoteEngine defines the interface for the high-level remote engine that manages
@@ -40,6 +42,8 @@ type RemoteEngine interface {
 	// Query Operations
 	RunQuery(queryId, queryType, sql string) (common.QueryResult, error)
 	CancelQuery(queryId string) error
+	GetTableData(table string, limit, offset int) (common.QueryResult, error)
+	GetTableSchema(table string) (common.QueryResult, error)
 }
 
 // Compile-time check to ensure Engine implements RemoteEngine interface

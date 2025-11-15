@@ -1,5 +1,7 @@
 import {
   RunQuery as WRunQuery,
+  GetTableData as WGetTableData,
+  GetTableSchema as WGetTableSchema,
 } from "../../bindings/layerbits/pkg/remote/engine.js";
 import { QueryResult } from "../../bindings/layerbits/pkg/common/models.js";
 import { detectQueryType } from "./utils.js";
@@ -13,5 +15,17 @@ export async function RunQuery(
   const t = detectQueryType(sql);
   const id = queryID ?? uuidv4();
   return WRunQuery(id, t, sql);
+}
+
+export async function GetTableData(
+  table: string,
+  limit: number,
+  offset: number
+): Promise<QueryResult> {
+  return WGetTableData(table, limit, offset);
+}
+
+export async function GetTableSchema(table: string): Promise<QueryResult> {
+  return WGetTableSchema(table);
 }
 
