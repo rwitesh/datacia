@@ -3,9 +3,11 @@ package db
 import (
 	"database/sql"
 	"encoding/json"
-	"log"
+	"fmt"
 	"path/filepath"
 
+	"layerbits/internal/constants"
+	"layerbits/internal/encryption"
 	"layerbits/pkg/common"
 
 	"github.com/adrg/xdg"
@@ -14,23 +16,24 @@ import (
 )
 
 type Store struct {
-	db *sql.DB
+	db           *sql.DB
+	encyptionKey []byte
 }
 
 // Open initializes SQLite at $XDG_DATA_HOME/<appName>/data.db and returns a Store
-func Open(appName string) *Store {
-	dbPath, err := xdg.DataFile(filepath.Join(appName, "data.db"))
+func Open(encryptionKey []byte) (*Store, error) {
+	dbPath, err := xdg.DataFile(filepath.Join(constants.APP_NAME, "data.db"))
 	if err != nil {
-		log.Fatalf("failed to resolve db path: %v", err)
+		return nil, fmt.Errorf("failed to resolve db path: %w", err)
 	}
 
 	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
-		log.Fatalf("failed to open db: %v", err)
+		return nil, fmt.Errorf("failed to open db: %w", err)
 	}
 
 	if err = db.Ping(); err != nil {
-		log.Fatalf("failed to ping db: %v", err)
+		return nil, fmt.Errorf("failed to ping db: %w", err)
 	}
 
 	// Schema: connections
@@ -44,10 +47,10 @@ func Open(appName string) *Store {
 		)
 	`)
 	if err != nil {
-		log.Fatalf("failed to create connections table: %v", err)
+		return nil, fmt.Errorf("failed to create connections table: %w", err)
 	}
 
-	return &Store{db: db}
+	return &Store{db: db, encyptionKey: encryptionKey}, nil
 }
 
 func (s *Store) Close() error {
@@ -60,12 +63,17 @@ func (s *Store) SaveConnection(name string, config map[string]string) error {
 		return err
 	}
 
+	encrpytedData, err := encryption.Encrypt(s.encyptionKey, data)
+	if err != nil {
+		return fmt.Errorf("unable to encrypt credentials: %w", err)
+	}
+
 	id := uuid.New().String()
 
 	_, err = s.db.Exec(`
 		INSERT INTO connections (id, name, config, created_at, updated_at)
 		VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-	`, id, name, string(data))
+	`, id, name, string(encrpytedData))
 	return err
 }
 
@@ -75,54 +83,74 @@ func (s *Store) UpdateConnection(id, name string, config map[string]string) erro
 		return err
 	}
 
+	encrpytedData, err := encryption.Encrypt(s.encyptionKey, data)
+	if err != nil {
+		return fmt.Errorf("unable to encrypt credentials: %w", err)
+	}
+
 	_, err = s.db.Exec(`
 		UPDATE connections
 		SET name = ?, config = ?, updated_at = CURRENT_TIMESTAMP
 		WHERE id = ?
-	`, name, string(data), id)
+	`, name, string(encrpytedData), id)
 	return err
 }
 
 func (s *Store) LoadConnection(id string) (map[string]string, error) {
 	row := s.db.QueryRow(`SELECT name, config FROM connections WHERE id = ?`, id)
 
-	var name, raw string
-	if err := row.Scan(&name, &raw); err != nil {
+	var name string
+	var encrypted string
+
+	if err := row.Scan(&name, &encrypted); err != nil {
 		if err == sql.ErrNoRows {
 			return map[string]string{}, nil
 		}
 		return map[string]string{}, err
 	}
 
-	var cfg map[string]string
-	if err := json.Unmarshal([]byte(raw), &cfg); err != nil {
-		return map[string]string{}, err
+	// Decrypt before parsing JSON
+	plain, err := encryption.Decrypt(s.encyptionKey, []byte(encrypted))
+	if err != nil {
+		return map[string]string{}, fmt.Errorf("failed to decrypt config: %w", err)
 	}
+
+	var cfg map[string]string
+	if err := json.Unmarshal(plain, &cfg); err != nil {
+		return map[string]string{}, fmt.Errorf("failed to parse decrypted json: %w", err)
+	}
+
 	cfg["name"] = name
 	return cfg, nil
 }
 
 func (s *Store) ListConnections() (map[string]common.ConnectionInfo, error) {
-	// bring id, name, engine from config
 	rows, err := s.db.Query(`SELECT id, name, config FROM connections ORDER BY updated_at DESC`)
 	if err != nil {
 		return map[string]common.ConnectionInfo{}, err
 	}
 	defer rows.Close()
 
-	var connections = map[string]common.ConnectionInfo{}
+	connections := map[string]common.ConnectionInfo{}
+
 	for rows.Next() {
-		var id, name, rawConfig string
-		if err := rows.Scan(&id, &name, &rawConfig); err != nil {
-			return map[string]common.ConnectionInfo{}, err
+		var id, name, encrypted string
+		if err := rows.Scan(&id, &name, &encrypted); err != nil {
+			return nil, err
 		}
 
-		// Parse JSON config to extract engine
-		var cfg map[string]string
-		engine := ""
-		if err := json.Unmarshal([]byte(rawConfig), &cfg); err == nil {
-			engine = cfg["engine"]
+		// Decrypt
+		plain, err := encryption.Decrypt(s.encyptionKey, []byte(encrypted))
+		if err != nil {
+			return nil, fmt.Errorf("failed to decrypt config for id=%s: %w", id, err)
 		}
+
+		var cfg map[string]string
+		if err := json.Unmarshal(plain, &cfg); err != nil {
+			return nil, fmt.Errorf("failed to parse decrypted config for id=%s: %w", id, err)
+		}
+
+		engine := cfg["engine"]
 
 		connections[id] = common.ConnectionInfo{
 			Name:   name,

@@ -26,7 +26,7 @@ type UIController interface {
 type App struct {
 	wailsApp *application.App
 	window   *application.WebviewWindow
-	dbEngine *remote.Engine
+	engine   *remote.Engine
 }
 
 func NewApp() *App {
@@ -45,15 +45,15 @@ func (a *App) Initialize(assets embed.FS) error {
 		},
 	})
 
-	dbEngine, err := remote.New(a)
+	engine, err := remote.New(a)
 	if err != nil {
 		return err
 	}
 
-	a.dbEngine = dbEngine
-	dbEngine.SetApplication(a.wailsApp)
+	a.engine = engine
+	engine.SetApplication(a.wailsApp)
 
-	a.wailsApp.RegisterService(application.NewService(dbEngine))
+	a.wailsApp.RegisterService(application.NewService(engine))
 
 	return nil
 }

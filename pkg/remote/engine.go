@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"layerbits/internal/db"
+	"layerbits/internal/encryption"
 	"layerbits/pkg/clickhouse"
 	"layerbits/pkg/common"
 	"layerbits/pkg/postgres"
@@ -27,7 +28,14 @@ type Engine struct {
 }
 
 func New(uiController UIController) (*Engine, error) {
-	store := db.Open("layerbits")
+	encrpytionKey, err := encryption.GetOrCreateEncryptionKey()
+	if err != nil {
+		return nil, fmt.Errorf("failed to check encryption key: %w", err)
+	}
+	store, err := db.Open(encrpytionKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize database: %w", err)
+	}
 
 	return &Engine{
 		store:        store,
