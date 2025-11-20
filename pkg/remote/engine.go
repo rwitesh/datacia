@@ -29,7 +29,7 @@ type Engine struct {
 	updater      *update.Updater
 }
 
-func New(uiController UIController) (*Engine, error) {
+func New(uiController UIController, version, releaseURL string) (*Engine, error) {
 	encrpytionKey, err := encryption.GetOrCreateEncryptionKey()
 	if err != nil {
 		return nil, fmt.Errorf("failed to check encryption key: %w", err)
@@ -39,7 +39,7 @@ func New(uiController UIController) (*Engine, error) {
 		return nil, fmt.Errorf("failed to initialize database: %w", err)
 	}
 
-	updater, err := update.NewUpdater()
+	updater, err := update.NewUpdater(version, releaseURL)
 	if err != nil {
 		return nil, err
 	}

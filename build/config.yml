@@ -60,4 +60,4 @@ fileAssociations:
 
 # Other data
 other:
-  - name: My Other Data
+  - release_url: "https://gist.githubusercontent.com/rwitesh/87dba61391fd2f9dc5919b69871d52fa/raw/7cb3ddc3aab2a8b15719c34fe8eb61011b376d0d/release.json"

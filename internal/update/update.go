@@ -1,7 +1,6 @@
 package update
 
 import (
-	"datacia/internal/constants"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -26,7 +25,7 @@ type Updater struct {
 	AppPath        string
 }
 
-func NewUpdater() (*Updater, error) {
+func NewUpdater(version, releaseURL string) (*Updater, error) {
 	exe, err := os.Executable()
 	if err != nil {
 		return nil, fmt.Errorf("cannot resolve executable path: %w", err)
@@ -50,8 +49,8 @@ func NewUpdater() (*Updater, error) {
 	}
 
 	return &Updater{
-		ReleaseURL:     constants.RELEASE_URL,
-		CurrentVersion: strings.TrimSpace(constants.VERSION),
+		ReleaseURL:     releaseURL,
+		CurrentVersion: strings.TrimSpace(version),
 		AppPath:        appRoot,
 	}, nil
 }

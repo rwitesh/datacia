@@ -5,10 +5,13 @@ import (
 	"datacia/internal/db"
 	"datacia/pkg/remote"
 	"embed"
+	"errors"
+	"fmt"
 	"log"
 	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
+	"gopkg.in/yaml.v3"
 )
 
 type AppManager interface {
@@ -22,9 +25,24 @@ type App struct {
 	instance *application.App
 	window   *application.WebviewWindow
 	engine   *remote.Engine
+	config   *Config
 }
 
-func NewApp(assets embed.FS) (*App, error) {
+type Config struct {
+	Info struct {
+		Version string `yaml:"version"`
+	} `yaml:"info"`
+	Other []struct {
+		ReleaseURL string `yaml:"release_url"`
+	} `yaml:"other"`
+}
+
+func NewApp(assets embed.FS, config []byte) (*App, error) {
+	var cfg *Config
+	if err := yaml.Unmarshal(config, &cfg); err != nil {
+		return nil, fmt.Errorf("failed to parse config.yml: %w", err)
+	}
+
 	app := application.New(application.Options{
 		Name:        constants.APP_NAME,
 		Description: "",
@@ -35,11 +53,24 @@ func NewApp(assets embed.FS) (*App, error) {
 			ApplicationShouldTerminateAfterLastWindowClosed: true,
 		},
 	})
-	return &App{instance: app}, nil
+	return &App{instance: app, config: cfg}, nil
 }
 
 func (a *App) Initialize() error {
-	engine, err := remote.New(a)
+	version := a.config.Info.Version
+	if version == "" {
+		return errors.New("version cannot be empty")
+	}
+
+	var releaseURL string
+	if len(a.config.Other) > 0 && a.config.Other[0].ReleaseURL != "" {
+		releaseURL = a.config.Other[0].ReleaseURL
+	}
+	if releaseURL == "" {
+		return errors.New("release url cannot be empty")
+	}
+
+	engine, err := remote.New(a, version, releaseURL)
 	if err != nil {
 		return err
 	}
