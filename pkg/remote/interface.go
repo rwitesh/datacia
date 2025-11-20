@@ -1,7 +1,7 @@
 package remote
 
 import (
-	"layerbits/pkg/common"
+	"datacia/pkg/common"
 )
 
 // DatabaseClient defines the common interface that individual database engines must implement
@@ -44,6 +44,10 @@ type RemoteEngine interface {
 	CancelQuery(queryId string) error
 	GetTableData(table string, limit, offset int) (common.QueryResult, error)
 	GetTableSchema(table string) (common.QueryResult, error)
+
+	// Check for updates
+	CheckForUpdates() (bool, error)
+	Update() error
 }
 
 // Compile-time check to ensure Engine implements RemoteEngine interface

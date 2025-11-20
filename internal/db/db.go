@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"layerbits/internal/constants"
-	"layerbits/internal/encryption"
-	"layerbits/pkg/common"
+	"datacia/internal/constants"
+	"datacia/internal/encryption"
+	"datacia/pkg/common"
 
 	"github.com/adrg/xdg"
 	"github.com/google/uuid"

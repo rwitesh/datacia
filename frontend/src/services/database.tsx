@@ -2,8 +2,8 @@ import {
   RunQuery as WRunQuery,
   GetTableData as WGetTableData,
   GetTableSchema as WGetTableSchema,
-} from "../../bindings/layerbits/pkg/remote/engine.js";
-import { QueryResult } from "../../bindings/layerbits/pkg/common/models.js";
+} from "../../bindings/datacia/pkg/remote/engine.js";
+import { QueryResult } from "../../bindings/datacia/pkg/common/models.js";
 import { detectQueryType } from "./utils.js";
 export { QueryResult };
 import { v4 as uuidv4 } from "uuid";

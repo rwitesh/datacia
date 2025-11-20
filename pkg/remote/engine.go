@@ -1,14 +1,15 @@
 package remote
 
 import (
+	"datacia/internal/db"
+	"datacia/internal/encryption"
+	"datacia/internal/update"
+	"datacia/pkg/clickhouse"
+	"datacia/pkg/common"
+	"datacia/pkg/postgres"
+	"datacia/pkg/ssh"
 	"errors"
 	"fmt"
-	"layerbits/internal/db"
-	"layerbits/internal/encryption"
-	"layerbits/pkg/clickhouse"
-	"layerbits/pkg/common"
-	"layerbits/pkg/postgres"
-	"layerbits/pkg/ssh"
 	"net"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -25,6 +26,7 @@ type Engine struct {
 	uiController UIController
 	sshTunnel    *ssh.Tunnel
 	wailsApp     *application.App
+	updater      *update.Updater
 }
 
 func New(uiController UIController) (*Engine, error) {
@@ -37,15 +39,25 @@ func New(uiController UIController) (*Engine, error) {
 		return nil, fmt.Errorf("failed to initialize database: %w", err)
 	}
 
+	updater, err := update.NewUpdater()
+	if err != nil {
+		return nil, err
+	}
+
 	return &Engine{
 		store:        store,
 		uiController: uiController,
+		updater:      updater,
 	}, nil
 }
 
 // SetApplication sets the Wails application instance for file dialogs
 func (e *Engine) SetApplication(app *application.App) {
 	e.wailsApp = app
+}
+
+func (e *Engine) GetStore() *db.Store {
+	return e.store
 }
 
 // getDBClient creates a new database client instance based on the engine type

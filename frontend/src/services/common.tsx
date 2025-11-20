@@ -1,5 +1,5 @@
 import type { DatabaseEngine } from "@/modules/Connection/utils/types.tsx";
-import { SaveConnection as WSaveConnection, DeleteConnection as WDeleteConnection, CreateNewConnectionWithSSH as WCreateNewConnectionWithSSH, CloseCurrentConnection as WCloseCurrentConnection, EstablishConnection as WEstablishConnection, ChangeDatabase as WChangeDatabase, ChangeDatabaseByName as WChangeDatabaseByName, UpdateConnection as WUpdateConnection, SelectSSHKeyFile as WSelectSSHKeyFile} from "../../bindings/layerbits/pkg/remote/engine.ts";
+import { SaveConnection as WSaveConnection, DeleteConnection as WDeleteConnection, CreateNewConnectionWithSSH as WCreateNewConnectionWithSSH, CloseCurrentConnection as WCloseCurrentConnection, EstablishConnection as WEstablishConnection, ChangeDatabase as WChangeDatabase, ChangeDatabaseByName as WChangeDatabaseByName, UpdateConnection as WUpdateConnection, SelectSSHKeyFile as WSelectSSHKeyFile} from "../../bindings/datacia/pkg/remote/engine.ts";
 
 
 export const CreateNewConnection = (engine: DatabaseEngine, host: string, port: string, username: string, password: string, database: string, useSSH: string = "", sshHost: string = "", sshPort: string = "", sshUsername: string = "", sshPassword: string = "", sshKeyPath: string = "") => {

@@ -2,12 +2,10 @@ version: '3'
 
 includes:
   common: ./build/Taskfile.yml
-  windows: ./build/windows/Taskfile.yml
   darwin: ./build/darwin/Taskfile.yml
-  linux: ./build/linux/Taskfile.yml
 
 vars:
-  APP_NAME: "layer"
+  APP_NAME: "DataCia"
   BIN_DIR: "bin"
   VITE_PORT: '{{.WAILS_VITE_PORT | default 9245}}'
 

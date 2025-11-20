@@ -5,9 +5,10 @@ import {
   ListDatabases,
   ListTables,
   CancelQuery,
-} from "../../bindings/layerbits/pkg/remote/engine";
-import type { ConnectionInfo } from "../../bindings/layerbits/pkg/common";
+} from "../../bindings/datacia/pkg/remote/engine";
+import type { ConnectionInfo } from "../../bindings/datacia/pkg/common";
 import { RunQuery, GetTableData, GetTableSchema } from "./database";
+import { CheckForUpdates, PerformUpdate } from "./updates";
 
 export function useDatabase() {
   return useQuery({
@@ -91,4 +92,22 @@ export function useGetTableSchema() {
       return GetTableSchema(table);
     },
   });
+}
+
+
+export function useCheckForUpdates() {
+  return useQuery({
+    queryKey: ["check-for-updates"],
+    queryFn: () => CheckForUpdates(),
+    retry: 3,
+  });
+}
+
+
+export function useUpdateApp() {
+  return useMutation({
+    mutationFn: async () => {
+      return PerformUpdate();
+    },
+  })
 }

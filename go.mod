@@ -1,9 +1,10 @@
-module layerbits
+module datacia
 
 go 1.24.0
 
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.40.3
+	github.com/Masterminds/semver/v3 v3.3.1
 	github.com/adrg/xdg v0.5.3
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.7.6

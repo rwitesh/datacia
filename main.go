@@ -1,24 +1,26 @@
 package main
 
 import (
+	"datacia/internal/app"
 	"embed"
-	"layerbits/internal/app"
-	"log"
 )
 
 //go:embed all:frontend/dist
 var assets embed.FS
 
 func main() {
-	appManager := app.NewApp()
-	
-	err := appManager.Initialize(assets)
+	appManager, err := app.NewApp(assets)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
-	
+
+	err = appManager.Initialize()
+	if err != nil {
+		panic(err)
+	}
+
 	err = appManager.Run()
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 }

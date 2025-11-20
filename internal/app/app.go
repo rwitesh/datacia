@@ -1,10 +1,10 @@
 package app
 
 import (
+	"datacia/internal/constants"
+	"datacia/internal/db"
+	"datacia/pkg/remote"
 	"embed"
-	"layerbits/internal/constants"
-	"layerbits/internal/db"
-	"layerbits/pkg/remote"
 	"log"
 	"time"
 
@@ -12,29 +12,20 @@ import (
 )
 
 type AppManager interface {
-	Initialize(assets embed.FS) error
+	Initialize() error
 	GetApplication() *application.App
 	GetStore() *db.Store
 	Run() error
 }
 
-type UIController interface {
-	OpenEditor()
-	CloseEditor()
-}
-
 type App struct {
-	wailsApp *application.App
+	instance *application.App
 	window   *application.WebviewWindow
 	engine   *remote.Engine
 }
 
-func NewApp() *App {
-	return &App{}
-}
-
-func (a *App) Initialize(assets embed.FS) error {
-	a.wailsApp = application.New(application.Options{
+func NewApp(assets embed.FS) (*App, error) {
+	app := application.New(application.Options{
 		Name:        constants.APP_NAME,
 		Description: "",
 		Assets: application.AssetOptions{
@@ -44,22 +35,23 @@ func (a *App) Initialize(assets embed.FS) error {
 			ApplicationShouldTerminateAfterLastWindowClosed: true,
 		},
 	})
+	return &App{instance: app}, nil
+}
 
+func (a *App) Initialize() error {
 	engine, err := remote.New(a)
 	if err != nil {
 		return err
 	}
 
 	a.engine = engine
-	engine.SetApplication(a.wailsApp)
-
-	a.wailsApp.RegisterService(application.NewService(engine))
-
+	engine.SetApplication(a.instance)
+	a.instance.RegisterService(application.NewService(engine))
 	return nil
 }
 
 func (a *App) CreateMainWindow() error {
-	a.window = a.wailsApp.Window.NewWithOptions(application.WebviewWindowOptions{
+	a.window = a.instance.Window.NewWithOptions(application.WebviewWindowOptions{
 		Name:  constants.APP_NAME,
 		Title: constants.APP_TITLE,
 		URL:   "/",
@@ -81,7 +73,7 @@ func (a *App) CreateMainWindow() error {
 }
 
 func (a *App) GetApplication() *application.App {
-	return a.wailsApp
+	return a.instance
 }
 
 func (a *App) GetWindow() *application.WebviewWindow {
@@ -114,10 +106,17 @@ func (a *App) Run() error {
 	go func() {
 		for {
 			now := time.Now().Format(time.RFC1123)
-			a.wailsApp.Event.Emit("time", now)
+			a.instance.Event.Emit("time", now)
 			time.Sleep(time.Second)
 		}
 	}()
 
-	return a.wailsApp.Run()
+	return a.instance.Run()
+}
+
+func (a *App) GetStore() *db.Store {
+	if a.engine == nil {
+		return nil
+	}
+	return a.engine.GetStore()
 }
