@@ -1,98 +1,72 @@
-# DataCia
+## DataCia
 
-## Prerequisites
+### Prerequisites
 
-* Go installed and configured
-* Wails 3 CLI installed (`wails3`)
-* Xcode command-line tools installed (required for `hdiutil` and macOS app bundling)
+Go must be installed and available in your shell.
+Wails 3 CLI (`wails3`) must be installed and configured.
+Xcode command-line tools are required for macOS bundling and `hdiutil`.
 
-
-## Usage
-
-### Run the dev environment
+### Development
 
 ```
 make dev
 ```
 
-This runs `wails3 dev`.
+Starts the Wails development server and rebuild loop.
 
-### Package the app (default architecture)
+### Building
+
+```
+make build
+```
+
+Regenerates build assets and performs a non-packaged build.
+
+### Packaging
 
 ```
 make package
 ```
 
-Outputs the bundle to `bin/DataCia.app`.
+Generates `bin/DataCia.app` for the host architecture.
 
-### Package for macOS ARM64
+Packaging for specific macOS targets:
 
 ```
 make package-mac-arm64
-```
-
-### Package for macOS AMD64 (Intel)
-
-```
 make package-mac-amd64
-```
-
-### Package a universal binary
-
-```
 make package-mac-universal
 ```
 
----
+These produce architecture-specific `.app` bundles using the corresponding Wails tasks.
 
-## Creating DMG Installers
+### DMG Creation
 
-All DMG outputs are written to the `output/` directory.
+All DMGs are written to `output/`.
 
-### Default DMG
+DMG for host architecture:
 
 ```
 make dmg
 ```
 
-Produces `DataCia.dmg`.
-
-### ARM64 DMG
+Architecture-specific DMGs:
 
 ```
 make dmg-arm64
-```
-
-Produces `DataCia_arm64.dmg`.
-
-### AMD64 DMG
-
-```
 make dmg-amd64
-```
-
-Produces `DataCia_amd64.dmg`.
-
-### Universal DMG
-
-```
 make dmg-universal
 ```
 
-Produces `DataCia_universal.dmg`.
+These commands package the app for the correct architecture and then create a compressed (`UDZO`) DMG using `hdiutil`.
 
----
+### Notes
 
-## Notes
+Packaging targets update build assets before creating bundles.
+DMG creation fails early if the expected `.app` bundle isn’t present.
+`ensure-output` guarantees the output directory exists before writing images.
 
-* Each DMG target first ensures the app is packaged for the correct architecture.
-* The Makefile prevents DMG creation if the app bundle doesn't exist.
-* `hdiutil` is used to generate compressed DMG images (`UDZO` format).
+### Troubleshooting
 
----
-
-## Troubleshooting
-
-If the DMG task reports missing `.app` bundle, run the appropriate `package-*` command manually and try again.
-
-If `hdiutil` fails, verify permissions and available disk space.
+If a DMG target exits with “missing bundle,” run the corresponding packaging command first and check that `bin/DataCia.app` exists.
+If `hdiutil` errors out, confirm disk space, permissions, and that the output directory is writable.

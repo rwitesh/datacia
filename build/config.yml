@@ -11,7 +11,7 @@ info:
   description: "Your database reimaginzed for speed and clarity" # The application description
   copyright: "(c) 2025, DataCia" # Copyright text
   comments: "Proudly designed by an Indian" # Comments
-  version: "0.1.0" # The application version
+  version: "0.0.1" # The application version
 
 # Dev mode configuration
 dev_mode:

@@ -7,19 +7,28 @@ VOLNAME = $(APP_NAME)
 ensure-output:
 	mkdir -p $(OUTPUT_DIR)
 
+.PHONY: build
+build:
+	wails3 task common:update:build-assets
+	wails3 build
+
 dev:
 	wails3 dev
 
 package:
+	wails3 task common:update:build-assets
 	wails3 package
 
 package-mac-arm64:
+	wails3 task common:update:build-assets
 	wails3 task darwin:package ARCH=arm64
 
 package-mac-amd64:
+	wails3 task common:update:build-assets
 	wails3 task darwin:package ARCH=amd64
 
 package-mac-universal:
+	wails3 task common:update:build-assets
 	wails3 task darwin:package:universal
 
 create-dmg:
@@ -27,6 +36,7 @@ create-dmg:
 		echo "Error: $(APP_BUNDLE) missing. Packaging failed."; \
 		exit 1; \
 	fi
+	mkdir -p "$(OUTPUT_DIR)"
 	hdiutil create -volname "$(VOLNAME)" \
 		-srcfolder "$(APP_BUNDLE)" \
 		-ov -format UDZO \
