@@ -1,59 +1,98 @@
-# Welcome to Your New Wails3 Project!
+# DataCia
 
-Congratulations on generating your Wails3 application! This README will guide you through the next steps to get your project up and running.
+## Prerequisites
 
-## Getting Started
+* Go installed and configured
+* Wails 3 CLI installed (`wails3`)
+* Xcode command-line tools installed (required for `hdiutil` and macOS app bundling)
 
-1. Navigate to your project directory in the terminal.
 
-2. To run your application in development mode, use the following command:
+## Usage
 
-   ```
-   wails3 dev
-   ```
+### Run the dev environment
 
-   This will start your application and enable hot-reloading for both frontend and backend changes.
+```
+make dev
+```
 
-3. To build your application for production, use:
+This runs `wails3 dev`.
 
-   ```
-   wails3 build
-   ```
+### Package the app (default architecture)
 
-   This will create a production-ready executable in the `build` directory.
+```
+make package
+```
 
-## Exploring Wails3 Features
+Outputs the bundle to `bin/DataCia.app`.
 
-Now that you have your project set up, it's time to explore the features that Wails3 offers:
+### Package for macOS ARM64
 
-1. **Check out the examples**: The best way to learn is by example. Visit the `examples` directory in the `v3/examples` directory to see various sample applications.
+```
+make package-mac-arm64
+```
 
-2. **Run an example**: To run any of the examples, navigate to the example's directory and use:
+### Package for macOS AMD64 (Intel)
 
-   ```
-   go run .
-   ```
+```
+make package-mac-amd64
+```
 
-   Note: Some examples may be under development during the alpha phase.
+### Package a universal binary
 
-3. **Explore the documentation**: Visit the [Wails3 documentation](https://v3.wails.io/) for in-depth guides and API references.
+```
+make package-mac-universal
+```
 
-4. **Join the community**: Have questions or want to share your progress? Join the [Wails Discord](https://discord.gg/JDdSxwjhGf) or visit the [Wails discussions on GitHub](https://github.com/wailsapp/wails/discussions).
+---
 
-## Project Structure
+## Creating DMG Installers
 
-Take a moment to familiarize yourself with your project structure:
+All DMG outputs are written to the `output/` directory.
 
-- `frontend/`: Contains your frontend code (HTML, CSS, JavaScript/TypeScript)
-- `main.go`: The entry point of your Go backend
-- `app.go`: Define your application structure and methods here
-- `wails.json`: Configuration file for your Wails project
+### Default DMG
 
-## Next Steps
+```
+make dmg
+```
 
-1. Modify the frontend in the `frontend/` directory to create your desired UI.
-2. Add backend functionality in `main.go`.
-3. Use `wails3 dev` to see your changes in real-time.
-4. When ready, build your application with `wails3 build`.
+Produces `DataCia.dmg`.
 
-Happy coding with Wails3! If you encounter any issues or have questions, don't hesitate to consult the documentation or reach out to the Wails community.
+### ARM64 DMG
+
+```
+make dmg-arm64
+```
+
+Produces `DataCia_arm64.dmg`.
+
+### AMD64 DMG
+
+```
+make dmg-amd64
+```
+
+Produces `DataCia_amd64.dmg`.
+
+### Universal DMG
+
+```
+make dmg-universal
+```
+
+Produces `DataCia_universal.dmg`.
+
+---
+
+## Notes
+
+* Each DMG target first ensures the app is packaged for the correct architecture.
+* The Makefile prevents DMG creation if the app bundle doesn't exist.
+* `hdiutil` is used to generate compressed DMG images (`UDZO` format).
+
+---
+
+## Troubleshooting
+
+If the DMG task reports missing `.app` bundle, run the appropriate `package-*` command manually and try again.
+
+If `hdiutil` fails, verify permissions and available disk space.
