@@ -2,6 +2,7 @@ import {
   RunQuery as WRunQuery,
   GetTableData as WGetTableData,
   GetTableSchema as WGetTableSchema,
+  GetQueryHistory as WGetQueryHistory,
 } from "../../bindings/datacia/pkg/remote/engine.js";
 import { QueryResult } from "../../bindings/datacia/pkg/common/models.js";
 import { detectQueryType } from "./utils.js";
@@ -27,5 +28,9 @@ export async function GetTableData(
 
 export async function GetTableSchema(table: string): Promise<QueryResult> {
   return WGetTableSchema(table);
+}
+
+export async function GetQueryHistory(limit: number): Promise<any[]> {
+  return WGetQueryHistory(limit);
 }
 

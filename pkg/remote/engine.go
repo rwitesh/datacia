@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
@@ -258,7 +259,29 @@ func (e *Engine) RunQuery(queryId, queryType, sql string) (common.QueryResult, e
 	if e.activeClient == nil {
 		return common.QueryResult{}, errors.New("no active database connection found")
 	}
-	return e.activeClient.RunQuery(queryId, queryType, sql)
+
+	start := time.Now()
+	result, err := e.activeClient.RunQuery(queryId, queryType, sql)
+	duration := time.Since(start).Milliseconds()
+
+	status := "success"
+	var errorMessage string
+	if err != nil {
+		status = "error"
+		errorMessage = err.Error()
+	}
+
+	// Save to history synchronously to ensure it's available immediately
+	saveErr := e.store.SaveQueryHistory(sql, duration, status, int64(len(result.Data)), errorMessage)
+	if saveErr != nil {
+		fmt.Printf("failed to save query history: %v\n", saveErr)
+	}
+
+	return result, err
+}
+
+func (e *Engine) GetQueryHistory(limit int) ([]db.QueryHistoryItem, error) {
+	return e.store.GetQueryHistory(limit)
 }
 
 func (e *Engine) CancelQuery(queryId string) error {

@@ -1,4 +1,4 @@
-import { AppWindowIcon, CodeIcon, Loader2, Table } from "lucide-react";
+import { AppWindowIcon, Loader2, Table, History, CheckCircle2, XCircle } from "lucide-react";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -12,17 +12,20 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { useEditorContext } from "@/modules/Context/Editor/Index";
-import { useGetTableData, useGetTableSchema } from "@/services/hooks";
+import { useGetTableData, useGetTableSchema, useGetQueryHistory } from "@/services/hooks";
+import { formatDistanceToNow } from "date-fns";
 
 export function EditorSidebar() {
   const {
     tables: { data, isLoading, isFetching, error },
     createTab,
     updateTab,
+    activeTab,
   } = useEditorContext();
 
   const getTableDataMutation = useGetTableData();
   const getTableSchemaMutation = useGetTableSchema();
+  const { data: queryHistory, isLoading: isHistoryLoading, refetch: refetchHistory } = useGetQueryHistory();
 
   const handleTableClick = async (table: string) => {
     const tab = createTab(table, "table");
@@ -59,6 +62,7 @@ export function EditorSidebar() {
             error: message,
             results: null,
             isExecuting: false,
+            pagination: false,
           });
         },
       }
@@ -82,6 +86,7 @@ export function EditorSidebar() {
         updateTab(tab.id, {
           results: response,
           isExecuting: false,
+          pagination: false,
         });
       },
       onError: (err: unknown) => {
@@ -93,9 +98,19 @@ export function EditorSidebar() {
           error: message,
           results: null,
           isExecuting: false,
+          pagination: false,
         });
       },
     });
+  };
+
+  const handleHistoryClick = (sql: string) => {
+    if (activeTab) {
+      updateTab(activeTab.id, { sql });
+    } else {
+      const tab = createTab("Query", "query");
+      updateTab(tab.id, { sql });
+    }
   };
 
   return (
@@ -113,9 +128,10 @@ export function EditorSidebar() {
             <TabsTrigger
               value="queries"
               className="flex items-center gap-2 px-3 py-1.5 text-xs data-[state=active]:bg-sidebar-accent"
+              onClick={() => refetchHistory()}
             >
-              <CodeIcon className="h-4 w-4" />
-              <span>Queries</span>
+              <History className="h-4 w-4" />
+              <span>History</span>
             </TabsTrigger>
           </TabsList>
         </div>
@@ -146,7 +162,7 @@ export function EditorSidebar() {
                   <ContextMenu key={t}>
                     <ContextMenuTrigger asChild>
                       <button
-                        className="flex w-full items-center gap-2 rounded-md px-2 py-1 text-xs hover:bg-sidebar-accent"
+                        className="flex w-full items-center gap-2 rounded-md px-2 py-1 text-xs hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors duration-200"
                         title={t}
                         onClick={() => handleTableClick(t)}
                       >
@@ -183,9 +199,54 @@ export function EditorSidebar() {
 
         <TabsContent
           value="queries"
-          className="flex flex-1 min-h-0 flex-col px-4 py-6 text-center text-xs text-muted-foreground focus-visible:outline-none focus-visible:ring-0"
+          className="flex flex-1 min-h-0 flex-col px-0 py-0 focus-visible:outline-none focus-visible:ring-0"
         >
-          Queries WIP
+           <div className="flex-1 min-h-0 overflow-y-auto">
+            {isHistoryLoading ? (
+               <div className="px-4 py-2 text-xs text-muted-foreground flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Loading history...</span>
+                </div>
+            ) : !queryHistory || queryHistory.length === 0 ? (
+               <div className="px-4 py-2 text-xs text-muted-foreground">
+                 No query history found
+               </div>
+            ) : (
+              <div className="space-y-0.5 px-1">
+                {queryHistory.map((item: any) => (
+                  <button
+                    key={item.id}
+                    className="w-full text-left px-3 py-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group transition-colors duration-200 cursor-pointer rounded-md"
+                    onClick={() => handleHistoryClick(item.query)}
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <div className="flex items-center gap-1.5">
+                        {item.status === "success" ? (
+                          <CheckCircle2 className="h-3 w-3 text-green-500 shrink-0" />
+                        ) : (
+                          <XCircle className="h-3 w-3 text-red-500 shrink-0" />
+                        )}
+                        <span className="text-[10px] text-muted-foreground font-medium group-hover:text-sidebar-accent-foreground/70 transition-colors">
+                          {formatDistanceToNow(new Date(item.timestamp), { addSuffix: true })}
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-muted-foreground tabular-nums group-hover:text-sidebar-accent-foreground/70 transition-colors">
+                        {item.duration_ms}ms
+                      </span>
+                    </div>
+                    <div className="text-xs font-mono text-foreground/90 line-clamp-2 break-all group-hover:text-sidebar-accent-foreground transition-colors">
+                      {item.query}
+                    </div>
+                    {item.error_message && (
+                       <div className="mt-1 text-[10px] text-red-400 line-clamp-1">
+                         {item.error_message}
+                       </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+           </div>
         </TabsContent>
       </Tabs>
     </div>

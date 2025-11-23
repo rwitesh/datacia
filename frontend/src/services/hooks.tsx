@@ -1,4 +1,4 @@
-import {useMutation, useQuery } from "@tanstack/react-query";
+import {useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ListConnections,
   LoadConnection,
@@ -7,7 +7,7 @@ import {
   CancelQuery,
 } from "../../bindings/datacia/pkg/remote/engine";
 import type { ConnectionInfo } from "../../bindings/datacia/pkg/common";
-import { RunQuery, GetTableData, GetTableSchema } from "./database";
+import { RunQuery, GetTableData, GetTableSchema, GetQueryHistory } from "./database";
 import { CheckForUpdates, PerformUpdate } from "./updates";
 
 export function useDatabase() {
@@ -28,12 +28,16 @@ export function useTables() {
 }
 
 export function useRunQuery() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ sql, queryId }: { sql: string; queryId?: string }) => {
       if (!sql?.trim()) {
         throw new Error("SQL cannot be empty");
       }
       return RunQuery(sql, queryId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["query-history"] });
     },
   });
 }
@@ -110,4 +114,12 @@ export function useUpdateApp() {
       return PerformUpdate();
     },
   })
+}
+
+export function useGetQueryHistory() {
+  return useQuery({
+    queryKey: ["query-history"],
+    queryFn: () => GetQueryHistory(50),
+    retry: 2,
+  });
 }

@@ -5,6 +5,51 @@
 // @ts-ignore: Unused imports
 import { Create as $Create } from "@wailsio/runtime";
 
+export class QueryHistoryItem {
+    "id": string;
+    "query": string;
+    "timestamp": string;
+    "duration_ms": number;
+    "status": string;
+    "rows_affected": number;
+    "error_message": string;
+
+    /** Creates a new QueryHistoryItem instance. */
+    constructor($$source: Partial<QueryHistoryItem> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = "";
+        }
+        if (!("query" in $$source)) {
+            this["query"] = "";
+        }
+        if (!("timestamp" in $$source)) {
+            this["timestamp"] = "";
+        }
+        if (!("duration_ms" in $$source)) {
+            this["duration_ms"] = 0;
+        }
+        if (!("status" in $$source)) {
+            this["status"] = "";
+        }
+        if (!("rows_affected" in $$source)) {
+            this["rows_affected"] = 0;
+        }
+        if (!("error_message" in $$source)) {
+            this["error_message"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new QueryHistoryItem instance from a string or object.
+     */
+    static createFrom($$source: any = {}): QueryHistoryItem {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new QueryHistoryItem($$parsedSource as Partial<QueryHistoryItem>);
+    }
+}
+
 export class Store {
 
     /** Creates a new Store instance. */

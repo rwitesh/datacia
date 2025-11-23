@@ -26,7 +26,11 @@ func Open(encryptionKey []byte) (*Store, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve db path: %w", err)
 	}
+	return OpenFile(dbPath, encryptionKey)
+}
 
+// OpenFile initializes SQLite at the given path and returns a Store
+func OpenFile(dbPath string, encryptionKey []byte) (*Store, error) {
 	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open db: %w", err)
@@ -48,6 +52,22 @@ func Open(encryptionKey []byte) (*Store, error) {
 	`)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create connections table: %w", err)
+	}
+
+	// Schema: query_history
+	_, err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS query_history (
+			id TEXT PRIMARY KEY,
+			query TEXT NOT NULL,
+			timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			duration_ms INTEGER,
+			status TEXT,
+			rows_affected INTEGER,
+			error_message TEXT
+		)
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create query_history table: %w", err)
 	}
 
 	return &Store{db: db, encyptionKey: encryptionKey}, nil
@@ -171,4 +191,50 @@ func (s *Store) DeleteConnection(id string) (bool, error) {
 		return false, err
 	}
 	return affected > 0, nil
+}
+
+type QueryHistoryItem struct {
+	ID           string `json:"id"`
+	Query        string `json:"query"`
+	Timestamp    string `json:"timestamp"`
+	DurationMs   int64  `json:"duration_ms"`
+	Status       string `json:"status"`
+	RowsAffected int64  `json:"rows_affected"`
+	ErrorMessage string `json:"error_message"`
+}
+
+func (s *Store) SaveQueryHistory(query string, durationMs int64, status string, rowsAffected int64, errorMessage string) error {
+	id := uuid.New().String()
+	_, err := s.db.Exec(`
+		INSERT INTO query_history (id, query, duration_ms, status, rows_affected, error_message, timestamp)
+		VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+	`, id, query, durationMs, status, rowsAffected, errorMessage)
+	return err
+}
+
+func (s *Store) GetQueryHistory(limit int) ([]QueryHistoryItem, error) {
+	rows, err := s.db.Query(`
+		SELECT id, query, timestamp, duration_ms, status, rows_affected, error_message
+		FROM query_history
+		ORDER BY timestamp DESC
+		LIMIT ?
+	`, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var history []QueryHistoryItem
+	for rows.Next() {
+		var item QueryHistoryItem
+		var errorMessage sql.NullString
+		if err := rows.Scan(&item.ID, &item.Query, &item.Timestamp, &item.DurationMs, &item.Status, &item.RowsAffected, &errorMessage); err != nil {
+			return nil, err
+		}
+		if errorMessage.Valid {
+			item.ErrorMessage = errorMessage.String
+		}
+		history = append(history, item)
+	}
+	return history, rows.Err()
 }
