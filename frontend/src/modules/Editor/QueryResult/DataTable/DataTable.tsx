@@ -403,7 +403,7 @@ useEffect(() => {
                       key={header.id}
                       colSpan={header.colSpan}
                       style={{ width: colWidths[i] }}
-                      className="relative border border-border bg-muted px-2 py-1 font-medium hover:bg-blue-600"
+                      className="relative border border-border bg-muted px-2 py-1 font-medium hover:bg-blue-500/20 hover:border-blue-500 transition-colors"
                       onClick={(e) => {
                         // Check if click is on resize handle
                         const rect = e.currentTarget.getBoundingClientRect();
@@ -441,7 +441,7 @@ useEffect(() => {
                         <div
                           onMouseDown={header.getResizeHandler()}
                           onTouchStart={header.getResizeHandler()}
-                          className="absolute right-0 top-0 h-full w-2 cursor-col-resize bg-transparent hover:bg-blue-600"
+                          className="absolute right-0 top-0 h-full w-2 cursor-col-resize bg-transparent hover:bg-blue-500/30"
                         />
                       )}
                     </th>
@@ -487,10 +487,10 @@ useEffect(() => {
                         <div
                           key={cell.id}
                           role="cell"
-                          className={`relative border-r border-border px-2 cursor-pointer ${
+                          className={`relative border border-border px-2 cursor-pointer transition-colors ${
                             isSelected
-                              ? "bg-blue-500 border-blue-400"
-                              : "hover:bg-blue-600"
+                              ? "bg-blue-500/30 border-blue-600 border-2"
+                              : "hover:bg-blue-500/10 hover:border-blue-500"
                           }`}
                           style={{ width: colWidths[ci] }}
                           onMouseDown={(e) =>

@@ -12,8 +12,8 @@ import { EditorFooter } from "./EditorFooter/EditorFooter";
 import { NavigationBar } from "../NavigationBar/NavigationBar";
 import { DataView } from "./DataView/DataView";
 import { LoadingOverlay } from "@/components/ui/loading-overlay";
-import { useState, useCallback, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Copy } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export const Editor = () => {
   const { activeTab, tables } = useEditorContext();
@@ -34,11 +34,7 @@ export const Editor = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  const handleCopy = useCallback(() => {
-    navigator.clipboard
-      .writeText(JSON.stringify(selectedData, null, 2))
-      .catch((err) => console.error("Copy failed:", err));
-  }, [selectedData]);
+
 
   return (
     <div className="h-full w-full flex flex-col bg-card relative">
@@ -128,22 +124,7 @@ export const Editor = () => {
                           maxSize={50}
                           className="min-w-60"
                         >
-                          <div className="relative h-full w-full overflow-hidden border-l">
-                            {/* Header */}
-                            <div className="flex items-center justify-between p-2 border-b bg-muted/50">
-                              <h3 className="text-sm font-medium">Data View</h3>
-                              <button
-                                onClick={handleCopy}
-                                className="flex items-center gap-1 px-2 py-1 text-xs rounded bg-background shadow hover:bg-accent transition-colors"
-                              >
-                                <Copy className="h-4 w-4" />
-                                Copy
-                              </button>
-                            </div>
-
-                            {/* Body */}
-                            <DataView selectedData={selectedData} />
-                          </div>
+                          <DataView selectedData={selectedData} />
                         </ResizablePanel>
                       </>
                     )}
