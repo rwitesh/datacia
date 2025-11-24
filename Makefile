@@ -1,6 +1,7 @@
 APP_NAME = DataCia
 OUTPUT_DIR = output
 APP_BUNDLE = bin/$(APP_NAME).app
+DMG_NAME = $(APP_NAME).dmg
 
 VOLNAME = $(APP_NAME)
 
