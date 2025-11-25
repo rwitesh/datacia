@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"time"
 
 	"datacia/internal/constants"
 	"datacia/internal/encryption"
@@ -201,21 +202,33 @@ type QueryHistoryItem struct {
 	Status       string `json:"status"`
 	RowsAffected int64  `json:"rows_affected"`
 	ErrorMessage string `json:"error_message"`
+	Count        int64  `json:"count"`
 }
 
 func (s *Store) SaveQueryHistory(query string, durationMs int64, status string, rowsAffected int64, errorMessage string) error {
 	id := uuid.New().String()
 	_, err := s.db.Exec(`
 		INSERT INTO query_history (id, query, duration_ms, status, rows_affected, error_message, timestamp)
-		VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-	`, id, query, durationMs, status, rowsAffected, errorMessage)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
+	`, id, query, durationMs, status, rowsAffected, errorMessage, time.Now().UTC().Format(time.RFC3339))
 	return err
 }
 
 func (s *Store) GetQueryHistory(limit int) ([]QueryHistoryItem, error) {
+	// Group by query to show unique queries with execution count
+	// We select the latest timestamp for each query
 	rows, err := s.db.Query(`
-		SELECT id, query, timestamp, duration_ms, status, rows_affected, error_message
+		SELECT 
+			id, 
+			query, 
+			MAX(timestamp) as timestamp, 
+			duration_ms, 
+			status, 
+			rows_affected, 
+			error_message,
+			COUNT(query) as count
 		FROM query_history
+		GROUP BY query
 		ORDER BY timestamp DESC
 		LIMIT ?
 	`, limit)
@@ -228,7 +241,7 @@ func (s *Store) GetQueryHistory(limit int) ([]QueryHistoryItem, error) {
 	for rows.Next() {
 		var item QueryHistoryItem
 		var errorMessage sql.NullString
-		if err := rows.Scan(&item.ID, &item.Query, &item.Timestamp, &item.DurationMs, &item.Status, &item.RowsAffected, &errorMessage); err != nil {
+		if err := rows.Scan(&item.ID, &item.Query, &item.Timestamp, &item.DurationMs, &item.Status, &item.RowsAffected, &errorMessage, &item.Count); err != nil {
 			return nil, err
 		}
 		if errorMessage.Valid {

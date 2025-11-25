@@ -38,7 +38,7 @@ export function QueryInput() {
     let dialect: SQLDialect;
     if (engine === "clickhouse") {
       dialect = ClickhouseDialect;
-    } else if (engine === "postgresql") {
+    } else if (engine === "postgres") {
       dialect = PostgreSQL;
     } else {
       dialect = StandardSQL;

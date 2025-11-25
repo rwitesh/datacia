@@ -13,6 +13,7 @@ export class QueryHistoryItem {
     "status": string;
     "rows_affected": number;
     "error_message": string;
+    "count": number;
 
     /** Creates a new QueryHistoryItem instance. */
     constructor($$source: Partial<QueryHistoryItem> = {}) {
@@ -36,6 +37,9 @@ export class QueryHistoryItem {
         }
         if (!("error_message" in $$source)) {
             this["error_message"] = "";
+        }
+        if (!("count" in $$source)) {
+            this["count"] = 0;
         }
 
         Object.assign(this, $$source);

@@ -262,20 +262,22 @@ func (e *Engine) RunQuery(queryId, queryType, sql string) (common.QueryResult, e
 
 	start := time.Now()
 	result, err := e.activeClient.RunQuery(queryId, queryType, sql)
-	duration := time.Since(start).Milliseconds()
 
 	status := "success"
+	duration := time.Since(start).Milliseconds()
 	var errorMessage string
 	if err != nil {
 		status = "error"
 		errorMessage = err.Error()
 	}
 
-	// Save to history synchronously to ensure it's available immediately
-	saveErr := e.store.SaveQueryHistory(sql, duration, status, int64(len(result.Data)), errorMessage)
-	if saveErr != nil {
-		fmt.Printf("failed to save query history: %v\n", saveErr)
-	}
+	// Save to history asynchronously
+	go func(sql string, duration int64, status string, rows int64, errorMessage string) {
+		saveErr := e.store.SaveQueryHistory(sql, duration, status, rows, errorMessage)
+		if saveErr != nil {
+			fmt.Printf("failed to save query history: %v\n", saveErr)
+		}
+	}(sql, duration, status, int64(len(result.Data)), errorMessage)
 
 	return result, err
 }

@@ -12,6 +12,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     queryClient.invalidateQueries({ queryKey: ["tables"] });
     queryClient.invalidateQueries({ queryKey: ["databases"] });
     queryClient.invalidateQueries({ queryKey: ["connections"] });
+    queryClient.invalidateQueries({ queryKey: ["query-history"] });
   };
 
   const value = {

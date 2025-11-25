@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/tabs";
 import { useEditorContext } from "@/modules/Context/Editor/Index";
 import { useGetTableData, useGetTableSchema, useGetQueryHistory } from "@/services/hooks";
-import { formatDistanceToNow } from "date-fns";
+import { timeAgo } from "./utils";
 
 export function EditorSidebar() {
   const {
@@ -201,16 +201,16 @@ export function EditorSidebar() {
           value="queries"
           className="flex flex-1 min-h-0 flex-col px-0 py-0 focus-visible:outline-none focus-visible:ring-0"
         >
-           <div className="flex-1 min-h-0 overflow-y-auto">
+          <div className="flex-1 min-h-0 overflow-y-auto">
             {isHistoryLoading ? (
-               <div className="px-4 py-2 text-xs text-muted-foreground flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Loading history...</span>
-                </div>
+              <div className="px-4 py-2 text-xs text-muted-foreground flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Loading history...</span>
+              </div>
             ) : !queryHistory || queryHistory.length === 0 ? (
-               <div className="px-4 py-2 text-xs text-muted-foreground">
-                 No query history found
-               </div>
+              <div className="px-4 py-2 text-xs text-muted-foreground">
+                No query history found
+              </div>
             ) : (
               <div className="space-y-0.5 px-1">
                 {queryHistory.map((item: any) => (
@@ -227,8 +227,13 @@ export function EditorSidebar() {
                           <XCircle className="h-3 w-3 text-red-500 shrink-0" />
                         )}
                         <span className="text-[10px] text-muted-foreground font-medium group-hover:text-sidebar-accent-foreground/70 transition-colors">
-                          {formatDistanceToNow(new Date(item.timestamp), { addSuffix: true })}
+                          {timeAgo(item.timestamp)}
                         </span>
+                        {item.count > 1 && (
+                          <span className="ml-1 px-1.5 py-0.5 rounded-full bg-sidebar-accent text-[9px] font-bold text-sidebar-accent-foreground">
+                            x{item.count}
+                          </span>
+                        )}
                       </div>
                       <span className="text-[10px] text-muted-foreground tabular-nums group-hover:text-sidebar-accent-foreground/70 transition-colors">
                         {item.duration_ms}ms
@@ -238,15 +243,15 @@ export function EditorSidebar() {
                       {item.query}
                     </div>
                     {item.error_message && (
-                       <div className="mt-1 text-[10px] text-red-400 line-clamp-1">
-                         {item.error_message}
-                       </div>
+                      <div className="mt-1 text-[10px] text-red-400 line-clamp-1">
+                        {item.error_message}
+                      </div>
                     )}
                   </button>
                 ))}
               </div>
             )}
-           </div>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

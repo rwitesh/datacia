@@ -1,4 +1,4 @@
-import {useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ListConnections,
   LoadConnection,
@@ -121,5 +121,6 @@ export function useGetQueryHistory() {
     queryKey: ["query-history"],
     queryFn: () => GetQueryHistory(50),
     retry: 2,
+    refetchOnWindowFocus: true,
   });
 }
