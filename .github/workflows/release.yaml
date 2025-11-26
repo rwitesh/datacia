@@ -1,0 +1,52 @@
+name: Build and Upload to Cloudflare R2
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-latest
+    environment: Cloudflare
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+          cache: true  # Cache Go modules for faster runs
+
+      - name: Install Wails3
+        run: go install github.com/wailsapp/wails/v3/cmd/wails3@latest
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install Homebrew dependencies
+        run: brew install create-dmg || true
+
+      - name: Build DMG
+        run: make dmg-universal
+        env:
+          CGO_ENABLED: 1
+
+      - name: Upload DMG(s) to R2
+        uses: ryand56/r2-upload-action@v1
+        with:
+          r2-account-id: ${{ secrets.CF_R2_ACCOUNT_ID }}
+          r2-access-key-id: ${{ secrets.CF_R2_KEY_ID }}
+          r2-secret-access-key: ${{ secrets.CF_R2_SECRET }}
+          r2-bucket: ${{ secrets.CF_R2_BUCKET }}
+          source-dir: output
+          destination-dir: builds/${{ github.sha }}
+          multipart-size: 5
+          multipart-concurrent: true
+          max-retries: 5
+          output-file-url: true
