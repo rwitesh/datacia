@@ -1,4 +1,4 @@
-name: Build and Upload to Cloudflare R2
+name: Build and Upload to GCP
 
 on:
   push:
@@ -10,7 +10,7 @@ permissions:
 jobs:
   build:
     runs-on: macos-latest
-    environment: Cloudflare
+    environment: GCP
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -19,7 +19,7 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: "1.24"
-          cache: true  # Cache Go modules for faster runs
+          cache: true
 
       - name: Install Wails3
         run: go install github.com/wailsapp/wails/v3/cmd/wails3@latest
@@ -37,16 +37,17 @@ jobs:
         env:
           CGO_ENABLED: 1
 
-      - name: Upload DMG(s) to R2
-        uses: ryand56/r2-upload-action@v1
+      # --- GCP AUTH ---
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
         with:
-          r2-account-id: ${{ secrets.CF_R2_ACCOUNT_ID }}
-          r2-access-key-id: ${{ secrets.CF_R2_KEY_ID }}
-          r2-secret-access-key: ${{ secrets.CF_R2_SECRET }}
-          r2-bucket: ${{ secrets.CF_R2_BUCKET }}
-          source-dir: output
-          destination-dir: builds/${{ github.sha }}
-          multipart-size: 5
-          multipart-concurrent: true
-          max-retries: 5
-          output-file-url: true
+          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_JSON }}
+
+      # --- Install gcloud + gsutil ---
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      # --- Upload to GCS ---
+      - name: Upload DMG to GCS
+        run: |
+          gsutil -m cp -r output/* gs://${{ secrets.GCP_BUCKET }}/builds/${{ github.sha }}/
