@@ -2,12 +2,13 @@
 import { useEditorContext } from "@/modules/Context/Editor/Index";
 import { DataTable } from "./DataTable/DataTable";
 import { FloatingBar } from "./FloatingBar/FloatingBar";
+import { ErrorView } from "./ErrorView/ErrorView";
 
 type QueryResultProps = {
   onSelectionChange: (selected: Array<Record<string, unknown>>) => void;
 };
 
-export function QueryResult({onSelectionChange}: QueryResultProps) {
+export function QueryResult({ onSelectionChange }: QueryResultProps) {
   const { activeTab } = useEditorContext();
 
   if (!activeTab) return null;
@@ -24,9 +25,7 @@ export function QueryResult({onSelectionChange}: QueryResultProps) {
             <div className="animate-spin h-8 w-8 border-b-2 border-primary rounded-full"></div>
           </div>
         ) : error ? (
-          <div className="flex justify-center text-center items-center h-full text-red-500 p-4">
-            {error}
-          </div>
+          <ErrorView error={error} />
         ) : isReadQuery ? (
           <DataTable
             columns={results.columns}

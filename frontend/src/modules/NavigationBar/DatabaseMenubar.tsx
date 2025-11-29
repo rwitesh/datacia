@@ -17,17 +17,17 @@ import { useQueryClient } from "@tanstack/react-query";
 export function DatabaseMenuBar() {
   const { data: databaseInfo } = useDatabase();
   const queryClient = useQueryClient();
-  const databases = databaseInfo?.databases || [];
+  const databases: string[] = databaseInfo?.databases || [];
   const currentDatabase = databaseInfo?.currentDatabase || "";
 
   const changeDatabaseHandler = (db: string) => async () => {
     try {
-        await ChangeDatabaseByName(db);
-        // Invalidate the databases query to refresh the current database
-        await queryClient.invalidateQueries({ queryKey: ["databases"] });
-        // Also invalidate tables query as it depends on the current database
-        await queryClient.invalidateQueries({ queryKey: ["tables"] });
-        console.log(currentDatabase, db)
+      await ChangeDatabaseByName(db);
+      // Invalidate the databases query to refresh the current database
+      await queryClient.invalidateQueries({ queryKey: ["databases"] });
+      // Also invalidate tables query as it depends on the current database
+      await queryClient.invalidateQueries({ queryKey: ["tables"] });
+      console.log(currentDatabase, db)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : String(error));
       console.error("Failed to change database:", error);
@@ -59,7 +59,7 @@ export function DatabaseMenuBar() {
             value={currentDatabase}
             onValueChange={(db) => changeDatabaseHandler(db)()}
           >
-            {databases.map((db) => (
+            {databases.map((db: string) => (
               <MenubarRadioItem
                 className="cursor-pointer text-xs"
                 key={db}

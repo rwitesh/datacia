@@ -39,7 +39,7 @@ export const Editor = () => {
   return (
     <div className="h-full w-full flex flex-col bg-card relative">
       {/* Loading Overlay */}
-      <LoadingOverlay 
+      <LoadingOverlay
         isVisible={isInitialLoading || tables.isLoading}
       >
         Initializing Editor...
