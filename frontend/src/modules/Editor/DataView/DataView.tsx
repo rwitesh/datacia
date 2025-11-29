@@ -11,22 +11,22 @@ function getColorClass(value: string): string {
   if (value === "null") {
     return "text-red-500 dark:text-red-400";
   }
-  
+
   // Check for booleans
   if (value === "true" || value === "false") {
     return "text-amber-600 dark:text-amber-400";
   }
-  
+
   // Check for numbers
   if (/^-?\d+\.?\d*$/.test(value.trim())) {
     return "text-blue-600 dark:text-blue-400";
   }
-  
+
   // Check for strings (wrapped in quotes)
   if (value.startsWith('"') && value.endsWith('"')) {
     return "text-emerald-600 dark:text-emerald-400";
   }
-  
+
   // Default for structural characters like brackets, braces, commas
   return "text-muted-foreground";
 }
@@ -35,16 +35,16 @@ function getColorClass(value: string): string {
 function HighlightedLine({ line }: { line: string }) {
   // Split by quotes to separate keys, values, and other parts
   const parts = line.split(/("(?:[^"\\]|\\.)*")/g);
-  
+
   return (
     <>
       {parts.map((part, index) => {
         if (!part) return null;
-        
+
         // Check if this part is a property key (followed by colon)
         const nextPart = parts[index + 1] || "";
         const isKey = part.startsWith('"') && nextPart.trim().startsWith(":");
-        
+
         if (isKey) {
           return (
             <span key={index} className="text-purple-600 dark:text-purple-400">
@@ -52,7 +52,7 @@ function HighlightedLine({ line }: { line: string }) {
             </span>
           );
         }
-        
+
         // Apply appropriate color based on content
         return (
           <span key={index} className={getColorClass(part)}>
@@ -123,10 +123,10 @@ export function DataView({ selectedData }: SelectedDataProps) {
 
       {/* JSON Content */}
       <div className="flex-1 overflow-auto">
-        <div className="p-4 min-w-max">
+        <div className="p-4">
           <code className="block text-xs font-mono leading-relaxed">
             {lines.map((line, index) => (
-              <div key={index} className="whitespace-pre">
+              <div key={index} className="whitespace-pre-wrap break-words">
                 <HighlightedLine line={line} />
               </div>
             ))}

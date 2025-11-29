@@ -50,7 +50,7 @@ export function DataTable({
   columns,
   data,
   onSelectionChange,
-  extraBlankRows = 5,
+  extraBlankRows = 0,
 }: Props) {
   const [columnSizing, setColumnSizing] = useState<Record<string, number>>({});
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -262,36 +262,36 @@ export function DataTable({
     [data.length, selection.ranges, updateSelectedCells]
   );
 
-useEffect(() => {
-  const selectedData: Array<Record<string, unknown>> = [];
+  useEffect(() => {
+    const selectedData: Array<Record<string, unknown>> = [];
 
-  selection.ranges.forEach((range) => {
-    const minRow = Math.min(range.start.row, range.end.row);
-    const maxRow = Math.max(range.start.row, range.end.row);
-    const minCol = Math.min(range.start.col, range.end.col);
-    const maxCol = Math.max(range.start.col, range.end.col);
+    selection.ranges.forEach((range) => {
+      const minRow = Math.min(range.start.row, range.end.row);
+      const maxRow = Math.max(range.start.row, range.end.row);
+      const minCol = Math.min(range.start.col, range.end.col);
+      const maxCol = Math.max(range.start.col, range.end.col);
 
-    for (let row = minRow; row <= maxRow; row++) {
-      if (row >= data.length) continue;
+      for (let row = minRow; row <= maxRow; row++) {
+        if (row >= data.length) continue;
 
-      const rowData: Record<string, unknown> = {};
-      let hasData = false;
+        const rowData: Record<string, unknown> = {};
+        let hasData = false;
 
-      for (let col = minCol; col <= maxCol; col++) {
-        if (col >= columns.length) continue;
-        const columnKey = columns[col];
-        rowData[columnKey] = data[row][columnKey];
-        hasData = true;
+        for (let col = minCol; col <= maxCol; col++) {
+          if (col >= columns.length) continue;
+          const columnKey = columns[col];
+          rowData[columnKey] = data[row][columnKey];
+          hasData = true;
+        }
+
+        if (hasData) {
+          selectedData.push(rowData);
+        }
       }
+    });
 
-      if (hasData) {
-        selectedData.push(rowData);
-      }
-    }
-  });
-
-  onSelectionChange(selectedData);
-}, [selection, data, columns, onSelectionChange]);
+    onSelectionChange(selectedData);
+  }, [selection, data, columns, onSelectionChange]);
 
 
   // Clear selection
@@ -405,14 +405,19 @@ useEffect(() => {
                       style={{ width: colWidths[i] }}
                       className="relative border border-border bg-muted px-2 py-1 font-medium hover:bg-blue-500/20 hover:border-blue-500 transition-colors"
                       onClick={(e) => {
-                        // Check if click is on resize handle
-                        const rect = e.currentTarget.getBoundingClientRect();
-                        const isResizeArea = e.clientX > rect.right - 10;
-
-                        if (!isResizeArea) {
-                          handleColumnHeaderClick(i, e);
+                        handleColumnHeaderClick(i, e);
+                        const isSorted = header.column.getIsSorted();
+                        if (isSorted === "asc") {
+                          header.column.toggleSorting(true); // Switch to desc
+                        } else if (isSorted === "desc") {
+                          header.column.toggleSorting(false); // Switch to asc
+                        }
+                      }}
+                      onDoubleClick={() => {
+                        if (header.column.getIsSorted()) {
+                          header.column.clearSorting();
                         } else {
-                          header.column.getToggleSortingHandler()?.(e);
+                          header.column.toggleSorting(false);
                         }
                       }}
                     >
@@ -481,47 +486,46 @@ useEffect(() => {
               >
                 {isDataRow
                   ? // Render data row
-                    row!.getVisibleCells().map((cell, ci) => {
-                      const isSelected = isCellSelected(vi.index, ci);
-                      return (
-                        <div
-                          key={cell.id}
-                          role="cell"
-                          className={`relative border border-border px-2 cursor-pointer transition-colors ${
-                            isSelected
-                              ? "bg-blue-500/30 border-blue-600 border-2"
-                              : "hover:bg-blue-500/10 hover:border-blue-500"
-                          }`}
-                          style={{ width: colWidths[ci] }}
-                          onMouseDown={(e) =>
-                            handleCellMouseDown(vi.index, ci, e)
-                          }
-                          onMouseEnter={() =>
-                            handleCellMouseEnter(vi.index, ci)
-                          }
-                        >
-                          <div className="overflow-hidden text-ellipsis whitespace-nowrap text-xs h-full flex items-center cursor-default select-none">
-                            {flexRender(
-                              cell.column.columnDef.cell,
-                              cell.getContext()
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })
-                  : // Render blank row
-                    colWidths.map((w, ci) => (
+                  row!.getVisibleCells().map((cell, ci) => {
+                    const isSelected = isCellSelected(vi.index, ci);
+                    return (
                       <div
-                        key={`blank-cell-${vi.index}-${ci}`}
+                        key={cell.id}
                         role="cell"
-                        className="relative border-r border-border px-2"
-                        style={{ width: w }}
+                        className={`relative border border-border px-2 cursor-pointer transition-colors ${isSelected
+                          ? "bg-blue-500/30 border-blue-600 border-2"
+                          : "hover:bg-blue-500/10 hover:border-blue-500"
+                          }`}
+                        style={{ width: colWidths[ci] }}
+                        onMouseDown={(e) =>
+                          handleCellMouseDown(vi.index, ci, e)
+                        }
+                        onMouseEnter={() =>
+                          handleCellMouseEnter(vi.index, ci)
+                        }
                       >
-                        <div className="h-full flex items-center cursor-default select-none">
-                          {/* Empty content for blank rows */}
+                        <div className="overflow-hidden text-ellipsis whitespace-nowrap text-xs h-full flex items-center cursor-default select-none">
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
                         </div>
                       </div>
-                    ))}
+                    );
+                  })
+                  : // Render blank row
+                  colWidths.map((w, ci) => (
+                    <div
+                      key={`blank-cell-${vi.index}-${ci}`}
+                      role="cell"
+                      className="relative border-r border-border px-2"
+                      style={{ width: w }}
+                    >
+                      <div className="h-full flex items-center cursor-default select-none">
+                        {/* Empty content for blank rows */}
+                      </div>
+                    </div>
+                  ))}
               </div>
             );
           })}
