@@ -4,10 +4,11 @@ import { EditorState } from "@codemirror/state";
 import { autocompletion, closeBrackets } from "@codemirror/autocomplete";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { PostgreSQL, sql, SQLDialect, StandardSQL } from "@codemirror/lang-sql";
-import { keymap, lineNumbers } from "@codemirror/view";
+import { drawSelection, keymap, lineNumbers } from "@codemirror/view";
 import { useEditorContext } from "@/modules/Context/Editor/Index";
 import { ClickhouseDialect } from "./sql";
 import { useAppContext } from "@/modules/Context/App/Index";
+import { defaultTheme } from "./theme";
 
 export function QueryInput() {
   const editorRef = useRef<HTMLDivElement | null>(null);
@@ -47,6 +48,7 @@ export function QueryInput() {
     const state = EditorState.create({
       extensions: [
         lineNumbers(),
+        drawSelection(),
         EditorView.lineWrapping,
         sql({ dialect, schema }),
         autocompletion(),
@@ -58,30 +60,7 @@ export function QueryInput() {
             updateTab(tabId, { sql: v.state.doc.toString() });
           }
         }),
-        EditorView.theme({
-          "&": {
-            height: "100%",
-            fontFamily: "monospace",
-            fontSize: "0.875rem",
-          },
-          ".cm-scroller": {
-            height: "100%",
-            overflow: "auto",
-          },
-          ".cm-tooltip": {
-            color: "var(--foreground)",
-            backgroundColor: "var(--background)",
-          },
-          ".cm-lineNumbers": {
-            backgroundColor: "var(--card)",
-          },
-          ".cm-content": {
-            caretColor: "var(--foreground)",
-          },
-          ".cm-gutters": {
-            border: "none",
-          },
-        }),
+        defaultTheme,
       ],
     });
 

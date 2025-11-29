@@ -39,13 +39,13 @@ jobs:
 
       # --- GCP AUTH ---
       - name: Authenticate to GCP
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@v3
         with:
           credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_JSON }}
 
       # --- Install gcloud + gsutil ---
       - name: Setup gcloud
-        uses: google-github-actions/setup-gcloud@v2
+        uses: google-github-actions/setup-gcloud@v3
 
       # --- Upload to GCS ---
       - name: Upload DMG to GCS

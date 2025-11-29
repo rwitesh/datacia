@@ -1,35 +1,74 @@
 // FloatingBar.tsx
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, RefreshCw} from "lucide-react";
+import { ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { useEditorContext } from "@/modules/Context/Editor/Index";
+import { useGetTableData } from "@/services/hooks";
+import { QueryResult } from "@/services/database";
 
 export function FloatingBar() {
-  const { activeTab, runQuery, updateTab } = useEditorContext();
+  const { activeTab, updateTab } = useEditorContext();
+  const getTableDataMutation = useGetTableData();
+
   if (!activeTab) return null;
   const { id, table, limit, offset, isExecuting } = activeTab;
+
+  const fetchData = (limit: number, offset: number) => {
+    if (!table || limit === undefined) return;
+
+    updateTab(id, {
+      isExecuting: true,
+      error: undefined,
+      limit,
+      offset,
+    });
+
+    getTableDataMutation.mutate(
+      {
+        table,
+        limit,
+        offset
+      },
+      {
+        onSuccess: (response: QueryResult) => {
+          updateTab(id, {
+            results: response,
+            isExecuting: false,
+            pagination: true,
+          });
+        },
+        onError: (err: unknown) => {
+          const message =
+            err instanceof Error
+              ? err.message
+              : String(err) || "Error fetching table data";
+          updateTab(id, {
+            error: message,
+            results: null,
+            isExecuting: false,
+            pagination: false,
+          });
+        },
+      }
+    );
+  };
 
   const handlePrev = () => {
     if (typeof limit === "number" && typeof offset === "number") {
       const newOffset = Math.max(0, offset - limit);
-      const sql = `SELECT * FROM ${table} LIMIT ${limit} OFFSET ${newOffset}`;
-      updateTab(id, { offset: newOffset });
-      runQuery(id, sql, true);
+      fetchData(limit, newOffset);
     }
   };
 
   const handleNext = () => {
     if (typeof limit === "number" && typeof offset === "number") {
       const newOffset = offset + limit;
-      const sql = `SELECT * FROM ${table} LIMIT ${limit} OFFSET ${newOffset}`;
-      updateTab(id, { offset: newOffset });
-      runQuery(id, sql, true);
+      fetchData(limit, newOffset);
     }
   };
 
   const handleRefresh = () => {
     if (typeof limit === "number" && typeof offset === "number") {
-      const sql = `SELECT * FROM ${table} LIMIT ${limit} OFFSET ${offset}`;
-      runQuery(id, sql, true);
+      fetchData(limit, offset);
     }
   };
 

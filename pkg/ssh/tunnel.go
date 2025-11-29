@@ -3,7 +3,6 @@ package ssh
 import (
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"time"
 
@@ -30,7 +29,6 @@ type Config struct {
 // NewTunnel creates a new SSH tunnel to forward local connections to a remote address
 // Returns the local address that should be used to connect to the remote service
 func NewTunnel(sshConfig Config, remoteHost, remotePort string) (*Tunnel, error) {
-	log.Println("NewTunnel", sshConfig, remoteHost, remotePort)
 	// Build SSH client config
 	config := &ssh.ClientConfig{
 		User:            sshConfig.Username,

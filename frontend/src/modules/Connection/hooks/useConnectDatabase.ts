@@ -5,7 +5,7 @@ import {
   CreateNewConnection as Connect,
   EstablishConnection,
 } from "@/services/common";
-import type { FormValues, Status } from "../utils/types";
+import type { DatabaseEngine, FormValues, Status } from "../utils/types";
 
 type ConnectByIdArgs = { id: string; engine: string };
 type ConnectByValuesArgs = { values: FormValues };
@@ -45,7 +45,9 @@ export const useConnectDatabase = (opts?: {
     },
     onSuccess: (_, variables) => {
       const engine =
-        "id" in variables ? variables.engine : variables.values.engine;
+        "id" in variables
+          ? (variables.engine as DatabaseEngine)
+          : variables.values.engine;
       setEngine(engine);
       queryClient.invalidateQueries({ queryKey: ["databases"] });
       queryClient.invalidateQueries({ queryKey: ["tables"] });
