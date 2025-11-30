@@ -2,12 +2,13 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
- 
+
 import {
   TestNewConnection as Test,
   SaveConnection,
   UpdateConnection,
   SelectSSHKeyFile,
+  SelectSQLiteFile,
 } from "@/services/common";
 import { DEFAULT_PORTS } from "../utils/constants";
 import type { DatabaseEngine, FormValues, Status } from "../utils/types";
@@ -40,13 +41,13 @@ interface UseConnectionFormProps {
   fetchedData?: FetchedConnectionData;
 }
 
-export const useConnectionForm = ({ 
-  resolvedEngine, 
-  connectionId, 
-  fetchedData 
+export const useConnectionForm = ({
+  resolvedEngine,
+  connectionId,
+  fetchedData
 }: UseConnectionFormProps) => {
   const queryClient = useQueryClient();
-  
+
 
   const [status, setStatus] = useState<Status>(null);
 
@@ -268,6 +269,17 @@ export const useConnectionForm = ({
     }
   };
 
+  const handleSelectSQLiteFile = async () => {
+    try {
+      const path = await SelectSQLiteFile();
+      if (path) {
+        setValue("database", path);
+      }
+    } catch (error) {
+      console.error("Failed to select SQLite file:", error);
+    }
+  };
+
   return {
     form,
     register,
@@ -281,6 +293,7 @@ export const useConnectionForm = ({
     handleTest,
     handleConnect,
     handleSelectSSHKey,
+    handleSelectSQLiteFile,
     saveMutation,
     testMutation,
     connectMutation,

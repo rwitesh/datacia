@@ -4,7 +4,7 @@ import type { FormValues } from "./types";
 export const validationSchema = yup
   .object({
     connectionName: yup.string().default(""),
-    engine: yup.string().oneOf(["postgres", "clickhouse", "mysql"]).default("postgres"),
+    engine: yup.string().oneOf(["postgres", "clickhouse", "mysql", "sqlite"]).default("postgres"),
     host: yup.string().default(""),
     port: yup.string().default(""),
     username: yup.string().default(""),
@@ -25,20 +25,30 @@ export const validateForSave = (values: FormValues) => {
   if (!values.connectionName?.trim())
     errs.connectionName = "Connection name is required";
   if (!values.engine) errs.engine = "Database engine is required";
-  if (!values.host?.trim()) errs.host = "Host is required";
-  if (!values.port?.trim()) errs.port = "Port is required";
-  if (!values.username?.trim()) errs.username = "Username is required";
-  if (!values.database?.trim()) errs.database = "Database is required";
+
+  if (values.engine === "sqlite") {
+    if (!values.database?.trim()) errs.database = "Database file is required";
+  } else {
+    if (!values.host?.trim()) errs.host = "Host is required";
+    if (!values.port?.trim()) errs.port = "Port is required";
+    if (!values.username?.trim()) errs.username = "Username is required";
+    if (!values.database?.trim()) errs.database = "Database is required";
+  }
   return errs;
 };
 
 export const validateForTestConnect = (values: FormValues) => {
   const errs: Partial<Record<keyof FormValues, string>> = {};
   if (!values.engine) errs.engine = "Database engine is required";
-  if (!values.host?.trim()) errs.host = "Host is required";
-  if (!values.port?.trim()) errs.port = "Port is required";
-  if (!values.username?.trim()) errs.username = "Username is required";
-  if (!values.database?.trim()) errs.database = "Database is required";
+
+  if (values.engine === "sqlite") {
+    if (!values.database?.trim()) errs.database = "Database file is required";
+  } else {
+    if (!values.host?.trim()) errs.host = "Host is required";
+    if (!values.port?.trim()) errs.port = "Port is required";
+    if (!values.username?.trim()) errs.username = "Username is required";
+    if (!values.database?.trim()) errs.database = "Database is required";
+  }
 
   // Validate SSH fields if SSH is enabled
   if (values.useSSH) {

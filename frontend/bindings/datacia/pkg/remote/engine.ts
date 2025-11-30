@@ -114,6 +114,14 @@ export function SaveConnection(name: string, config: { [_: string]: string }): $
 }
 
 /**
+ * SelectSQLiteFile opens a file dialog to select a SQLite database file
+ * Returns the selected file path, or an error if cancelled or failed
+ */
+export function SelectSQLiteFile(): $CancellablePromise<string> {
+    return $Call.ByID(195308604);
+}
+
+/**
  * SelectSSHKeyFile opens a file dialog to select an SSH private key file
  * Returns the selected file path, or an error if cancelled or failed
  */

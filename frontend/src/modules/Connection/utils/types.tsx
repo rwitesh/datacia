@@ -1,8 +1,9 @@
 export const postgres = "postgres";
 export const clickhouse = "clickhouse";
 export const mysql = "mysql";
+export const sqlite = "sqlite";
 
-export type DatabaseEngine = typeof postgres | typeof clickhouse | typeof mysql;
+export type DatabaseEngine = typeof postgres | typeof clickhouse | typeof mysql | typeof sqlite;
 
 export interface FormValues {
   connectionName: string;

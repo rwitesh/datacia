@@ -41,6 +41,8 @@ export function QueryInput() {
       dialect = ClickhouseDialect;
     } else if (engine === "postgres") {
       dialect = PostgreSQL;
+    } else if (engine === "sqlite") {
+      dialect = StandardSQL; // SQLite uses standard SQL mostly
     } else {
       dialect = StandardSQL;
     }

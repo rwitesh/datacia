@@ -7,11 +7,11 @@ import { ConnectionAlert } from "./components/ConnectionAlert";
 import { ConnectionForm } from "./components/ConnectionForm";
 import { ConnectionActions } from "./components/ConnectionActions";
 import type { DatabaseEngine, FormValues } from "./utils/types";
-import { postgres, clickhouse, mysql } from "./utils/types";
+import { postgres, clickhouse, mysql, sqlite } from "./utils/types";
 
 // Helper function to validate engine type
 const isValidEngine = (engine: string): engine is DatabaseEngine => {
-  return [postgres, clickhouse, mysql].includes(engine);
+  return [postgres, clickhouse, mysql, sqlite].includes(engine);
 };
 
 export const DatabaseConnection: React.FC = () => {
@@ -45,6 +45,7 @@ export const DatabaseConnection: React.FC = () => {
     handleTest,
     handleConnect,
     handleSelectSSHKey,
+    handleSelectSQLiteFile,
     saveMutation,
     testMutation,
     connectMutation,
@@ -94,6 +95,7 @@ export const DatabaseConnection: React.FC = () => {
           currentEngine={currentEngine}
           loading={loading}
           onSelectSSHKey={handleSelectSSHKey}
+          onSelectSQLiteFile={handleSelectSQLiteFile}
         />
       </div>
 

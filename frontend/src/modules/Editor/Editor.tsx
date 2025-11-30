@@ -13,12 +13,13 @@ import { NavigationBar } from "../NavigationBar/NavigationBar";
 import { DataView } from "./DataView/DataView";
 import { LoadingOverlay } from "@/components/ui/loading-overlay";
 import { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileUp } from "lucide-react";
 
 export const Editor = () => {
-  const { activeTab, tables } = useEditorContext();
+  const { activeTab, tables, createTab, updateTab } = useEditorContext();
   const [isDataViewOpen, setIsDataViewOpen] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isDragging, setIsDragging] = useState(false);
 
   // Selected Data
   const [selectedData, setSelectedData] = useState<
@@ -34,10 +35,55 @@ export const Editor = () => {
     return () => clearTimeout(timer);
   }, []);
 
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
 
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    const files = Array.from(e.dataTransfer.files);
+    const sqlFile = files.find((file) => file.name.endsWith(".sql"));
+
+    if (sqlFile) {
+      const text = await sqlFile.text();
+
+      if (activeTab && activeTab.mode === "query") {
+        updateTab(activeTab.id, { sql: text });
+      } else {
+        const newTab = createTab(sqlFile.name, "query");
+        updateTab(newTab.id, { sql: text });
+      }
+    }
+  };
 
   return (
-    <div className="h-full w-full flex flex-col bg-card relative">
+    <div
+      className="h-full w-full flex flex-col bg-card relative"
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {isDragging && (
+        <div className="absolute inset-0 z-50 bg-background/90 backdrop-blur-sm flex flex-col items-center justify-center border-2 border-dashed border-primary m-4 rounded-lg animate-in fade-in duration-200">
+          <div className="bg-primary/10 p-6 rounded-full mb-4">
+            <FileUp className="w-12 h-12 text-primary" />
+          </div>
+          <h3 className="text-2xl font-semibold text-primary mb-2">
+            Import SQL File
+          </h3>
+          <p className="text-muted-foreground text-lg">
+            Drop your .sql file here to open it in the editor
+          </p>
+        </div>
+      )}
       {/* Loading Overlay */}
       <LoadingOverlay
         isVisible={isInitialLoading || tables.isLoading}

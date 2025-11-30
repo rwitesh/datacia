@@ -3,6 +3,7 @@ import { DeleteConnection } from "@/services/common";
 import ClickhouseIcon from "@/assets/clickhouse.svg";
 import PostgreSQLIcon from "@/assets/postgres.svg";
 import MySQLIcon from "@/assets/mysql.svg";
+import SQLiteIcon from "@/assets/sqlite.svg";
 import {
   Plus,
   MoreHorizontal,
@@ -92,6 +93,13 @@ export const Home = () => {
                   <img src={MySQLIcon} width={11} height={11} className="mr-1" />
                   MySQL
                 </MenubarItem>
+                <MenubarItem
+                  className="cursor-pointer text-[11px]"
+                  onClick={() => navigate("/connect?engine=sqlite")}
+                >
+                  <img src={SQLiteIcon} width={11} height={11} className="mr-1" />
+                  SQLite
+                </MenubarItem>
               </MenubarContent>
             </MenubarMenu>
           </Menubar>
@@ -111,6 +119,8 @@ export const Home = () => {
                   return <img src={PostgreSQLIcon} width={12} height={12} className="shrink-0" alt="PostgreSQL" />;
                 } else if (engine === "mysql") {
                   return <img src={MySQLIcon} width={12} height={12} className="shrink-0" alt="MySQL" />;
+                } else if (engine === "sqlite") {
+                  return <img src={SQLiteIcon} width={12} height={12} className="shrink-0" alt="SQLite" />;
                 } else {
                   return <Database className="h-3 w-3 shrink-0 text-muted-foreground" />;
                 }

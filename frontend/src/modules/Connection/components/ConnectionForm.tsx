@@ -14,6 +14,7 @@ interface ConnectionFormProps {
   currentEngine: DatabaseEngine;
   loading: boolean;
   onSelectSSHKey: () => Promise<string | null>;
+  onSelectSQLiteFile: () => Promise<void>;
 }
 
 export const ConnectionForm: React.FC<ConnectionFormProps> = ({
@@ -23,6 +24,7 @@ export const ConnectionForm: React.FC<ConnectionFormProps> = ({
   currentEngine,
   loading,
   onSelectSSHKey,
+  onSelectSQLiteFile,
 }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [showSSHPassword, setShowSSHPassword] = useState(false);
@@ -74,76 +76,103 @@ export const ConnectionForm: React.FC<ConnectionFormProps> = ({
         </div>
       </div>
 
-      <div className="flex gap-2">
-        <div className="flex-1 space-y-1">
-          <Label htmlFor="host">Host</Label>
-          <Input
-            id="host"
-            disabled={loading}
-            {...register("host")}
-            placeholder="localhost"
-            className="h-6 px-2 text-sm"
-          />
+      {currentEngine === "sqlite" ? (
+        <div className="space-y-1">
+          <Label htmlFor="database">Database File</Label>
+          <div className="flex gap-2">
+            <Input
+              id="database"
+              disabled={loading}
+              {...register("database")}
+              placeholder="/path/to/database.sqlite"
+              className="h-6 px-2 text-sm flex-1"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onSelectSQLiteFile}
+              disabled={loading}
+              className="h-6 px-2 text-xs"
+            >
+              Browse...
+            </Button>
+          </div>
         </div>
+      ) : (
+        <>
+          <div className="flex gap-2">
+            <div className="flex-1 space-y-1">
+              <Label htmlFor="host">Host</Label>
+              <Input
+                id="host"
+                disabled={loading}
+                {...register("host")}
+                placeholder="localhost"
+                className="h-6 px-2 text-sm"
+              />
+            </div>
 
-        <div className="w-24 space-y-1">
-          <Label htmlFor="port">Port</Label>
-          <Input
-            id="port"
-            disabled={loading}
-            inputMode="numeric"
-            pattern="[0-9]*"
-            {...register("port")}
-            className="h-6 px-2 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-          />
-        </div>
-      </div>
+            <div className="w-24 space-y-1">
+              <Label htmlFor="port">Port</Label>
+              <Input
+                id="port"
+                disabled={loading}
+                inputMode="numeric"
+                pattern="[0-9]*"
+                {...register("port")}
+                className="h-6 px-2 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+            </div>
+          </div>
 
-      <div className="space-y-1">
-        <Label htmlFor="username">Username</Label>
-        <Input
-          id="username"
-          disabled={loading}
-          {...register("username")}
-          className="h-6 px-2 text-sm"
-        />
-      </div>
+          <div className="space-y-1">
+            <Label htmlFor="username">Username</Label>
+            <Input
+              id="username"
+              disabled={loading}
+              {...register("username")}
+              className="h-6 px-2 text-sm"
+            />
+          </div>
 
-      <div className="space-y-1">
-        <Label htmlFor="password">Password</Label>
-        <div className="relative">
-          <Input
-            id="password"
-            type={showPassword ? "text" : "password"}
-            disabled={loading}
-            {...register("password")}
-            className="h-6 px-2 pr-8 text-sm"
-          />
-          <button
-            type="button"
-            onClick={() => setShowPassword((prev) => !prev)}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            tabIndex={-1}
-            aria-label={showPassword ? "Hide password" : "Show password"}
-          >
-            {showPassword ? (
-              <EyeOff className="w-4 h-4" />
-            ) : (
-              <Eye className="w-4 h-4" />
-            )}
-          </button>
-        </div>
-      </div>
+          <div className="space-y-1">
+            <Label htmlFor="password">Password</Label>
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                disabled={loading}
+                {...register("password")}
+                className="h-6 px-2 pr-8 text-sm"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                tabIndex={-1}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? (
+                  <EyeOff className="w-4 h-4" />
+                ) : (
+                  <Eye className="w-4 h-4" />
+                )}
+              </button>
+            </div>
+          </div>
 
-      <div className="space-y-1">
-        <Label htmlFor="database">Database</Label>
-        <Input
-          id="database"
-          disabled={loading}
-          {...register("database")}
-          className="h-6 px-2 text-sm"
-        />
-      </div>
+          <div className="space-y-1">
+            <Label htmlFor="database">Database</Label>
+            <Input
+              id="database"
+              disabled={loading}
+              {...register("database")}
+              className="h-6 px-2 text-sm"
+            />
+          </div>
+        </>
+      )}
 
       <div className="pt-2 border-t">
         <div className="flex items-center space-x-2">

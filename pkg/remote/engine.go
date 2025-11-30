@@ -8,6 +8,7 @@ import (
 	"datacia/pkg/common"
 	"datacia/pkg/mysql"
 	"datacia/pkg/postgres"
+	"datacia/pkg/sqlite"
 	"datacia/pkg/ssh"
 	"errors"
 	"fmt"
@@ -71,6 +72,8 @@ func getDBClient(engineType string) (DatabaseClient, error) {
 		return postgres.New(), nil
 	case "mysql":
 		return mysql.New(), nil
+	case "sqlite":
+		return sqlite.New(), nil
 	default:
 		return nil, fmt.Errorf("unsupported engine type: %s", engineType)
 	}
@@ -326,6 +329,26 @@ func (e *Engine) SelectSSHKeyFile() (string, error) {
 
 	dialog := application.OpenFileDialog()
 	dialog.SetTitle("Select SSH Private Key")
+
+	path, err := dialog.PromptForSingleSelection()
+	if err != nil {
+		return "", err
+	}
+
+	return path, nil
+}
+
+// SelectSQLiteFile opens a file dialog to select a SQLite database file
+// Returns the selected file path, or an error if cancelled or failed
+func (e *Engine) SelectSQLiteFile() (string, error) {
+	if e.wailsApp == nil {
+		return "", errors.New("application instance not available")
+	}
+
+	dialog := application.OpenFileDialog()
+	dialog.SetTitle("Select SQLite Database File")
+	dialog.AddFilter("SQLite Database", "*.sqlite;*.db;*.sqlite3")
+	dialog.AddFilter("All Files", "*.*")
 
 	path, err := dialog.PromptForSingleSelection()
 	if err != nil {

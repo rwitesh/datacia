@@ -5,6 +5,7 @@ export const DEFAULT_PORTS: Record<DatabaseEngine, string> = {
   clickhouse: "9000",
   postgres: "5432",
   mysql: "3306",
+  sqlite: "",
 };
 
 // Engine display names
@@ -12,6 +13,7 @@ export const ENGINE_LABELS: Record<DatabaseEngine, string> = {
   clickhouse: "ClickHouse",
   postgres: "PostgreSQL",
   mysql: "MySQL",
+  sqlite: "SQLite",
 };
 
 // Field labels for form validation messages
