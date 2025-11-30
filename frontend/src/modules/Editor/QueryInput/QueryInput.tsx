@@ -1,102 +1,128 @@
 import { useEffect, useMemo, useRef } from "react";
 import { EditorView } from "codemirror";
-import { EditorState } from "@codemirror/state";
+import { EditorState, Compartment } from "@codemirror/state";
 import { autocompletion, closeBrackets } from "@codemirror/autocomplete";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
-import { PostgreSQL, sql, SQLDialect, StandardSQL } from "@codemirror/lang-sql";
+import { sql, PostgreSQL, StandardSQL, SQLDialect } from "@codemirror/lang-sql";
 import { drawSelection, keymap, lineNumbers } from "@codemirror/view";
+
 import { useEditorContext } from "@/modules/Context/Editor/Index";
-import { ClickhouseDialect } from "./sql";
 import { useAppContext } from "@/modules/Context/App/Index";
+import { ClickhouseDialect } from "./sql";
 import { defaultTheme } from "./theme";
 
 export function QueryInput() {
-  const editorRef = useRef<HTMLDivElement | null>(null);
+  const editorEl = useRef<HTMLDivElement | null>(null);
   const viewRef = useRef<EditorView | null>(null);
 
   const { engine } = useAppContext();
-
   const {
     tables: { data },
     activeTab,
     updateTab,
   } = useEditorContext();
 
-  const tabId = useMemo(() => activeTab?.id, [activeTab?.id]);
+  const tabId = activeTab?.id ?? null;
 
   const schema = useMemo(() => {
     return Object.fromEntries((data || []).map((t) => [t, []]));
   }, [data]);
 
+  // store mutable refs to avoid effect re-runs
+  const latestTabId = useRef(tabId);
+  const latestUpdateTab = useRef(updateTab);
+
   useEffect(() => {
-    if (!editorRef.current || !schema || !tabId) return;
+    latestTabId.current = tabId;
+  }, [tabId]);
 
-    if (viewRef.current) {
-      viewRef.current.destroy();
-      viewRef.current = null;
-    }
+  useEffect(() => {
+    latestUpdateTab.current = updateTab;
+  }, [updateTab]);
 
-    let dialect: SQLDialect;
-    if (engine === "clickhouse") {
-      dialect = ClickhouseDialect;
-    } else if (engine === "postgres") {
-      dialect = PostgreSQL;
-    } else if (engine === "sqlite") {
-      dialect = StandardSQL; // SQLite uses standard SQL mostly
-    } else {
-      dialect = StandardSQL;
-    }
+  // SQL configuration compartment
+  const sqlConfig = useMemo(() => new Compartment(), []);
+
+  // create editor ONCE
+  useEffect(() => {
+    if (!editorEl.current) return;
+
+    const initialDialect: SQLDialect =
+      engine === "clickhouse"
+        ? ClickhouseDialect
+        : engine === "postgres"
+          ? PostgreSQL
+          : StandardSQL;
 
     const state = EditorState.create({
+      doc: activeTab?.sql || "",
       extensions: [
         lineNumbers(),
         drawSelection(),
         EditorView.lineWrapping,
-        sql({ dialect, schema }),
+
+        sqlConfig.of(sql({ dialect: initialDialect, schema })),
+
         autocompletion(),
         closeBrackets(),
         history(),
         keymap.of([...historyKeymap, ...defaultKeymap]),
+
         EditorView.updateListener.of((v) => {
-          if (v.docChanged && tabId) {
-            updateTab(tabId, { sql: v.state.doc.toString() });
+          if (!v.docChanged) return;
+          const id = latestTabId.current;
+          if (id) {
+            latestUpdateTab.current(id, {
+              sql: v.state.doc.toString(),
+            });
           }
         }),
+
         defaultTheme,
       ],
     });
 
     const view = new EditorView({
       state,
-      parent: editorRef.current,
+      parent: editorEl.current,
     });
 
     viewRef.current = view;
 
-    return () => {
-      view.destroy();
-      viewRef.current = null;
-    };
-  }, [schema, tabId, updateTab]);
+    return () => view.destroy();
+    // run ONCE
+  }, []);
 
+  // dynamically update dialect + schema
   useEffect(() => {
     const view = viewRef.current;
     if (!view) return;
 
-    const currentDoc = view.state.doc.toString();
-    if (currentDoc !== activeTab?.sql) {
+    const dialect: SQLDialect =
+      engine === "clickhouse"
+        ? ClickhouseDialect
+        : engine === "postgres"
+          ? PostgreSQL
+          : StandardSQL;
+
+    view.dispatch({
+      effects: sqlConfig.reconfigure(sql({ dialect, schema })),
+    });
+  }, [engine, schema, sqlConfig]);
+
+  // sync tab content on tab switch
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) return;
+    const doc = view.state.doc.toString();
+    const expected = activeTab?.sql ?? "";
+
+    if (doc !== expected) {
       view.dispatch({
-        changes: { from: 0, to: currentDoc.length, insert: activeTab?.sql },
+        changes: { from: 0, to: doc.length, insert: expected },
       });
     }
-  }, [activeTab]);
+  }, [activeTab?.id, activeTab?.sql]);
 
-  return (
-    <div className="h-full w-full">
-      <div
-        ref={editorRef}
-        className="h-full w-full font-mono text-sm bg-card"
-      />
-    </div>
-  );
+  return <div ref={editorEl} className="h-full w-full font-mono text-sm bg-card" />;
 }
