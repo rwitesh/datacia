@@ -7,11 +7,11 @@ import { ConnectionAlert } from "./components/ConnectionAlert";
 import { ConnectionForm } from "./components/ConnectionForm";
 import { ConnectionActions } from "./components/ConnectionActions";
 import type { DatabaseEngine, FormValues } from "./utils/types";
-import { postgres, clickhouse } from "./utils/types";
+import { postgres, clickhouse, mysql } from "./utils/types";
 
 // Helper function to validate engine type
 const isValidEngine = (engine: string): engine is DatabaseEngine => {
-  return [postgres, clickhouse].includes(engine);
+  return [postgres, clickhouse, mysql].includes(engine);
 };
 
 export const DatabaseConnection: React.FC = () => {

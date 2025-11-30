@@ -6,6 +6,7 @@ import (
 	"datacia/internal/update"
 	"datacia/pkg/clickhouse"
 	"datacia/pkg/common"
+	"datacia/pkg/mysql"
 	"datacia/pkg/postgres"
 	"datacia/pkg/ssh"
 	"errors"
@@ -68,6 +69,8 @@ func getDBClient(engineType string) (DatabaseClient, error) {
 		return clickhouse.New(), nil
 	case "postgres":
 		return postgres.New(), nil
+	case "mysql":
+		return mysql.New(), nil
 	default:
 		return nil, fmt.Errorf("unsupported engine type: %s", engineType)
 	}

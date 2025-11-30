@@ -1,11 +1,11 @@
 import { useMemo } from "react";
 import { useLocation } from "react-router";
 import type { DatabaseEngine } from "../utils/types";
-import { postgres, clickhouse } from "../utils/types";
+import { postgres, clickhouse, mysql } from "../utils/types";
 
 // Helper function to validate engine type
 const isValidEngine = (engine: string): engine is DatabaseEngine => {
-  return [postgres, clickhouse].includes(engine);
+  return [postgres, clickhouse, mysql].includes(engine);
 };
 
 export const useConnectionParams = () => {

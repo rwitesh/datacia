@@ -4,12 +4,14 @@ import { type DatabaseEngine, type FormValues } from './types';
 export const DEFAULT_PORTS: Record<DatabaseEngine, string> = {
   clickhouse: "9000",
   postgres: "5432",
+  mysql: "3306",
 };
 
 // Engine display names
 export const ENGINE_LABELS: Record<DatabaseEngine, string> = {
   clickhouse: "ClickHouse",
   postgres: "PostgreSQL",
+  mysql: "MySQL",
 };
 
 // Field labels for form validation messages

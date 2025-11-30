@@ -4,7 +4,7 @@ import type { FormValues } from "./types";
 export const validationSchema = yup
   .object({
     connectionName: yup.string().default(""),
-    engine: yup.string().oneOf(["postgres", "clickhouse"]).default("postgres"),
+    engine: yup.string().oneOf(["postgres", "clickhouse", "mysql"]).default("postgres"),
     host: yup.string().default(""),
     port: yup.string().default(""),
     username: yup.string().default(""),
@@ -39,7 +39,7 @@ export const validateForTestConnect = (values: FormValues) => {
   if (!values.port?.trim()) errs.port = "Port is required";
   if (!values.username?.trim()) errs.username = "Username is required";
   if (!values.database?.trim()) errs.database = "Database is required";
-  
+
   // Validate SSH fields if SSH is enabled
   if (values.useSSH) {
     if (!values.sshHost?.trim()) errs.sshHost = "SSH host is required";
@@ -50,6 +50,6 @@ export const validateForTestConnect = (values: FormValues) => {
       if (!values.sshPassword?.trim()) errs.sshPassword = "SSH password is required";
     }
   }
-  
+
   return errs;
 };

@@ -32,7 +32,7 @@ export const TabBar = () => {
 
   const handleTitleSubmit = (tabId: string) => {
     if (editValue.trim()) {
-      updateTab(tabId, {title:editValue.trim()})
+      updateTab(tabId, { title: editValue.trim() })
     }
     setEditingTabId(null);
     setEditValue("");
@@ -53,11 +53,10 @@ export const TabBar = () => {
         {tabs.map((tab) => (
           <div
             key={tab.id}
-            className={`flex items-center group relative min-w-32 flex-1 basis-0 border-r select-none ${
-              activeTab?.id === tab.id
-                ? "bg-background border-b-2 border-b-primary"
-                : "bg-muted/50 hover:bg-muted"
-            }`}
+            className={`flex items-center group relative min-w-32 flex-1 basis-0 border-r select-none ${activeTab?.id === tab.id
+              ? "bg-background border-t-2"
+              : "bg-muted/50 hover:bg-muted"
+              }`}
           >
             <div
               className="flex items-center px-3 py-1 cursor-pointer flex-1 min-w-0"
