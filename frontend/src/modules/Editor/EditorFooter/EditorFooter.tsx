@@ -16,7 +16,7 @@ export const EditorFooter = () => {
 
   return (
     <div className="flex items-center justify-end px-5 py-1 bg-background text-xs text-muted-foreground w-full cursor-default gap-1.5 min-h-6">
-      
+
       {/* Checking for updates */}
       {isLoading && (
         <>
@@ -73,11 +73,6 @@ export const EditorFooter = () => {
             Update available
           </span>
         </>
-      )}
-
-      {/* No update available */}
-      {!isLoading && !error && data === false && !isUpdating && !updateSuccess && !updateError && (
-        <span>Up to date</span>
       )}
     </div>
   );

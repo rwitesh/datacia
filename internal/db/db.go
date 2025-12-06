@@ -32,7 +32,7 @@ func Open(encryptionKey []byte) (*Store, error) {
 
 // OpenFile initializes SQLite at the given path and returns a Store
 func OpenFile(dbPath string, encryptionKey []byte) (*Store, error) {
-	db, err := sql.Open("sqlite3", dbPath)
+	db, err := sql.Open("sqlite3", dbPath+"?_journal_mode=WAL&_busy_timeout=5000")
 	if err != nil {
 		return nil, fmt.Errorf("failed to open db: %w", err)
 	}

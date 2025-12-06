@@ -2,8 +2,8 @@ package sqlite
 
 import (
 	"context"
-	"datacia/pkg/common"
 	"database/sql"
+	"datacia/pkg/common"
 	"errors"
 	"fmt"
 	"sync"
@@ -42,7 +42,7 @@ func (s *SQLite) Connect(host, port, username, password, database string, test b
 		return errors.New("database file path is required")
 	}
 
-	db, err := sql.Open("sqlite3", database)
+	db, err := sql.Open("sqlite3", database+"?_busy_timeout=5000")
 	if err != nil {
 		return err
 	}
@@ -289,7 +289,7 @@ func (s *SQLite) GetTableSchema(table string) (common.QueryResult, error) {
 
 	// Use PRAGMA table_info for SQLite schema
 	sql := fmt.Sprintf("PRAGMA table_info('%s')", table)
-	
+
 	rows, err := db.QueryContext(ctx, sql)
 	if err != nil {
 		return common.QueryResult{Type: common.QueryTypeRead}, err
@@ -298,7 +298,7 @@ func (s *SQLite) GetTableSchema(table string) (common.QueryResult, error) {
 
 	// PRAGMA table_info returns: cid, name, type, notnull, dflt_value, pk
 	columns := []string{"cid", "name", "type", "notnull", "dflt_value", "pk"}
-	
+
 	var data []map[string]interface{}
 	for rows.Next() {
 		var cid int
