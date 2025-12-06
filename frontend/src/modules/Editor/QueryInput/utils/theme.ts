@@ -2,7 +2,6 @@ import { EditorView } from "@codemirror/view";
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { tags as t } from "@lezer/highlight";
 
-// Professional GitHub-like Dark Dimmed color palette
 const c = {
   background: "#0d1117",
   foreground: "#c9d1d9",
@@ -102,6 +101,9 @@ const theme = EditorView.theme({
     borderBottomColor: c.gutterBackground,
   },
   ".cm-tooltip-autocomplete": {
+    "& > ul > li": {
+      transition: "background 100ms ease, color 100ms ease",
+    },
     "& > ul > li[aria-selected]": {
       backgroundColor: c.selection,
       color: c.foreground,

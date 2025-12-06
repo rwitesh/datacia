@@ -3,19 +3,18 @@ import { EditorView } from "codemirror";
 import { EditorState, Compartment } from "@codemirror/state";
 import { autocompletion, closeBrackets } from "@codemirror/autocomplete";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
-import { sql, PostgreSQL, StandardSQL, SQLDialect } from "@codemirror/lang-sql";
+import { sql } from "@codemirror/lang-sql";
 import { drawSelection, keymap, lineNumbers } from "@codemirror/view";
 
 import { useEditorContext } from "@/modules/Context/Editor/Index";
 import { useAppContext } from "@/modules/Context/App/Index";
-import { ClickhouseDialect } from "./sql";
-import { defaultTheme } from "./theme";
+import { defaultTheme } from "./utils/theme";
 
 export function QueryInput() {
   const editorEl = useRef<HTMLDivElement | null>(null);
   const viewRef = useRef<EditorView | null>(null);
 
-  const { engine } = useAppContext();
+  const { dialect } = useAppContext();
   const {
     tables: { data },
     activeTab,
@@ -47,13 +46,6 @@ export function QueryInput() {
   useEffect(() => {
     if (!editorEl.current) return;
 
-    const initialDialect: SQLDialect =
-      engine === "clickhouse"
-        ? ClickhouseDialect
-        : engine === "postgres"
-          ? PostgreSQL
-          : StandardSQL;
-
     const state = EditorState.create({
       doc: activeTab?.sql || "",
       extensions: [
@@ -61,7 +53,7 @@ export function QueryInput() {
         drawSelection(),
         EditorView.lineWrapping,
 
-        sqlConfig.of(sql({ dialect: initialDialect, schema })),
+        sqlConfig.of(sql({ dialect, schema })),
 
         autocompletion(),
         closeBrackets(),
@@ -91,6 +83,7 @@ export function QueryInput() {
 
     return () => view.destroy();
     // run ONCE
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // dynamically update dialect + schema
@@ -98,17 +91,10 @@ export function QueryInput() {
     const view = viewRef.current;
     if (!view) return;
 
-    const dialect: SQLDialect =
-      engine === "clickhouse"
-        ? ClickhouseDialect
-        : engine === "postgres"
-          ? PostgreSQL
-          : StandardSQL;
-
     view.dispatch({
       effects: sqlConfig.reconfigure(sql({ dialect, schema })),
     });
-  }, [engine, schema, sqlConfig]);
+  }, [dialect, schema, sqlConfig]);
 
   // sync tab content on tab switch
   useEffect(() => {
