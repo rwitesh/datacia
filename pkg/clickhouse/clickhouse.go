@@ -327,7 +327,7 @@ func (ch *ClickHouse) GetConnectionInfo() (map[string]string, error) {
 	}, nil
 }
 
-func (ch *ClickHouse) GetTableData(table string, limit, offset int) (common.QueryResult, error) {
+func (ch *ClickHouse) GetTableData(table string, limit, offset int, orderBy, orderDir string) (common.QueryResult, error) {
 	ch.Mu.RLock()
 	conn := ch.conn
 	ch.Mu.RUnlock()
@@ -339,8 +339,15 @@ func (ch *ClickHouse) GetTableData(table string, limit, offset int) (common.Quer
 	ctx, cancel := common.NewTimeoutContext(common.QUERY_TIMEOUT)
 	defer cancel()
 
-	// Use backticks for table name escaping in ClickHouse
-	sql := fmt.Sprintf("SELECT * FROM `%s` LIMIT %d OFFSET %d", table, limit, offset)
+	sql := fmt.Sprintf("SELECT * FROM `%s`", table)
+	if orderBy != "" {
+		dir := "ASC"
+		if orderDir == "desc" {
+			dir = "DESC"
+		}
+		sql += fmt.Sprintf(" ORDER BY `%s` %s", orderBy, dir)
+	}
+	sql += fmt.Sprintf(" LIMIT %d OFFSET %d", limit, offset)
 	return ch.query(ctx, conn, sql, "")
 }
 

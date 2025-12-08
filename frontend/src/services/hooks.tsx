@@ -74,15 +74,19 @@ export function useGetTableData() {
       table,
       limit,
       offset,
+      orderBy,
+      orderDir,
     }: {
       table: string;
       limit: number;
       offset: number;
+      orderBy?: string;
+      orderDir?: string;
     }) => {
       if (!table?.trim()) {
         throw new Error("Table name cannot be empty");
       }
-      return GetTableData(table, limit, offset);
+      return GetTableData(table, limit, offset, orderBy, orderDir);
     },
   });
 }

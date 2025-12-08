@@ -21,7 +21,7 @@ type MySQLClient interface {
 	ListDatabases() (common.DatabaseInfo, error)
 	ListTables() ([]string, error)
 	GetConnectionInfo() (map[string]string, error)
-	GetTableData(table string, limit, offset int) (common.QueryResult, error)
+	GetTableData(table string, limit, offset int, orderBy, orderDir string) (common.QueryResult, error)
 	GetTableSchema(table string) (common.QueryResult, error)
 }
 
@@ -315,7 +315,7 @@ func (m *MySQL) GetConnectionInfo() (map[string]string, error) {
 	}, nil
 }
 
-func (m *MySQL) GetTableData(table string, limit, offset int) (common.QueryResult, error) {
+func (m *MySQL) GetTableData(table string, limit, offset int, orderBy, orderDir string) (common.QueryResult, error) {
 	m.Mu.RLock()
 	db := m.db
 	m.Mu.RUnlock()
@@ -327,8 +327,15 @@ func (m *MySQL) GetTableData(table string, limit, offset int) (common.QueryResul
 	ctx, cancel := common.NewTimeoutContext(common.QUERY_TIMEOUT)
 	defer cancel()
 
-	// Use backticks for table name escaping in MySQL
-	sqlStr := fmt.Sprintf("SELECT * FROM `%s` LIMIT %d OFFSET %d", table, limit, offset)
+	sqlStr := fmt.Sprintf("SELECT * FROM `%s`", table)
+	if orderBy != "" {
+		dir := "ASC"
+		if orderDir == "desc" {
+			dir = "DESC"
+		}
+		sqlStr += fmt.Sprintf(" ORDER BY `%s` %s", orderBy, dir)
+	}
+	sqlStr += fmt.Sprintf(" LIMIT %d OFFSET %d", limit, offset)
 	return m.query(ctx, db, sqlStr)
 }
 

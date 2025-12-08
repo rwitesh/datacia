@@ -52,7 +52,7 @@ type DatabaseClient interface {
 	ListTables() ([]string, error)
 	ListDatabases() (DatabaseInfo, error)
 	GetConnectionInfo() (map[string]string, error)
-	GetTableData(table string, limit, offset int) (QueryResult, error)
+	GetTableData(table string, limit, offset int, orderBy, orderDir string) (QueryResult, error)
 	GetTableSchema(table string) (QueryResult, error)
 }
 

@@ -20,6 +20,12 @@ interface DataTableProps {
   data: DataRow[];
   onSelectionChange: (selected: Array<DataRow>) => void;
   extraBlankRows?: number;
+  // Server-side sorting props (only used in table-view mode)
+  isTableViewMode?: boolean;
+  currentOrderBy?: string;
+  currentOrderDir?: "asc" | "desc";
+  onServerSort?: (column: string, direction: "asc" | "desc") => void;
+  isLoading?: boolean;
 }
 
 export function DataTable({
@@ -27,8 +33,14 @@ export function DataTable({
   data,
   onSelectionChange,
   extraBlankRows = 0,
+  isTableViewMode = false,
+  currentOrderBy,
+  currentOrderDir,
+  onServerSort,
+  isLoading = false,
 }: DataTableProps) {
   const [columnSizing, setColumnSizing] = useState<Record<string, number>>({});
+  // Only use client-side sorting when not in table-view mode
   const [sorting, setSorting] = useState<SortingState>([]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -128,6 +140,10 @@ export function DataTable({
                       colIndex={i}
                       colWidth={colWidths[i]}
                       onColumnClick={handleColumnHeaderClick}
+                      isTableViewMode={isTableViewMode}
+                      serverSortColumn={currentOrderBy}
+                      serverSortDir={currentOrderDir}
+                      onServerSort={onServerSort}
                     />
                   ))}
                 </tr>
@@ -144,6 +160,16 @@ export function DataTable({
             height: rowVirtualizer.getTotalSize() + additionalFillerRows * rowHeight,
           }}
         >
+          {/* Loading overlay - only covers the body, not the header */}
+          {isLoading && (
+            <div 
+              className="absolute inset-0 bg-background/60 z-10 flex items-center justify-center"
+              style={{ width: totalWidth }}
+            >
+              <div className="animate-spin h-6 w-6 border-b-2 border-primary rounded-full"></div>
+            </div>
+          )}
+
           {/* Virtualized rows */}
           {rowVirtualizer.getVirtualItems().map((vi) => {
             const isDataRow = vi.index < rows.length;

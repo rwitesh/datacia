@@ -14,6 +14,7 @@ import {
 import { useEditorContext } from "@/modules/Context/Editor/Index";
 import { useGetTableData, useGetTableSchema, useGetQueryHistory } from "@/services/hooks";
 import { timeAgo } from "./utils";
+import type { QueryHistoryItem } from "@/services/database";
 
 export function EditorSidebar() {
   const {
@@ -213,7 +214,7 @@ export function EditorSidebar() {
               </div>
             ) : (
               <div className="space-y-0.5 px-1">
-                {queryHistory.map((item: any) => (
+                {queryHistory.map((item: QueryHistoryItem) => (
                   <button
                     key={item.id}
                     className="w-full text-left px-3 py-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group transition-colors duration-200 cursor-pointer rounded-md"

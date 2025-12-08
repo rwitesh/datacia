@@ -69,8 +69,8 @@ export function GetStore(): $CancellablePromise<db$0.Store | null> {
     });
 }
 
-export function GetTableData(table: string, limit: number, offset: number): $CancellablePromise<common$0.QueryResult> {
-    return $Call.ByID(2699628066, table, limit, offset).then(($result: any) => {
+export function GetTableData(table: string, limit: number, offset: number, orderBy: string, orderDir: string): $CancellablePromise<common$0.QueryResult> {
+    return $Call.ByID(2699628066, table, limit, offset, orderBy, orderDir).then(($result: any) => {
         return $$createType5($result);
     });
 }

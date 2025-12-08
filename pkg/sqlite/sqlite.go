@@ -259,7 +259,7 @@ func (s *SQLite) GetConnectionInfo() (map[string]string, error) {
 	}, nil
 }
 
-func (s *SQLite) GetTableData(table string, limit, offset int) (common.QueryResult, error) {
+func (s *SQLite) GetTableData(table string, limit, offset int, orderBy, orderDir string) (common.QueryResult, error) {
 	s.Mu.RLock()
 	db := s.db
 	s.Mu.RUnlock()
@@ -271,7 +271,15 @@ func (s *SQLite) GetTableData(table string, limit, offset int) (common.QueryResu
 	ctx, cancel := common.NewTimeoutContext(common.QUERY_TIMEOUT)
 	defer cancel()
 
-	sql := fmt.Sprintf(`SELECT * FROM "%s" LIMIT %d OFFSET %d`, table, limit, offset)
+	sql := fmt.Sprintf(`SELECT * FROM "%s"`, table)
+	if orderBy != "" {
+		dir := "ASC"
+		if orderDir == "desc" {
+			dir = "DESC"
+		}
+		sql += fmt.Sprintf(` ORDER BY "%s" %s`, orderBy, dir)
+	}
+	sql += fmt.Sprintf(` LIMIT %d OFFSET %d`, limit, offset)
 	return s.query(ctx, db, sql)
 }
 

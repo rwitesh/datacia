@@ -10,7 +10,7 @@ export function FloatingBar() {
   const getTableDataMutation = useGetTableData();
 
   if (!activeTab) return null;
-  const { id, table, limit, offset, isExecuting } = activeTab;
+  const { id, table, limit, offset, isExecuting, orderBy, orderDir } = activeTab;
 
   const fetchData = (limit: number, offset: number) => {
     if (!table || limit === undefined) return;
@@ -26,7 +26,9 @@ export function FloatingBar() {
       {
         table,
         limit,
-        offset
+        offset,
+        orderBy,
+        orderDir,
       },
       {
         onSuccess: (response: QueryResult) => {

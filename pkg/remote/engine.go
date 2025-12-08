@@ -306,11 +306,11 @@ func (e *Engine) ListTables() ([]string, error) {
 	return e.activeClient.ListTables()
 }
 
-func (e *Engine) GetTableData(table string, limit, offset int) (common.QueryResult, error) {
+func (e *Engine) GetTableData(table string, limit, offset int, orderBy, orderDir string) (common.QueryResult, error) {
 	if e.activeClient == nil {
 		return common.QueryResult{}, errors.New("no active database connection found")
 	}
-	return e.activeClient.GetTableData(table, limit, offset)
+	return e.activeClient.GetTableData(table, limit, offset, orderBy, orderDir)
 }
 
 func (e *Engine) GetTableSchema(table string) (common.QueryResult, error) {

@@ -13,7 +13,7 @@ type DatabaseClient interface {
 	ListTables() ([]string, error)
 	RunQuery(queryId, queryType, sql string) (common.QueryResult, error)
 	CancelQuery(queryId string) error
-	GetTableData(table string, limit, offset int) (common.QueryResult, error)
+	GetTableData(table string, limit, offset int, orderBy, orderDir string) (common.QueryResult, error)
 	GetTableSchema(table string) (common.QueryResult, error)
 }
 
@@ -42,7 +42,7 @@ type RemoteEngine interface {
 	// Query Operations
 	RunQuery(queryId, queryType, sql string) (common.QueryResult, error)
 	CancelQuery(queryId string) error
-	GetTableData(table string, limit, offset int) (common.QueryResult, error)
+	GetTableData(table string, limit, offset int, orderBy, orderDir string) (common.QueryResult, error)
 	GetTableSchema(table string) (common.QueryResult, error)
 
 	// Check for updates

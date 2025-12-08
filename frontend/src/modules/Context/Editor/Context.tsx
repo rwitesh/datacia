@@ -14,6 +14,8 @@ export interface Tab {
   limit?: number;
   offset?: number;
   pagination: boolean;
+  orderBy?: string;
+  orderDir?: "asc" | "desc";
 }
 
 export type EditorContextType = {

@@ -331,7 +331,7 @@ func (p *Postgres) GetConnectionInfo() (map[string]string, error) {
 	}, nil
 }
 
-func (p *Postgres) GetTableData(table string, limit, offset int) (common.QueryResult, error) {
+func (p *Postgres) GetTableData(table string, limit, offset int, orderBy, orderDir string) (common.QueryResult, error) {
 	p.Mu.RLock()
 	pool := p.pool
 	p.Mu.RUnlock()
@@ -350,8 +350,15 @@ func (p *Postgres) GetTableData(table string, limit, offset int) (common.QueryRe
 	}
 	defer conn.Release()
 
-	// Use proper SQL escaping for table name
-	sql := fmt.Sprintf(`SELECT * FROM "%s" LIMIT %d OFFSET %d`, table, limit, offset)
+	sql := fmt.Sprintf(`SELECT * FROM "%s"`, table)
+	if orderBy != "" {
+		dir := "ASC"
+		if orderDir == "desc" {
+			dir = "DESC"
+		}
+		sql += fmt.Sprintf(` ORDER BY "%s" %s`, orderBy, dir)
+	}
+	sql += fmt.Sprintf(` LIMIT %d OFFSET %d`, limit, offset)
 	return p.query(ctx, conn.Conn(), sql)
 }
 

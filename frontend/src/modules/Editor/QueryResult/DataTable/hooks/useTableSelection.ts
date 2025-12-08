@@ -60,17 +60,36 @@ export function useTableSelection({ columns, data, onSelectionChange }: UseTable
                     currentRange: null,
                 });
             } else {
-                // Regular click: Start new selection
-                const newRange: SelectionRange = {
-                    start: newPosition,
-                    end: newPosition,
-                };
-                setSelection({
-                    ranges: [newRange],
-                    selectedCells: new Set([createCellKey(row, col)]),
-                    isSelecting: true,
-                    currentRange: newRange,
-                });
+                // Regular click: Toggle selection if clicking on same single cell, otherwise start new selection
+                const cellKey = createCellKey(row, col);
+                const isSingleCellSelected = 
+                    selection.ranges.length === 1 &&
+                    selection.ranges[0].start.row === row &&
+                    selection.ranges[0].start.col === col &&
+                    selection.ranges[0].end.row === row &&
+                    selection.ranges[0].end.col === col;
+
+                if (isSingleCellSelected) {
+                    // Clicking same cell again: unselect
+                    setSelection({
+                        ranges: [],
+                        selectedCells: new Set(),
+                        isSelecting: false,
+                        currentRange: null,
+                    });
+                } else {
+                    // Start new selection
+                    const newRange: SelectionRange = {
+                        start: newPosition,
+                        end: newPosition,
+                    };
+                    setSelection({
+                        ranges: [newRange],
+                        selectedCells: new Set([cellKey]),
+                        isSelecting: true,
+                        currentRange: newRange,
+                    });
+                }
             }
         },
         [selection.ranges]
