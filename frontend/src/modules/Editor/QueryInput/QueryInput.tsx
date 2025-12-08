@@ -4,7 +4,7 @@ import { EditorState, Compartment } from "@codemirror/state";
 import { autocompletion, closeBrackets } from "@codemirror/autocomplete";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { sql } from "@codemirror/lang-sql";
-import { drawSelection, keymap, lineNumbers } from "@codemirror/view";
+import { drawSelection, keymap } from "@codemirror/view";
 
 import { useEditorContext } from "@/modules/Context/Editor/Index";
 import { useAppContext } from "@/modules/Context/App/Index";
@@ -49,7 +49,6 @@ export function QueryInput() {
     const state = EditorState.create({
       doc: activeTab?.sql || "",
       extensions: [
-        lineNumbers(),
         drawSelection(),
         EditorView.lineWrapping,
 

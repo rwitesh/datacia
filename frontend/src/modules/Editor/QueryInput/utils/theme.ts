@@ -3,12 +3,12 @@ import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { tags as t } from "@lezer/highlight";
 
 const c = {
-  background: "#0d1117",
+  background: "transparent",
   foreground: "#c9d1d9",
   selection: "#006affcf",
   selectionMatch: "#006affcf",
   cursor: "#c9d1d9",
-  gutterBackground: "#0d1117",
+  gutterBackground: "transparent",
   gutterForeground: "#8b949e",
   lineHighlight: "#161b22",
   keyword: "#ff5f54ff",
@@ -72,15 +72,6 @@ const theme = EditorView.theme({
   ".cm-matchingBracket, .cm-nonmatchingBracket": {
     backgroundColor: c.selectionMatch,
     outline: `1px solid ${c.foreground}`,
-  },
-  ".cm-gutters": {
-    backgroundColor: c.gutterBackground,
-    color: c.gutterForeground,
-    borderRight: "1px solid " + c.lineHighlight,
-  },
-  ".cm-activeLineGutter": {
-    backgroundColor: c.lineHighlight,
-    color: c.foreground,
   },
   ".cm-foldPlaceholder": {
     backgroundColor: "transparent",

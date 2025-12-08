@@ -56,7 +56,7 @@ export const Home = () => {
   };
 
   return (
-    <div className="flex min-h-screen min-w-screen select-none cursor-default">
+    <div className="flex min-h-screen min-w-screen select-none cursor-default bg-background dark:bg-transparent">
       {/* Left panel: saved connections */}
       <div className="w-1/3 p-3 flex flex-col mt-12">
         <div className="flex items-center justify-between mb-2">
@@ -178,7 +178,7 @@ export const Home = () => {
         )}
       </div>
 
-      <div className="flex-1 p-3 bg-background border-l border-muted">
+      <div className="flex-1 p-3 border-l border-muted dark:bg-background">
         <Outlet />
       </div>
     </div>

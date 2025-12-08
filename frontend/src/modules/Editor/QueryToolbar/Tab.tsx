@@ -53,9 +53,9 @@ export const TabBar = () => {
         {tabs.map((tab) => (
           <div
             key={tab.id}
-            className={`flex items-center group relative min-w-32 flex-1 basis-0 border-r select-none ${activeTab?.id === tab.id
-              ? "bg-background border-t-2"
-              : "bg-muted/50 hover:bg-muted"
+            className={`flex items-center group relative min-w-32 flex-1 basis-0 border-r select-none border-t-2 ${activeTab?.id === tab.id
+              ? "bg-background"
+              : "bg-muted/50 hover:bg-muted border-t-transparent"
               }`}
           >
             <div
@@ -93,7 +93,7 @@ export const TabBar = () => {
         ))}
       </div>
 
-      <div className="flex items-center px-2 border-l border-border">
+      <div className="flex items-center px-2 border-t-2 border-transparent">
         <Button
           variant="ghost"
           size="sm"
