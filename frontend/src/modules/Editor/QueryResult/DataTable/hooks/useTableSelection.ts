@@ -20,10 +20,24 @@ export function useTableSelection({ columns, data, onSelectionChange }: UseTable
         isSelecting: false,
         currentRange: null,
     });
+    const [selectedData, setSelectedData] = useState<Array<Record<string, unknown>>>([]);
 
     // Handle mouse down on cell
     const handleCellMouseDown = useCallback(
         (row: number, col: number, event: React.MouseEvent) => {
+            // Right click behavior:
+            if (event.button === 2) {
+                // 1. If right-clicking on a cell that is already selected (part of multi-selection), do NOT select/deselect. Keep the current selection so the context menu acts on it.
+                // 2. If right-clicking on an unselected cell, treat it as a normal click (select it), checking the "single selection" logic below which will reset other selections.
+
+                const cellKey = createCellKey(row, col);
+                if (selection.selectedCells.has(cellKey)) {
+                    // Already selected, ignore right click to preserve multi-selection
+                    return;
+                }
+                // Not selected: allow fall-through to normal selection logic (will behave like left click)
+            }
+
             event.preventDefault();
 
             const newPosition: CellPosition = { row, col };
@@ -62,7 +76,7 @@ export function useTableSelection({ columns, data, onSelectionChange }: UseTable
             } else {
                 // Regular click: Toggle selection if clicking on same single cell, otherwise start new selection
                 const cellKey = createCellKey(row, col);
-                const isSingleCellSelected = 
+                const isSingleCellSelected =
                     selection.ranges.length === 1 &&
                     selection.ranges[0].start.row === row &&
                     selection.ranges[0].start.col === col &&
@@ -202,11 +216,13 @@ export function useTableSelection({ columns, data, onSelectionChange }: UseTable
             }
         });
 
+        setSelectedData(selectedData);
         onSelectionChange(selectedData);
     }, [selection, data, columns, onSelectionChange]);
 
     return {
         selection,
+        selectedData,
         handleCellMouseDown,
         handleCellMouseEnter,
         handleColumnHeaderClick,

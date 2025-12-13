@@ -51,6 +51,7 @@ export function DataTable({
   const columnDefs = useTableColumns(columns);
   const {
     selection,
+    selectedData,
     handleCellMouseDown,
     handleCellMouseEnter,
     handleColumnHeaderClick,
@@ -162,7 +163,7 @@ export function DataTable({
         >
           {/* Loading overlay - only covers the body, not the header */}
           {isLoading && (
-            <div 
+            <div
               className="absolute inset-0 bg-background/60 z-10 flex items-center justify-center"
               style={{ width: totalWidth }}
             >
@@ -187,6 +188,7 @@ export function DataTable({
                 selectedCells={selection.selectedCells}
                 onCellMouseDown={handleCellMouseDown}
                 onCellMouseEnter={handleCellMouseEnter}
+                selectedData={selectedData as DataRow[]}
               />
             );
           })}

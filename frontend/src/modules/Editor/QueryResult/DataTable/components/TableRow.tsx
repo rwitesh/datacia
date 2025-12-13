@@ -2,6 +2,8 @@ import { type VirtualItem } from "@tanstack/react-virtual";
 import { type Row as TanStackRow } from "@tanstack/react-table";
 import { TableCell } from "./TableCell";
 import type { DataRow } from "../types";
+import { TableContextMenu } from "./TableContextMenu";
+
 
 interface TableRowProps {
     virtualItem: VirtualItem;
@@ -13,6 +15,10 @@ interface TableRowProps {
     selectedCells: Set<string>;
     onCellMouseDown: (rowIndex: number, colIndex: number, event: React.MouseEvent) => void;
     onCellMouseEnter: (rowIndex: number, colIndex: number) => void;
+    // We need selectedData to be passed down if we want full multi-select support in menu
+    // But TableRow currently doesn't receive full data of ALL selections, only keys `selectedCells`
+    // We might need to pass `selectedData` from DataTable
+    selectedData?: DataRow[];
 }
 
 export function TableRow({
@@ -25,10 +31,11 @@ export function TableRow({
     selectedCells,
     onCellMouseDown,
     onCellMouseEnter,
+    selectedData = [],
 }: TableRowProps) {
     const even = virtualItem.index % 2 === 0;
 
-    return (
+    const rowContent = (
         <div
             key={isDataRow ? row!.id : `blank-row-${virtualItem.index}`}
             role="row"
@@ -69,5 +76,15 @@ export function TableRow({
                     </div>
                 ))}
         </div>
+    );
+
+    if (!isDataRow || !row) {
+        return rowContent;
+    }
+
+    return (
+        <TableContextMenu row={row.original} selectedData={selectedData}>
+            {rowContent}
+        </TableContextMenu>
     );
 }

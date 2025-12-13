@@ -1,8 +1,10 @@
 package app
 
 import (
+	"datacia/internal/clipboard"
 	"datacia/internal/constants"
 	"datacia/internal/db"
+	"datacia/internal/files"
 	"datacia/pkg/remote"
 	"embed"
 	"errors"
@@ -78,6 +80,13 @@ func (a *App) Initialize() error {
 	a.engine = engine
 	engine.SetApplication(a.instance)
 	a.instance.RegisterService(application.NewService(engine))
+
+	fileService := files.NewFileService(a.instance)
+	a.instance.RegisterService(application.NewService(fileService))
+
+	clipboardService := clipboard.NewClipboardService(a.instance)
+	a.instance.RegisterService(application.NewService(clipboardService))
+
 	return nil
 }
 
