@@ -63,7 +63,7 @@ export function TableHeader({
             key={header.id}
             colSpan={header.colSpan}
             style={{ width: colWidth }}
-            className="relative border border-border bg-muted px-2 py-1 font-medium"
+            className="relative border-[0.5px] border-border/60 bg-muted/80 px-2 py-1 font-medium"
             onClick={(e) => {
                 onColumnClick(colIndex, e);
             }}

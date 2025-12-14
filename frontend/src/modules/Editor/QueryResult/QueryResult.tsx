@@ -8,9 +8,10 @@ import type { QueryResult as QueryResultType } from "@/services/database";
 
 type QueryResultProps = {
   onSelectionChange: (selected: Array<Record<string, unknown>>) => void;
+  onOpenDataView?: () => void;
 };
 
-export function QueryResult({ onSelectionChange }: QueryResultProps) {
+export function QueryResult({ onSelectionChange, onOpenDataView }: QueryResultProps) {
   const { activeTab, updateTab } = useEditorContext();
   const getTableDataMutation = useGetTableData();
 
@@ -81,6 +82,7 @@ export function QueryResult({ onSelectionChange }: QueryResultProps) {
             currentOrderDir={orderDir}
             onServerSort={isTableViewMode ? handleServerSort : undefined}
             isLoading={isExecuting}
+            onOpenDataView={onOpenDataView}
           />
         ) : isExecuting ? (
           <div className="flex justify-center items-center h-full">

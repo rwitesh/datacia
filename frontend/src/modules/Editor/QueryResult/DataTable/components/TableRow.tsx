@@ -19,6 +19,7 @@ interface TableRowProps {
     // But TableRow currently doesn't receive full data of ALL selections, only keys `selectedCells`
     // We might need to pass `selectedData` from DataTable
     selectedData?: DataRow[];
+    onOpenDataView?: () => void;
 }
 
 export function TableRow({
@@ -32,14 +33,13 @@ export function TableRow({
     onCellMouseDown,
     onCellMouseEnter,
     selectedData = [],
+    onOpenDataView,
 }: TableRowProps) {
-    const even = virtualItem.index % 2 === 0;
-
     const rowContent = (
         <div
             key={isDataRow ? row!.id : `blank-row-${virtualItem.index}`}
             role="row"
-            className={`${even ? "bg-muted" : "bg-background"}`}
+            className="bg-muted"
             style={{
                 position: "absolute",
                 insetInlineStart: 0,
@@ -67,7 +67,7 @@ export function TableRow({
                     <div
                         key={`blank-cell-${virtualItem.index}-${ci}`}
                         role="cell"
-                        className="relative border-r border-border px-2"
+                        className="relative border-r-[0.5px] border-border/60 px-2"
                         style={{ width: w }}
                     >
                         <div className="h-full flex items-center cursor-default select-none">
@@ -83,7 +83,7 @@ export function TableRow({
     }
 
     return (
-        <TableContextMenu row={row.original} selectedData={selectedData}>
+        <TableContextMenu row={row.original} selectedData={selectedData} onOpenDataView={onOpenDataView}>
             {rowContent}
         </TableContextMenu>
     );

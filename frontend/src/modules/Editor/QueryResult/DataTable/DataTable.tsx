@@ -26,6 +26,7 @@ interface DataTableProps {
   currentOrderDir?: "asc" | "desc";
   onServerSort?: (column: string, direction: "asc" | "desc") => void;
   isLoading?: boolean;
+  onOpenDataView?: () => void;
 }
 
 export function DataTable({
@@ -38,6 +39,7 @@ export function DataTable({
   currentOrderDir,
   onServerSort,
   isLoading = false,
+  onOpenDataView,
 }: DataTableProps) {
   const [columnSizing, setColumnSizing] = useState<Record<string, number>>({});
   // Only use client-side sorting when not in table-view mode
@@ -126,7 +128,7 @@ export function DataTable({
         style={{ contain: "strict" }}
       >
         {/* Header */}
-        <div className="sticky top-0 z-10 bg-muted">
+        <div className="sticky top-0 z-10 bg-muted/80">
           <table
             className="table-fixed border-separate border-spacing-0 text-xs cursor-default select-none"
             style={{ width: totalWidth }}
@@ -189,6 +191,7 @@ export function DataTable({
                 onCellMouseDown={handleCellMouseDown}
                 onCellMouseEnter={handleCellMouseEnter}
                 selectedData={selectedData as DataRow[]}
+                onOpenDataView={onOpenDataView}
               />
             );
           })}
@@ -197,12 +200,11 @@ export function DataTable({
           {additionalFillerRows > 0 &&
             Array.from({ length: additionalFillerRows }).map((_, idx) => {
               const top = rowVirtualizer.getTotalSize() + idx * rowHeight;
-              const isEven = (totalRows + idx) % 2 === 0;
               return (
                 <div
                   key={`filler-${idx}`}
                   role="row"
-                  className={isEven ? "bg-muted" : "bg-background"}
+                  className="bg-muted"
                   style={{
                     position: "absolute",
                     insetInlineStart: 0,
@@ -217,7 +219,7 @@ export function DataTable({
                     <div
                       key={`filler-cell-${ci}`}
                       style={{ width: w }}
-                      className="border-r border-border"
+                      className="border-r-[0.5px] border-border/60"
                     />
                   ))}
                 </div>

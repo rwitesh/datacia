@@ -85,12 +85,6 @@ export function DataView({ selectedData }: SelectedDataProps) {
     }
   };
 
-  if (!selectedData.length) {
-    return (
-      <div className="p-4 text-muted-foreground text-sm">No rows selected</div>
-    );
-  }
-
   const rowCount = selectedData.length;
 
   return (

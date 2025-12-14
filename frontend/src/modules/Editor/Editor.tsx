@@ -168,7 +168,10 @@ export const Editor = () => {
                         )}
                         <ResizablePanel minSize={0} className="min-h-0">
                           <div className="h-full overflow-hidden">
-                            <QueryResult onSelectionChange={setSelectedData} />
+                            <QueryResult 
+                              onSelectionChange={setSelectedData} 
+                              onOpenDataView={() => setIsDataViewOpen(true)}
+                            />
                           </div>
                         </ResizablePanel>
                       </ResizablePanelGroup>

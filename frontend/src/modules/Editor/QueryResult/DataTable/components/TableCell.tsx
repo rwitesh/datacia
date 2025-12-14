@@ -28,9 +28,9 @@ export function TableCell({
         <div
             key={cell.id}
             role="cell"
-            className={`relative border border-border px-2 cursor-pointer transition-colors ${isSelected
+            className={`relative border-[0.5px] border-border/60 px-2 cursor-pointer transition-colors ${isSelected
                 ? "bg-blue-500/30"
-                : "hover:bg-blue-500/10 hover:border-blue-500"
+                : "hover:bg-blue-500/10 hover:border-blue-500/80"
                 }`}
             style={{
                 width: colWidth,
