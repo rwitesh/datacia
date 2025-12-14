@@ -19,10 +19,18 @@ export const TabBar = () => {
     await closeTab(tabId);
   };
 
-  const handleTabClick = (tabId: string) => {
-    if (editingTabId !== tabId) {
-      setActiveTab(tabId);
+  const handleTabClick = (e: React.MouseEvent, tabId: string) => {
+    e.stopPropagation();
+    e.preventDefault();
+
+    if (e.button === 0) {
+      if (editingTabId !== tabId) {
+        setActiveTab(tabId);
+      }
+    } else if (e.button === 1) {
+      handleCloseTab(e, tabId);
     }
+    return;
   };
 
   const handleTabDoubleClick = (tabId: string, currentTitle: string) => {
@@ -32,7 +40,7 @@ export const TabBar = () => {
 
   const handleTitleSubmit = (tabId: string) => {
     if (editValue.trim()) {
-      updateTab(tabId, { title: editValue.trim() })
+      updateTab(tabId, { title: editValue.trim() });
     }
     setEditingTabId(null);
     setEditValue("");
@@ -53,14 +61,15 @@ export const TabBar = () => {
         {tabs.map((tab) => (
           <div
             key={tab.id}
-            className={`flex items-center group relative min-w-32 flex-1 basis-0 border-r select-none border-t-2 ${activeTab?.id === tab.id
-              ? "bg-background"
-              : "bg-muted/50 hover:bg-muted border-t-transparent"
-              }`}
+            className={`flex items-center group relative min-w-32 flex-1 basis-0 border-r select-none border-t-2 ${
+              activeTab?.id === tab.id
+                ? "bg-background"
+                : "bg-muted/50 hover:bg-muted border-t-transparent"
+            }`}
           >
             <div
               className="flex items-center px-3 py-1 cursor-pointer flex-1 min-w-0"
-              onClick={() => handleTabClick(tab.id)}
+              onMouseDown={(e) => handleTabClick(e, tab.id)}
               onDoubleClick={() => handleTabDoubleClick(tab.id, tab.title)}
             >
               {editingTabId === tab.id ? (

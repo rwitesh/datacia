@@ -16,6 +16,7 @@ export interface Tab {
   pagination: boolean;
   orderBy?: string;
   orderDir?: "asc" | "desc";
+  savedPath?: string;
 }
 
 export type EditorContextType = {

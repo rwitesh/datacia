@@ -14,12 +14,15 @@ import { DataView } from "./DataView/DataView";
 import { LoadingOverlay } from "@/components/ui/loading-overlay";
 import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight, FileUp } from "lucide-react";
+import { useWriteFile } from "@/services/queries";
+import { toast } from "sonner";
 
 export const Editor = () => {
   const { activeTab, tables, createTab, updateTab } = useEditorContext();
   const [isDataViewOpen, setIsDataViewOpen] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
+  const writeFile = useWriteFile();
 
   // Selected Data
   const [selectedData, setSelectedData] = useState<
@@ -34,6 +37,30 @@ export const Editor = () => {
 
     return () => clearTimeout(timer);
   }, []);
+
+  // Handle Save Shortcut
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+        e.preventDefault();
+        if (activeTab && activeTab.mode === "query") {
+          if (activeTab.savedPath) {
+            writeFile.mutate({
+              path: activeTab.savedPath,
+              content: activeTab.sql || "",
+            });
+          } else {
+            // Optional: Handle "Save As" flow or prompt user
+            // For now, only files opened from Queries tab support direct saving
+            toast("This query is not saved to a file. Create a file in Queries tab first.");
+          }
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [activeTab, writeFile]);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -65,25 +92,7 @@ export const Editor = () => {
   };
 
   return (
-    <div
-      className="h-full w-full flex flex-col bg-card relative"
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
-    >
-      {isDragging && (
-        <div className="absolute inset-0 z-50 bg-background/90 backdrop-blur-sm flex flex-col items-center justify-center border-2 border-dashed border-primary m-4 rounded-lg animate-in fade-in duration-200">
-          <div className="bg-primary/10 p-6 rounded-full mb-4">
-            <FileUp className="w-12 h-12 text-primary" />
-          </div>
-          <h3 className="text-2xl font-semibold text-primary mb-2">
-            Import SQL File
-          </h3>
-          <p className="text-muted-foreground text-lg">
-            Drop your .sql file here to open it in the editor
-          </p>
-        </div>
-      )}
+    <div className="h-full w-full flex flex-col bg-card relative">
       {/* Loading Overlay */}
       <LoadingOverlay
         isVisible={isInitialLoading || tables.isLoading}
@@ -106,7 +115,25 @@ export const Editor = () => {
           </ResizablePanel>
           <ResizableHandle />
           <ResizablePanel className="min-w-0">
-            <div className="flex h-full w-full flex-col overflow-hidden">
+            <div
+              className="flex h-full w-full flex-col overflow-hidden relative"
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+              {isDragging && (
+                <div className="absolute inset-0 z-50 bg-background/90 backdrop-blur-sm flex flex-col items-center justify-center border-2 border-dashed border-primary m-4 rounded-lg animate-in fade-in duration-200">
+                  <div className="bg-primary/10 p-6 rounded-full mb-4">
+                    <FileUp className="w-12 h-12 text-primary" />
+                  </div>
+                  <h3 className="text-2xl font-semibold text-primary mb-2">
+                    Import SQL File
+                  </h3>
+                  <p className="text-muted-foreground text-lg">
+                    Drop your .sql file here to open it in the editor
+                  </p>
+                </div>
+              )}
               <div className="shrink-0">
                 <NavigationBar />
                 <QueryToolbar />

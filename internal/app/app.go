@@ -5,6 +5,7 @@ import (
 	"datacia/internal/constants"
 	"datacia/internal/db"
 	"datacia/internal/files"
+	"datacia/internal/queries"
 	"datacia/pkg/remote"
 	"embed"
 	"errors"
@@ -86,6 +87,9 @@ func (a *App) Initialize() error {
 
 	clipboardService := clipboard.NewClipboardService(a.instance)
 	a.instance.RegisterService(application.NewService(clipboardService))
+
+	queriesService := queries.NewQueriesService(a.instance)
+	a.instance.RegisterService(application.NewService(queriesService))
 
 	return nil
 }
