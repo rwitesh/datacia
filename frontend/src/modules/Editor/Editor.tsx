@@ -1,5 +1,5 @@
 import { QueryInput } from "./QueryInput/QueryInput";
-import { QueryToolbar } from "./QueryToolbar/QueryToolbar";
+import { TabBar } from "./TabBar/Tab";
 import { EditorSidebar } from "./EditorSidebar/EditorSidebar";
 import {
   ResizableHandle,
@@ -136,7 +136,9 @@ export const Editor = () => {
               )}
               <div className="shrink-0">
                 <NavigationBar />
-                <QueryToolbar />
+                <div className="border-b border-border">
+                  <TabBar />
+                </div>
               </div>
               {activeTab && (
                 <div className="flex-1 min-h-0">

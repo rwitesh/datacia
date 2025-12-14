@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-    FileIcon,
     FolderIcon,
     FolderOpenIcon,
     Plus,
@@ -8,7 +7,8 @@ import {
     Edit2,
     Loader2,
     FilePlus,
-    FolderPlus
+    FolderPlus,
+    FileCode
 } from "lucide-react";
 import {
     ContextMenu,
@@ -219,7 +219,7 @@ export function QueriesTab() {
                 {/* Inline input for Root creation */}
                 {creatingState && creatingState.parentPath === "" && (
                     <div className="px-2 py-1 flex items-center gap-2 mb-1">
-                        {creatingState.type === "folder" ? <FolderIcon className="h-4 w-4 text-blue-400" /> : <FileIcon className="h-4 w-4 text-gray-400" />}
+                        {getNodeIcon(creatingState.type)}
                         <CreationInput
                             onSubmit={handleCreateSubmit}
                             onCancel={() => setCreatingState(null)}
@@ -288,6 +288,16 @@ function CreationInput({ onSubmit, onCancel }: { onSubmit: (val: string) => void
             }}
         />
     )
+}
+
+// Helper function to get icon based on node type
+function getNodeIcon(type: string, isExpanded?: boolean) {
+    if (type === "folder") {
+        return isExpanded
+            ? <FolderOpenIcon className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+            : <FolderIcon className="h-3.5 w-3.5 text-blue-500 shrink-0" />;
+    }
+    return <FileCode className="h-3.5 w-3.5 text-emerald-500 shrink-0" />;
 }
 
 interface FileTreeProps {
@@ -451,13 +461,7 @@ function FileTree({
                                     }}
                                     onDrop={(e) => handleDrop(e, node)}
                                 >
-                                    {isFolder ? (
-                                        isExpanded ?
-                                            <FolderOpenIcon className="h-3.5 w-3.5 text-blue-400 shrink-0" /> :
-                                            <FolderIcon className="h-3.5 w-3.5 text-blue-400 shrink-0" />
-                                    ) : (
-                                        <FileIcon className="h-3.5 w-3.5 text-gray-400 shrink-0" />
-                                    )}
+                                    {getNodeIcon(node.type, isExpanded)}
 
                                     {isRenaming ? (
                                         <Input
@@ -522,10 +526,7 @@ function FileTree({
                                         className="flex items-center gap-1.5 px-2 py-1"
                                         style={{ paddingLeft: `${((depth + 1) * 12) + 8}px` }}
                                     >
-                                        {creatingState.type === "folder" ?
-                                            <FolderIcon className="h-3.5 w-3.5 text-blue-400 shrink-0" /> :
-                                            <FileIcon className="h-3.5 w-3.5 text-gray-400 shrink-0" />
-                                        }
+                                        {getNodeIcon(creatingState.type)}
                                         <CreationInput onSubmit={onCreateSubmit} onCancel={onCancelCreate} />
                                     </div>
                                 )}

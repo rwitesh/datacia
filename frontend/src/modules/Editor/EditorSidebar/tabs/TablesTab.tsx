@@ -122,7 +122,7 @@ export function TablesTab() {
                   title={t}
                   onClick={() => handleTableClick(t)}
                 >
-                  <Table className="h-3 w-3 opacity-60" />
+                  <Table className="h-3 w-3 text-blue-500 shrink-0" />
                   <span className="truncate">{t}</span>
                 </button>
               </ContextMenuTrigger>

@@ -9,6 +9,9 @@ import { drawSelection, keymap } from "@codemirror/view";
 import { useEditorContext } from "@/modules/Context/Editor/Index";
 import { useAppContext } from "@/modules/Context/App/Index";
 import { defaultTheme } from "./utils/theme";
+import { formatSQL } from "./utils/formatter";
+import { Button } from "@/components/ui/button";
+import { Play, StopCircle, Paintbrush } from "lucide-react";
 
 export function QueryInput() {
   const editorEl = useRef<HTMLDivElement | null>(null);
@@ -19,6 +22,8 @@ export function QueryInput() {
     tables: { data },
     activeTab,
     updateTab,
+    runQuery,
+    stopQuery,
   } = useEditorContext();
 
   const tabId = activeTab?.id ?? null;
@@ -109,5 +114,49 @@ export function QueryInput() {
     }
   }, [activeTab?.id, activeTab?.sql]);
 
-  return <div ref={editorEl} className="h-full w-full font-mono text-sm bg-card" />;
+  const handleFormat = () => {
+    if (activeTab && activeTab.mode === "query") {
+      const formatted = formatSQL(activeTab.sql || "");
+      updateTab(activeTab.id, { sql: formatted });
+    }
+  };
+
+  return (
+    <div className="relative h-full w-full">
+      <div ref={editorEl} className="h-full w-full font-mono text-sm bg-card" />
+
+      {/* Floating Action Buttons */}
+      <div className="absolute bottom-3 right-3 flex items-center gap-2 z-10">
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-7 px-3 cursor-pointer select-none gap-1.5 bg-background/80 backdrop-blur-sm hover:bg-background shadow-md border-border/50"
+          onClick={handleFormat}
+        >
+          <Paintbrush className="w-3.5 h-3.5" />
+          Format
+        </Button>
+
+        {!activeTab?.isExecuting ? (
+          <Button
+            size="sm"
+            className="h-7 px-4 cursor-pointer select-none gap-1.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white shadow-lg shadow-emerald-500/25 border-0 font-medium"
+            onClick={() => runQuery()}
+          >
+            <Play className="w-3.5 h-3.5" strokeWidth={2.5} />
+            Run
+          </Button>
+        ) : (
+          <Button
+            size="sm"
+            className="h-7 px-4 cursor-pointer select-none gap-1.5 bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 text-white shadow-lg shadow-red-500/25 border-0 font-medium"
+            onClick={() => stopQuery()}
+          >
+            <StopCircle className="w-3.5 h-3.5" strokeWidth={2.5} />
+            Stop
+          </Button>
+        )}
+      </div>
+    </div>
+  );
 }
