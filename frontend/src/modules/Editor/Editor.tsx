@@ -181,8 +181,8 @@ export const Editor = () => {
                     <div className="relative">
                       <button
                         onClick={() => setIsDataViewOpen(!isDataViewOpen)}
-                        className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-border hover:bg-border/80 rounded-l-md p-1 transition-colors"
-                        style={{ marginLeft: isDataViewOpen ? "0" : "-24px" }}
+                        className={`absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-primary hover:bg-primary/90 text-primary-foreground p-1 shadow-lg border border-primary/20 transition-all hover:shadow-xl hover:scale-105 ${isDataViewOpen ? 'rounded-r-md' : 'rounded-l-md'}`}
+                        style={{ marginLeft: isDataViewOpen ? "0" : "-32px" }}
                       >
                         {isDataViewOpen ? (
                           <ChevronRight className="h-4 w-4" />

@@ -118,7 +118,7 @@ export function DataTable({
   }
 
   return (
-    <div className="h-full w-full overflow-hidden">
+    <div className="h-full w-full overflow-hidden bg-card">
       <div
         ref={(el) => {
           scrollRef.current = el;
@@ -128,7 +128,7 @@ export function DataTable({
         style={{ contain: "strict" }}
       >
         {/* Header */}
-        <div className="sticky top-0 z-10 bg-muted/80">
+        <div className="sticky top-0 z-10">
           <table
             className="table-fixed border-separate border-spacing-0 text-xs cursor-default select-none"
             style={{ width: totalWidth }}
@@ -204,7 +204,6 @@ export function DataTable({
                 <div
                   key={`filler-${idx}`}
                   role="row"
-                  className="bg-muted"
                   style={{
                     position: "absolute",
                     insetInlineStart: 0,

@@ -42,22 +42,7 @@ export function useTableSelection({ columns, data, onSelectionChange }: UseTable
 
             const newPosition: CellPosition = { row, col };
 
-            if (event.ctrlKey || event.metaKey) {
-                // Ctrl+Click: Add new range
-                const newRange: SelectionRange = {
-                    start: newPosition,
-                    end: newPosition,
-                };
-                const newRanges = [...selection.ranges, newRange];
-                const newSelectedCells = updateSelectedCells(newRanges);
-
-                setSelection({
-                    ranges: newRanges,
-                    selectedCells: newSelectedCells,
-                    isSelecting: false,
-                    currentRange: null,
-                });
-            } else if (event.shiftKey && selection.ranges.length > 0) {
+            if (event.shiftKey && selection.ranges.length > 0) {
                 // Shift+Click: Extend last range
                 const lastRange = selection.ranges[selection.ranges.length - 1];
                 const extendedRange: SelectionRange = {
@@ -106,7 +91,7 @@ export function useTableSelection({ columns, data, onSelectionChange }: UseTable
                 }
             }
         },
-        [selection.ranges]
+        [selection.ranges, selection.selectedCells]
     );
 
     // Handle mouse enter on cell (for dragging)
@@ -163,28 +148,16 @@ export function useTableSelection({ columns, data, onSelectionChange }: UseTable
                 end: { row: totalDataRows - 1, col: colIndex },
             };
 
-            if (event.ctrlKey || event.metaKey) {
-                // Add column to selection
-                const newRanges = [...selection.ranges, columnRange];
-                const newSelectedCells = updateSelectedCells(newRanges);
-                setSelection({
-                    ranges: newRanges,
-                    selectedCells: newSelectedCells,
-                    isSelecting: false,
-                    currentRange: null,
-                });
-            } else {
-                // Select only this column
-                const newSelectedCells = updateSelectedCells([columnRange]);
-                setSelection({
-                    ranges: [columnRange],
-                    selectedCells: newSelectedCells,
-                    isSelecting: false,
-                    currentRange: null,
-                });
-            }
+            // Select only this column
+            const newSelectedCells = updateSelectedCells([columnRange]);
+            setSelection({
+                ranges: [columnRange],
+                selectedCells: newSelectedCells,
+                isSelecting: false,
+                currentRange: null,
+            });
         },
-        [data.length, selection.ranges]
+        [data.length]
     );
 
     // Notify parent about selection changes

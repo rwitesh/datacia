@@ -68,7 +68,7 @@ export function QueryResult({ onSelectionChange, onOpenDataView }: QueryResultPr
   const showDataTable = isReadQuery || (isExecuting && results?.type === "read");
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
+    <div className="h-full flex flex-col overflow-hidden bg-card">
       <div className="flex-1 overflow-hidden">
         {error ? (
           <ErrorView error={error} />

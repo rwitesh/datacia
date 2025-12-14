@@ -75,7 +75,7 @@ export function PaginationBar() {
     };
 
     return (
-        <div className="flex items-center justify-center gap-3 bg-muted border-t border-border px-4 py-1.5 select-none">
+        <div className="flex items-center justify-center gap-3 bg-card border-t border-border px-4 py-1.5 select-none">
             <Button
                 size="icon"
                 variant="ghost"

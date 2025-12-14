@@ -39,7 +39,6 @@ export function TableRow({
         <div
             key={isDataRow ? row!.id : `blank-row-${virtualItem.index}`}
             role="row"
-            className="bg-muted"
             style={{
                 position: "absolute",
                 insetInlineStart: 0,

@@ -40,6 +40,7 @@ export function DatabaseMenuBar() {
         <MenubarTrigger
           className="cursor-pointer"
           disabled={databases.length == 0}
+          title="Open Database"
         >
           <Database
             size={16}

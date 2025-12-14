@@ -3,7 +3,6 @@ import {
   MenubarMenu,
   MenubarTrigger,
   MenubarContent,
-  MenubarItem,
   MenubarLabel,
   MenubarSeparator,
   MenubarSub,
@@ -14,31 +13,14 @@ import {
 } from "@/components/ui/menubar";
 import { useTheme, type Theme } from "@/components/theme/theme-provider";
 import { Bolt } from "lucide-react";
-import { CloseCurrentConnection as Close } from "@/services/common";
-import { useNavigate } from "react-router";
 
 export function MenuBar() {
   const { theme, setTheme } = useTheme();
-  const navigate = useNavigate();
-
-  const DisconnectHandler = async () => {
-    try {
-      await Close();
-      // Redirect to home after successful disconnection
-      navigate("/");
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        console.error("Error disconnecting:", error.message);
-      } else {
-        console.error("Unknown error disconnecting:", error);
-      }
-    }
-  };
 
   return (
     <Menubar className="border-none bg-transparent">
       <MenubarMenu>
-        <MenubarTrigger className="cursor-pointer">
+        <MenubarTrigger className="cursor-pointer" title="Settings">
           <Bolt size={18} />
         </MenubarTrigger>
         <MenubarContent className="bg-white dark:bg-zinc-900 min-w-[180px]">
@@ -77,13 +59,6 @@ export function MenuBar() {
               </MenubarRadioGroup>
             </MenubarSubContent>
           </MenubarSub>
-          <MenubarSeparator />
-          <MenubarItem
-            className="cursor-pointer text-xs"
-            onClick={DisconnectHandler}
-          >
-            Disconnect
-          </MenubarItem>
         </MenubarContent>
       </MenubarMenu>
     </Menubar>
