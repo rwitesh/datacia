@@ -63,7 +63,6 @@ func OpenFile(dbPath string, encryptionKey []byte) (*Store, error) {
 			timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 			duration_ms INTEGER,
 			status TEXT,
-			rows_affected INTEGER,
 			error_message TEXT
 		)
 	`)
@@ -200,17 +199,16 @@ type QueryHistoryItem struct {
 	Timestamp    string `json:"timestamp"`
 	DurationMs   int64  `json:"duration_ms"`
 	Status       string `json:"status"`
-	RowsAffected int64  `json:"rows_affected"`
 	ErrorMessage string `json:"error_message"`
 	Count        int64  `json:"count"`
 }
 
-func (s *Store) SaveQueryHistory(query string, durationMs int64, status string, rowsAffected int64, errorMessage string) error {
+func (s *Store) SaveQueryHistory(query string, durationMs int64, status string, errorMessage string) error {
 	id := uuid.New().String()
 	_, err := s.db.Exec(`
-		INSERT INTO query_history (id, query, duration_ms, status, rows_affected, error_message, timestamp)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
-	`, id, query, durationMs, status, rowsAffected, errorMessage, time.Now().UTC().Format(time.RFC3339))
+		INSERT INTO query_history (id, query, duration_ms, status, error_message, timestamp)
+		VALUES (?, ?, ?, ?, ?, ?)
+	`, id, query, durationMs, status, errorMessage, time.Now().UTC().Format(time.RFC3339))
 	return err
 }
 
@@ -224,7 +222,6 @@ func (s *Store) GetQueryHistory(limit int) ([]QueryHistoryItem, error) {
 			MAX(timestamp) as timestamp, 
 			duration_ms, 
 			status, 
-			rows_affected, 
 			error_message,
 			COUNT(query) as count
 		FROM query_history
@@ -241,7 +238,7 @@ func (s *Store) GetQueryHistory(limit int) ([]QueryHistoryItem, error) {
 	for rows.Next() {
 		var item QueryHistoryItem
 		var errorMessage sql.NullString
-		if err := rows.Scan(&item.ID, &item.Query, &item.Timestamp, &item.DurationMs, &item.Status, &item.RowsAffected, &errorMessage, &item.Count); err != nil {
+		if err := rows.Scan(&item.ID, &item.Query, &item.Timestamp, &item.DurationMs, &item.Status, &errorMessage, &item.Count); err != nil {
 			return nil, err
 		}
 		if errorMessage.Valid {

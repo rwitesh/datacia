@@ -2,13 +2,13 @@ import { useState } from "react";
 import {
     FolderIcon,
     FolderOpenIcon,
-    Plus,
     Trash2,
     Edit2,
     Loader2,
     FilePlus,
     FolderPlus,
-    FileCode
+    FileCode,
+    RefreshCw
 } from "lucide-react";
 import {
     ContextMenu,
@@ -17,12 +17,6 @@ import {
     ContextMenuTrigger,
     ContextMenuSeparator
 } from "@/components/ui/context-menu";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -40,7 +34,7 @@ import type { FileNode } from "@/services/bindings";
 import { toast } from "sonner";
 
 export function QueriesTab() {
-    const { data: tree, isLoading } = useGetQueriesTree();
+    const { data: tree, isLoading, refetch } = useGetQueriesTree();
     const createFolder = useCreateFolder();
     const createQueryFile = useCreateQueryFile();
     const moveNode = useMoveNode();
@@ -196,23 +190,37 @@ export function QueriesTab() {
             }}
             onDrop={handleRootDrop}
         >
-            <div className="p-2 border-b border-sidebar-border flex items-center justify-between">
+            <div className="px-2 border-sidebar-border flex items-center justify-between">
                 <span className="text-xs font-medium text-muted-foreground">Queries</span>
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-6 w-6">
-                            <Plus className="h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setCreatingState({ type: "folder", parentPath: "" })}>
-                            New Folder
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setCreatingState({ type: "file", parentPath: "" })}>
-                            New Query
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                <div className="flex items-center gap-1">
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-6 w-6"
+                        onClick={() => setCreatingState({ type: "folder", parentPath: "" })}
+                        title="New Folder"
+                    >
+                        <FolderPlus className="h-4 w-4" strokeWidth={1} />
+                    </Button>
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-6 w-6"
+                        onClick={() => setCreatingState({ type: "file", parentPath: "" })}
+                        title="New Query"
+                    >
+                        <FilePlus className="h-4 w-4" strokeWidth={1} />
+                    </Button>
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-6 w-6"
+                        onClick={() => refetch()}
+                        title="Refresh"
+                    >
+                        <RefreshCw className="h-4 w-4" strokeWidth={1} />
+                    </Button>
+                </div>
             </div>
 
             <div className="flex-1 overflow-y-auto p-1 relative min-h-[100px]">
@@ -276,7 +284,7 @@ function CreationInput({ onSubmit, onCancel }: { onSubmit: (val: string) => void
     return (
         <Input
             autoFocus
-            className="h-6 text-xs"
+            className="h-6 text-xs focus-visible:ring-0 focus-visible:ring-offset-0"
             value={val}
             onChange={(e) => setVal(e.target.value)}
             onKeyDown={(e) => {
@@ -466,7 +474,7 @@ function FileTree({
                                     {isRenaming ? (
                                         <Input
                                             autoFocus
-                                            className="h-5 text-xs py-0 px-1"
+                                            className="h-5 text-xs py-0 px-1 focus-visible:ring-0 focus-visible:ring-offset-0"
                                             value={renameValue}
                                             onChange={(e) => setRenameValue(e.target.value)}
                                             onKeyDown={(e) => {

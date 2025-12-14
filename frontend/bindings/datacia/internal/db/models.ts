@@ -11,7 +11,6 @@ export class QueryHistoryItem {
     "timestamp": string;
     "duration_ms": number;
     "status": string;
-    "rows_affected": number;
     "error_message": string;
     "count": number;
 
@@ -31,9 +30,6 @@ export class QueryHistoryItem {
         }
         if (!("status" in $$source)) {
             this["status"] = "";
-        }
-        if (!("rows_affected" in $$source)) {
-            this["rows_affected"] = 0;
         }
         if (!("error_message" in $$source)) {
             this["error_message"] = "";

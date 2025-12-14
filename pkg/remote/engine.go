@@ -278,12 +278,12 @@ func (e *Engine) RunQuery(queryId, queryType, sql string) (common.QueryResult, e
 	}
 
 	// Save to history asynchronously
-	go func(sql string, duration int64, status string, rows int64, errorMessage string) {
-		saveErr := e.store.SaveQueryHistory(sql, duration, status, rows, errorMessage)
+	go func(sql string, duration int64, status string, errorMessage string) {
+		saveErr := e.store.SaveQueryHistory(sql, duration, status, errorMessage)
 		if saveErr != nil {
 			fmt.Printf("failed to save query history: %v\n", saveErr)
 		}
-	}(sql, duration, status, int64(len(result.Data)), errorMessage)
+	}(sql, duration, status, errorMessage)
 
 	return result, err
 }

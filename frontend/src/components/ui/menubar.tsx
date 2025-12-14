@@ -50,13 +50,19 @@ function MenubarRadioGroup({
 
 function MenubarTrigger({
   className,
+  variant = "default",
   ...props
-}: React.ComponentProps<typeof MenubarPrimitive.Trigger>) {
+}: React.ComponentProps<typeof MenubarPrimitive.Trigger> & {
+  variant?: "default" | "ghost"
+}) {
   return (
     <MenubarPrimitive.Trigger
       data-slot="menubar-trigger"
+      data-variant={variant}
       className={cn(
-        "focus:bg-accent focus:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground flex items-center rounded-sm px-2 py-1 text-sm font-medium outline-hidden select-none",
+        "flex items-center rounded-sm px-2 py-1 text-sm font-medium outline-hidden select-none",
+        variant === "default" && "focus:bg-accent focus:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground",
+        variant === "ghost" && "focus:bg-transparent focus:text-foreground data-[state=open]:bg-transparent data-[state=open]:text-foreground hover:bg-transparent active:bg-transparent",
         className
       )}
       {...props}

@@ -68,8 +68,8 @@ export const TabBar = () => {
   };
 
   return (
-    <div className="flex items-center overflow-hidden bg-muted/30">
-      <div className="flex items-center overflow-x-auto flex-1 scrollbar-thin gap-0.5 p-1">
+    <div className="flex items-center overflow-hidden bg-muted/30 h-10">
+      <div className="flex items-center overflow-x-auto flex-1 scrollbar-thin gap-0.5 p-1 h-full">
         {tabs.map((tab) => {
           const isActive = activeTab?.id === tab.id;
           return (
