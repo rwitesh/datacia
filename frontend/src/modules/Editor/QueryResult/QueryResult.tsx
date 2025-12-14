@@ -2,7 +2,7 @@
 import { useEditorContext } from "@/modules/Context/Editor/Index";
 import { useGetTableData } from "@/services/hooks";
 import { DataTable } from "./DataTable/DataTable";
-import { FloatingBar } from "./FloatingBar/FloatingBar";
+import { PaginationBar } from "./PaginationBar/PaginationBar";
 import { ErrorView } from "./ErrorView/ErrorView";
 import type { QueryResult as QueryResultType } from "@/services/database";
 
@@ -67,7 +67,7 @@ export function QueryResult({ onSelectionChange }: QueryResultProps) {
   const showDataTable = isReadQuery || (isExecuting && results?.type === "read");
 
   return (
-    <div className="h-full flex flex-col overflow-hidden relative">
+    <div className="h-full flex flex-col overflow-hidden">
       <div className="flex-1 overflow-hidden">
         {error ? (
           <ErrorView error={error} />
@@ -99,7 +99,8 @@ export function QueryResult({ onSelectionChange }: QueryResultProps) {
         )}
       </div>
 
-      {activeTab.pagination && <FloatingBar />}
+      {activeTab.pagination && <PaginationBar />}
     </div>
   );
 }
+

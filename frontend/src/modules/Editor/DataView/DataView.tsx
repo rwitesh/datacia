@@ -67,10 +67,12 @@ function HighlightedLine({ line }: { line: string }) {
 export function DataView({ selectedData }: SelectedDataProps) {
   const [copied, setCopied] = useState(false);
 
-  // Convert data to formatted JSON lines
+  // Convert data to formatted JSON lines, compacting }, { onto same line
   const lines = useMemo(() => {
     const jsonString = JSON.stringify(selectedData, null, 2);
-    return jsonString.split("\n");
+    // Compact: merge "  }," followed by "  {" into single line "  }, {"
+    const compacted = jsonString.replace(/\},\n\s*\{/g, "}, {");
+    return compacted.split("\n");
   }, [selectedData]);
 
   const handleCopy = async () => {
@@ -92,15 +94,12 @@ export function DataView({ selectedData }: SelectedDataProps) {
   const rowCount = selectedData.length;
 
   return (
-    <div className="h-full w-full flex flex-col bg-muted">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-background/50 backdrop-blur-sm">
-        <div>
-          <h3 className="text-sm font-semibold text-foreground">Selected Data</h3>
-          <p className="text-xs text-muted-foreground">
-            {rowCount} {rowCount === 1 ? 'row' : 'rows'} selected
-          </p>
-        </div>
+    <div className="h-full w-full flex flex-col bg-gradient-to-b from-background to-muted/30">
+      {/* Minimal Header */}
+      <div className="flex items-center justify-between px-3 py-2 border-b border-border/50 bg-background/80 backdrop-blur-md">
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-primary/10 text-primary border border-primary/20">
+          {rowCount} {rowCount === 1 ? 'row' : 'rows'}
+        </span>
         <button
           type="button"
           aria-label="Copy JSON to clipboard"
@@ -108,12 +107,12 @@ export function DataView({ selectedData }: SelectedDataProps) {
           onClick={handleCopy}
           onPointerLeave={() => setCopied(false)}
           onBlur={() => setCopied(false)}
-          className="p-2 rounded-md hover:bg-muted/80 transition-colors"
+          className="p-1.5 rounded-md hover:bg-muted transition-all duration-200 group"
         >
           {copied ? (
-            <Check className="w-4 h-4 text-green-500" />
+            <Check className="w-3.5 h-3.5 text-emerald-500 transition-transform duration-200 scale-110" />
           ) : (
-            <Copy className="w-4 h-4 text-muted-foreground" />
+            <Copy className="w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground transition-colors duration-200" />
           )}
           <span className="sr-only">
             {copied ? "Copied to clipboard" : "Copy JSON"}
