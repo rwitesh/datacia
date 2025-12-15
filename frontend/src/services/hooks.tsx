@@ -5,8 +5,8 @@ import {
   ListDatabases,
   ListTables,
   CancelQuery,
-} from "../../bindings/datacia/pkg/remote/engine";
-import type { ConnectionInfo } from "../../bindings/datacia/pkg/common";
+} from "./bindings";
+import type { ConnectionInfo } from "./bindings";
 import { RunQuery, GetTableData, GetTableSchema, GetQueryHistory } from "./database";
 import { CheckForUpdates, PerformUpdate } from "./updates";
 

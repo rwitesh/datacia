@@ -11,7 +11,8 @@ const {
   ChangeDatabaseByName: WChangeDatabaseByName,
   UpdateConnection: WUpdateConnection,
   SelectSSHKeyFile: WSelectSSHKeyFile,
-  SelectSQLiteFile: WSelectSQLiteFile
+  SelectSQLiteFile: WSelectSQLiteFile,
+  CheckConnectionHealth: WCheckConnectionHealth
 } = RemoteEngine;
 
 
@@ -57,4 +58,8 @@ export const DeleteConnection = (id: string) => {
 
 export const SelectSQLiteFile = () => {
   return WSelectSQLiteFile();
+}
+
+export const CheckConnectionHealth = () => {
+  return WCheckConnectionHealth();
 }

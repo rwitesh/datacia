@@ -15,6 +15,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     queryClient.invalidateQueries({ queryKey: ["connections"] });
     queryClient.invalidateQueries({ queryKey: ["queries-tree"] });
     queryClient.invalidateQueries({ queryKey: ["query-history"] });
+    queryClient.invalidateQueries({ queryKey: ["connection-health"] });
   };
 
   const dialect = useMemo(() => chooseDialect(engine), [engine]);

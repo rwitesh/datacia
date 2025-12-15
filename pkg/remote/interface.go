@@ -8,6 +8,7 @@ import (
 type DatabaseClient interface {
 	Connect(host, port, username, password, database string, test bool) error
 	Close() error
+	Ping() error
 	GetConnectionInfo() (map[string]string, error)
 	ListDatabases() (common.DatabaseInfo, error)
 	ListTables() ([]string, error)
@@ -48,6 +49,9 @@ type RemoteEngine interface {
 	// Check for updates
 	CheckForUpdates() (bool, error)
 	Update() error
+
+	// Connection Health
+	CheckConnectionHealth() (common.ConnectionHealth, error)
 }
 
 // Compile-time check to ensure Engine implements RemoteEngine interface

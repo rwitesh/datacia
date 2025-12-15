@@ -3,6 +3,7 @@ import { useEditorContext } from "@/modules/Context/Editor/Index";
 import { useGetTableData } from "@/services/hooks";
 import { DataTable } from "./DataTable/DataTable";
 import { PaginationBar } from "./PaginationBar/PaginationBar";
+import { QueryInfoBar } from "./QueryInfoBar/QueryInfoBar";
 import { ErrorView } from "./ErrorView/ErrorView";
 import type { QueryResult as QueryResultType } from "@/services/database";
 
@@ -101,7 +102,8 @@ export function QueryResult({ onSelectionChange, onOpenDataView }: QueryResultPr
         )}
       </div>
 
-      {activeTab.pagination && <PaginationBar />}
+      {activeTab.mode === "table" && <PaginationBar />}
+      {activeTab.mode === "query" && <QueryInfoBar />}
     </div>
   );
 }

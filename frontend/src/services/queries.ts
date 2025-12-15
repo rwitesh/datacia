@@ -9,8 +9,8 @@ import {
     ReadFile,
     WriteFile,
     Move
-} from "../../bindings/datacia/internal/queries/queriesservice";
-import { FileNode } from "../../bindings/datacia/internal/queries/models";
+} from "./bindings";
+import type { FileNode } from "./bindings";
 import { toast } from "sonner";
 
 export const useGetQueriesTree = () => {
