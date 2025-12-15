@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { useEditorContext } from "@/modules/Context/Editor/Index";
 import { useGetTableData } from "@/services/hooks";
-import { QueryResult } from "@/services/database";
+import type { QueryResult } from "@/services/database";
 
 export function PaginationBar() {
     const { activeTab, updateTab } = useEditorContext();

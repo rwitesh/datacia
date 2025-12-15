@@ -29,11 +29,11 @@ export function HistoryTab() {
           No query history found
         </div>
       ) : (
-        <div className="space-y-0.5 px-1">
+        <div className="flex flex-col px-1">
           {queryHistory.map((item: QueryHistoryItem) => (
             <button
               key={item.id}
-              className="w-full text-left px-3 py-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group transition-colors duration-200 cursor-pointer rounded-md"
+              className="w-full text-left px-3 py-1.5 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group transition-colors duration-200 cursor-pointer m-0 rounded-none first:rounded-t-md last:rounded-b-md"
               onClick={() => handleHistoryClick(item.query)}
             >
               <div className="flex items-start justify-between gap-2 mb-1">

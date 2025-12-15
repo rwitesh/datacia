@@ -322,12 +322,9 @@ func (e *Engine) GetTableSchema(table string) (common.QueryResult, error) {
 }
 
 // checks the health of the current database connection by pinging the database and measuring latency
-func (e *Engine) CheckConnectionHealth() (common.ConnectionHealth, error) {
+func (e *Engine) CheckConnectionHealth() (*int64, error) {
 	if e.activeClient == nil {
-		return common.ConnectionHealth{
-			Latency:  0,
-			IsOnline: false,
-		}, errors.New("no active database connection found")
+		return nil, errors.New("no active database connection found")
 	}
 
 	start := time.Now()
@@ -335,16 +332,12 @@ func (e *Engine) CheckConnectionHealth() (common.ConnectionHealth, error) {
 	latency := time.Since(start).Milliseconds()
 
 	if err != nil {
-		return common.ConnectionHealth{
-			Latency:  latency,
-			IsOnline: false,
-		}, err
+		// Don't send latency if ping failed
+		return nil, err
 	}
 
-	return common.ConnectionHealth{
-		Latency:  latency,
-		IsOnline: true,
-	}, nil
+	// Only return latency if ping succeeded
+	return &latency, nil
 }
 
 // SelectSSHKeyFile opens a file dialog to select an SSH private key file

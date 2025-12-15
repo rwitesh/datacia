@@ -32,13 +32,6 @@ type ConnectionInfo struct {
 	Engine string `json:"engine"`
 }
 
-// ConnectionHealth represents basic health metrics of a database connection.
-// The frontend is responsible for deriving a human‑readable status from these values.
-type ConnectionHealth struct {
-	Latency  int64 `json:"latency"`  // Latency in milliseconds
-	IsOnline bool  `json:"isOnline"` // Whether the connection is online
-}
-
 // ConnectionState holds common connection state for database clients
 type ConnectionState struct {
 	Host          string

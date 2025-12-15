@@ -6,16 +6,12 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 export const ConnectionHealthIndicator = () => {
   const location = useLocation();
   const isEditorPage = location.pathname === "/editor";
-  const { data } = useConnectionHealth(isEditorPage);
-
-  const latency = data?.latency ?? 0;
-  const isOnline = data?.isOnline ?? false;
+  const { data: latency, error, isError } = useConnectionHealth(isEditorPage);
 
   const getStatus = () => {
-    if (!data) return "unknown";
-    if (!isOnline) return "unhealthy";
-    if (latency > 5000) return "unhealthy";
-    if (latency > 1000) return "degraded";
+    if (isError) return "disconnected";
+    if (!latency) return "unknown";
+    if (latency > 500) return "degraded";
     return "healthy";
   };
 
@@ -31,7 +27,7 @@ export const ConnectionHealthIndicator = () => {
         return "text-green-500";
       case "degraded":
         return "text-yellow-500";
-      case "unhealthy":
+      case "disconnected":
         return "text-red-500";
       default:
         return "text-foreground";
@@ -44,8 +40,8 @@ export const ConnectionHealthIndicator = () => {
         return "Connection healthy";
       case "degraded":
         return "Connection degraded";
-      case "unhealthy":
-        return "Connection lost";
+      case "disconnected":
+        return "Disconnected";
       default:
         return "Connection status unknown";
     }
@@ -57,12 +53,18 @@ export const ConnectionHealthIndicator = () => {
     return `${(ms / 1000).toFixed(1)}s`;
   };
 
+  const errorMessage = error?.message || "Connection error";
+
   return (
       <Tooltip>
         <TooltipTrigger asChild>
           <div className="flex items-center gap-1.5">
             <Circle className={`h-2.5 w-2.5 fill-current ${getStatusColor()}`} />
-            {latency >= 0 && (
+            {isError ? (
+              <span className={`text-xs ${getStatusColor()}`}>
+                Disconnected
+              </span>
+            ) : latency > 0 && (
               <span className={`text-xs ${getStatusColor()}`}>
                 {formatLatency(latency)}
               </span>
@@ -72,14 +74,13 @@ export const ConnectionHealthIndicator = () => {
         <TooltipContent>
           <div className="space-y-1">
             <p className="font-medium">{getStatusText()}</p>
-            {latency >= 0 && (
+            {isError ? (
+              <p className="text-xs">
+                {errorMessage}
+              </p>
+            ) : latency > 0 && (
               <p className="text-xs">
                 Latency: {formatLatency(latency)}
-              </p>
-            )}
-            {!isOnline && status === "unhealthy" && (
-              <p className="text-xs text-destructive">
-                Attempting to reconnect...
               </p>
             )}
           </div>

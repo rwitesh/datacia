@@ -30,10 +30,8 @@ export function ChangeDatabaseByName(database: string): $CancellablePromise<void
 /**
  * checks the health of the current database connection by pinging the database and measuring latency
  */
-export function CheckConnectionHealth(): $CancellablePromise<common$0.ConnectionHealth> {
-    return $Call.ByID(1737579716).then(($result: any) => {
-        return $$createType0($result);
-    });
+export function CheckConnectionHealth(): $CancellablePromise<number | null> {
+    return $Call.ByID(1737579716);
 }
 
 export function CheckForUpdates(): $CancellablePromise<boolean> {
@@ -62,37 +60,37 @@ export function EstablishConnection(id: string): $CancellablePromise<void> {
 
 export function GetCurrentConnectionInfo(): $CancellablePromise<{ [_: string]: string }> {
     return $Call.ByID(2978731099).then(($result: any) => {
-        return $$createType1($result);
+        return $$createType0($result);
     });
 }
 
 export function GetQueryHistory(limit: number): $CancellablePromise<db$0.QueryHistoryItem[]> {
     return $Call.ByID(1117816130, limit).then(($result: any) => {
-        return $$createType3($result);
+        return $$createType2($result);
     });
 }
 
 export function GetStore(): $CancellablePromise<db$0.Store | null> {
     return $Call.ByID(431469839).then(($result: any) => {
-        return $$createType5($result);
+        return $$createType4($result);
     });
 }
 
 export function GetTableData(table: string, limit: number, offset: number, orderBy: string, orderDir: string): $CancellablePromise<common$0.QueryResult> {
     return $Call.ByID(2699628066, table, limit, offset, orderBy, orderDir).then(($result: any) => {
-        return $$createType6($result);
+        return $$createType5($result);
     });
 }
 
 export function GetTableSchema(table: string): $CancellablePromise<common$0.QueryResult> {
     return $Call.ByID(2740712797, table).then(($result: any) => {
-        return $$createType6($result);
+        return $$createType5($result);
     });
 }
 
 export function ListConnections(): $CancellablePromise<{ [_: string]: common$0.ConnectionInfo }> {
     return $Call.ByID(3165584091).then(($result: any) => {
-        return $$createType8($result);
+        return $$createType7($result);
     });
 }
 
@@ -102,19 +100,19 @@ export function ListDatabases(): $CancellablePromise<any> {
 
 export function ListTables(): $CancellablePromise<string[]> {
     return $Call.ByID(3417806403).then(($result: any) => {
-        return $$createType9($result);
+        return $$createType8($result);
     });
 }
 
 export function LoadConnection(id: string): $CancellablePromise<{ [_: string]: string }> {
     return $Call.ByID(1470478446, id).then(($result: any) => {
-        return $$createType1($result);
+        return $$createType0($result);
     });
 }
 
 export function RunQuery(queryId: string, queryType: string, sql: string): $CancellablePromise<common$0.QueryResult> {
     return $Call.ByID(1539590401, queryId, queryType, sql).then(($result: any) => {
-        return $$createType6($result);
+        return $$createType5($result);
     });
 }
 
@@ -154,13 +152,12 @@ export function UpdateConnection(id: string, name: string, config: { [_: string]
 }
 
 // Private type creation functions
-const $$createType0 = common$0.ConnectionHealth.createFrom;
-const $$createType1 = $Create.Map($Create.Any, $Create.Any);
-const $$createType2 = db$0.QueryHistoryItem.createFrom;
-const $$createType3 = $Create.Array($$createType2);
-const $$createType4 = db$0.Store.createFrom;
-const $$createType5 = $Create.Nullable($$createType4);
-const $$createType6 = common$0.QueryResult.createFrom;
-const $$createType7 = common$0.ConnectionInfo.createFrom;
-const $$createType8 = $Create.Map($Create.Any, $$createType7);
-const $$createType9 = $Create.Array($Create.Any);
+const $$createType0 = $Create.Map($Create.Any, $Create.Any);
+const $$createType1 = db$0.QueryHistoryItem.createFrom;
+const $$createType2 = $Create.Array($$createType1);
+const $$createType3 = db$0.Store.createFrom;
+const $$createType4 = $Create.Nullable($$createType3);
+const $$createType5 = common$0.QueryResult.createFrom;
+const $$createType6 = common$0.ConnectionInfo.createFrom;
+const $$createType7 = $Create.Map($Create.Any, $$createType6);
+const $$createType8 = $Create.Array($Create.Any);

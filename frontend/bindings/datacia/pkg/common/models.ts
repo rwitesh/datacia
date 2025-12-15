@@ -6,42 +6,6 @@
 import { Create as $Create } from "@wailsio/runtime";
 
 /**
- * ConnectionHealth represents basic health metrics of a database connection.
- * The frontend is responsible for deriving a human‑readable status from these values.
- */
-export class ConnectionHealth {
-    /**
-     * Latency in milliseconds
-     */
-    "latency": number;
-
-    /**
-     * Whether the connection is online
-     */
-    "isOnline": boolean;
-
-    /** Creates a new ConnectionHealth instance. */
-    constructor($$source: Partial<ConnectionHealth> = {}) {
-        if (!("latency" in $$source)) {
-            this["latency"] = 0;
-        }
-        if (!("isOnline" in $$source)) {
-            this["isOnline"] = false;
-        }
-
-        Object.assign(this, $$source);
-    }
-
-    /**
-     * Creates a new ConnectionHealth instance from a string or object.
-     */
-    static createFrom($$source: any = {}): ConnectionHealth {
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        return new ConnectionHealth($$parsedSource as Partial<ConnectionHealth>);
-    }
-}
-
-/**
  * ConnectionInfo represents a connection list item with name and engine
  */
 export class ConnectionInfo {

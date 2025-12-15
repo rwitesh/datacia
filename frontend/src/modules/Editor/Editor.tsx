@@ -163,7 +163,7 @@ export const Editor = () => {
                                 <QueryInput />
                               </div>
                             </ResizablePanel>
-                            <ResizableHandle />
+                            <ResizableHandle/>
                           </>
                         )}
                         <ResizablePanel minSize={0} className="min-h-0">
