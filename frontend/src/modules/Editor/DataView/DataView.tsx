@@ -88,9 +88,9 @@ export function DataView({ selectedData }: SelectedDataProps) {
   const rowCount = selectedData.length;
 
   return (
-    <div className="h-full w-full flex flex-col bg-gradient-to-b from-background to-muted/30">
+    <div className="h-full w-full flex flex-col">
       {/* Minimal Header */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-border/50 bg-background/80 backdrop-blur-md">
+      <div className="flex items-center justify-between px-1 py-1 border-b border-border/50">
         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-primary/10 text-primary border border-primary/20">
           {rowCount} {rowCount === 1 ? 'row' : 'rows'}
         </span>

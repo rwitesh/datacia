@@ -118,7 +118,7 @@ export function TablesTab() {
             <ContextMenu key={t}>
               <ContextMenuTrigger asChild>
                 <button
-                  className="flex w-full items-center gap-2 rounded-md px-2 py-[1px] text-xs hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors duration-200"
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-[1px] text-xs hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors duration-200 cursor-pointer"
                   title={t}
                   onClick={() => handleTableClick(t)}
                 >

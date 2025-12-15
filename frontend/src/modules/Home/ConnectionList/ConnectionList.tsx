@@ -121,10 +121,11 @@ export const ConnectionList = ({
             return (
               <li
                 key={id}
-                className={`flex items-center justify-between rounded select-none px-1 hover:bg-muted/50 cursor-pointer ${
-                  isActive ? "bg-muted" : ""
+                className={`flex items-center justify-between rounded select-none px-1 cursor-pointer ${
+                  isActive ? "bg-muted" : "hover:bg-muted/50"
                 }`}
                 onClick={() => onEdit(id)}
+                onDoubleClick={() => onConnect(id, connectionInfo.engine)}
               >
                 <div className="flex items-center gap-1 min-w-0 flex-1">
                   {getConnectionIcon(connectionInfo.engine)}

@@ -197,10 +197,7 @@ export const Editor = () => {
                       <>
                         <ResizableHandle />
                         <ResizablePanel
-                          defaultSize={25}
-                          minSize={15}
-                          maxSize={50}
-                          className="min-w-60"
+                          defaultSize={42}
                         >
                           <DataView selectedData={selectedData} />
                         </ResizablePanel>

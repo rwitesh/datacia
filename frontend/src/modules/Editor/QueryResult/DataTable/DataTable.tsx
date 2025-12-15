@@ -80,8 +80,10 @@ export function DataTable({
   let totalWidth = colWidths.reduce((a, b) => a + b, 0);
   const rowHeight = 24;
 
-  // Stretch columns to fill container if needed
-  if (containerWidth > totalWidth && colWidths.length > 0) {
+  // Only stretch columns to fill container if no columns have been manually resized
+  // This prevents the stretching logic from interfering with manual resizing
+  const hasManualResizing = Object.keys(columnSizing).length > 0;
+  if (!hasManualResizing && containerWidth > totalWidth && colWidths.length > 0) {
     const extraSpace = containerWidth - totalWidth;
     const extraPerCol = extraSpace / colWidths.length;
     colWidths = colWidths.map((w) => w + extraPerCol);

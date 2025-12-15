@@ -196,7 +196,7 @@ export function QueriesTab() {
                     <Button 
                         variant="ghost" 
                         size="icon" 
-                        className="h-6 w-6"
+                        className="h-6 w-6 cursor-pointer"
                         onClick={() => setCreatingState({ type: "folder", parentPath: "" })}
                         title="New Folder"
                     >
@@ -205,7 +205,7 @@ export function QueriesTab() {
                     <Button 
                         variant="ghost" 
                         size="icon" 
-                        className="h-6 w-6"
+                        className="h-6 w-6 cursor-pointer"
                         onClick={() => setCreatingState({ type: "file", parentPath: "" })}
                         title="New Query"
                     >
@@ -214,7 +214,7 @@ export function QueriesTab() {
                     <Button 
                         variant="ghost" 
                         size="icon" 
-                        className="h-6 w-6"
+                        className="h-6 w-6 cursor-pointer"
                         onClick={() => refetch()}
                         title="Refresh"
                     >

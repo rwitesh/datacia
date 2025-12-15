@@ -27,7 +27,7 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
         error: undefined,
         isExecuting: false,
         mode,
-        limit: mode === "table" ? 250 : undefined,
+        limit: mode === "table" ? 50 : undefined,
         offset: mode === "table" ? 0 : undefined,
         pagination: false,
       };
