@@ -57,7 +57,7 @@ export function QueryInput() {
         drawSelection(),
         EditorView.lineWrapping,
 
-        sqlConfig.of(sql({ dialect, schema })),
+        sqlConfig.of(sql({ dialect, schema, upperCaseKeywords: true })),
 
         autocompletion(),
         closeBrackets(),
@@ -96,7 +96,7 @@ export function QueryInput() {
     if (!view) return;
 
     view.dispatch({
-      effects: sqlConfig.reconfigure(sql({ dialect, schema })),
+      effects: sqlConfig.reconfigure(sql({ dialect, schema, upperCaseKeywords: true })),
     });
   }, [dialect, schema, sqlConfig]);
 

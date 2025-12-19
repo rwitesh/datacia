@@ -9,7 +9,7 @@ export function HistoryTab() {
   const { data: queryHistory, isLoading: isHistoryLoading } = useGetQueryHistory();
 
   const handleHistoryClick = (sql: string) => {
-    if (activeTab) {
+    if (activeTab?.mode === 'query') {
       updateTab(activeTab.id, { sql });
     } else {
       const tab = createTab("Query", "query");

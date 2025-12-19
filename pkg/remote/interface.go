@@ -51,7 +51,7 @@ type RemoteEngine interface {
 	Update() error
 
 	// Connection Health
-	CheckConnectionHealth() (*int64, error)
+	CheckConnectionHealth() (*float64, error)
 }
 
 // Compile-time check to ensure Engine implements RemoteEngine interface
