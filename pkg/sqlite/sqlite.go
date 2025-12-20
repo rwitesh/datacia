@@ -59,7 +59,7 @@ func (s *SQLite) Connect(host, port, username, password, database string, test b
 			s.db.Close()
 		}
 		s.db = db
-		s.Database = database
+		s.Host = database
 		s.Mu.Unlock()
 	} else {
 		db.Close()
@@ -254,8 +254,8 @@ func (s *SQLite) GetConnectionInfo() (map[string]string, error) {
 	}
 
 	return map[string]string{
-		"engine":   "sqlite",
-		"database": s.Database,
+		"engine": "sqlite",
+		"host":   s.Host,
 	}, nil
 }
 

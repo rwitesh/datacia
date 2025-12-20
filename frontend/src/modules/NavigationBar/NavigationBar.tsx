@@ -1,4 +1,5 @@
 import { useLocation, useNavigate } from "react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import { MenuBar } from "./Menubar";
 import { useAppContext } from "../Context/App/Index";
 import { DatabaseMenuBar } from "./DatabaseMenubar";
@@ -9,11 +10,14 @@ import { CloseCurrentConnection } from "@/services/common";
 export function NavigationBar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { reload} = useAppContext();
+  const queryClient = useQueryClient();
+  const { reload } = useAppContext();
 
   const DisconnectHandler = async () => {
     try {
       await CloseCurrentConnection();
+      // Invalidate current connection query so it refetches (will return null)
+      queryClient.invalidateQueries({ queryKey: ["current-connection"] });
       // Redirect to home after successful disconnection
       navigate("/");
     } catch (error: unknown) {
@@ -25,10 +29,12 @@ export function NavigationBar() {
     }
   };
 
+  const isEditorPage = location.pathname === "/editor";
+
   return (
-    <div className="flex cursor-default border-b border-border  bg-transparent w-full justify-end">
+    <div className="flex cursor-default border-b border-border bg-transparent w-full justify-end">
       <div className="flex items-center">
-        {location.pathname === "/editor" ? (
+        {isEditorPage && (
           <>
             <Button
               size="icon"
@@ -41,8 +47,6 @@ export function NavigationBar() {
             </Button>
             <DatabaseMenuBar />
           </>
-        ) : (
-          <></>
         )}
         <Button
           size="icon"

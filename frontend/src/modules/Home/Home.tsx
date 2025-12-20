@@ -39,7 +39,9 @@ export const Home = () => {
   };
 
   const handleConnect = (id: string, engine: string) => {
-    connectMutation.mutate({ id, engine });
+    const connection = savedConnections[id];
+    const name = connection?.name || "Unknown Connection";
+    connectMutation.mutate({ id, name, engine });
   };
 
   const handleEdit = (id: string) => {

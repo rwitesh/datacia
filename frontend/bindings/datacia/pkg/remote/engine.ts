@@ -38,8 +38,8 @@ export function CheckForUpdates(): $CancellablePromise<boolean> {
     return $Call.ByID(3465916777);
 }
 
-export function CloseCurrentConnection(): $CancellablePromise<void> {
-    return $Call.ByID(102279455);
+export function CloseCurrentConnection(closeEditor: boolean): $CancellablePromise<void> {
+    return $Call.ByID(102279455, closeEditor);
 }
 
 export function CreateNewConnection(engine: string, host: string, port: string, username: string, password: string, database: string, test: boolean): $CancellablePromise<void> {

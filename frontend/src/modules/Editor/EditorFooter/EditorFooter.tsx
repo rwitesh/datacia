@@ -1,6 +1,7 @@
 import { useCheckForUpdates, useUpdateApp } from "@/services/hooks";
 import { Download, AlertCircle, Loader2, CheckCircle2 } from "lucide-react";
 import { ConnectionHealthIndicator } from "./ConnectionHealth";
+import { ConnectionSwitcher } from "./ConnectionSwitcher/ConnectionSwitcher";
 
 export const EditorFooter = () => {
   const { data, error, isLoading } = useCheckForUpdates();
@@ -17,9 +18,10 @@ export const EditorFooter = () => {
 
   return (
     <div className="flex items-center justify-between px-5 py-1 bg-background text-xs text-muted-foreground w-full cursor-default gap-1.5 min-h-6">
-      {/* Connection Health Indicator */}
-      <div className="flex items-center">
+      {/* Left side - Connection Health and Switcher */}
+      <div className="flex items-center gap-3">
         <ConnectionHealthIndicator />
+        <ConnectionSwitcher />
       </div>
 
       {/* Update Status */}

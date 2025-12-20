@@ -216,7 +216,7 @@ func (e *Engine) ChangeDatabaseByName(database string) error {
 	)
 }
 
-func (e *Engine) CloseCurrentConnection() error {
+func (e *Engine) CloseCurrentConnection(closeEditor bool) error {
 	if e.activeClient == nil {
 		return errors.New("no active database connection found")
 	}
@@ -230,7 +230,7 @@ func (e *Engine) CloseCurrentConnection() error {
 		e.sshTunnel = nil
 	}
 
-	if e.uiController != nil {
+	if closeEditor && e.uiController != nil {
 		e.uiController.CloseEditor()
 	}
 

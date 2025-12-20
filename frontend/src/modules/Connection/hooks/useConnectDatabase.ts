@@ -1,13 +1,12 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
-import { useAppContext } from "@/modules/Context/App/Index";
 import {
   CreateNewConnection as Connect,
   EstablishConnection,
 } from "@/services/common";
-import type { DatabaseEngine, FormValues, Status } from "../utils/types";
+import type { FormValues, Status } from "../utils/types";
 
-type ConnectByIdArgs = { id: string; engine: string };
+type ConnectByIdArgs = { id: string; name: string; engine: string };
 type ConnectByValuesArgs = { values: FormValues };
 type ConnectArgs = ConnectByIdArgs | ConnectByValuesArgs;
 
@@ -16,7 +15,6 @@ export const useConnectDatabase = (opts?: {
 }) => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { setEngine } = useAppContext();
 
   return useMutation<void, Error, ConnectArgs, unknown>({
     mutationFn: async (payload) => {
@@ -43,12 +41,9 @@ export const useConnectDatabase = (opts?: {
     onMutate: () => {
       opts?.setStatus?.({ kind: "info", title: "Connecting..." });
     },
-    onSuccess: (_, variables) => {
-      const engine =
-        "id" in variables
-          ? (variables.engine as DatabaseEngine)
-          : variables.values.engine;
-      setEngine(engine);
+    onSuccess: () => {
+      // Invalidate queries to refetch current connection from backend
+      queryClient.invalidateQueries({ queryKey: ["current-connection"] });
       queryClient.invalidateQueries({ queryKey: ["databases"] });
       queryClient.invalidateQueries({ queryKey: ["tables"] });
       navigate("/editor");

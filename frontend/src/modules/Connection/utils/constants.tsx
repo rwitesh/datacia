@@ -1,20 +1,14 @@
-import { type DatabaseEngine, type FormValues } from './types';
+import { DATABASE_ENGINES, type DatabaseEngine } from "@/modules/utils/engines";
+import type { FormValues } from "./types";
 
-// Default ports for different database engines
-export const DEFAULT_PORTS: Record<DatabaseEngine, string> = {
-  clickhouse: "9000",
-  postgres: "5432",
-  mysql: "3306",
-  sqlite: "",
-};
+// Re-export from centralized config for backwards compatibility
+export const DEFAULT_PORTS: Record<DatabaseEngine, string> = Object.fromEntries(
+  Object.entries(DATABASE_ENGINES).map(([key, config]) => [key, config.defaultPort])
+) as Record<DatabaseEngine, string>;
 
-// Engine display names
-export const ENGINE_LABELS: Record<DatabaseEngine, string> = {
-  clickhouse: "ClickHouse",
-  postgres: "PostgreSQL",
-  mysql: "MySQL",
-  sqlite: "SQLite",
-};
+export const ENGINE_LABELS: Record<DatabaseEngine, string> = Object.fromEntries(
+  Object.entries(DATABASE_ENGINES).map(([key, config]) => [key, config.label])
+) as Record<DatabaseEngine, string>;
 
 // Field labels for form validation messages
 export const FIELD_LABELS: Record<keyof FormValues, string> = {

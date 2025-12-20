@@ -26,7 +26,7 @@ type RemoteEngine interface {
 	EstablishConnection(id string) error
 	ChangeDatabase(engine, host, port, username, password, database string) error
 	ChangeDatabaseByName(database string) error
-	CloseCurrentConnection() error
+	CloseCurrentConnection(closeEditor bool) error
 	GetCurrentConnectionInfo() (map[string]string, error)
 
 	// Connection Storage

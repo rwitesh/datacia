@@ -1,29 +1,36 @@
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AppContext } from "./Context";
-import type { DatabaseEngine } from "@/modules/Connection/utils/types";
 import { chooseDialect } from "@/modules/Editor/QueryInput/utils/dialect";
+import { useCurrentConnection } from "@/services/hooks";
+import type { DatabaseEngine } from "@/modules/Connection/utils/types";
 
 export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const queryClient = useQueryClient();
-  const [engine, setEngine] = useState<DatabaseEngine | null>(null);
+  const { data: currentConnection } = useCurrentConnection();
 
-  const reload = () => {
-    // Invalidate cache for tables, databases, and connections
+  const invalidateConnectionQueries = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["tables"] });
     queryClient.invalidateQueries({ queryKey: ["databases"] });
-    queryClient.invalidateQueries({ queryKey: ["connections"] });
     queryClient.invalidateQueries({ queryKey: ["queries-tree"] });
     queryClient.invalidateQueries({ queryKey: ["query-history"] });
     queryClient.invalidateQueries({ queryKey: ["connection-health"] });
+    queryClient.invalidateQueries({ queryKey: ["current-connection"] });
+  }, [queryClient]);
+
+  const reload = () => {
+    invalidateConnectionQueries();
+    queryClient.invalidateQueries({ queryKey: ["connections"] });
   };
 
-  const dialect = useMemo(() => chooseDialect(engine), [engine]);
+  const dialect = useMemo(
+    () => chooseDialect(currentConnection?.engine as DatabaseEngine | null),
+    [currentConnection?.engine]
+  );
 
   const value = {
     reload,
-    engine,
-    setEngine,
+    invalidateConnectionQueries,
     dialect,
   };
 

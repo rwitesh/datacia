@@ -1,10 +1,11 @@
 import * as yup from "yup";
+import { ENGINE_IDS, SQLITE } from "@/modules/utils/engines";
 import type { FormValues } from "./types";
 
 export const validationSchema = yup
   .object({
     connectionName: yup.string().default(""),
-    engine: yup.string().oneOf(["postgres", "clickhouse", "mysql", "sqlite"]).default("postgres"),
+    engine: yup.string().oneOf(ENGINE_IDS).default("postgres"),
     host: yup.string().default(""),
     port: yup.string().default(""),
     username: yup.string().default(""),
@@ -26,7 +27,7 @@ export const validateForSave = (values: FormValues) => {
     errs.connectionName = "Connection name is required";
   if (!values.engine) errs.engine = "Database engine is required";
 
-  if (values.engine === "sqlite") {
+  if (values.engine === SQLITE) {
     if (!values.database?.trim()) errs.database = "Database file is required";
   } else {
     if (!values.host?.trim()) errs.host = "Host is required";
@@ -41,7 +42,7 @@ export const validateForTestConnect = (values: FormValues) => {
   const errs: Partial<Record<keyof FormValues, string>> = {};
   if (!values.engine) errs.engine = "Database engine is required";
 
-  if (values.engine === "sqlite") {
+  if (values.engine === SQLITE) {
     if (!values.database?.trim()) errs.database = "Database file is required";
   } else {
     if (!values.host?.trim()) errs.host = "Host is required";

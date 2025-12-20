@@ -6,13 +6,8 @@ import { useConnectionForm } from "./hooks/useConnectionForm";
 import { ConnectionAlert } from "./components/ConnectionAlert";
 import { ConnectionForm } from "./components/ConnectionForm";
 import { ConnectionActions } from "./components/ConnectionActions";
-import type { DatabaseEngine, FormValues } from "./utils/types";
-import { postgres, clickhouse, mysql, sqlite } from "./utils/types";
-
-// Helper function to validate engine type
-const isValidEngine = (engine: string): engine is DatabaseEngine => {
-  return [postgres, clickhouse, mysql, sqlite].includes(engine);
-};
+import { isValidEngine } from "@/modules/utils/engines";
+import type { FormValues } from "./utils/types";
 
 export const DatabaseConnection: React.FC = () => {
   const { connectionId, engineParam } = useConnectionParams();

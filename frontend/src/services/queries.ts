@@ -27,7 +27,7 @@ export const useCreateFolder = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["queries-tree"] });
         },
-        onError: (err: any) => {
+        onError: (err: Error) => {
             console.error(err.message || "Failed to create folder");
         }
     });
@@ -40,7 +40,7 @@ export const useCreateQueryFile = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["queries-tree"] });
         },
-        onError: (err: any) => {
+        onError: (err: Error) => {
             console.error(err.message || "Failed to create file");
         }
     });
@@ -53,7 +53,7 @@ export const useRenameNode = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["queries-tree"] });
         },
-        onError: (err: any) => {
+        onError: (err: Error) => {
             console.error(err.message || "Failed to rename");
         }
     });
@@ -66,7 +66,7 @@ export const useMoveNode = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["queries-tree"] });
         },
-        onError: (err: any) => {
+        onError: (err: Error) => {
             console.error(err.message || "Failed to move");
         }
     });
@@ -79,7 +79,7 @@ export const useDeleteNode = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["queries-tree"] });
         },
-        onError: (err: any) => {
+        onError: (err: Error) => {
             console.error(err.message || "Failed to delete");
         }
     });
@@ -88,7 +88,7 @@ export const useDeleteNode = () => {
 export const useReadFile = () => {
     return useMutation<string, Error, string>({
         mutationFn: ReadFile,
-        onError: (err: any) => {
+        onError: (err: Error) => {
             console.error(err.message || "Failed to read file");
         }
     });
@@ -102,7 +102,7 @@ export const useWriteFile = () => {
             queryClient.invalidateQueries({ queryKey: ["queries-tree"] });
             toast.success("File saved");
         },
-        onError: (err: any) => {
+        onError: (err: Error) => {
             toast.error(err.message || "Failed to save file");
         }
     });

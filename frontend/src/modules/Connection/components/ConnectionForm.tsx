@@ -4,8 +4,8 @@ import { Eye, EyeOff, X, FileKey } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { ENGINE_LABELS } from "../utils/constants";
-import type { DatabaseEngine, FormValues } from "../utils/types";
+import { DATABASE_ENGINES, SQLITE, type DatabaseEngine } from "@/modules/utils/engines";
+import type { FormValues } from "../utils/types";
 
 interface ConnectionFormProps {
   register: UseFormRegister<FormValues>;
@@ -72,11 +72,11 @@ export const ConnectionForm: React.FC<ConnectionFormProps> = ({
           Database Engine
         </Label>
         <div className="h-6 px-2 text-sm bg-muted/30 rounded border flex items-center text-muted-foreground">
-          {ENGINE_LABELS[currentEngine]}
+          {DATABASE_ENGINES[currentEngine].label}
         </div>
       </div>
 
-      {currentEngine === "sqlite" ? (
+      {currentEngine === SQLITE ? (
         <div className="space-y-1">
           <Label htmlFor="database">Database File</Label>
           <div className="flex gap-2">
