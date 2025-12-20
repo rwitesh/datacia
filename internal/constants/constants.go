@@ -10,6 +10,7 @@ const (
 )
 
 const (
-	DefaultEncryptionKey = "5&j7ZLkjdff4cDTLs*T4TaQqu#ZMQ&ng"
-	KeyFileName          = ".key"
+	// AppSalt is a hardcoded salt used in PBKDF2 key derivation.
+	// This should be a random 32-byte string
+	AppSalt = "DataCiaAppSalt2026!SecureRandomBytes32"
 )

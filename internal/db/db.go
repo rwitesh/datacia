@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"datacia/internal/constants"
-	"datacia/internal/encryption"
+	"datacia/internal/security"
 	"datacia/pkg/common"
 
 	"github.com/adrg/xdg"
@@ -83,7 +83,7 @@ func (s *Store) SaveConnection(name string, config map[string]string) error {
 		return err
 	}
 
-	encrpytedData, err := encryption.Encrypt(s.encyptionKey, data)
+	encrpytedData, err := security.Encrypt(s.encyptionKey, data)
 	if err != nil {
 		return fmt.Errorf("unable to encrypt credentials: %w", err)
 	}
@@ -103,7 +103,7 @@ func (s *Store) UpdateConnection(id, name string, config map[string]string) erro
 		return err
 	}
 
-	encrpytedData, err := encryption.Encrypt(s.encyptionKey, data)
+	encrpytedData, err := security.Encrypt(s.encyptionKey, data)
 	if err != nil {
 		return fmt.Errorf("unable to encrypt credentials: %w", err)
 	}
@@ -130,7 +130,7 @@ func (s *Store) LoadConnection(id string) (map[string]string, error) {
 	}
 
 	// Decrypt before parsing JSON
-	plain, err := encryption.Decrypt(s.encyptionKey, []byte(encrypted))
+	plain, err := security.Decrypt(s.encyptionKey, []byte(encrypted))
 	if err != nil {
 		return map[string]string{}, fmt.Errorf("failed to decrypt config: %w", err)
 	}
@@ -160,7 +160,7 @@ func (s *Store) ListConnections() (map[string]common.ConnectionInfo, error) {
 		}
 
 		// Decrypt
-		plain, err := encryption.Decrypt(s.encyptionKey, []byte(encrypted))
+		plain, err := security.Decrypt(s.encyptionKey, []byte(encrypted))
 		if err != nil {
 			return nil, fmt.Errorf("failed to decrypt config for id=%s: %w", id, err)
 		}

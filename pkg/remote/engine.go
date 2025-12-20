@@ -2,7 +2,7 @@ package remote
 
 import (
 	"datacia/internal/db"
-	"datacia/internal/encryption"
+	"datacia/internal/security"
 	"datacia/internal/update"
 	"datacia/pkg/clickhouse"
 	"datacia/pkg/common"
@@ -33,11 +33,11 @@ type Engine struct {
 }
 
 func New(uiController UIController, version, releaseURL string) (*Engine, error) {
-	encrpytionKey, err := encryption.GetOrCreateEncryptionKey()
+	encryptionKey, err := security.DeriveMachineKey()
 	if err != nil {
-		return nil, fmt.Errorf("failed to check encryption key: %w", err)
+		return nil, fmt.Errorf("failed to derive encryption key: %w", err)
 	}
-	store, err := db.Open(encrpytionKey)
+	store, err := db.Open(encryptionKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize database: %w", err)
 	}
