@@ -26,14 +26,6 @@ export const EditorFooter = () => {
 
       {/* Update Status */}
       <div className="flex items-center gap-1.5">
-      {/* Checking for updates */}
-      {isLoading && (
-        <>
-          <Loader2 className="h-3 w-3 animate-spin" />
-          <span>Checking for updates...</span>
-        </>
-      )}
-
       {/* Update check failed */}
       {!isLoading && error && (
         <>

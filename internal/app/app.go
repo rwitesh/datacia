@@ -5,15 +5,16 @@ import (
 	"datacia/internal/constants"
 	"datacia/internal/db"
 	"datacia/internal/files"
+	"datacia/internal/logger"
 	"datacia/internal/queries"
 	"datacia/pkg/remote"
 	"embed"
 	"errors"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
+	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
 )
 
@@ -43,6 +44,7 @@ type Config struct {
 func NewApp(assets embed.FS, config []byte) (*App, error) {
 	var cfg *Config
 	if err := yaml.Unmarshal(config, &cfg); err != nil {
+		logger.Logger.Error("Failed to parse config.yml", zap.Error(err))
 		return nil, fmt.Errorf("failed to parse config.yml: %w", err)
 	}
 
@@ -62,6 +64,7 @@ func NewApp(assets embed.FS, config []byte) (*App, error) {
 func (a *App) Initialize() error {
 	version := a.config.Info.Version
 	if version == "" {
+		logger.Logger.Error("Version cannot be empty in config")
 		return errors.New("version cannot be empty")
 	}
 
@@ -70,11 +73,13 @@ func (a *App) Initialize() error {
 		releaseURL = a.config.Other[0].ReleaseURL
 	}
 	if releaseURL == "" {
+		logger.Logger.Error("Release URL cannot be empty in config")
 		return errors.New("release url cannot be empty")
 	}
 
 	engine, err := remote.New(a, version, releaseURL)
 	if err != nil {
+		logger.Logger.Error("Failed to create remote engine", zap.Error(err), zap.String("version", version))
 		return err
 	}
 
@@ -110,7 +115,8 @@ func (a *App) CreateMainWindow() error {
 	})
 
 	if a.window == nil {
-		return log.New(log.Writer(), "", log.LstdFlags).Output(1, "failed to create window")
+		logger.Logger.Error("Failed to create window")
+		return fmt.Errorf("failed to create window")
 	}
 
 	return nil
@@ -144,6 +150,7 @@ func (a *App) CloseEditor() {
 
 func (a *App) Run() error {
 	if err := a.CreateMainWindow(); err != nil {
+		logger.Logger.Error("Failed to create main window", zap.Error(err))
 		return err
 	}
 
@@ -155,7 +162,11 @@ func (a *App) Run() error {
 		}
 	}()
 
-	return a.instance.Run()
+	err := a.instance.Run()
+	if err != nil {
+		logger.Logger.Error("Application run failed", zap.Error(err))
+	}
+	return err
 }
 
 func (a *App) GetStore() *db.Store {

@@ -237,7 +237,7 @@ export function QueriesTab() {
 
                 {(!tree || tree.length === 0) && !creatingState && (
                     <div className="px-4 py-8 text-center text-xs text-muted-foreground pointer-events-none">
-                        No saved queries. <br /> Right click or use + to add.
+                        No saved queries.
                     </div>
                 )}
 

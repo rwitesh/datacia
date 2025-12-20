@@ -2,6 +2,7 @@ package remote
 
 import (
 	"datacia/internal/db"
+	"datacia/internal/logger"
 	"datacia/internal/security"
 	"datacia/internal/update"
 	"datacia/pkg/clickhouse"
@@ -16,6 +17,7 @@ import (
 	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
+	"go.uber.org/zap"
 )
 
 type UIController interface {
@@ -293,7 +295,7 @@ func (e *Engine) RunQuery(queryId, queryType, sql string) (common.QueryResult, e
 	go func(sql string, duration int64, status string, errorMessage string) {
 		saveErr := e.store.SaveQueryHistory(sql, duration, status, errorMessage)
 		if saveErr != nil {
-			fmt.Printf("failed to save query history: %v\n", saveErr)
+			logger.Logger.Error("Failed to save query history", zap.Error(saveErr))
 		}
 	}(sql, duration, status, errorMessage)
 

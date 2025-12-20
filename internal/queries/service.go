@@ -8,9 +8,11 @@ import (
 	"strings"
 
 	"datacia/internal/constants"
+	"datacia/internal/logger"
 
 	"github.com/adrg/xdg"
 	"github.com/wailsapp/wails/v3/pkg/application"
+	"go.uber.org/zap"
 )
 
 type FileType string
@@ -39,7 +41,7 @@ func NewQueriesService(app *application.App) *QueriesService {
 	rootDir := filepath.Join(xdg.DataHome, constants.APP_NAME, "queries")
 
 	if err := os.MkdirAll(rootDir, 0755); err != nil {
-		fmt.Printf("Error creating queries root dir: %v\n", err)
+		logger.Logger.Error("Error creating queries root dir", zap.Error(err), zap.String("rootDir", rootDir))
 	}
 
 	return &QueriesService{
