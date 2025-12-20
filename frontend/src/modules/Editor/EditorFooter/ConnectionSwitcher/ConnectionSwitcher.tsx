@@ -20,7 +20,6 @@ import {
 
 export function ConnectionSwitcher() {
   const { data: currentConnection } = useCurrentConnection();
-  console.log(currentConnection);
   const { data: savedConnections = {}, isLoading } = useFetchConnections();
   const { mutate: switchTo, isPending } = useSwitchConnection();
 

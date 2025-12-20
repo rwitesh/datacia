@@ -71,8 +71,12 @@ func (m *MySQL) Connect(host, port, username, password, database string, test bo
 		m.Host = host
 		m.Port = port
 		m.Username = username
-		m.Password = password
 		m.Database = database
+		// Set password directly when we already hold the lock
+		if m.Password != nil {
+			m.Password.Clear()
+		}
+		m.Password = common.NewSecureString(password)
 		m.Mu.Unlock()
 	} else {
 		// if test=true → close right away
@@ -86,15 +90,16 @@ func (m *MySQL) Close() error {
 	m.ActiveQueries = sync.Map{} // reset
 
 	m.Mu.Lock()
-	defer m.Mu.Unlock()
+	db := m.db
+	m.db = nil
+	m.ClearAllStateUnsafe() // Calling unsafe method since it is already in lock
+	m.Mu.Unlock()
 
-	if m.db == nil {
+	if db == nil {
 		return nil
 	}
 
-	err := m.db.Close()
-	m.db = nil
-	return err
+	return db.Close()
 }
 
 func (m *MySQL) Ping() error {
@@ -229,6 +234,7 @@ func (m *MySQL) CancelQuery(queryID string) error {
 func (m *MySQL) ListDatabases() (common.DatabaseInfo, error) {
 	m.Mu.RLock()
 	db := m.db
+	database := m.Database
 	m.Mu.RUnlock()
 
 	if db == nil {
@@ -259,7 +265,7 @@ func (m *MySQL) ListDatabases() (common.DatabaseInfo, error) {
 
 	return common.DatabaseInfo{
 		Databases:       databases,
-		CurrentDatabase: m.Database,
+		CurrentDatabase: database,
 	}, nil
 }
 
@@ -310,9 +316,13 @@ func (m *MySQL) GetConnectionInfo() (map[string]string, error) {
 		"host":     m.Host,
 		"port":     m.Port,
 		"username": m.Username,
-		"password": m.Password,
+		"password": "", // Password not exposed for security
 		"database": m.Database,
 	}, nil
+}
+
+func (m *MySQL) GetPassword() string {
+	return m.ConnectionState.GetPassword()
 }
 
 func (m *MySQL) GetTableData(table string, limit, offset int, orderBy, orderDir string) (common.QueryResult, error) {
@@ -351,6 +361,7 @@ func (m *MySQL) GetTableData(table string, limit, offset int, orderBy, orderDir 
 func (m *MySQL) GetTableSchema(table string) (common.QueryResult, error) {
 	m.Mu.RLock()
 	db := m.db
+	database := m.Database
 	m.Mu.RUnlock()
 
 	if db == nil {
@@ -371,7 +382,7 @@ func (m *MySQL) GetTableSchema(table string) (common.QueryResult, error) {
 	`
 
 	// We need to pass database name as table_schema
-	rows, err := db.QueryContext(ctx, sqlStr, m.Database, table)
+	rows, err := db.QueryContext(ctx, sqlStr, database, table)
 	if err != nil {
 		return common.QueryResult{Type: common.QueryTypeRead}, err
 	}

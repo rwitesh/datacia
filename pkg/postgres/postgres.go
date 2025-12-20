@@ -81,8 +81,12 @@ func (p *Postgres) Connect(host, port, username, password, database string, test
 		p.Host = host
 		p.Port = port
 		p.Username = username
-		p.Password = password
 		p.Database = database
+		// Set password directly when we already hold the lock
+		if p.Password != nil {
+			p.Password.Clear()
+		}
+		p.Password = common.NewSecureString(password)
 		p.Mu.Unlock()
 	} else {
 		// if test=true → close right away (don't keep state)
@@ -96,14 +100,16 @@ func (p *Postgres) Close() error {
 	p.ActiveQueries = sync.Map{} // reset
 
 	p.Mu.Lock()
-	defer p.Mu.Unlock()
+	pool := p.pool
+	p.pool = nil
+	p.ClearAllStateUnsafe() // Calling unsafe method since it is already in lock
+	p.Mu.Unlock()
 
-	if p.pool == nil {
+	if pool == nil {
 		return nil
 	}
 
-	p.pool.Close()
-	p.pool = nil
+	pool.Close()
 	return nil
 }
 
@@ -231,6 +237,7 @@ func (p *Postgres) CancelQuery(queryID string) error {
 func (p *Postgres) ListDatabases() (common.DatabaseInfo, error) {
 	p.Mu.RLock()
 	pool := p.pool
+	database := p.Database
 	p.Mu.RUnlock()
 
 	if pool == nil {
@@ -268,7 +275,7 @@ func (p *Postgres) ListDatabases() (common.DatabaseInfo, error) {
 
 	return common.DatabaseInfo{
 		Databases:       databases,
-		CurrentDatabase: p.Database,
+		CurrentDatabase: database,
 	}, nil
 }
 
@@ -326,9 +333,13 @@ func (p *Postgres) GetConnectionInfo() (map[string]string, error) {
 		"host":     p.Host,
 		"port":     p.Port,
 		"username": p.Username,
-		"password": p.Password,
+		"password": "", // Password not exposed for security
 		"database": p.Database,
 	}, nil
+}
+
+func (p *Postgres) GetPassword() string {
+	return p.ConnectionState.GetPassword()
 }
 
 func (p *Postgres) GetTableData(table string, limit, offset int, orderBy, orderDir string) (common.QueryResult, error) {

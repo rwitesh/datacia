@@ -201,9 +201,20 @@ func (e *Engine) GetCurrentConnectionInfo() (map[string]string, error) {
 }
 
 func (e *Engine) ChangeDatabaseByName(database string) error {
+	if e.activeClient == nil {
+		return errors.New("no active connection found")
+	}
+
 	connInfo, err := e.GetCurrentConnectionInfo()
 	if err != nil {
 		return err
+	}
+
+	// Get password directly from the client instead of from GetConnectionInfo
+	// which no longer exposes passwords for security
+	password := e.activeClient.GetPassword()
+	if password == "" {
+		return errors.New("password not available for reconnection")
 	}
 
 	return e.ChangeDatabase(
@@ -211,7 +222,7 @@ func (e *Engine) ChangeDatabaseByName(database string) error {
 		connInfo["host"],
 		connInfo["port"],
 		connInfo["username"],
-		connInfo["password"],
+		password,
 		database,
 	)
 }

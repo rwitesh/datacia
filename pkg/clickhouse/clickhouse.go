@@ -75,8 +75,12 @@ func (ch *ClickHouse) Connect(host, port, username, password, database string, t
 		ch.Host = host
 		ch.Port = port
 		ch.Username = username
-		ch.Password = password
 		ch.Database = database
+		// Set password directly when we already hold the lock
+		if ch.Password != nil {
+			ch.Password.Clear()
+		}
+		ch.Password = common.NewSecureString(password)
 		ch.Mu.Unlock()
 	} else {
 		// if test=true → close right away (don't keep state)
@@ -90,18 +94,16 @@ func (ch *ClickHouse) Close() error {
 	ch.ActiveQueries = sync.Map{}
 
 	ch.Mu.Lock()
-	defer ch.Mu.Unlock()
+	conn := ch.conn
+	ch.conn = nil
+	ch.ClearAllStateUnsafe() // Calling unsafe method since it is already in lock
+	ch.Mu.Unlock()
 
-	if ch.conn == nil {
+	if conn == nil {
 		return nil
 	}
 
-	err := ch.conn.Close()
-	if err != nil {
-		return err
-	}
-	ch.conn = nil
-	return nil
+	return conn.Close()
 }
 
 func (ch *ClickHouse) Ping() error {
@@ -234,6 +236,7 @@ func (ch *ClickHouse) killQueryOnServer(queryID string) error {
 func (ch *ClickHouse) ListTables() ([]string, error) {
 	ch.Mu.RLock()
 	conn := ch.conn
+	database := ch.Database
 	ch.Mu.RUnlock()
 
 	if conn == nil {
@@ -250,7 +253,7 @@ func (ch *ClickHouse) ListTables() ([]string, error) {
 	ctx, cancel := common.NewTimeoutContext(common.META_TIMEOUT)
 	defer cancel()
 
-	rows, err := conn.Query(ctx, sql, clickhouse.Named("db", ch.Database))
+	rows, err := conn.Query(ctx, sql, clickhouse.Named("db", database))
 	if err != nil {
 		return nil, err
 	}
@@ -328,9 +331,13 @@ func (ch *ClickHouse) GetConnectionInfo() (map[string]string, error) {
 		"host":     ch.Host,
 		"port":     ch.Port,
 		"username": ch.Username,
-		"password": ch.Password,
+		"password": "", // Password not exposed for security
 		"database": ch.Database,
 	}, nil
+}
+
+func (ch *ClickHouse) GetPassword() string {
+	return ch.ConnectionState.GetPassword()
 }
 
 func (ch *ClickHouse) GetTableData(table string, limit, offset int, orderBy, orderDir string) (common.QueryResult, error) {

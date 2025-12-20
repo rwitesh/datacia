@@ -27,7 +27,6 @@ export function DatabaseMenuBar() {
       await queryClient.invalidateQueries({ queryKey: ["databases"] });
       // Also invalidate tables query as it depends on the current database
       await queryClient.invalidateQueries({ queryKey: ["tables"] });
-      console.log(currentDatabase, db)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : String(error));
       console.error("Failed to change database:", error);

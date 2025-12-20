@@ -73,15 +73,16 @@ func (s *SQLite) Close() error {
 	s.ActiveQueries = sync.Map{} // reset
 
 	s.Mu.Lock()
-	defer s.Mu.Unlock()
+	db := s.db
+	s.db = nil
+	s.ClearAllStateUnsafe() // Calling unsafe method since it is already in lock
+	s.Mu.Unlock()
 
-	if s.db == nil {
+	if db == nil {
 		return nil
 	}
 
-	err := s.db.Close()
-	s.db = nil
-	return err
+	return db.Close()
 }
 
 func (s *SQLite) Ping() error {
@@ -258,6 +259,11 @@ func (s *SQLite) GetConnectionInfo() (map[string]string, error) {
 		"engine": "sqlite",
 		"host":   s.Host,
 	}, nil
+}
+
+func (s *SQLite) GetPassword() string {
+	// SQLite doesn't use passwords, but we implement the interface
+	return s.ConnectionState.GetPassword()
 }
 
 func (s *SQLite) GetTableData(table string, limit, offset int, orderBy, orderDir string) (common.QueryResult, error) {
