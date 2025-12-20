@@ -350,13 +350,22 @@ func (p *Postgres) GetTableData(table string, limit, offset int, orderBy, orderD
 	}
 	defer conn.Release()
 
-	sql := fmt.Sprintf(`SELECT * FROM "%s"`, table)
+	quotedTable, err := common.QuoteIdentifier(table, common.QuoteDoubleQuote)
+	if err != nil {
+		return common.QueryResult{}, err
+	}
+
+	sql := fmt.Sprintf(`SELECT * FROM %s`, quotedTable)
 	if orderBy != "" {
+		quotedCol, err := common.QuoteIdentifier(orderBy, common.QuoteDoubleQuote)
+		if err != nil {
+			return common.QueryResult{}, err
+		}
 		dir := "ASC"
 		if orderDir == "desc" {
 			dir = "DESC"
 		}
-		sql += fmt.Sprintf(` ORDER BY "%s" %s`, orderBy, dir)
+		sql += fmt.Sprintf(` ORDER BY %s %s`, quotedCol, dir)
 	}
 	sql += fmt.Sprintf(` LIMIT %d OFFSET %d`, limit, offset)
 	return p.query(ctx, conn.Conn(), sql)

@@ -6,6 +6,7 @@ import (
 	"datacia/pkg/common"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -271,16 +272,25 @@ func (s *SQLite) GetTableData(table string, limit, offset int, orderBy, orderDir
 	ctx, cancel := common.NewTimeoutContext(common.QUERY_TIMEOUT)
 	defer cancel()
 
-	sql := fmt.Sprintf(`SELECT * FROM "%s"`, table)
+	quotedTable, err := common.QuoteIdentifier(table, common.QuoteDoubleQuote)
+	if err != nil {
+		return common.QueryResult{}, err
+	}
+
+	sqlStr := fmt.Sprintf(`SELECT * FROM %s`, quotedTable)
 	if orderBy != "" {
+		quotedCol, err := common.QuoteIdentifier(orderBy, common.QuoteDoubleQuote)
+		if err != nil {
+			return common.QueryResult{}, err
+		}
 		dir := "ASC"
 		if orderDir == "desc" {
 			dir = "DESC"
 		}
-		sql += fmt.Sprintf(` ORDER BY "%s" %s`, orderBy, dir)
+		sqlStr += fmt.Sprintf(` ORDER BY %s %s`, quotedCol, dir)
 	}
-	sql += fmt.Sprintf(` LIMIT %d OFFSET %d`, limit, offset)
-	return s.query(ctx, db, sql)
+	sqlStr += fmt.Sprintf(` LIMIT %d OFFSET %d`, limit, offset)
+	return s.query(ctx, db, sqlStr)
 }
 
 func (s *SQLite) GetTableSchema(table string) (common.QueryResult, error) {
@@ -295,10 +305,16 @@ func (s *SQLite) GetTableSchema(table string) (common.QueryResult, error) {
 	ctx, cancel := common.NewTimeoutContext(common.META_TIMEOUT)
 	defer cancel()
 
-	// Use PRAGMA table_info for SQLite schema
-	sql := fmt.Sprintf("PRAGMA table_info('%s')", table)
+	// Validate table name before using in PRAGMA
+	if err := common.ValidateIdentifier(table); err != nil {
+		return common.QueryResult{}, err
+	}
 
-	rows, err := db.QueryContext(ctx, sql)
+	// Use PRAGMA table_info for SQLite schema
+	// Note: PRAGMA doesn't support parameterized queries, but we've validated the identifier
+	pragmaSQL := fmt.Sprintf("PRAGMA table_info('%s')", strings.ReplaceAll(table, "'", "''"))
+
+	rows, err := db.QueryContext(ctx, pragmaSQL)
 	if err != nil {
 		return common.QueryResult{Type: common.QueryTypeRead}, err
 	}

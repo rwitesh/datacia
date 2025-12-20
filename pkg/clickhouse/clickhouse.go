@@ -208,6 +208,11 @@ func (ch *ClickHouse) CancelQuery(queryID string) error {
 }
 
 func (ch *ClickHouse) killQueryOnServer(queryID string) error {
+	// Validate queryID is a valid UUID to prevent SQL injection
+	if err := common.ValidateUUID(queryID); err != nil {
+		return fmt.Errorf("invalid query ID: %w", err)
+	}
+
 	ch.Mu.RLock()
 	conn := ch.conn
 	ch.Mu.RUnlock()
@@ -219,6 +224,7 @@ func (ch *ClickHouse) killQueryOnServer(queryID string) error {
 	ctx, cancel := common.NewTimeoutContext(3 * time.Second)
 	defer cancel()
 
+	// queryID is validated as UUID format, safe to use in query
 	killSQL := fmt.Sprintf("KILL QUERY WHERE query_id = '%s'", queryID)
 	// Ignore errors from KILL QUERY as it might already be completed
 	conn.Exec(ctx, killSQL)
@@ -339,16 +345,25 @@ func (ch *ClickHouse) GetTableData(table string, limit, offset int, orderBy, ord
 	ctx, cancel := common.NewTimeoutContext(common.QUERY_TIMEOUT)
 	defer cancel()
 
-	sql := fmt.Sprintf("SELECT * FROM `%s`", table)
+	quotedTable, err := common.QuoteIdentifier(table, common.QuoteBacktick)
+	if err != nil {
+		return common.QueryResult{}, err
+	}
+
+	sqlStr := fmt.Sprintf("SELECT * FROM %s", quotedTable)
 	if orderBy != "" {
+		quotedCol, err := common.QuoteIdentifier(orderBy, common.QuoteBacktick)
+		if err != nil {
+			return common.QueryResult{}, err
+		}
 		dir := "ASC"
 		if orderDir == "desc" {
 			dir = "DESC"
 		}
-		sql += fmt.Sprintf(" ORDER BY `%s` %s", orderBy, dir)
+		sqlStr += fmt.Sprintf(" ORDER BY %s %s", quotedCol, dir)
 	}
-	sql += fmt.Sprintf(" LIMIT %d OFFSET %d", limit, offset)
-	return ch.query(ctx, conn, sql, "")
+	sqlStr += fmt.Sprintf(" LIMIT %d OFFSET %d", limit, offset)
+	return ch.query(ctx, conn, sqlStr, "")
 }
 
 func (ch *ClickHouse) GetTableSchema(table string) (common.QueryResult, error) {

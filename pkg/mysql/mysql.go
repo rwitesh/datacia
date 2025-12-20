@@ -327,13 +327,22 @@ func (m *MySQL) GetTableData(table string, limit, offset int, orderBy, orderDir 
 	ctx, cancel := common.NewTimeoutContext(common.QUERY_TIMEOUT)
 	defer cancel()
 
-	sqlStr := fmt.Sprintf("SELECT * FROM `%s`", table)
+	quotedTable, err := common.QuoteIdentifier(table, common.QuoteBacktick)
+	if err != nil {
+		return common.QueryResult{}, err
+	}
+
+	sqlStr := fmt.Sprintf("SELECT * FROM %s", quotedTable)
 	if orderBy != "" {
+		quotedCol, err := common.QuoteIdentifier(orderBy, common.QuoteBacktick)
+		if err != nil {
+			return common.QueryResult{}, err
+		}
 		dir := "ASC"
 		if orderDir == "desc" {
 			dir = "DESC"
 		}
-		sqlStr += fmt.Sprintf(" ORDER BY `%s` %s", orderBy, dir)
+		sqlStr += fmt.Sprintf(" ORDER BY %s %s", quotedCol, dir)
 	}
 	sqlStr += fmt.Sprintf(" LIMIT %d OFFSET %d", limit, offset)
 	return m.query(ctx, db, sqlStr)

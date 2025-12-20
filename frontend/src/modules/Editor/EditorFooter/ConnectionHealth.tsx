@@ -64,7 +64,7 @@ export const ConnectionHealthIndicator = () => {
               <span className={`text-xs ${getStatusColor()}`}>
                 Disconnected
               </span>
-            ) : latency > 0 && (
+            ) : latency != null && latency > 0 && (
               <span className={`text-xs ${getStatusColor()}`}>
                 {formatLatency(latency)}
               </span>
@@ -78,7 +78,7 @@ export const ConnectionHealthIndicator = () => {
               <p className="text-xs">
                 {errorMessage}
               </p>
-            ) : latency > 0 && (
+            ) : latency != null && latency > 0 && (
               <p className="text-xs">
                 Latency: {formatLatency(latency)}
               </p>
