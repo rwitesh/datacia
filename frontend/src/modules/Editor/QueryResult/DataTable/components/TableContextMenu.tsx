@@ -51,10 +51,10 @@ export function TableContextMenu({
   };
 
   const handleExportJSON = () => {
-    if (!isLicenseActive) {
-      setIsLicenseDialogOpen(true);
-      return;
-    }
+    // if (!isLicenseActive) {
+    //   setIsLicenseDialogOpen(true);
+    //   return;
+    // }
 
     const defaultName = dataToUse.length > 1
       ? `export-${dataToUse.length}-rows.json`
@@ -74,10 +74,10 @@ export function TableContextMenu({
   };
 
   const handleExportCSV = () => {
-    if (!isLicenseActive) {
-      setIsLicenseDialogOpen(true);
-      return;
-    }
+    // if (!isLicenseActive) {
+    //   setIsLicenseDialogOpen(true);
+    //   return;
+    // }
 
     if (dataToUse.length === 0) return;
 
@@ -116,51 +116,55 @@ export function TableContextMenu({
   };
 
   return (
-    <ContextMenu>
-      <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
-      <ContextMenuContent className="w-48">
-        <ContextMenuItem onSelect={onOpenDataView} className="gap-2 text-xs">
-          <PanelRight className="h-3 w-3" />
-          Open DataView
-        </ContextMenuItem>
+    <>
+      <ContextMenu>
+        <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
+        <ContextMenuContent className="w-48">
+          <ContextMenuItem onSelect={onOpenDataView} className="gap-2 text-xs">
+            <PanelRight className="h-3 w-3" />
+            Open DataView
+          </ContextMenuItem>
 
-        <ContextMenuItem onSelect={handleCopyText} className="gap-2 text-xs">
-          <Copy className="h-3 w-3" />
-          Copy
-        </ContextMenuItem>
-        <ContextMenuItem onSelect={handleCopyJSON} className="gap-2 text-xs">
-          <Braces className="h-3 w-3" />
-          Copy as JSON
-        </ContextMenuItem>
-        <ContextMenuItem 
-          onSelect={handleExportJSON} 
-          className="gap-2 text-xs justify-between"
-        >
-          <div className="flex items-center gap-2">
-            <FileJson className="h-3 w-3" />
-            Export as JSON
-          </div>
-          {!isLicenseActive && (
-            <Crown className="h-3 w-3 text-amber-500" />
-          )}
-        </ContextMenuItem>
-        <ContextMenuItem 
-          onSelect={handleExportCSV} 
-          className="gap-2 text-xs justify-between"
-        >
-          <div className="flex items-center gap-2">
-            <FileType className="h-3 w-3" />
-            Export as CSV
-          </div>
-          {!isLicenseActive && (
-            <Crown className="h-3 w-3 text-amber-500" />
-          )}
-        </ContextMenuItem>
-      </ContextMenuContent>
+          <ContextMenuItem onSelect={handleCopyText} className="gap-2 text-xs">
+            <Copy className="h-3 w-3" />
+            Copy
+          </ContextMenuItem>
+          <ContextMenuItem onSelect={handleCopyJSON} className="gap-2 text-xs">
+            <Braces className="h-3 w-3" />
+            Copy as JSON
+          </ContextMenuItem>
+          <ContextMenuItem 
+            onSelect={handleExportJSON} 
+            disabled={!isLicenseActive}
+            className="gap-2 text-xs justify-between"
+          >
+            <div className="flex items-center gap-2">
+              <FileJson className="h-3 w-3" />
+              Export as JSON
+            </div>
+            {!isLicenseActive && (
+              <Crown className="h-3 w-3 text-amber-500" />
+            )}
+          </ContextMenuItem>
+          <ContextMenuItem 
+            onSelect={handleExportCSV} 
+            disabled={!isLicenseActive}
+            className="gap-2 text-xs justify-between"
+          >
+            <div className="flex items-center gap-2">
+              <FileType className="h-3 w-3" />
+              Export as CSV
+            </div>
+            {!isLicenseActive && (
+              <Crown className="h-3 w-3 text-amber-500" />
+            )}
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
       <LicenseDialog
         open={isLicenseDialogOpen}
         onOpenChange={setIsLicenseDialogOpen}
       />
-    </ContextMenu>
+    </>
   );
 }
