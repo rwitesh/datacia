@@ -6,6 +6,7 @@ export type AppContextType = {
   reload: () => void;
   invalidateConnectionQueries: () => void;
   dialect: SQLDialect;
+  engine: string;
   licenseStatus: LicenseStatus | undefined;
   isLicenseActive: boolean;
 };

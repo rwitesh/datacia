@@ -17,7 +17,7 @@ export function QueryInput() {
   const editorEl = useRef<HTMLDivElement | null>(null);
   const viewRef = useRef<EditorView | null>(null);
 
-  const { dialect } = useAppContext();
+  const { dialect, engine } = useAppContext();
   const {
     tables: { data },
     activeTab,
@@ -116,7 +116,7 @@ export function QueryInput() {
 
   const handleFormat = () => {
     if (activeTab && activeTab.mode === "query") {
-      const formatted = formatSQL(activeTab.sql || "");
+      const formatted = formatSQL(activeTab.sql || "", engine || "sql");
       updateTab(activeTab.id, { sql: formatted });
     }
   };

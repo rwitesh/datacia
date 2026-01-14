@@ -1,15 +1,10 @@
-// Re-export engine types and constants from centralized config
-export {
-  POSTGRES as postgres,
-  CLICKHOUSE as clickhouse,
-  MYSQL as mysql,
-  SQLITE as sqlite,
-  type DatabaseEngine,
-} from "@/modules/utils/engines";
+// All engine types and constants are in @/modules/utils/engines
+// Import from there directly - no need for re-exports
+import type { DatabaseEngine } from "@/modules/utils/engines";
 
 export interface FormValues {
   connectionName: string;
-  engine: import("@/modules/utils/engines").DatabaseEngine;
+  engine: DatabaseEngine;
   host: string;
   port: string;
   username: string;
@@ -25,7 +20,7 @@ export interface FormValues {
 }
 
 export interface ConnectionConfig {
-  engine: import("@/modules/utils/engines").DatabaseEngine;
+  engine: DatabaseEngine;
   host: string;
   port: string;
   username: string;

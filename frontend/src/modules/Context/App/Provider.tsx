@@ -3,7 +3,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { AppContext } from "./Context";
 import { chooseDialect } from "@/modules/Editor/QueryInput/utils/dialect";
 import { useCurrentConnection, useLicenseStatus } from "@/services/hooks";
-import type { DatabaseEngine } from "@/modules/Connection/utils/types";
 
 export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const queryClient = useQueryClient();
@@ -25,7 +24,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const dialect = useMemo(
-    () => chooseDialect(currentConnection?.engine as DatabaseEngine | null),
+    () => chooseDialect(currentConnection?.engine || null),
     [currentConnection?.engine]
   );
 
@@ -37,6 +36,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     reload,
     invalidateConnectionQueries,
     dialect,
+    engine: currentConnection?.engine || "",
     licenseStatus,
     isLicenseActive,
   };
