@@ -18,7 +18,7 @@ import {
   useActivateLicense,
   useDeactivateLicense,
 } from "@/services/hooks";
-import { CheckCircle2, XCircle, Loader2, Key, Shield, AlertCircle, Calendar } from "lucide-react";
+import { CheckCircle2, XCircle, Loader2, Key, Shield, AlertCircle, Calendar, User, Mail, Crown } from "lucide-react";
 
 interface LicenseDialogProps {
   children?: React.ReactNode;
@@ -49,6 +49,9 @@ export function LicenseDialog({
   const isValid = status?.valid ?? false;
   const maskedKey = status?.license_key;
   const expiresAt = status?.expires_at;
+  const customerName = status?.customer_name;
+  const customerEmail = status?.customer_email;
+  const variantName = status?.variant_name;
   const hasLicense = isValid || !!maskedKey; // Show license UI if we have a key or valid status
 
   useEffect(() => {
@@ -178,16 +181,24 @@ export function LicenseDialog({
                 <div className="flex items-center gap-2 rounded-md border p-3">
                   {hasLicense ? (
                     <>
-                      {isValid ? (
-                        <CheckCircle2 className="h-5 w-5 text-green-500" />
-                      ) : (
-                        <AlertCircle className="h-5 w-5 text-amber-500" />
-                      )}
-                      <div className="flex-1">
-                        <div className="font-medium text-sm">
-                          {isValid ? "License Active" : "License Invalid"}
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center gap-2">
+                          {isValid ? (
+                            <CheckCircle2 className="h-5 w-5 text-green-500" />
+                          ) : (
+                            <AlertCircle className="h-5 w-5 text-amber-500" />
+                          )}
+                          <div className="font-medium text-sm">
+                            {isValid ? "License Active" : "License Invalid"}
+                          </div>
+                          {variantName && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-medium">
+                              <Crown className="h-3 w-3" />
+                              {variantName.charAt(0).toUpperCase() + variantName.slice(1)}
+                            </span>
+                          )}
                         </div>
-                        <div className="text-xs text-muted-foreground space-y-1">
+                        <div className="text-xs text-muted-foreground space-y-1.5">
                           {maskedKey && (
                             <div className="font-mono flex items-center gap-1">
                               <Key className="h-3 w-3" />
@@ -198,6 +209,22 @@ export function LicenseDialog({
                             <div className="flex items-center gap-1">
                               <Calendar className="h-3 w-3" />
                               Expires: {formatExpiryDate(expiresAt)}
+                            </div>
+                          )}
+                          {(customerName || customerEmail) && (
+                            <div className="pt-1 border-t space-y-1">
+                              {customerName && (
+                                <div className="flex items-center gap-1">
+                                  <User className="h-3 w-3" />
+                                  {customerName}
+                                </div>
+                              )}
+                              {customerEmail && (
+                                <div className="flex items-center gap-1">
+                                  <Mail className="h-3 w-3" />
+                                  {customerEmail}
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>

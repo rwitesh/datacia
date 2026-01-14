@@ -16,6 +16,9 @@ export interface LicenseStatus {
   valid: boolean;
   license_key?: string;
   expires_at?: string;
+  customer_name?: string;
+  customer_email?: string;
+  variant_name?: string;
 }
 
 export async function ActivateLicense(

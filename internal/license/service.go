@@ -106,9 +106,12 @@ func (s *LicenseService) Activate(licenseKey string) ActivateResponse {
 	}
 
 	var response struct {
-		ID        string `json:"id"`
-		CreatedAt string `json:"created_at"`
-		ExpiresAt string `json:"expires_at"`
+		ID            string `json:"id"`
+		CreatedAt     string `json:"created_at"`
+		ExpiresAt     string `json:"expires_at"`
+		CustomerName  string `json:"customer_name"`
+		CustomerEmail string `json:"customer_email"`
+		VariantName   string `json:"variant_name"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		logger.Logger.Error("Failed to decode response", zap.Error(err))
@@ -146,11 +149,14 @@ func (s *LicenseService) Activate(licenseKey string) ActivateResponse {
 	}
 
 	lic := &License{
-		ID:        encryptedID,
-		Key:       encryptedLicenseKey,
-		MachineId: hashedMachineID,
-		CreatedAt: createdAt,
-		ExpiresAt: expiresAt,
+		ID:            encryptedID,
+		Key:           encryptedLicenseKey,
+		MachineId:     hashedMachineID,
+		CreatedAt:     createdAt,
+		ExpiresAt:     expiresAt,
+		CustomerName:  response.CustomerName,
+		CustomerEmail: response.CustomerEmail,
+		VariantName:   response.VariantName,
 	}
 
 	if err := SaveLicense(lic); err != nil {
@@ -509,6 +515,17 @@ func (s *LicenseService) GetStatus() map[string]interface{} {
 	// Add expiry date if available
 	if !license.ExpiresAt.IsZero() {
 		status["expires_at"] = license.ExpiresAt.Format(time.RFC3339)
+	}
+
+	// Add customer information if available
+	if license.CustomerName != "" {
+		status["customer_name"] = license.CustomerName
+	}
+	if license.CustomerEmail != "" {
+		status["customer_email"] = license.CustomerEmail
+	}
+	if license.VariantName != "" {
+		status["variant_name"] = license.VariantName
 	}
 
 	return status
