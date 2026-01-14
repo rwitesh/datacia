@@ -73,7 +73,7 @@ export function TableHeader({
         // Call the original resize handler
         const handler = header.getResizeHandler();
         if (handler) {
-            handler(e as any);
+            handler(e);
         }
 
         // Handle resize end
@@ -102,6 +102,20 @@ export function TableHeader({
         onColumnClick(colIndex, e);
     };
 
+    const handleMouseDown = (e: React.MouseEvent) => {
+        // Prevent selection from starting when mousedown is on header
+        // This prevents drag-selection from header to cells
+        const target = e.target as HTMLElement;
+        
+        // Allow resize handle to work
+        if (resizeHandleRef.current && resizeHandleRef.current.contains(target)) {
+            return;
+        }
+        
+        // Prevent default to stop cell selection from initiating
+        e.preventDefault();
+    };
+
     return (
         <th
             key={header.id}
@@ -109,6 +123,7 @@ export function TableHeader({
             style={{ width: colWidth }}
             className="relative border-[0.5px] border-border/60 bg-card px-2 py-1 font-medium"
             onClick={handleColumnClick}
+            onMouseDown={handleMouseDown}
         >
             <div className="flex items-center justify-center h-full gap-1">
                 <span className="overflow-hidden text-ellipsis whitespace-nowrap">

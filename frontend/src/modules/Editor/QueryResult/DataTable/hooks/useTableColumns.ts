@@ -4,7 +4,7 @@ import type { DataRow } from "../types";
 
 export function useTableColumns(columns: string[]) {
     const columnDefs = useMemo<ColumnDef<DataRow>[]>(() => {
-        return columns.map((colKey) => ({
+        return columns.map((colKey, index) => ({
             id: colKey,
             accessorFn: (row: DataRow) => row[colKey],
             header: colKey,
@@ -14,6 +14,7 @@ export function useTableColumns(columns: string[]) {
                 if (typeof value === "object") return JSON.stringify(value);
                 return String(value);
             },
+            enableResizing: index < columns.length - 1, // Disable resize for last column
         }));
     }, [columns]);
 

@@ -69,17 +69,14 @@ export function DataTable({
   const headers = table.getFlatHeaders();
 
   // Calculate column widths
-  let colWidths = headers.map((h) => Math.max(40, Math.floor(h.getSize())));
-  let totalWidth = colWidths.reduce((a, b) => a + b, 0);
+  const colWidths = headers.map((h) => Math.max(40, Math.floor(h.getSize())));
   const rowHeight = 24;
 
-  // Only stretch columns to fill container if no columns have been manually resized
-  // This prevents the stretching logic from interfering with manual resizing
-  const hasManualResizing = Object.keys(columnSizing).length > 0;
-  if (!hasManualResizing && containerWidth > totalWidth && colWidths.length > 0) {
+  // Ensure last column fills remaining space to prevent gaps
+  let totalWidth = colWidths.reduce((a, b) => a + b, 0);
+  if (containerWidth > totalWidth && colWidths.length > 0) {
     const extraSpace = containerWidth - totalWidth;
-    const extraPerCol = extraSpace / colWidths.length;
-    colWidths = colWidths.map((w) => w + extraPerCol);
+    colWidths[colWidths.length - 1] += extraSpace;
     totalWidth = containerWidth;
   }
 
