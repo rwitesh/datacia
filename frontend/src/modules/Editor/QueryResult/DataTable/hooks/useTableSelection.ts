@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useLayoutEffect, useEffect } from "react";
+import React, { useState, useCallback, useLayoutEffect, useEffect, useRef } from "react";
 import {
     type SelectionState,
     type SelectionRange,
@@ -11,9 +11,12 @@ interface UseTableSelectionProps {
     columns: string[];
     data: Array<Record<string, unknown>>;
     onSelectionChange: (selected: Array<Record<string, unknown>>) => void;
+    scrollRef: React.RefObject<HTMLDivElement | null>;
+    rowHeight: number;
+    colWidths: number[];
 }
 
-export function useTableSelection({ columns, data, onSelectionChange }: UseTableSelectionProps) {
+export function useTableSelection({ columns, data, onSelectionChange, scrollRef, rowHeight, colWidths }: UseTableSelectionProps) {
     const [selection, setSelection] = useState<SelectionState>({
         ranges: [],
         selectedCells: new Set(),
@@ -21,6 +24,8 @@ export function useTableSelection({ columns, data, onSelectionChange }: UseTable
         currentRange: null,
     });
     const [selectedData, setSelectedData] = useState<Array<Record<string, unknown>>>([]);
+    const autoScrollAnimationRef = useRef<number | null>(null);
+    const lastMousePositionRef = useRef<{ x: number; y: number } | null>(null);
 
     // Handle mouse down on cell
     const handleCellMouseDown = useCallback(
@@ -133,6 +138,146 @@ export function useTableSelection({ columns, data, onSelectionChange }: UseTable
         document.addEventListener("mouseup", handleMouseUp);
         return () => document.removeEventListener("mouseup", handleMouseUp);
     }, [handleMouseUp]);
+
+    // Auto-scroll when selecting near edges
+    useEffect(() => {
+        if (!selection.isSelecting) {
+            if (autoScrollAnimationRef.current) {
+                cancelAnimationFrame(autoScrollAnimationRef.current);
+                autoScrollAnimationRef.current = null;
+            }
+            lastMousePositionRef.current = null;
+            return;
+        }
+
+        const SCROLL_ZONE = 50; // pixels from edge to trigger scroll
+        const SCROLL_SPEED = 10; // pixels per frame
+
+        const getCellUnderMouse = (x: number, y: number): { row: number; col: number } | null => {
+            if (!scrollRef.current) return null;
+
+            // First, try to find an actual cell element under the mouse
+            const element = document.elementFromPoint(x, y);
+            if (element) {
+                const cellElement = element.closest('[role="cell"]');
+                if (cellElement) {
+                    const rowAttr = cellElement.getAttribute('data-row');
+                    const colAttr = cellElement.getAttribute('data-col');
+                    
+                    if (rowAttr !== null && colAttr !== null) {
+                        return {
+                            row: parseInt(rowAttr, 10),
+                            col: parseInt(colAttr, 10),
+                        };
+                    }
+                }
+            }
+
+            // If no cell found, calculate position based on scroll and mouse coordinates
+            const container = scrollRef.current;
+            const rect = container.getBoundingClientRect();
+            
+            // Calculate relative position within the scrollable area
+            const relativeX = x - rect.left + container.scrollLeft;
+            const relativeY = y - rect.top + container.scrollTop;
+            
+            // Account for header height (approximately 32px)
+            const HEADER_HEIGHT = 32;
+            const contentY = relativeY - HEADER_HEIGHT;
+            
+            // Calculate row and column indices
+            const row = Math.floor(contentY / rowHeight);
+            
+            let col = -1;
+            let accumulatedWidth = 0;
+            for (let i = 0; i < colWidths.length; i++) {
+                accumulatedWidth += colWidths[i];
+                if (relativeX < accumulatedWidth) {
+                    col = i;
+                    break;
+                }
+            }
+            
+            // Validate the calculated indices
+            if (row >= 0 && row < data.length && col >= 0 && col < columns.length) {
+                return { row, col };
+            }
+
+            return null;
+        };
+
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!scrollRef.current || !selection.isSelecting) return;
+
+            // Store the current mouse position
+            lastMousePositionRef.current = { x: e.clientX, y: e.clientY };
+
+            const container = scrollRef.current;
+            const rect = container.getBoundingClientRect();
+
+            let scrollX = 0;
+            let scrollY = 0;
+
+            // Check vertical edges
+            if (e.clientY < rect.top + SCROLL_ZONE) {
+                scrollY = -SCROLL_SPEED;
+            } else if (e.clientY > rect.bottom - SCROLL_ZONE) {
+                scrollY = SCROLL_SPEED;
+            }
+
+            // Check horizontal edges
+            if (e.clientX < rect.left + SCROLL_ZONE) {
+                scrollX = -SCROLL_SPEED;
+            } else if (e.clientX > rect.right - SCROLL_ZONE) {
+                scrollX = SCROLL_SPEED;
+            }
+
+            // Perform scroll if needed
+            if (scrollX !== 0 || scrollY !== 0) {
+                const scroll = () => {
+                    if (!scrollRef.current || !selection.isSelecting) return;
+                    
+                    container.scrollBy(scrollX, scrollY);
+                    
+                    // Update selection based on cell under mouse
+                    if (lastMousePositionRef.current) {
+                        const cell = getCellUnderMouse(
+                            lastMousePositionRef.current.x,
+                            lastMousePositionRef.current.y
+                        );
+                        if (cell) {
+                            handleCellMouseEnter(cell.row, cell.col);
+                        }
+                    }
+                    
+                    // Continue scrolling while mouse is in scroll zone
+                    if (selection.isSelecting) {
+                        autoScrollAnimationRef.current = requestAnimationFrame(scroll);
+                    }
+                };
+                
+                if (!autoScrollAnimationRef.current) {
+                    autoScrollAnimationRef.current = requestAnimationFrame(scroll);
+                }
+            } else {
+                // Stop scrolling if mouse is not in scroll zone
+                if (autoScrollAnimationRef.current) {
+                    cancelAnimationFrame(autoScrollAnimationRef.current);
+                    autoScrollAnimationRef.current = null;
+                }
+            }
+        };
+
+        document.addEventListener("mousemove", handleMouseMove);
+        
+        return () => {
+            document.removeEventListener("mousemove", handleMouseMove);
+            if (autoScrollAnimationRef.current) {
+                cancelAnimationFrame(autoScrollAnimationRef.current);
+                autoScrollAnimationRef.current = null;
+            }
+        };
+    }, [selection.isSelecting, scrollRef, handleCellMouseEnter, rowHeight, colWidths, data.length, columns.length]);
 
     // Handle column header click (select entire column)
     const handleColumnHeaderClick = useCallback(

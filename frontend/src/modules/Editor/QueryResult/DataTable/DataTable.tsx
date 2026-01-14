@@ -51,13 +51,6 @@ export function DataTable({
   // Custom hooks
   const { containerWidth, containerHeight } = useTableDimensions(containerRef);
   const columnDefs = useTableColumns(columns);
-  const {
-    selection,
-    selectedData,
-    handleCellMouseDown,
-    handleCellMouseEnter,
-    handleColumnHeaderClick,
-  } = useTableSelection({ columns, data, onSelectionChange });
 
   // Table setup
   const table = useReactTable({
@@ -89,6 +82,22 @@ export function DataTable({
     colWidths = colWidths.map((w) => w + extraPerCol);
     totalWidth = containerWidth;
   }
+
+  // Selection hook - needs rowHeight and colWidths
+  const {
+    selection,
+    selectedData,
+    handleCellMouseDown,
+    handleCellMouseEnter,
+    handleColumnHeaderClick,
+  } = useTableSelection({ 
+    columns, 
+    data, 
+    onSelectionChange, 
+    scrollRef,
+    rowHeight,
+    colWidths,
+  });
 
   const gridTemplateColumns = useMemo(
     () => colWidths.map((w) => `${w}px`).join(" "),
