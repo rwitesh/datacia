@@ -1,10 +1,10 @@
-// Services
-export { FileService } from "../../bindings/datacia/internal/files";
-export { ClipboardService } from "../../bindings/datacia/internal/clipboard";
-export { ConnectionInfo, QueryType } from "../../bindings/datacia/pkg/common";
-export type { QueryResult } from "../../bindings/datacia/pkg/common/models";
-export type { FileNode } from "../../bindings/datacia/internal/queries/models";
-export type { QueryHistoryItem } from "../../bindings/datacia/internal/db/models";
+// Re-export all bindings from the generated bindings directory
+export { FileService } from "../../../bindings/datacia/internal/files";
+export { ClipboardService } from "../../../bindings/datacia/internal/clipboard";
+export { ConnectionInfo, QueryType } from "../../../bindings/datacia/pkg/common";
+export type { QueryResult } from "../../../bindings/datacia/pkg/common/models";
+export type { FileNode } from "../../../bindings/datacia/internal/queries/models";
+export type { QueryHistoryItem } from "../../../bindings/datacia/internal/db/models";
 
 // Re-export all functions from remote engine
 export {
@@ -36,7 +36,7 @@ export {
   // Additional functions
   GetStore,
   SetApplication,
-} from "../../bindings/datacia/pkg/remote/engine";
+} from "../../../bindings/datacia/pkg/remote/engine";
 
 // Query service functions
 export {
@@ -48,4 +48,4 @@ export {
   ReadFile,
   WriteFile,
   Move,
-} from "../../bindings/datacia/internal/queries/queriesservice";
+} from "../../../bindings/datacia/internal/queries/queriesservice";

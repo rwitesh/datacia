@@ -1,5 +1,5 @@
 import { useAppContext } from "@/modules/Context/App/Index";
-import { useSwitchConnectionMutation } from "@/services/hooks";
+import { useSwitchConnectionMutation } from "@/services/connections";
 import { type DatabaseEngine } from "@/modules/utils/engines";
 import { toast } from "sonner";
 

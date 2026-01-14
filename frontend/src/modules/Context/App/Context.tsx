@@ -1,6 +1,6 @@
 import { createContext } from "react";
 import { SQLDialect } from "@codemirror/lang-sql";
-import type { LicenseStatus } from "@/services/license";
+import type { LicenseStatus } from "@/services/bindings/license";
 
 export type AppContextType = {
   reload: () => void;

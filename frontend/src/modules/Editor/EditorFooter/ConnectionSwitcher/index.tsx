@@ -1,4 +1,4 @@
-import { useFetchConnections, useCurrentConnection } from "@/services/hooks";
+import { useFetchConnections, useCurrentConnection } from "@/services/connections";
 import { useSwitchConnection } from "./useSwitchConnection";
 import { type DatabaseEngine } from "@/modules/utils/engines";
 import { DatabaseIcon } from "@/modules/utils/DatabaseIcon";

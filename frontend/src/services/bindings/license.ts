@@ -2,12 +2,12 @@ import {
   Activate as WActivate,
   Deactivate as WDeactivate,
   GetStatus as WGetStatus,
-} from "../../bindings/datacia/internal/license/licenseservice";
+} from "../../../bindings/datacia/internal/license/licenseservice";
 import type {
   ActivateResponse,
   DeactivateResponse,
   ValidateResponse,
-} from "../../bindings/datacia/internal/license/models";
+} from "../../../bindings/datacia/internal/license/models";
 
 export type { ActivateResponse, DeactivateResponse, ValidateResponse };
 

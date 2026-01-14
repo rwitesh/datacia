@@ -1,5 +1,5 @@
 import { createContext } from "react";
-import type { QueryResult } from "@/services/database";
+import type { QueryResult } from "@/services/bindings/database";
 
 export interface Tab {
   id: string;

@@ -8,9 +8,9 @@ import {
   MenubarRadioGroup,
   MenubarRadioItem,
 } from "@/components/ui/menubar";
-import { ChangeDatabaseByName } from "@/services/common";
+import { ChangeDatabaseByName } from "@/services/bindings/connection";
 import { Database } from "lucide-react";
-import { useDatabase } from "@/services/hooks";
+import { useDatabase } from "@/services/database";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 

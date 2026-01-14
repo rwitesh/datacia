@@ -1,8 +1,8 @@
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { useEditorContext } from "@/modules/Context/Editor/Index";
-import { useGetQueryHistory } from "@/services/hooks";
+import { useGetQueryHistory } from "@/services/database";
 import { timeAgo } from "../utils";
-import type { QueryHistoryItem } from "@/services/database";
+import type { QueryHistoryItem } from "@/services/bindings/database";
 
 export function HistoryTab() {
   const { createTab, updateTab, activeTab } = useEditorContext();

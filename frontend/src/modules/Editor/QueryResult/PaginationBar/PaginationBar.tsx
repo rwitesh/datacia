@@ -2,8 +2,8 @@
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { useEditorContext } from "@/modules/Context/Editor/Index";
-import { useGetTableData } from "@/services/hooks";
-import type { QueryResult } from "@/services/database";
+import { useGetTableData } from "@/services/database";
+import type { QueryResult } from "@/services/bindings/database";
 
 export function PaginationBar() {
     const { activeTab, updateTab } = useEditorContext();

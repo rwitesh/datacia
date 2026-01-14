@@ -9,7 +9,7 @@ import {
   UpdateConnection,
   SelectSSHKeyFile,
   SelectSQLiteFile,
-} from "@/services/common";
+} from "@/services/bindings/connection";
 import { DEFAULT_PORTS } from "../utils/constants";
 import type { DatabaseEngine, FormValues, Status } from "../utils/types";
 import {

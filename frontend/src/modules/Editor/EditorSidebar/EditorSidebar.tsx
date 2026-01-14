@@ -5,7 +5,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { useGetQueryHistory } from "@/services/hooks";
+import { useGetQueryHistory } from "@/services/database";
 import { QueriesTab } from "./Tabs/QueriesTab";
 import { TablesTab } from "./Tabs/TablesTab";
 import { HistoryTab } from "./Tabs/HistoryTab";

@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { useTables, useCancelQuery, useRunQuery } from "@/services/hooks";
+import { useTables, useCancelQuery, useRunQuery } from "@/services/database";
 import { v4 as uuidv4 } from "uuid";
 import { EditorContext, type Tab } from "./Context";
 

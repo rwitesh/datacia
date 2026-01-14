@@ -1,4 +1,4 @@
-import { useCheckForUpdates, useUpdateApp } from "@/services/hooks";
+import { useCheckForUpdates, useUpdateApp } from "@/services/updates";
 import { Download, AlertCircle, Loader2, CheckCircle2 } from "lucide-react";
 import { ConnectionHealthIndicator } from "./ConnectionHealth";
 import { ConnectionSwitcher } from "./ConnectionSwitcher";

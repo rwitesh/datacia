@@ -1,5 +1,5 @@
 import { useLocation } from "react-router";
-import { useConnectionHealth } from "@/services/hooks";
+import { useConnectionHealth } from "@/services/connections";
 import { Circle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { RTT_RANGES, STATUS_COLORS, STATUS_NAMES, type ConnectionStatus } from "./constants";

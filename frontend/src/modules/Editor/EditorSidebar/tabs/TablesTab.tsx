@@ -6,7 +6,7 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { useEditorContext } from "@/modules/Context/Editor/Index";
-import { useGetTableData, useGetTableSchema } from "@/services/hooks";
+import { useGetTableData, useGetTableSchema } from "@/services/database";
 
 export function TablesTab() {
   const {

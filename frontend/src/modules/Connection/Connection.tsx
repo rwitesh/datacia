@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { type FieldError } from "react-hook-form";
-import { useFetchConnectionById } from "@/services/hooks";
+import { useFetchConnectionById } from "@/services/connections";
 import { useConnectionParams } from "./hooks/useConnectionParams";
 import { useConnectionForm } from "./hooks/useConnectionForm";
 import { ConnectionAlert } from "./components/ConnectionAlert";

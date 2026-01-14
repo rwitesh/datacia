@@ -17,7 +17,7 @@ import {
   useLicenseStatus,
   useActivateLicense,
   useDeactivateLicense,
-} from "@/services/hooks";
+} from "@/services/license";
 import { CheckCircle2, XCircle, Loader2, Key, Shield, AlertCircle, Calendar, User, Mail, Crown } from "lucide-react";
 
 interface LicenseDialogProps {

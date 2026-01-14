@@ -11,7 +11,7 @@ import {
   SelectSSHKeyFile as WSelectSSHKeyFile,
   SelectSQLiteFile as WSelectSQLiteFile,
   CheckConnectionHealth as WCheckConnectionHealth
-} from "./bindings";
+} from "./index";
 
 
 export const CreateNewConnection = (engine: DatabaseEngine, host: string, port: string, username: string, password: string, database: string, useSSH: string = "", sshHost: string = "", sshPort: string = "", sshUsername: string = "", sshPassword: string = "", sshKeyPath: string = "") => {

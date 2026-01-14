@@ -3,9 +3,9 @@ import {
   GetTableData as WGetTableData,
   GetTableSchema as WGetTableSchema,
   GetQueryHistory as WGetQueryHistory,
-} from "./bindings";
-import type { QueryResult, QueryHistoryItem } from "./bindings";
-import { detectQueryType } from "./utils.js";
+} from "./index";
+import type { QueryResult, QueryHistoryItem } from "./index";
+import { detectQueryType } from "./utils";
 export type { QueryResult, QueryHistoryItem };
 import { v4 as uuidv4 } from "uuid";
 
@@ -35,4 +35,3 @@ export async function GetTableSchema(table: string): Promise<QueryResult> {
 export async function GetQueryHistory(limit: number) {
   return WGetQueryHistory(limit);
 }
-

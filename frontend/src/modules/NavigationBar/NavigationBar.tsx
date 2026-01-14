@@ -5,7 +5,7 @@ import { useAppContext } from "../Context/App/Index";
 import { DatabaseMenuBar } from "./DatabaseMenubar";
 import { RotateCw, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { CloseCurrentConnection } from "@/services/common";
+import { CloseCurrentConnection } from "@/services/bindings/connection";
 
 export function NavigationBar() {
   const location = useLocation();

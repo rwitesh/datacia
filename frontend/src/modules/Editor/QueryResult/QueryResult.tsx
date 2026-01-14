@@ -1,11 +1,11 @@
 // QueryResult.tsx
 import { useEditorContext } from "@/modules/Context/Editor/Index";
-import { useGetTableData } from "@/services/hooks";
+import { useGetTableData } from "@/services/database";
 import { DataTable } from "./DataTable/DataTable";
 import { PaginationBar } from "./PaginationBar/PaginationBar";
 import { QueryInfoBar } from "./QueryInfoBar/QueryInfoBar";
 import { ErrorView } from "./ErrorView/ErrorView";
-import type { QueryResult as QueryResultType } from "@/services/database";
+import type { QueryResult as QueryResultType } from "@/services/bindings/database";
 
 type QueryResultProps = {
   onSelectionChange: (selected: Array<Record<string, unknown>>) => void;

@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useNavigate, Outlet, useLocation } from "react-router";
-import { DeleteConnection } from "@/services/common";
-import { useFetchConnections } from "@/services/hooks";
+import { DeleteConnection } from "@/services/bindings/connection";
+import { useFetchConnections } from "@/services/connections";
 import { useConnectDatabase } from "@/modules/Connection/hooks/useConnectDatabase";
 import { ConnectionList } from "./ConnectionList/ConnectionList";
 

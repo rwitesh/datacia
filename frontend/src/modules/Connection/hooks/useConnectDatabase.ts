@@ -3,7 +3,7 @@ import { useNavigate } from "react-router";
 import {
   CreateNewConnection as Connect,
   EstablishConnection,
-} from "@/services/common";
+} from "@/services/bindings/connection";
 import type { FormValues, Status } from "../utils/types";
 
 type ConnectByIdArgs = { id: string; name: string; engine: string };

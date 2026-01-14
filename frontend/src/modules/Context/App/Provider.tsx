@@ -2,7 +2,8 @@ import React, { useCallback, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AppContext } from "./Context";
 import { chooseDialect } from "@/modules/Editor/QueryInput/utils/dialect";
-import { useCurrentConnection, useLicenseStatus } from "@/services/hooks";
+import { useCurrentConnection } from "@/services/connections";
+import { useLicenseStatus } from "@/services/license";
 
 export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const queryClient = useQueryClient();
