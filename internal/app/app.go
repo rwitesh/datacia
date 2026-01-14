@@ -107,6 +107,11 @@ func (a *App) Initialize() error {
 	licenseService := license.NewLicenseService(a.instance)
 	a.instance.RegisterService(application.NewService(licenseService))
 
+	// Validate license on startup (non-blocking)
+	if err := licenseService.ValidateOnStart(); err != nil {
+		logger.Logger.Warn("Failed to start license validation", zap.Error(err))
+	}
+
 	// Saving files // exporting data
 	fileService := files.NewFileService(a.instance)
 	a.instance.RegisterService(application.NewService(fileService))

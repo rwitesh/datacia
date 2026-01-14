@@ -17,9 +17,8 @@ import {
   useLicenseStatus,
   useActivateLicense,
   useDeactivateLicense,
-  useValidateLicense,
 } from "@/services/hooks";
-import { CheckCircle2, XCircle, Loader2, Key, Shield } from "lucide-react";
+import { CheckCircle2, XCircle, Loader2, Key, Shield, AlertCircle, Calendar } from "lucide-react";
 
 interface LicenseDialogProps {
   children?: React.ReactNode;
@@ -46,10 +45,11 @@ export function LicenseDialog({
   const { data: status, isLoading: isLoadingStatus } = useLicenseStatus();
   const activateMutation = useActivateLicense();
   const deactivateMutation = useDeactivateLicense();
-  const validateMutation = useValidateLicense();
 
-  const hasLicense = status?.has_license ?? false;
-  const machineMatch = status?.machine_match ?? false;
+  const isValid = status?.valid ?? false;
+  const maskedKey = status?.license_key;
+  const expiresAt = status?.expires_at;
+  const hasLicense = isValid || !!maskedKey; // Show license UI if we have a key or valid status
 
   useEffect(() => {
     if (!isOpen) {
@@ -122,38 +122,24 @@ export function LicenseDialog({
     }
   };
 
-  const handleValidate = async () => {
-    setMessage(null);
-    try {
-      const result = await validateMutation.mutateAsync();
-      if (result.valid) {
-        setMessage({
-          variant: "success",
-          title: "License valid",
-          description: result.message || "Your license is valid.",
-        });
-      } else {
-        setMessage({
-          variant: "destructive",
-          title: "License invalid",
-          description: result.error || result.message || "License validation failed.",
-        });
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to validate license";
-      setMessage({
-        variant: "destructive",
-        title: "Validation failed",
-        description: message,
-      });
-    }
-  };
-
   const isLoading =
     isLoadingStatus ||
     activateMutation.isPending ||
-    deactivateMutation.isPending ||
-    validateMutation.isPending;
+    deactivateMutation.isPending;
+
+  const formatExpiryDate = (dateString?: string) => {
+    if (!dateString) return null;
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString(undefined, { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+    } catch {
+      return null;
+    }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -192,13 +178,28 @@ export function LicenseDialog({
                 <div className="flex items-center gap-2 rounded-md border p-3">
                   {hasLicense ? (
                     <>
-                      <CheckCircle2 className="h-5 w-5 text-green-500" />
+                      {isValid ? (
+                        <CheckCircle2 className="h-5 w-5 text-green-500" />
+                      ) : (
+                        <AlertCircle className="h-5 w-5 text-amber-500" />
+                      )}
                       <div className="flex-1">
-                        <div className="font-medium text-sm">License Active</div>
-                        <div className="text-xs text-muted-foreground">
-                          <span>
-                            {machineMatch ? "Machine ID matches" : "Machine ID mismatch"}
-                          </span>
+                        <div className="font-medium text-sm">
+                          {isValid ? "License Active" : "License Invalid"}
+                        </div>
+                        <div className="text-xs text-muted-foreground space-y-1">
+                          {maskedKey && (
+                            <div className="font-mono flex items-center gap-1">
+                              <Key className="h-3 w-3" />
+                              {maskedKey}
+                            </div>
+                          )}
+                          {expiresAt && (
+                            <div className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              Expires: {formatExpiryDate(expiresAt)}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </>
@@ -238,7 +239,7 @@ export function LicenseDialog({
               <Button
                 type="submit"
                 disabled={isLoading || !licenseKey.trim()}
-                className="w-full"
+                className="w-full cursor-pointer"
               >
                 {activateMutation.isPending ? (
                   <>
@@ -254,38 +255,21 @@ export function LicenseDialog({
 
           {/* License Actions */}
           {hasLicense && (
-            <div className="space-y-2">
-              <Button
-                onClick={handleValidate}
-                disabled={isLoading}
-                variant="outline"
-                className="w-full"
-              >
-                {validateMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Validating...
-                  </>
-                ) : (
-                  "Validate License"
-                )}
-              </Button>
-              <Button
-                onClick={handleDeactivate}
-                disabled={isLoading}
-                variant="destructive"
-                className="w-full"
-              >
-                {deactivateMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Deactivating...
-                  </>
-                ) : (
-                  "Deactivate License"
-                )}
-              </Button>
-            </div>
+            <Button
+              onClick={handleDeactivate}
+              disabled={isLoading}
+              variant="destructive"
+              className="w-full cursor-pointer"
+            >
+              {deactivateMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deactivating...
+                </>
+              ) : (
+                "Deactivate License"
+              )}
+            </Button>
           )}
         </div>
 

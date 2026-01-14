@@ -22,6 +22,12 @@ type LicenseService struct {
 	app *application.App
 }
 
+// cached validation status for use in GetStatus
+var (
+	lastValidationResult ValidateResponse
+	hasValidationResult  bool
+)
+
 // NewLicenseService creates a new license service instance
 func NewLicenseService(app *application.App) *LicenseService {
 	return &LicenseService{app: app}
@@ -100,7 +106,9 @@ func (s *LicenseService) Activate(licenseKey string) ActivateResponse {
 	}
 
 	var response struct {
-		ID string `json:"id"`
+		ID        string `json:"id"`
+		CreatedAt string `json:"created_at"`
+		ExpiresAt string `json:"expires_at"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		logger.Logger.Error("Failed to decode response", zap.Error(err))
@@ -128,10 +136,21 @@ func (s *LicenseService) Activate(licenseKey string) ActivateResponse {
 		}
 	}
 
+	// Parse timestamps
+	var createdAt, expiresAt time.Time
+	if response.CreatedAt != "" {
+		createdAt, _ = time.Parse(time.RFC3339, response.CreatedAt)
+	}
+	if response.ExpiresAt != "" {
+		expiresAt, _ = time.Parse(time.RFC3339, response.ExpiresAt)
+	}
+
 	lic := &License{
 		ID:        encryptedID,
 		Key:       encryptedLicenseKey,
 		MachineId: hashedMachineID,
+		CreatedAt: createdAt,
+		ExpiresAt: expiresAt,
 	}
 
 	if err := SaveLicense(lic); err != nil {
@@ -413,19 +432,83 @@ func (s *LicenseService) Validate() ValidateResponse {
 	}
 }
 
-// GetStatus returns the current license status
-func (s *LicenseService) GetStatus() map[string]interface{} {
-	hasLicense := license != nil
-
-	status := map[string]interface{}{
-		"has_license": hasLicense,
+// ValidateOnStart validates the license on app startup (non-blocking).
+// It uses the same Validate API but runs in the background and caches the result.
+func (s *LicenseService) ValidateOnStart() error {
+	if license == nil {
+		// No license to validate
+		hasValidationResult = false
+		return nil
 	}
 
-	if hasLicense {
-		hashedMachineID, err := security.GetHashedMachineID()
-		if err == nil {
-			status["machine_match"] = license.MachineId == hashedMachineID
+	// Validate in background - don't block app startup
+	go func() {
+		result := s.Validate()
+		lastValidationResult = result
+		hasValidationResult = true
+
+		if !result.Valid {
+			logger.Logger.Warn(
+				"License validation failed on startup",
+				zap.String("error", result.Error),
+				zap.String("message", result.Message),
+			)
+		} else {
+			logger.Logger.Info("License validated successfully on startup")
 		}
+	}()
+
+	return nil
+}
+
+// maskLicenseKey masks a license key showing only first 4 and last 4 characters.
+func maskLicenseKey(key string) string {
+	if len(key) <= 8 {
+		return "xxxx-xxxx"
+	}
+
+	first := key[:4]
+	last := key[len(key)-4:]
+	return fmt.Sprintf("%s-xxxx-xxxx-%s", first, last)
+}
+
+// GetStatus returns the current license status with only essential information:
+// expires_at, license_key (masked), and valid (true/false).
+func (s *LicenseService) GetStatus() map[string]interface{} {
+	status := map[string]interface{}{
+		"valid": false,
+	}
+
+	// If no license exists, return valid: false
+	if license == nil {
+		return status
+	}
+
+	// Check if license key exists and can be decrypted
+	if license.Key == "" {
+		return status
+	}
+
+	key, err := security.DecryptString(license.Key)
+	if err != nil || key == "" {
+		return status
+	}
+	status["license_key"] = maskLicenseKey(key)
+
+	// Check machine ID match
+	hashedMachineID, err := security.GetHashedMachineID()
+	if err != nil || license.MachineId != hashedMachineID {
+		return status
+	}
+
+	// Use cached validation result if available, otherwise valid remains false
+	if hasValidationResult {
+		status["valid"] = lastValidationResult.Valid
+	}
+
+	// Add expiry date if available
+	if !license.ExpiresAt.IsZero() {
+		status["expires_at"] = license.ExpiresAt.Format(time.RFC3339)
 	}
 
 	return status

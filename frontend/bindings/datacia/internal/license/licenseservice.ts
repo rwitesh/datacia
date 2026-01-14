@@ -33,7 +33,8 @@ export function Deactivate(): $CancellablePromise<$models.DeactivateResponse> {
 }
 
 /**
- * GetStatus returns the current license status
+ * GetStatus returns the current license status with only essential information:
+ * expires_at, license_key (masked), and valid (true/false).
  */
 export function GetStatus(): $CancellablePromise<{ [_: string]: any }> {
     return $Call.ByID(408498648).then(($result: any) => {
@@ -48,6 +49,14 @@ export function Validate(): $CancellablePromise<$models.ValidateResponse> {
     return $Call.ByID(3725401140).then(($result: any) => {
         return $$createType3($result);
     });
+}
+
+/**
+ * ValidateOnStart validates the license on app startup (non-blocking).
+ * It uses the same Validate API but runs in the background and caches the result.
+ */
+export function ValidateOnStart(): $CancellablePromise<void> {
+    return $Call.ByID(1025287207);
 }
 
 // Private type creation functions

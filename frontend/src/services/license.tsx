@@ -13,8 +13,9 @@ import type {
 export type { ActivateResponse, DeactivateResponse, ValidateResponse };
 
 export interface LicenseStatus {
-  has_license: boolean;
-  machine_match?: boolean;
+  valid: boolean;
+  license_key?: string;
+  expires_at?: string;
 }
 
 export async function ActivateLicense(
@@ -31,7 +32,7 @@ export async function DeactivateLicense(): Promise<DeactivateResponse> {
 }
 
 export async function GetLicenseStatus(): Promise<LicenseStatus> {
-  return WGetStatus() as Promise<LicenseStatus>;
+  return WGetStatus() as unknown as Promise<LicenseStatus>;
 }
 
 export async function ValidateLicense(): Promise<ValidateResponse> {
