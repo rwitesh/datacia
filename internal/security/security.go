@@ -78,7 +78,7 @@ func Decrypt(masterKey, ciphertext []byte) ([]byte, error) {
 // EncryptString encrypts a plaintext string using machine-bound encryption and returns
 // the result as a base64-encoded string.
 func EncryptString(plaintext string) (string, error) {
-	key, err := DeriveMachineKey()
+	key, err := DeriveHardwareEncryptionKey()
 	if err != nil {
 		return "", fmt.Errorf("failed to derive encryption key: %w", err)
 	}
@@ -97,7 +97,7 @@ func EncryptString(plaintext string) (string, error) {
 // DecryptString decrypts a base64-encoded ciphertext string using machine-bound encryption
 // and returns the plaintext string.
 func DecryptString(ciphertext string) (string, error) {
-	key, err := DeriveMachineKey()
+	key, err := DeriveHardwareEncryptionKey()
 	if err != nil {
 		return "", fmt.Errorf("failed to derive encryption key: %w", err)
 	}
@@ -118,7 +118,7 @@ func DecryptString(ciphertext string) (string, error) {
 	return string(plaintext), nil
 }
 
-// GetMachineID retrieves a unique machine identifier.
+// GetMachineID retrieves a unique machine identifier hash.
 func GetMachineID() (string, error) {
 	id, err := deviceid.Get()
 	if err != nil {
@@ -130,10 +130,10 @@ func GetMachineID() (string, error) {
 	return id, nil
 }
 
-// DeriveMachineKey derives a 32-byte AES-256 key from the machine's hardware ID
+// DeriveHardwareEncryptionKey derives a 32-byte AES-256 key from the machine's hardware ID
 // using PBKDF2. The key is deterministically derived each time, making it
 // machine-bound. Data encrypted on one machine cannot be decrypted on another.
-func DeriveMachineKey() ([]byte, error) {
+func DeriveHardwareEncryptionKey() ([]byte, error) {
 	machineID, err := GetMachineID()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get machine ID for key derivation: %w", err)

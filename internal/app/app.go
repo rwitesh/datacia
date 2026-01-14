@@ -5,6 +5,7 @@ import (
 	"datacia/internal/constants"
 	"datacia/internal/db"
 	"datacia/internal/files"
+	"datacia/internal/license"
 	"datacia/internal/logger"
 	"datacia/internal/queries"
 	"datacia/pkg/remote"
@@ -77,6 +78,12 @@ func (a *App) Initialize() error {
 		return errors.New("release url cannot be empty")
 	}
 
+	// Load license from local storage if it exists
+	if err := license.LoadLicense(); err != nil {
+		logger.Logger.Warn("Failed to load license", zap.Error(err))
+		// Continue even if license loading fails - it might not exist or be corrupted
+	}
+
 	engine, err := remote.New(a, version, releaseURL)
 	if err != nil {
 		logger.Logger.Error("Failed to create remote engine", zap.Error(err), zap.String("version", version))
@@ -84,15 +91,20 @@ func (a *App) Initialize() error {
 	}
 
 	a.engine = engine
+
+	// Services that should be exposed to UI
 	engine.SetApplication(a.instance)
 	a.instance.RegisterService(application.NewService(engine))
 
+	// Saving files // exporting data
 	fileService := files.NewFileService(a.instance)
 	a.instance.RegisterService(application.NewService(fileService))
 
+	// Copying to clipboard
 	clipboardService := clipboard.NewClipboardService(a.instance)
 	a.instance.RegisterService(application.NewService(clipboardService))
 
+	// Storing, writing, reading, etc. queries
 	queriesService := queries.NewQueriesService(a.instance)
 	a.instance.RegisterService(application.NewService(queriesService))
 

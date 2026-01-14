@@ -1,7 +1,7 @@
 import { useCheckForUpdates, useUpdateApp } from "@/services/hooks";
 import { Download, AlertCircle, Loader2, CheckCircle2 } from "lucide-react";
 import { ConnectionHealthIndicator } from "./ConnectionHealth";
-import { ConnectionSwitcher } from "./ConnectionSwitcher/ConnectionSwitcher";
+import { ConnectionSwitcher } from "./ConnectionSwitcher";
 
 export const EditorFooter = () => {
   const { data, error, isLoading } = useCheckForUpdates();

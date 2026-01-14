@@ -35,7 +35,7 @@ type Engine struct {
 }
 
 func New(uiController UIController, version, releaseURL string) (*Engine, error) {
-	encryptionKey, err := security.DeriveMachineKey()
+	encryptionKey, err := security.DeriveHardwareEncryptionKey()
 	if err != nil {
 		return nil, fmt.Errorf("failed to derive encryption key: %w", err)
 	}

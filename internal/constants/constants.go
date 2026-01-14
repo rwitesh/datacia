@@ -14,3 +14,7 @@ const (
 	// This should be a random 32-byte string
 	AppSalt = "DataCiaAppSalt2026!SecureRandomBytes32"
 )
+
+const (
+	LICENSE_SERVER_URL = "http://localhost:8787"
+)
