@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -27,6 +27,8 @@ interface DataTableProps {
   onServerSort?: (column: string, direction: "asc" | "desc") => void;
   isLoading?: boolean;
   onOpenDataView?: () => void;
+  scrollPosition?: { left: number; top: number };
+  onScrollChange?: (scroll: { left: number; top: number }) => void;
 }
 
 export function DataTable({
@@ -40,6 +42,8 @@ export function DataTable({
   onServerSort,
   isLoading = false,
   onOpenDataView,
+  scrollPosition,
+  onScrollChange,
 }: DataTableProps) {
   const [columnSizing, setColumnSizing] = useState<Record<string, number>>({});
   // Only use client-side sorting when not in table-view mode
@@ -47,6 +51,44 @@ export function DataTable({
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Restore scroll position when scrollPosition prop changes
+  useEffect(() => {
+    if (scrollRef.current && scrollPosition) {
+      scrollRef.current.scrollLeft = scrollPosition.left;
+      scrollRef.current.scrollTop = scrollPosition.top;
+    }
+  }, [scrollPosition]);
+
+  // Save scroll position when user scrolls (throttled with RAF for performance)
+  useEffect(() => {
+    const scrollElement = scrollRef.current;
+    if (!scrollElement || !onScrollChange) return;
+
+    let rafId: number | null = null;
+    let isScheduled = false;
+
+    const handleScroll = () => {
+      if (isScheduled) return;
+      
+      isScheduled = true;
+      rafId = requestAnimationFrame(() => {
+        onScrollChange({
+          left: scrollElement.scrollLeft,
+          top: scrollElement.scrollTop,
+        });
+        isScheduled = false;
+      });
+    };
+
+    scrollElement.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
+      scrollElement.removeEventListener("scroll", handleScroll);
+    };
+  }, [onScrollChange]);
 
   // Custom hooks
   const { containerWidth, containerHeight } = useTableDimensions(containerRef);

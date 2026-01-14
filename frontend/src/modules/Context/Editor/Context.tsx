@@ -17,6 +17,7 @@ export interface Tab {
   orderBy?: string;
   orderDir?: "asc" | "desc";
   savedPath?: string;
+  scroll?: { left: number; top: number };
 }
 
 export type EditorContextType = {

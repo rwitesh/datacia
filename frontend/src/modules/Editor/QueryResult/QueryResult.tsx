@@ -65,6 +65,10 @@ export function QueryResult({ onSelectionChange, onOpenDataView }: QueryResultPr
     );
   };
 
+  const handleScrollChange = (scroll: { left: number; top: number }) => {
+    updateTab(id, { scroll });
+  };
+
   // Show DataTable if we have results, even while loading new sorted data
   const showDataTable = isReadQuery || (isExecuting && results?.type === "read");
 
@@ -84,6 +88,8 @@ export function QueryResult({ onSelectionChange, onOpenDataView }: QueryResultPr
             onServerSort={isTableViewMode ? handleServerSort : undefined}
             isLoading={isExecuting}
             onOpenDataView={onOpenDataView}
+            scrollPosition={activeTab.scroll}
+            onScrollChange={handleScrollChange}
           />
         ) : isExecuting ? (
           <div className="flex justify-center items-center h-full">
