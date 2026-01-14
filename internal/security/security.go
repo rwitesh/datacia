@@ -78,10 +78,24 @@ func Decrypt(masterKey, ciphertext []byte) ([]byte, error) {
 // EncryptString encrypts a plaintext string using machine-bound encryption and returns
 // the result as a base64-encoded string.
 func EncryptString(plaintext string) (string, error) {
-	key, err := DeriveHardwareEncryptionKey()
+	ctx, err := GetSecurityContext()
 	if err != nil {
-		return "", fmt.Errorf("failed to derive encryption key: %w", err)
+		// Fall back to deriving key on-the-fly if context not initialized
+		key, err := DeriveHardwareEncryptionKey()
+		if err != nil {
+			return "", fmt.Errorf("failed to derive encryption key: %w", err)
+		}
+		defer Wipe(key)
+
+		plaintextBytes := []byte(plaintext)
+		ciphertext, err := Encrypt(key, plaintextBytes)
+		if err != nil {
+			return "", fmt.Errorf("failed to encrypt data: %w", err)
+		}
+		return base64.StdEncoding.EncodeToString(ciphertext), nil
 	}
+
+	key := ctx.GetEncryptionKey()
 	defer Wipe(key)
 
 	plaintextBytes := []byte(plaintext)
@@ -97,10 +111,29 @@ func EncryptString(plaintext string) (string, error) {
 // DecryptString decrypts a base64-encoded ciphertext string using machine-bound encryption
 // and returns the plaintext string.
 func DecryptString(ciphertext string) (string, error) {
-	key, err := DeriveHardwareEncryptionKey()
+	ctx, err := GetSecurityContext()
 	if err != nil {
-		return "", fmt.Errorf("failed to derive encryption key: %w", err)
+		// Fall back to deriving key on-the-fly if context not initialized
+		key, err := DeriveHardwareEncryptionKey()
+		if err != nil {
+			return "", fmt.Errorf("failed to derive encryption key: %w", err)
+		}
+		defer Wipe(key)
+
+		ciphertextBytes, err := base64.StdEncoding.DecodeString(ciphertext)
+		if err != nil {
+			return "", fmt.Errorf("failed to decode base64 ciphertext: %w", err)
+		}
+
+		plaintext, err := Decrypt(key, ciphertextBytes)
+		if err != nil {
+			return "", fmt.Errorf("failed to decrypt data: %w", err)
+		}
+		defer Wipe(plaintext)
+		return string(plaintext), nil
 	}
+
+	key := ctx.GetEncryptionKey()
 	defer Wipe(key)
 
 	// Decode base64
@@ -118,8 +151,16 @@ func DecryptString(ciphertext string) (string, error) {
 	return string(plaintext), nil
 }
 
-// GetMachineID retrieves a unique machine identifier hash.
+// GetMachineID retrieves a unique machine identifier.
+// If SecurityContext is initialized, it returns the cached value.
+// Otherwise, it fetches it directly from the device.
 func GetMachineID() (string, error) {
+	ctx, err := GetSecurityContext()
+	if err == nil {
+		return ctx.GetMachineID(), nil
+	}
+	
+	// Fall back to direct retrieval if context not initialized
 	id, err := deviceid.Get()
 	if err != nil {
 		return "", fmt.Errorf("failed to retrieve machine ID: %w. This may be due to insufficient permissions or unsupported platform", err)
@@ -128,6 +169,23 @@ func GetMachineID() (string, error) {
 		return "", fmt.Errorf("machine ID is empty - hardware identification unavailable")
 	}
 	return id, nil
+}
+
+// GetHashedMachineID retrieves the SHA-256 hash of the machine ID.
+// If SecurityContext is initialized, it returns the cached value.
+// Otherwise, it computes it on-the-fly.
+func GetHashedMachineID() (string, error) {
+	ctx, err := GetSecurityContext()
+	if err == nil {
+		return ctx.GetHashedMachineID(), nil
+	}
+	
+	// Fall back to computing on-the-fly if context not initialized
+	id, err := GetMachineID()
+	if err != nil {
+		return "", err
+	}
+	return Sha256Hex(id), nil
 }
 
 // DeriveHardwareEncryptionKey derives a 32-byte AES-256 key from the machine's hardware ID

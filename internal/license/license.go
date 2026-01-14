@@ -6,6 +6,4 @@ type License struct {
 	MachineId string
 }
 
-// cachedLicense holds the loaded license in memory
-// It's loaded once at startup and then used read-only
 var license *License

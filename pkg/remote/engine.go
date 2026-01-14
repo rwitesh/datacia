@@ -35,10 +35,13 @@ type Engine struct {
 }
 
 func New(uiController UIController, version, releaseURL string) (*Engine, error) {
-	encryptionKey, err := security.DeriveHardwareEncryptionKey()
+	// Get encryption key from security context (cached at startup)
+	ctx, err := security.GetSecurityContext()
 	if err != nil {
-		return nil, fmt.Errorf("failed to derive encryption key: %w", err)
+		return nil, fmt.Errorf("failed to get security context: %w", err)
 	}
+	
+	encryptionKey := ctx.GetEncryptionKey()
 	store, err := db.Open(encryptionKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize database: %w", err)

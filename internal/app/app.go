@@ -8,6 +8,7 @@ import (
 	"datacia/internal/license"
 	"datacia/internal/logger"
 	"datacia/internal/queries"
+	"datacia/internal/security"
 	"datacia/pkg/remote"
 	"embed"
 	"errors"
@@ -78,6 +79,12 @@ func (a *App) Initialize() error {
 		return errors.New("release url cannot be empty")
 	}
 
+	// Initialize security context once at startup
+	if err := security.InitSecurityContext(); err != nil {
+		logger.Logger.Error("Failed to initialize security context", zap.Error(err))
+		return fmt.Errorf("failed to initialize security context: %w", err)
+	}
+
 	// Load license from local storage if it exists
 	if err := license.LoadLicense(); err != nil {
 		logger.Logger.Warn("Failed to load license", zap.Error(err))
@@ -95,6 +102,10 @@ func (a *App) Initialize() error {
 	// Services that should be exposed to UI
 	engine.SetApplication(a.instance)
 	a.instance.RegisterService(application.NewService(engine))
+
+	// License management
+	licenseService := license.NewLicenseService(a.instance)
+	a.instance.RegisterService(application.NewService(licenseService))
 
 	// Saving files // exporting data
 	fileService := files.NewFileService(a.instance)

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Menubar,
   MenubarMenu,
@@ -10,12 +11,15 @@ import {
   MenubarSubContent,
   MenubarRadioGroup,
   MenubarRadioItem,
+  MenubarItem,
 } from "@/components/ui/menubar";
 import { useTheme, type Theme } from "@/components/theme/theme-provider";
-import { Bolt } from "lucide-react";
+import { Bolt, Key } from "lucide-react";
+import { LicenseDialog } from "@/modules/License/LicenseDialog";
 
 export function MenuBar() {
   const { theme, setTheme } = useTheme();
+  const [isLicenseDialogOpen, setIsLicenseDialogOpen] = useState(false);
 
   return (
     <Menubar className="border-none bg-transparent">
@@ -59,8 +63,22 @@ export function MenuBar() {
               </MenubarRadioGroup>
             </MenubarSubContent>
           </MenubarSub>
+
+          <MenubarSeparator />
+
+          <MenubarItem
+            className="cursor-pointer text-xs flex items-center gap-2"
+            onSelect={(e) => {
+              e.preventDefault();
+              setIsLicenseDialogOpen(true);
+            }}
+          >
+            <Key className="h-3.5 w-3.5" />
+            License
+          </MenubarItem>
         </MenubarContent>
       </MenubarMenu>
+      <LicenseDialog open={isLicenseDialogOpen} onOpenChange={setIsLicenseDialogOpen} />
     </Menubar>
   );
 }
