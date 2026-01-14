@@ -22,38 +22,26 @@ export function TableContextMenu({
   selectedData = [],
   onOpenDataView,
 }: TableContextMenuProps) {
-  const isMultiSelect = selectedData.length > 1;
+  const dataToUse = selectedData.length > 0 ? selectedData : [row];
 
   const handleCopyText = async () => {
-    if (isMultiSelect) {
-      const text = selectedData
-        .map((d) => Object.values(d).join("\t"))
-        .join("\n");
-      await ClipboardService.SetText(text);
-    } else {
-      const text = Object.values(row).join("\t");
-      await ClipboardService.SetText(text);
-    }
+    const text = dataToUse.map((d) => Object.values(d).join("\t")).join("\n");
+    await ClipboardService.SetText(text);
   };
 
   const handleCopyJSON = async () => {
-    if (isMultiSelect) {
-      await ClipboardService.SetText(JSON.stringify(selectedData, null, 2));
-    } else {
-      await ClipboardService.SetText(JSON.stringify(row, null, 2));
-    }
+    await ClipboardService.SetText(JSON.stringify(dataToUse, null, 2));
   };
 
   const handleExportJSON = async () => {
-    const dataToExport = isMultiSelect ? selectedData : row;
-    const defaultName = isMultiSelect
-      ? `export-${selectedData.length}-rows.json`
+    const defaultName = dataToUse.length > 1
+      ? `export-${dataToUse.length}-rows.json`
       : "row-export.json";
 
     try {
       await FileService.SaveFile(
         defaultName,
-        JSON.stringify(dataToExport, null, 2)
+        JSON.stringify(dataToUse, null, 2)
       );
     } catch (err) {
       console.error("Failed to save JSON", err);
@@ -61,12 +49,11 @@ export function TableContextMenu({
   };
 
   const handleExportCSV = async () => {
-    const dataToExport = isMultiSelect ? selectedData : [row];
-    if (dataToExport.length === 0) return;
+    if (dataToUse.length === 0) return;
 
-    const headers = Object.keys(dataToExport[0]);
+    const headers = Object.keys(dataToUse[0]);
     const headerRow = headers.join(",");
-    const rows = dataToExport.map((d) => {
+    const rows = dataToUse.map((d) => {
       return headers
         .map((h) => {
           const val = d[h];
@@ -81,8 +68,8 @@ export function TableContextMenu({
     });
 
     const csvContent = [headerRow, ...rows].join("\n");
-    const defaultName = isMultiSelect
-      ? `export-${selectedData.length}-rows.csv`
+    const defaultName = dataToUse.length > 1
+      ? `export-${dataToUse.length}-rows.csv`
       : "row-export.csv";
 
     try {

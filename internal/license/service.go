@@ -23,10 +23,7 @@ type LicenseService struct {
 }
 
 // cached validation status for use in GetStatus
-var (
-	lastValidationResult ValidateResponse
-	hasValidationResult  bool
-)
+var lastValidationResult *ValidateResponse
 
 // NewLicenseService creates a new license service instance
 func NewLicenseService(app *application.App) *LicenseService {
@@ -443,24 +440,24 @@ func (s *LicenseService) Validate() ValidateResponse {
 func (s *LicenseService) ValidateOnStart() error {
 	if license == nil {
 		// No license to validate
-		hasValidationResult = false
+		lastValidationResult = nil
 		return nil
 	}
 
 	// Validate in background - don't block app startup
 	go func() {
 		result := s.Validate()
-		lastValidationResult = result
-		hasValidationResult = true
 
-		if !result.Valid {
+		if result.Valid {
+			lastValidationResult = &result
+			logger.Logger.Info("License validated successfully on startup")
+		} else {
+			lastValidationResult = nil
 			logger.Logger.Warn(
 				"License validation failed on startup",
 				zap.String("error", result.Error),
 				zap.String("message", result.Message),
 			)
-		} else {
-			logger.Logger.Info("License validated successfully on startup")
 		}
 	}()
 
@@ -508,7 +505,7 @@ func (s *LicenseService) GetStatus() map[string]interface{} {
 	}
 
 	// Use cached validation result if available, otherwise valid remains false
-	if hasValidationResult {
+	if lastValidationResult != nil {
 		status["valid"] = lastValidationResult.Valid
 	}
 

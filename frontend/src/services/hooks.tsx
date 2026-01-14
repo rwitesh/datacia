@@ -18,7 +18,6 @@ import {
   ActivateLicense,
   DeactivateLicense,
   GetLicenseStatus,
-  ValidateLicense,
   type LicenseStatus,
 } from "./license";
 
@@ -220,10 +219,3 @@ export function useDeactivateLicense() {
   });
 }
 
-export function useValidateLicense() {
-  return useMutation({
-    mutationFn: async () => {
-      return ValidateLicense();
-    },
-  });
-}

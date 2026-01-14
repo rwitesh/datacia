@@ -2,7 +2,6 @@ import {
   Activate as WActivate,
   Deactivate as WDeactivate,
   GetStatus as WGetStatus,
-  Validate as WValidate,
 } from "../../bindings/datacia/internal/license/licenseservice";
 import type {
   ActivateResponse,
@@ -36,8 +35,4 @@ export async function DeactivateLicense(): Promise<DeactivateResponse> {
 
 export async function GetLicenseStatus(): Promise<LicenseStatus> {
   return WGetStatus() as unknown as Promise<LicenseStatus>;
-}
-
-export async function ValidateLicense(): Promise<ValidateResponse> {
-  return WValidate();
 }

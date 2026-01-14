@@ -164,34 +164,44 @@ export function useTableSelection({ columns, data, onSelectionChange }: UseTable
     useEffect(() => {
         const selectedData: Array<Record<string, unknown>> = [];
 
-        selection.ranges.forEach((range) => {
-            const minRow = Math.min(range.start.row, range.end.row);
-            const maxRow = Math.max(range.start.row, range.end.row);
-            const minCol = Math.min(range.start.col, range.end.col);
-            const maxCol = Math.max(range.start.col, range.end.col);
+        // Group selected cells by row
+        const cellsByRow = new Map<number, Set<number>>();
+        
+        selection.selectedCells.forEach((cellKey) => {
+            const [rowStr, colStr] = cellKey.split("-");
+            const row = parseInt(rowStr, 10);
+            const col = parseInt(colStr, 10);
+            
+            if (row >= 0 && row < data.length && col >= 0 && col < columns.length) {
+                if (!cellsByRow.has(row)) {
+                    cellsByRow.set(row, new Set());
+                }
+                cellsByRow.get(row)!.add(col);
+            }
+        });
 
-            for (let row = minRow; row <= maxRow; row++) {
-                if (row >= data.length) continue;
+        // Build selectedData with only selected cells
+        cellsByRow.forEach((selectedCols, row) => {
+            const rowData: Record<string, unknown> = {};
+            let hasData = false;
 
-                const rowData: Record<string, unknown> = {};
-                let hasData = false;
-
-                for (let col = minCol; col <= maxCol; col++) {
-                    if (col >= columns.length) continue;
+            // Only include columns that are actually selected
+            selectedCols.forEach((col) => {
+                if (col >= 0 && col < columns.length) {
                     const columnKey = columns[col];
                     rowData[columnKey] = data[row][columnKey];
                     hasData = true;
                 }
+            });
 
-                if (hasData) {
-                    selectedData.push(rowData);
-                }
+            if (hasData) {
+                selectedData.push(rowData);
             }
         });
 
         setSelectedData(selectedData);
         onSelectionChange(selectedData);
-    }, [selection, data, columns, onSelectionChange]);
+    }, [selection.selectedCells, data, columns, onSelectionChange]);
 
     return {
         selection,

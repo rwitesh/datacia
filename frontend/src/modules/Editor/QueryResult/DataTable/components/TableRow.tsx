@@ -15,9 +15,6 @@ interface TableRowProps {
     selectedCells: Set<string>;
     onCellMouseDown: (rowIndex: number, colIndex: number, event: React.MouseEvent) => void;
     onCellMouseEnter: (rowIndex: number, colIndex: number) => void;
-    // We need selectedData to be passed down if we want full multi-select support in menu
-    // But TableRow currently doesn't receive full data of ALL selections, only keys `selectedCells`
-    // We might need to pass `selectedData` from DataTable
     selectedData?: DataRow[];
     onOpenDataView?: () => void;
 }
@@ -82,7 +79,11 @@ export function TableRow({
     }
 
     return (
-        <TableContextMenu row={row.original} selectedData={selectedData} onOpenDataView={onOpenDataView}>
+        <TableContextMenu 
+            row={row.original} 
+            selectedData={selectedData}
+            onOpenDataView={onOpenDataView}
+        >
             {rowContent}
         </TableContextMenu>
     );
