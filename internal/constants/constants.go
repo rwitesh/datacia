@@ -16,5 +16,5 @@ const (
 )
 
 const (
-	LICENSE_SERVER_URL = "http://localhost:8787/license"
+	LICENSE_SERVER_URL = "http://localhost:3000"
 )

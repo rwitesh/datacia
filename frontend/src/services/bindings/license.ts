@@ -18,6 +18,7 @@ export interface LicenseStatus {
   customer_name?: string;
   customer_email?: string;
   variant_name?: string;
+  error?: string;
 }
 
 export async function ActivateLicense(

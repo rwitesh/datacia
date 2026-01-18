@@ -58,8 +58,15 @@ export function LicenseDialog({
     if (!isOpen) {
       setMessage(null);
       setLicenseKey("");
+    } else if (status?.error) {
+       // If there is a validation error (from backend GetStatus), show it
+       setMessage({
+         variant: "destructive",
+         title: "License Error",
+         description: status.error,
+       });
     }
-  }, [isOpen]);
+  }, [isOpen, status?.error]);
 
   const handleActivate = async (e: React.FormEvent) => {
     e.preventDefault();

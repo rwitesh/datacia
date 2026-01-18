@@ -86,7 +86,7 @@ func (a *App) Initialize() error {
 	}
 
 	// Load license from local storage if it exists
-	if err := license.LoadLicense(); err != nil {
+	if _, err := license.LoadLicense(); err != nil {
 		logger.Logger.Warn("Failed to load license", zap.Error(err))
 		// Continue even if license loading fails - it might not exist or be corrupted
 	}

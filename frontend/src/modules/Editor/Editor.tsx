@@ -155,7 +155,7 @@ export const Editor = () => {
                         {activeTab.mode === "query" && (
                           <>
                             <ResizablePanel
-                              defaultSize={45}
+                              defaultSize={75}
                               minSize={0}
                               className="min-h-0"
                             >

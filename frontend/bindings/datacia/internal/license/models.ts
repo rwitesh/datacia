@@ -5,9 +5,6 @@
 // @ts-ignore: Unused imports
 import { Create as $Create } from "@wailsio/runtime";
 
-/**
- * ActivateResponse represents the response from license activation
- */
 export class ActivateResponse {
     "success": boolean;
     "message": string;
@@ -34,9 +31,6 @@ export class ActivateResponse {
     }
 }
 
-/**
- * DeactivateResponse represents the response from license deactivation
- */
 export class DeactivateResponse {
     "success": boolean;
     "message": string;
@@ -63,9 +57,6 @@ export class DeactivateResponse {
     }
 }
 
-/**
- * ValidateResponse represents the response from license validation
- */
 export class ValidateResponse {
     "valid": boolean;
     "message": string;
