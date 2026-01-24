@@ -14,6 +14,7 @@ import { useTableColumns } from "./hooks/useTableColumns";
 import { useTableSelection } from "./hooks/useTableSelection";
 import { TableHeader } from "./components/TableHeader";
 import { TableRow } from "./components/TableRow";
+import { calculateContentWidths, distributeExtraSpace } from "./utils/columnWidths";
 
 interface DataTableProps {
   columns: string[];
@@ -109,18 +110,19 @@ export function DataTable({
 
   const rows = table.getRowModel().rows;
   const headers = table.getFlatHeaders();
-
-  // Calculate column widths
-  const colWidths = headers.map((h) => Math.max(40, Math.floor(h.getSize())));
   const rowHeight = 24;
 
-  // Ensure last column fills remaining space to prevent gaps
-  let totalWidth = colWidths.reduce((a, b) => a + b, 0);
-  if (containerWidth > totalWidth && colWidths.length > 0) {
-    const extraSpace = containerWidth - totalWidth;
-    colWidths[colWidths.length - 1] += extraSpace;
-    totalWidth = containerWidth;
-  }
+  // Calculate content-based column widths using utility function
+  const colWidths = useMemo(
+    () => calculateContentWidths(headers, data),
+    [headers, data]
+  );
+
+  // Distribute extra space evenly across all columns
+  const { finalColWidths, totalWidth } = useMemo(
+    () => distributeExtraSpace(colWidths, containerWidth),
+    [colWidths, containerWidth]
+  );
 
   // Selection hook - needs rowHeight and colWidths
   const {
@@ -135,12 +137,12 @@ export function DataTable({
     onSelectionChange, 
     scrollRef,
     rowHeight,
-    colWidths,
+    colWidths: finalColWidths,
   });
 
   const gridTemplateColumns = useMemo(
-    () => colWidths.map((w) => `${w}px`).join(" "),
-    [colWidths]
+    () => finalColWidths.map((w) => `${w}px`).join(" "),
+    [finalColWidths]
   );
 
   // Virtualization setup
@@ -191,7 +193,7 @@ export function DataTable({
                       key={header.id}
                       header={header}
                       colIndex={i}
-                      colWidth={colWidths[i]}
+                      colWidth={finalColWidths[i]}
                       onColumnClick={handleColumnHeaderClick}
                       isTableViewMode={isTableViewMode}
                       serverSortColumn={currentOrderBy}
@@ -234,7 +236,7 @@ export function DataTable({
                 virtualItem={vi}
                 row={row}
                 isDataRow={isDataRow}
-                colWidths={colWidths}
+                colWidths={finalColWidths}
                 totalWidth={totalWidth}
                 gridTemplateColumns={gridTemplateColumns}
                 selectedCells={selection.selectedCells}
@@ -264,7 +266,7 @@ export function DataTable({
                     gridTemplateColumns,
                   }}
                 >
-                  {colWidths.map((w, ci) => (
+                  {finalColWidths.map((w, ci) => (
                     <div
                       key={`filler-cell-${ci}`}
                       style={{ width: w }}
