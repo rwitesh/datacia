@@ -108,7 +108,9 @@ export function QueryResult({ onSelectionChange, onOpenDataView }: QueryResultPr
         )}
       </div>
 
-      {activeTab.mode === "table" && <PaginationBar />}
+      {activeTab.mode === "table" && (
+        <PaginationBar data={results?.data ?? []} />
+      )}
       {activeTab.mode === "query" && <QueryInfoBar />}
     </div>
   );

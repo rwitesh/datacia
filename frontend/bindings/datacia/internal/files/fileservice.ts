@@ -6,8 +6,10 @@
 import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
 
 /**
- * SaveFile prompts the user to choose a location and saves the content to that file.
+ * ExportDataToFile exports data to a file with the given format (csv or json)
+ * data: JSON array string of rows
+ * suggestedFilename: default filename suggestion
  */
-export function SaveFile(filename: string, content: string): $CancellablePromise<string> {
-    return $Call.ByID(633018296, filename, content);
+export function ExportDataToFile(format: string, data: string, suggestedFilename: string): $CancellablePromise<string> {
+    return $Call.ByID(1909849774, format, data, suggestedFilename);
 }

@@ -10,7 +10,7 @@ import {
 import { useAppContext } from "@/modules/Context/App/Index";
 import { LicenseDialog } from "@/modules/License/LicenseDialog";
 import { useCopyToClipboard } from "@/services/clipboard";
-import { useSaveFile } from "@/services/files";
+import { useExportData, type ExportFormat } from "@/services/export";
 import type { DataRow } from "../types";
 
 interface TableContextMenuProps {
@@ -31,7 +31,7 @@ export function TableContextMenu({
   const dataToUse = selectedData.length > 0 ? selectedData : [row];
   
   const copyToClipboardMutation = useCopyToClipboard();
-  const saveFileMutation = useSaveFile();
+  const exportDataMutation = useExportData();
 
   const handleCopyText = () => {
     const text = dataToUse.map((d) => Object.values(d).join("\t")).join("\n");
@@ -50,66 +50,23 @@ export function TableContextMenu({
     });
   };
 
-  const handleExportJSON = () => {
-    // if (!isLicenseActive) {
-    //   setIsLicenseDialogOpen(true);
-    //   return;
-    // }
-
-    const defaultName = dataToUse.length > 1
-      ? `export-${dataToUse.length}-rows.json`
-      : "row-export.json";
-
-    saveFileMutation.mutate(
-      {
-        filename: defaultName,
-        content: JSON.stringify(dataToUse, null, 2),
-      },
-      {
-        onError: (err) => {
-          console.error("Failed to save JSON", err);
-        },
-      }
-    );
-  };
-
-  const handleExportCSV = () => {
-    // if (!isLicenseActive) {
-    //   setIsLicenseDialogOpen(true);
-    //   return;
-    // }
-
+  const handleExport = (format: ExportFormat) => {
     if (dataToUse.length === 0) return;
 
-    const headers = Object.keys(dataToUse[0]);
-    const headerRow = headers.join(",");
-    const rows = dataToUse.map((d) => {
-      return headers
-        .map((h) => {
-          const val = d[h];
-          if (val === null || val === undefined) return "";
-          const str = String(val);
-          if (str.includes(",") || str.includes('"') || str.includes("\n")) {
-            return `"${str.replace(/"/g, '""')}"`;
-          }
-          return str;
-        })
-        .join(",");
-    });
+    const rowCount = dataToUse.length;
+    const suggestedFilename = rowCount > 1
+      ? `export-${rowCount}-rows.${format}`
+      : `row-export.${format}`;
 
-    const csvContent = [headerRow, ...rows].join("\n");
-    const defaultName = dataToUse.length > 1
-      ? `export-${dataToUse.length}-rows.csv`
-      : "row-export.csv";
-
-    saveFileMutation.mutate(
+    exportDataMutation.mutate(
       {
-        filename: defaultName,
-        content: csvContent,
+        format,
+        data: dataToUse,
+        suggestedFilename,
       },
       {
         onError: (err) => {
-          console.error("Failed to save CSV", err);
+          console.error(`Failed to export as ${format}:`, err);
         },
       }
     );
@@ -134,7 +91,7 @@ export function TableContextMenu({
             Copy as JSON
           </ContextMenuItem>
           <ContextMenuItem 
-            onSelect={handleExportJSON} 
+            onSelect={() => handleExport("json")} 
             disabled={!isLicenseActive}
             className="gap-2 text-xs justify-between"
           >
@@ -147,7 +104,7 @@ export function TableContextMenu({
             )}
           </ContextMenuItem>
           <ContextMenuItem 
-            onSelect={handleExportCSV} 
+            onSelect={() => handleExport("csv")} 
             disabled={!isLicenseActive}
             className="gap-2 text-xs justify-between"
           >
@@ -168,3 +125,4 @@ export function TableContextMenu({
     </>
   );
 }
+
