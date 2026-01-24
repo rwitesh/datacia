@@ -8,6 +8,6 @@ import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Cr
 /**
  * SetText sets the system clipboard content to the given text.
  */
-export function SetText(text: string): $CancellablePromise<void> {
-    return $Call.ByID(1233582489, text);
+export function SetContent(content: string, contentType: string): $CancellablePromise<void> {
+    return $Call.ByID(1967985899, content, contentType);
 }

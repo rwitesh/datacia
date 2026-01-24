@@ -1,7 +1,6 @@
 // Re-export all bindings from the generated bindings directory
-export { FileService } from "../../../bindings/datacia/internal/files";
-export { ClipboardService } from "../../../bindings/datacia/internal/clipboard";
-export { ConnectionInfo, QueryType } from "../../../bindings/datacia/pkg/common";
+
+export { ConnectionInfo } from "../../../bindings/datacia/pkg/common";
 export type { QueryResult } from "../../../bindings/datacia/pkg/common/models";
 export type { FileNode } from "../../../bindings/datacia/internal/queries/models";
 export type { QueryHistoryItem } from "../../../bindings/datacia/internal/db/models";
@@ -34,8 +33,7 @@ export {
   SelectSQLiteFile,
   CheckConnectionHealth,
   // Additional functions
-  GetStore,
-  SetApplication,
+
 } from "../../../bindings/datacia/pkg/remote/engine";
 
 // Query service functions

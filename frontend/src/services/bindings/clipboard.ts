@@ -1,11 +1,11 @@
-import { SetText as WSetText } from "../../../bindings/datacia/internal/clipboard/clipboardservice";
+import { SetContent as WSetContent } from "../../../bindings/datacia/internal/clipboard/clipboardservice";
 
 /**
  * Copy text to the system clipboard
  */
-export async function CopyToClipboard(text: string): Promise<void> {
-  if (!text?.trim()) {
-    throw new Error("Text cannot be empty");
+export async function CopyToClipboard(content: string, type: string): Promise<void> {
+  if (!content) {
+    throw new Error("Content cannot be empty");
   }
-  return WSetText(text);
+  return WSetContent(content, type);
 }

@@ -1,20 +1,30 @@
 import { useMutation } from "@tanstack/react-query";
 import { ExportDataToFile } from "./bindings/files";
 
-export type ExportFormat = "csv" | "json";
+export type ExportFormat = "csv" | "json" | "png";
 
 export function useExportData() {
     return useMutation({
         mutationFn: async ({
             format,
             data,
-            suggestedFilename
+            suggestedFilename,
+            imageData // optional, used for png
         }: {
             format: ExportFormat;
-            data: Record<string, unknown>[];
+            data?: Record<string, unknown>[];
             suggestedFilename: string;
+            imageData?: string;
         }) => {
-            return ExportDataToFile(format, JSON.stringify(data), suggestedFilename);
+            let dataToSend = "";
+            if (format === "png") {
+                if (!imageData) throw new Error("Image data required for PNG export");
+                dataToSend = imageData;
+            } else {
+                if (!data) throw new Error("Data required for text export");
+                dataToSend = JSON.stringify(data);
+            }
+            return ExportDataToFile(format, dataToSend, suggestedFilename);
         },
     });
 }

@@ -17,6 +17,7 @@ import (
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"go.uber.org/zap"
+	clip "golang.design/x/clipboard"
 	"gopkg.in/yaml.v3"
 )
 
@@ -83,6 +84,12 @@ func (a *App) Initialize() error {
 	if err := security.InitSecurityContext(); err != nil {
 		logger.Logger.Error("Failed to initialize security context", zap.Error(err))
 		return fmt.Errorf("failed to initialize security context: %w", err)
+	}
+
+	// Init clipboard
+	if err := clip.Init(); err != nil {
+		logger.Logger.Error("Failed to initialize clipboard", zap.Error(err))
+		return fmt.Errorf("failed to initialize clipboard: %w", err)
 	}
 
 	// Load license from local storage if it exists

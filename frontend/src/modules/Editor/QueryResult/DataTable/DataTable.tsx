@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useEffect } from "react";
+import { useState, useRef, useMemo, useEffect, forwardRef, useImperativeHandle } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -32,7 +32,7 @@ interface DataTableProps {
   onScrollChange?: (scroll: { left: number; top: number }) => void;
 }
 
-export function DataTable({
+export const DataTable = forwardRef<HTMLDivElement, DataTableProps>(function DataTable({
   columns,
   data,
   onSelectionChange,
@@ -45,13 +45,17 @@ export function DataTable({
   onOpenDataView,
   scrollPosition,
   onScrollChange,
-}: DataTableProps) {
+}, ref) {
   const [columnSizing, setColumnSizing] = useState<Record<string, number>>({});
   // Only use client-side sorting when not in table-view mode
   const [sorting, setSorting] = useState<SortingState>([]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  // Separate internal ref for dimensions hook
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  // Expose scrollRef to parent via forwarded ref
+  useImperativeHandle(ref, () => scrollRef.current as HTMLDivElement);
 
   // Restore scroll position when scrollPosition prop changes
   useEffect(() => {
@@ -280,4 +284,4 @@ export function DataTable({
       </div>
     </div>
   );
-}
+});

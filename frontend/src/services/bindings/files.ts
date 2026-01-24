@@ -1,4 +1,3 @@
-// Re-exports for ExportDataToFile
 import { ExportDataToFile as WExportDataToFile } from "../../../bindings/datacia/internal/files/fileservice";
 
 /**
@@ -24,3 +23,5 @@ export async function ExportDataToFile(
   }
   return WExportDataToFile(format, data, suggestedFilename);
 }
+
+

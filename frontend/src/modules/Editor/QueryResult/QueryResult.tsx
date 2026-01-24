@@ -1,11 +1,12 @@
-// QueryResult.tsx
 import { useEditorContext } from "@/modules/Context/Editor/Index";
 import { useGetTableData } from "@/services/database";
 import { DataTable } from "./DataTable/DataTable";
-import { PaginationBar } from "./PaginationBar/PaginationBar";
-import { QueryInfoBar } from "./QueryInfoBar/QueryInfoBar";
+import { ResultBar } from "./ResultBar/ResultBar";
 import { ErrorView } from "./ErrorView/ErrorView";
 import type { QueryResult as QueryResultType } from "@/services/bindings/database";
+import html2canvaspro from "html2canvas-pro";
+import React from "react";
+import { useExportData } from "@/services/export";
 
 type QueryResultProps = {
   onSelectionChange: (selected: Array<Record<string, unknown>>) => void;
@@ -72,13 +73,42 @@ export function QueryResult({ onSelectionChange, onOpenDataView }: QueryResultPr
   // Show DataTable if we have results, even while loading new sorted data
   const showDataTable = isReadQuery || (isExecuting && results?.type === "read");
 
+  // Export Logic for Full Result Set
+  const tableRef = React.useRef<HTMLDivElement>(null);
+  const { mutate: exportData } = useExportData();
+
+  const handleExportPng = async () => {
+    if (!tableRef.current || !results?.data) return;
+    
+    try {
+        const canvas = await html2canvaspro(tableRef.current, {
+            backgroundColor: "#ffffff", // Ensure white background
+            scale: 2, // Higher resolution
+        });
+        
+        const base64 = canvas.toDataURL("image/png");
+        const filename = `${table || 'query'}-${results.data.length}-rows.png`;
+        
+        exportData({ 
+            format: "png", 
+            suggestedFilename: filename,
+            imageData: base64
+        });
+    } catch (err) {
+        console.error("Export failed:", err);
+    }
+  };
+
+
+
   return (
     <div className="h-full flex flex-col overflow-hidden bg-card">
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden relative">
         {error ? (
           <ErrorView error={error} />
         ) : showDataTable ? (
           <DataTable
+            ref={tableRef}
             columns={results.columns}
             data={results.data ?? []}
             onSelectionChange={onSelectionChange}
@@ -108,10 +138,10 @@ export function QueryResult({ onSelectionChange, onOpenDataView }: QueryResultPr
         )}
       </div>
 
-      {activeTab.mode === "table" && (
-        <PaginationBar data={results?.data ?? []} />
-      )}
-      {activeTab.mode === "query" && <QueryInfoBar />}
+       <ResultBar 
+          data={results?.data ?? []} 
+          onExportPng={handleExportPng}
+       />
     </div>
   );
 }

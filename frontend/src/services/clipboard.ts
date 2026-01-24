@@ -3,8 +3,8 @@ import { CopyToClipboard } from "./bindings/clipboard";
 
 export function useCopyToClipboard() {
   return useMutation({
-    mutationFn: async (text: string) => {
-      return CopyToClipboard(text);
+    mutationFn: async ({ content, type }: { content: string; type: string }) => {
+      return CopyToClipboard(content, type);
     },
   });
 }

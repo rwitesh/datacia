@@ -9,6 +9,9 @@ import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Cr
  * ExportDataToFile exports data to a file with the given format (csv or json)
  * data: JSON array string of rows
  * suggestedFilename: default filename suggestion
+ * ExportDataToFile exports data or image to a file with the given format
+ * data: JSON array string for csv/json, or base64 string for png
+ * suggestedFilename: default filename suggestion
  */
 export function ExportDataToFile(format: string, data: string, suggestedFilename: string): $CancellablePromise<string> {
     return $Call.ByID(1909849774, format, data, suggestedFilename);
