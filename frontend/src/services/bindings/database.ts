@@ -2,6 +2,7 @@ import {
   RunQuery as WRunQuery,
   GetTableData as WGetTableData,
   GetTableSchema as WGetTableSchema,
+  GetDDL as WGetDDL,
   GetQueryHistory as WGetQueryHistory,
 } from "./index";
 import type { QueryResult, QueryHistoryItem } from "./index";
@@ -30,6 +31,13 @@ export async function GetTableData(
 
 export async function GetTableSchema(table: string): Promise<QueryResult> {
   return WGetTableSchema(table);
+}
+
+export async function GetDDL(table: string): Promise<string> {
+  if (!table?.trim()) {
+    throw new Error("Table name cannot be empty");
+  }
+  return WGetDDL(table);
 }
 
 export async function GetQueryHistory(limit: number) {

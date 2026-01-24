@@ -358,3 +358,26 @@ func (s *SQLite) GetTableSchema(table string) (common.QueryResult, error) {
 		Data:    data,
 	}, nil
 }
+
+func (s *SQLite) GetDDL(table string) (string, error) {
+	s.Mu.RLock()
+	db := s.db
+	s.Mu.RUnlock()
+
+	if db == nil {
+		return "", errors.New("no active connection found")
+	}
+
+	ctx, cancel := common.NewTimeoutContext(common.META_TIMEOUT)
+	defer cancel()
+
+	// Query sqlite_master for the CREATE statement
+	sqlStr := "SELECT sql FROM sqlite_master WHERE type='table' AND name=?"
+	var ddl string
+	err := db.QueryRowContext(ctx, sqlStr, table).Scan(&ddl)
+	if err != nil {
+		return "", err
+	}
+
+	return ddl, nil
+}

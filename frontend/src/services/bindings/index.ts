@@ -10,6 +10,7 @@ export {
   RunQuery,
   GetTableData,
   GetTableSchema,
+  GetDDL,
   GetQueryHistory,
   ListConnections,
   LoadConnection,

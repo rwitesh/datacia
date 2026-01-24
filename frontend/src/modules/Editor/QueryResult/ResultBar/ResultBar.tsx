@@ -5,6 +5,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { ChevronLeft, ChevronRight, RefreshCw, Download, FileJson, FileType, Image as ImageIcon, Crown } from "lucide-react";
 import { useEditorContext } from "@/modules/Context/Editor/Index";
 import { useAppContext } from "@/modules/Context/App/Index";
@@ -13,19 +14,23 @@ import { useExportData, type ExportFormat } from "@/services/export";
 import type { QueryResult } from "@/services/bindings/database";
 
 function formatExecutionTime(ms: number): string {
-  if (ms < 1000) {
-    return `${ms} ms`;
-  }
-  const seconds = (ms / 1000).toFixed(2);
-  return `${seconds} s`;
+    if (ms < 1000) {
+        return `${ms} ms`;
+    }
+    const seconds = (ms / 1000).toFixed(2);
+    return `${seconds} s`;
 }
+
+export type ViewMode = "data" | "ddl";
 
 interface ResultBarProps {
     data?: Record<string, unknown>[];
     onExportPng?: () => void;
+    viewMode?: ViewMode;
+    onViewModeChange?: (mode: ViewMode) => void;
 }
 
-export function ResultBar({ data, onExportPng }: ResultBarProps) {
+export function ResultBar({ data, onExportPng, viewMode = "data", onViewModeChange }: ResultBarProps) {
     const { activeTab, updateTab } = useEditorContext();
     const { isLicenseActive } = useAppContext();
     const getTableDataMutation = useGetTableData();
@@ -107,7 +112,7 @@ export function ResultBar({ data, onExportPng }: ResultBarProps) {
         if (!data || data.length === 0) return;
 
         const count = data.length;
-        const suggestedFilename = table 
+        const suggestedFilename = table
             ? `${table}-${count}-rows.${format}`
             : `export-${count}-rows.${format}`;
 
@@ -120,7 +125,7 @@ export function ResultBar({ data, onExportPng }: ResultBarProps) {
 
     const handleExportPng = async () => {
         if (!data || data.length === 0) return;
-        
+
         if (onExportPng) {
             onExportPng();
         }
@@ -135,6 +140,24 @@ export function ResultBar({ data, onExportPng }: ResultBarProps) {
             <div className="flex items-center gap-4 flex-1">
                 {isTableMode ? (
                     <div className="flex items-center gap-3">
+                        {/* Data/DDL Toggle */}
+                        <ToggleGroup
+                            type="single"
+                            value={viewMode}
+                            onValueChange={(value) => value && onViewModeChange?.(value as ViewMode)}
+                            size="sm"
+                            variant="outline"
+                        >
+                            <ToggleGroupItem value="data" className="h-6 px-2 text-xs">
+                                Data
+                            </ToggleGroupItem>
+                            <ToggleGroupItem value="ddl" className="h-6 px-2 text-xs">
+                                DDL
+                            </ToggleGroupItem>
+                        </ToggleGroup>
+
+                        <div className="h-4 w-[1px] bg-border" />
+
                         <div className="flex items-center">
                             <Button
                                 size="icon"
@@ -234,8 +257,8 @@ export function ResultBar({ data, onExportPng }: ResultBarProps) {
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-44">
-                         <DropdownMenuItem 
-                            onSelect={() => handleExport("json")} 
+                        <DropdownMenuItem
+                            onSelect={() => handleExport("json")}
                             disabled={!isLicenseActive}
                             className="gap-2 text-xs"
                         >
@@ -245,8 +268,8 @@ export function ResultBar({ data, onExportPng }: ResultBarProps) {
                                 <Crown className="h-3 w-3 text-amber-500 ml-auto" />
                             )}
                         </DropdownMenuItem>
-                        <DropdownMenuItem 
-                            onSelect={() => handleExport("csv")} 
+                        <DropdownMenuItem
+                            onSelect={() => handleExport("csv")}
                             disabled={!isLicenseActive}
                             className="gap-2 text-xs"
                         >
@@ -256,7 +279,7 @@ export function ResultBar({ data, onExportPng }: ResultBarProps) {
                                 <Crown className="h-3 w-3 text-amber-500 ml-auto" />
                             )}
                         </DropdownMenuItem>
-                        <DropdownMenuItem 
+                        <DropdownMenuItem
                             onSelect={handleExportPng}
                             disabled={!isLicenseActive}
                             className="gap-2 text-xs"

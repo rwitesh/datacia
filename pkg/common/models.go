@@ -107,7 +107,8 @@ type DatabaseClient interface {
 	GetConnectionInfo() (map[string]string, error)
 	GetTableData(table string, limit, offset int, orderBy, orderDir string) (QueryResult, error)
 	GetTableSchema(table string) (QueryResult, error)
-	GetPassword() string // Returns password for reconnection purposes (internal use)
+	GetDDL(table string) (string, error) // Returns CREATE TABLE statement
+	GetPassword() string                 // Returns password for reconnection purposes (internal use)
 }
 
 const (

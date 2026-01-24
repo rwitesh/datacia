@@ -4,7 +4,7 @@ import {
   ListTables,
   CancelQuery,
 } from "./bindings";
-import { RunQuery, GetTableData, GetTableSchema, GetQueryHistory } from "./bindings/database";
+import { RunQuery, GetTableData, GetTableSchema, GetDDL, GetQueryHistory } from "./bindings/database";
 
 export function useDatabase() {
   return useQuery({
@@ -77,6 +77,17 @@ export function useGetTableSchema() {
         throw new Error("Table name cannot be empty");
       }
       return GetTableSchema(table);
+    },
+  });
+}
+
+export function useGetDDL() {
+  return useMutation({
+    mutationFn: async (table: string) => {
+      if (!table?.trim()) {
+        throw new Error("Table name cannot be empty");
+      }
+      return GetDDL(table);
     },
   });
 }

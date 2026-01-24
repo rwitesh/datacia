@@ -40,7 +40,7 @@ func New(uiController UIController, version, releaseURL string) (*Engine, error)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get security context: %w", err)
 	}
-	
+
 	encryptionKey := ctx.GetEncryptionKey()
 	store, err := db.Open(encryptionKey)
 	if err != nil {
@@ -335,6 +335,13 @@ func (e *Engine) GetTableSchema(table string) (common.QueryResult, error) {
 		return common.QueryResult{}, errors.New("no active database connection found")
 	}
 	return e.activeClient.GetTableSchema(table)
+}
+
+func (e *Engine) GetDDL(table string) (string, error) {
+	if e.activeClient == nil {
+		return "", errors.New("no active database connection found")
+	}
+	return e.activeClient.GetDDL(table)
 }
 
 // checks the health of the current database connection by pinging the database and measuring latency

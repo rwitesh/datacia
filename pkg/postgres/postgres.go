@@ -453,3 +453,49 @@ func (p *Postgres) GetTableSchema(table string) (common.QueryResult, error) {
 		Data:    data,
 	}, nil
 }
+
+func (p *Postgres) GetDDL(table string) (string, error) {
+	p.Mu.RLock()
+	pool := p.pool
+	p.Mu.RUnlock()
+
+	if pool == nil {
+		return "", errors.New("no active connection pool found")
+	}
+
+	ctx, cancel := common.NewTimeoutContext(common.META_TIMEOUT)
+	defer cancel()
+
+	conn, err := pool.Acquire(ctx)
+	if err != nil {
+		return "", fmt.Errorf("failed to acquire connection: %w", err)
+	}
+	defer conn.Release()
+
+	// Use pg_get_tabledef function or construct DDL manually
+	// Since pg_get_tabledef is not standard, we'll use a query that constructs the DDL
+	sql := `
+		SELECT 
+			'CREATE TABLE ' || quote_ident(c.table_name) || ' (' || 
+			string_agg(
+				quote_ident(c.column_name) || ' ' || c.data_type || 
+				CASE WHEN c.character_maximum_length IS NOT NULL 
+					THEN '(' || c.character_maximum_length || ')' 
+					ELSE '' 
+				END ||
+				CASE WHEN c.is_nullable = 'NO' THEN ' NOT NULL' ELSE '' END,
+				', ' ORDER BY c.ordinal_position
+			) || ');' as ddl
+		FROM information_schema.columns c
+		WHERE c.table_schema = 'public' AND c.table_name = $1
+		GROUP BY c.table_name
+	`
+
+	var ddl string
+	err = conn.Conn().QueryRow(ctx, sql, table).Scan(&ddl)
+	if err != nil {
+		return "", err
+	}
+
+	return ddl, nil
+}

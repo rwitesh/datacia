@@ -1,8 +1,9 @@
 import { useEditorContext } from "@/modules/Context/Editor/Index";
-import { useGetTableData } from "@/services/database";
+import { useGetTableData, useGetDDL } from "@/services/database";
 import { DataTable } from "./DataTable/DataTable";
-import { ResultBar } from "./ResultBar/ResultBar";
+import { ResultBar, type ViewMode } from "./ResultBar/ResultBar";
 import { ErrorView } from "./ErrorView/ErrorView";
+import { DDLView } from "./DDLView/DDLView";
 import type { QueryResult as QueryResultType } from "@/services/bindings/database";
 import html2canvaspro from "html2canvas-pro";
 import React from "react";
@@ -16,6 +17,10 @@ type QueryResultProps = {
 export function QueryResult({ onSelectionChange, onOpenDataView }: QueryResultProps) {
   const { activeTab, updateTab } = useEditorContext();
   const getTableDataMutation = useGetTableData();
+  const getDDLMutation = useGetDDL();
+  const [viewMode, setViewMode] = React.useState<ViewMode>("data");
+  const [ddlData, setDdlData] = React.useState<string>("");
+  const [ddlError, setDdlError] = React.useState<string | undefined>();
 
   if (!activeTab) return null;
 
@@ -23,6 +28,29 @@ export function QueryResult({ onSelectionChange, onOpenDataView }: QueryResultPr
   const isReadQuery = results && results.type === "read";
   const isCommandQuery = results && results.type === "command";
   const isTableViewMode = mode === "table";
+
+  // Reset viewMode to "data" when table changes
+  React.useEffect(() => {
+    setViewMode("data");
+    setDdlData("");
+    setDdlError(undefined);
+  }, [table]);
+
+  // Fetch DDL when switching to DDL mode
+  const handleViewModeChange = (newMode: ViewMode) => {
+    setViewMode(newMode);
+    if (newMode === "ddl" && table && !ddlData) {
+      getDDLMutation.mutate(table, {
+        onSuccess: (ddl) => {
+          setDdlData(ddl);
+          setDdlError(undefined);
+        },
+        onError: (err) => {
+          setDdlError(err instanceof Error ? err.message : String(err));
+        },
+      });
+    }
+  };
 
   const handleServerSort = (column: string, direction: "asc" | "desc") => {
     if (!table || limit === undefined || offset === undefined) return;
@@ -79,33 +107,37 @@ export function QueryResult({ onSelectionChange, onOpenDataView }: QueryResultPr
 
   const handleExportPng = async () => {
     if (!tableRef.current || !results?.data) return;
-    
+
     try {
-        const canvas = await html2canvaspro(tableRef.current, {
-            backgroundColor: "#ffffff", // Ensure white background
-            scale: 2, // Higher resolution
-        });
-        
-        const base64 = canvas.toDataURL("image/png");
-        const filename = `${table || 'query'}-${results.data.length}-rows.png`;
-        
-        exportData({ 
-            format: "png", 
-            suggestedFilename: filename,
-            imageData: base64
-        });
+      const canvas = await html2canvaspro(tableRef.current, {
+        backgroundColor: "#ffffff", // Ensure white background
+        scale: 2, // Higher resolution
+      });
+
+      const base64 = canvas.toDataURL("image/png");
+      const filename = `${table || 'query'}-${results.data.length}-rows.png`;
+
+      exportData({
+        format: "png",
+        suggestedFilename: filename,
+        imageData: base64
+      });
     } catch (err) {
-        console.error("Export failed:", err);
+      console.error("Export failed:", err);
     }
   };
-
-
 
   return (
     <div className="h-full flex flex-col overflow-hidden bg-card">
       <div className="flex-1 overflow-hidden relative">
         {error ? (
           <ErrorView error={error} />
+        ) : isTableViewMode && viewMode === "ddl" ? (
+          <DDLView
+            ddl={ddlData}
+            isLoading={getDDLMutation.isPending}
+            error={ddlError}
+          />
         ) : showDataTable ? (
           <DataTable
             ref={tableRef}
@@ -138,11 +170,12 @@ export function QueryResult({ onSelectionChange, onOpenDataView }: QueryResultPr
         )}
       </div>
 
-       <ResultBar 
-          data={results?.data ?? []} 
-          onExportPng={handleExportPng}
-       />
+      <ResultBar
+        data={results?.data ?? []}
+        onExportPng={handleExportPng}
+        viewMode={viewMode}
+        onViewModeChange={handleViewModeChange}
+      />
     </div>
   );
 }
-

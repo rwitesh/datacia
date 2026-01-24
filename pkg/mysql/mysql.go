@@ -424,3 +424,38 @@ func (m *MySQL) GetTableSchema(table string) (common.QueryResult, error) {
 		Data:    data,
 	}, nil
 }
+
+func (m *MySQL) GetDDL(table string) (string, error) {
+	m.Mu.RLock()
+	db := m.db
+	m.Mu.RUnlock()
+
+	if db == nil {
+		return "", errors.New("no active connection found")
+	}
+
+	ctx, cancel := common.NewTimeoutContext(common.META_TIMEOUT)
+	defer cancel()
+
+	quotedTable, err := common.QuoteIdentifier(table, common.QuoteBacktick)
+	if err != nil {
+		return "", err
+	}
+
+	sqlStr := fmt.Sprintf("SHOW CREATE TABLE %s", quotedTable)
+	rows, err := db.QueryContext(ctx, sqlStr)
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+
+	if rows.Next() {
+		var tableName, ddl string
+		if err := rows.Scan(&tableName, &ddl); err != nil {
+			return "", err
+		}
+		return ddl, nil
+	}
+
+	return "", errors.New("no DDL found for table")
+}

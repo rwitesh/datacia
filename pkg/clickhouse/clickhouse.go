@@ -413,6 +413,41 @@ func (ch *ClickHouse) GetTableSchema(table string) (common.QueryResult, error) {
 	}, nil
 }
 
+func (ch *ClickHouse) GetDDL(table string) (string, error) {
+	ch.Mu.RLock()
+	conn := ch.conn
+	ch.Mu.RUnlock()
+
+	if conn == nil {
+		return "", errors.New("no active connection found")
+	}
+
+	ctx, cancel := common.NewTimeoutContext(common.META_TIMEOUT)
+	defer cancel()
+
+	quotedTable, err := common.QuoteIdentifier(table, common.QuoteBacktick)
+	if err != nil {
+		return "", err
+	}
+
+	sqlStr := fmt.Sprintf("SHOW CREATE TABLE %s", quotedTable)
+	rows, err := conn.Query(ctx, sqlStr)
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+
+	if rows.Next() {
+		var ddl string
+		if err := rows.Scan(&ddl); err != nil {
+			return "", err
+		}
+		return ddl, nil
+	}
+
+	return "", errors.New("no DDL found for table")
+}
+
 // func (ch *ClickHouse) SaveConnection(name string, config map[string]string) error {
 // 	return ch.engine.SaveConnection(name, config)
 // }

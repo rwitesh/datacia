@@ -64,6 +64,10 @@ export function GetCurrentConnectionInfo(): $CancellablePromise<{ [_: string]: s
     });
 }
 
+export function GetDDL(table: string): $CancellablePromise<string> {
+    return $Call.ByID(1892461142, table);
+}
+
 export function GetQueryHistory(limit: number): $CancellablePromise<db$0.QueryHistoryItem[]> {
     return $Call.ByID(1117816130, limit).then(($result: any) => {
         return $$createType2($result);

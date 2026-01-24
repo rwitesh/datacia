@@ -16,7 +16,8 @@ type DatabaseClient interface {
 	CancelQuery(queryId string) error
 	GetTableData(table string, limit, offset int, orderBy, orderDir string) (common.QueryResult, error)
 	GetTableSchema(table string) (common.QueryResult, error)
-	GetPassword() string // Returns password for reconnection purposes (internal use)
+	GetDDL(table string) (string, error) // Returns CREATE TABLE statement
+	GetPassword() string                 // Returns password for reconnection purposes (internal use)
 }
 
 // RemoteEngine defines the interface for the high-level remote engine that manages
@@ -46,6 +47,7 @@ type RemoteEngine interface {
 	CancelQuery(queryId string) error
 	GetTableData(table string, limit, offset int, orderBy, orderDir string) (common.QueryResult, error)
 	GetTableSchema(table string) (common.QueryResult, error)
+	GetDDL(table string) (string, error)
 
 	// Check for updates
 	CheckForUpdates() (bool, error)
