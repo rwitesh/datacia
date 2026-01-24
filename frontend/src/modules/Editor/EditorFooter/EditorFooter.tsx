@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useCheckForUpdates, useUpdateApp } from "@/services/updates";
 import { useLicenseStatus } from "@/services/license";
-import { Download, AlertCircle, Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Download, AlertCircle, Loader2, CheckCircle2, AlertTriangle, Sparkles } from "lucide-react";
 import { ConnectionHealthIndicator } from "./ConnectionHealth";
 import { ConnectionSwitcher } from "./ConnectionSwitcher";
 import { LicenseDialog } from "@/modules/License/LicenseDialog";
@@ -32,7 +32,7 @@ const getDaysUntilExpiry = (expiresAt?: string): number => {
 
 export const EditorFooter = () => {
   const [licenseDialogOpen, setLicenseDialogOpen] = useState(false);
-  
+
   const { data, error, isLoading } = useCheckForUpdates();
   const { data: licenseStatus } = useLicenseStatus();
   const {
@@ -53,6 +53,7 @@ export const EditorFooter = () => {
   const daysUntilExpiry = getDaysUntilExpiry(licenseStatus?.expires_at);
 
   const showLicenseWarning = hasLicenseError || licenseExpired || licenseExpiringSoon;
+  const isLicenseValid = licenseStatus?.valid === true && !hasLicenseError && !licenseExpired;
 
   return (
     <div className="flex items-center justify-between px-5 py-1 bg-background text-xs text-muted-foreground w-full cursor-default gap-1.5 min-h-6">
@@ -60,7 +61,7 @@ export const EditorFooter = () => {
       <div className="flex items-center gap-3">
         <ConnectionHealthIndicator />
         <ConnectionSwitcher />
-        
+
         {/* License Status Indicator */}
         {showLicenseWarning && (
           <>
@@ -90,6 +91,21 @@ export const EditorFooter = () => {
             </div>
           </>
         )}
+
+        {/* PRO Badge - shown when license is valid */}
+        {isLicenseValid && (
+          <>
+            <div className="h-3 w-px bg-border" />
+            <div
+              className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 cursor-pointer hover:bg-amber-500/20 transition-colors"
+              onClick={() => setLicenseDialogOpen(true)}
+              title="Pro License Active"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              <span className="text-xs font-semibold">Pro</span>
+            </div>
+          </>
+        )}
       </div>
 
       {/* License Dialog */}
@@ -97,55 +113,55 @@ export const EditorFooter = () => {
 
       {/* Update Status */}
       <div className="flex items-center gap-1.5">
-      {/* Update check failed */}
-      {!isLoading && error && (
-        <>
-          <AlertCircle className="h-3 w-3 text-destructive" />
-          <span className="text-destructive">{error.message}</span>
-        </>
-      )}
+        {/* Update check failed */}
+        {!isLoading && error && (
+          <>
+            <AlertCircle className="h-3 w-3 text-destructive" />
+            <span className="text-destructive">{error.message}</span>
+          </>
+        )}
 
-      {/* Update in progress */}
-      {!isLoading && !error && isUpdating && (
-        <>
-          <Loader2 className="h-3 w-3 animate-spin" />
-          <span>Updating...</span>
-        </>
-      )}
+        {/* Update in progress */}
+        {!isLoading && !error && isUpdating && (
+          <>
+            <Loader2 className="h-3 w-3 animate-spin" />
+            <span>Updating...</span>
+          </>
+        )}
 
-      {/* Update failed */}
-      {!isLoading && !error && updateError && (
-        <>
-          <AlertCircle className="h-3 w-3 text-destructive" />
-          <span
-            className="text-destructive cursor-pointer underline-offset-2 hover:underline"
-            onClick={handleUpdate}
-          >
-            Update failed. retry?
-          </span>
-        </>
-      )}
+        {/* Update failed */}
+        {!isLoading && !error && updateError && (
+          <>
+            <AlertCircle className="h-3 w-3 text-destructive" />
+            <span
+              className="text-destructive cursor-pointer underline-offset-2 hover:underline"
+              onClick={handleUpdate}
+            >
+              Update failed. retry?
+            </span>
+          </>
+        )}
 
-      {/* Update success */}
-      {!isLoading && !error && updateSuccess && (
-        <>
-          <CheckCircle2 className="h-3 w-3 text-green-500" />
-          <span className="text-green-500">Updated successfully</span>
-        </>
-      )}
+        {/* Update success */}
+        {!isLoading && !error && updateSuccess && (
+          <>
+            <CheckCircle2 className="h-3 w-3 text-green-500" />
+            <span className="text-green-500">Updated successfully</span>
+          </>
+        )}
 
-      {/* Update available */}
-      {!isLoading && !error && data === true && !isUpdating && !updateSuccess && !updateError && (
-        <>
-          <Download
-            className="h-3 w-3 text-blue-500 cursor-pointer"
-            onClick={handleUpdate}
-          />
-          <span className="text-blue-500 cursor-pointer" onClick={handleUpdate}>
-            Update available
-          </span>
-        </>
-      )}
+        {/* Update available */}
+        {!isLoading && !error && data === true && !isUpdating && !updateSuccess && !updateError && (
+          <>
+            <Download
+              className="h-3 w-3 text-blue-500 cursor-pointer"
+              onClick={handleUpdate}
+            />
+            <span className="text-blue-500 cursor-pointer" onClick={handleUpdate}>
+              Update available
+            </span>
+          </>
+        )}
       </div>
     </div>
   );
