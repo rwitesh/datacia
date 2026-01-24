@@ -14,14 +14,14 @@ import (
 var (
 	ErrSignatureMismatch = errors.New("invalid license signature")
 	ErrClockRollback     = errors.New("system clock rollback detected")
-	ErrGracePeriodOver   = errors.New("offline grace period expired")
-	ErrMachineMismatch   = errors.New("license machine ID mismatch")
+	ErrGracePeriodOver   = errors.New("internet connection required to validate license")
+	ErrMachineMismatch   = errors.New("hardware mismatch")
 	ErrLicenseExpired    = errors.New("license has expired")
 )
 
 const (
 	MaxOfflineDuration = 24 * time.Hour
-	GracePeriod        = 1 * time.Hour
+	GracePeriod        = 7 * 24 * time.Hour // 7 days grace period after last update
 )
 
 type Verifier struct {
@@ -98,27 +98,10 @@ func (v *Verifier) IsLicenseValid(l *License) error {
 	}
 
 	// 5. Offline Grace Period Check
-	// If it's been > 24h since last server check, we typically require validation.
-	// But `IsLicenseValid` is often calling LOCALLY.
-	// The Service layer calls API validate if needed.
-	// Here we just check if we are beyond the "safe offline" window + grace period?
-	// The requirement says:
-	// > If > 24h, the client MUST successfully hit /validate
-	// This implies `IsLicenseValid` should return error if > 24h, FORCING the caller to try network validation.
-
+	// If it's been more than 24h + 7 days grace period since last check, require internet validation
 	timeSinceLastCheck := time.Since(l.LastCheck)
-	if timeSinceLastCheck > MaxOfflineDuration {
-		// If we are strictly offline, check if within grace period?
-		// The prompt says: "Allow a configurable grace window (e.g. 1 hour) before locking UI".
-		// This likely means: 24h is the soft limit, after that try validate. If validate fails (network),
-		// allow another 1 hour.
-		// So strict invalidation happens at 25h?
-
-		if timeSinceLastCheck > MaxOfflineDuration+GracePeriod {
-			return ErrGracePeriodOver
-		}
-		// If between 24h and 25h, it's technically "valid" for offline use but should trigger BG validation.
-		// We will treat it as valid here, but Service layer should notice and try to validate.
+	if timeSinceLastCheck > MaxOfflineDuration+GracePeriod {
+		return ErrGracePeriodOver
 	}
 
 	return nil
