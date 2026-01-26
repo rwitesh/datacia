@@ -9,6 +9,7 @@ export type AppContextType = {
   engine: string;
   licenseStatus: LicenseStatus | undefined;
   isLicenseActive: boolean;
+  appVersion: string;
 };
 
 export const AppContext = createContext<AppContextType | undefined>(undefined);

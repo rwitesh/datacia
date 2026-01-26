@@ -16,9 +16,11 @@ import {
 import { useTheme, type Theme } from "@/components/theme/theme-provider";
 import { Bolt, Key } from "lucide-react";
 import { LicenseDialog } from "@/modules/License/LicenseDialog";
+import { useAppContext } from "@/modules/Context/App/Index";
 
 export function MenuBar() {
   const { theme, setTheme } = useTheme();
+  const { appVersion } = useAppContext();
   const [isLicenseDialogOpen, setIsLicenseDialogOpen] = useState(false);
 
   return (
@@ -76,9 +78,19 @@ export function MenuBar() {
             <Key className="h-3.5 w-3.5" />
             License
           </MenubarItem>
+
+          {appVersion && (
+            <>
+              <MenubarSeparator />
+              <MenubarLabel className="text-[10px] text-muted-foreground px-2 cursor-default select-none">
+                Version {appVersion}
+              </MenubarLabel>
+            </>
+          )}
         </MenubarContent>
       </MenubarMenu>
       <LicenseDialog open={isLicenseDialogOpen} onOpenChange={setIsLicenseDialogOpen} />
     </Menubar>
   );
 }
+

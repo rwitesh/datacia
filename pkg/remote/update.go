@@ -11,3 +11,13 @@ func (e *Engine) CheckForUpdates() (bool, error) {
 func (e *Engine) Update() error {
 	return e.updater.Update()
 }
+
+type AppInfo struct {
+	Version string `json:"version"`
+}
+
+func (e *Engine) GetAppInfo() AppInfo {
+	return AppInfo{
+		Version: e.updater.CurrentVersion,
+	}
+}

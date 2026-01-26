@@ -3,6 +3,7 @@ import { ThemeProvider } from "@/components/theme/theme-provider";
 import { Routes, Route, HashRouter } from "react-router";
 import { Home } from "@/modules/Home/Home";
 import { DatabaseConnection } from "@/modules/Connection/Connection";
+import { WelcomePanel } from "@/modules/Home/WelcomePanel";
 import { Editor } from "@/modules/Editor/Editor";
 import { AppProvider } from "./modules/Context/App/Provider";
 import { Toaster } from "sonner";
@@ -21,6 +22,7 @@ function App() {
               <Toaster position="top-center" richColors closeButton />
               <Routes>
                 <Route path="/" element={<Home />}>
+                  <Route index element={<WelcomePanel />} />
                   <Route path="connect" element={<DatabaseConnection />} />
                 </Route>
                 <Route

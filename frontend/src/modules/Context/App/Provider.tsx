@@ -4,11 +4,15 @@ import { AppContext } from "./Context";
 import { chooseDialect } from "@/modules/Editor/QueryInput/utils/dialect";
 import { useCurrentConnection } from "@/services/connections";
 import { useLicenseStatus } from "@/services/license";
+import { useAppInfo } from "@/services/appInfo";
 
 export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const queryClient = useQueryClient();
   const { data: currentConnection } = useCurrentConnection();
   const { data: licenseStatus } = useLicenseStatus();
+  const { data: appInfo } = useAppInfo();
+
+  console.log(appInfo)
 
   const invalidateConnectionQueries = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["tables"] });
@@ -40,7 +44,9 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     engine: currentConnection?.engine || "",
     licenseStatus,
     isLicenseActive,
+    appVersion: appInfo?.version || "",
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };
+

@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Name=DataCia
+Comment=Your database reimaginzed for speed and clarity
+# The Exec line includes %u to pass the URL to the application
+Exec=/usr/local/bin/DataCia %u
+Terminal=false
+Type=Application
+Icon=DataCia
+Categories=Utility;
+StartupWMClass=DataCia
+
+ 

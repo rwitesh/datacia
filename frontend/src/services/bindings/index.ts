@@ -20,6 +20,7 @@ export {
   CheckForUpdates,
   Update,
   GetCurrentConnectionInfo,
+  GetAppInfo,
   // Connection management functions
   SaveConnection,
   DeleteConnection,

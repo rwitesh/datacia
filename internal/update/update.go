@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
@@ -85,7 +87,17 @@ func (u *Updater) Update() error {
 }
 
 func (u *Updater) fetchReleaseMetadata() (*ReleaseMetadata, error) {
-	response, err := http.Get(u.ReleaseURL)
+	releaseURL, err := url.Parse(u.ReleaseURL)
+	if err != nil {
+		return nil, fmt.Errorf("invalid release URL: %w", err)
+	}
+
+	query := releaseURL.Query()
+	query.Set("os", runtime.GOOS)
+	query.Set("arch", runtime.GOARCH)
+	releaseURL.RawQuery = query.Encode()
+
+	response, err := http.Get(releaseURL.String())
 	if err != nil {
 		return nil, err
 	}
@@ -176,10 +188,49 @@ func (u *Updater) copyAppFromDMG(mountPoint, targetAppPath string) error {
 	}
 
 	srcApp := apps[0]
+	appName := filepath.Base(targetAppPath)
+	parentDir := filepath.Dir(targetAppPath)
 
-	cmd := exec.Command("rsync", "-a", "--delete", srcApp+"/", targetAppPath+"/")
-	if out, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("rsync failed: %v (%s)", err, out)
+	// Create a temp directory for the new app bundle
+	tempDir, err := os.MkdirTemp(parentDir, "update-staging-")
+	if err != nil {
+		return fmt.Errorf("create temp dir: %w", err)
 	}
+	defer os.RemoveAll(tempDir) // Cleanup staging on any exit
+
+	stagingApp := filepath.Join(tempDir, appName)
+
+	// Copy new app from DMG to staging directory using rsync
+	cmd := exec.Command("rsync", "-a", srcApp+"/", stagingApp+"/")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("rsync to staging failed: %v (%s)", err, out)
+	}
+
+	// Define backup path for rollback
+	backupPath := targetAppPath + ".old"
+
+	// Remove any stale backup from a previous failed update
+	os.RemoveAll(backupPath)
+
+	// Rename existing app to backup (atomic on macOS for same filesystem)
+	if err := os.Rename(targetAppPath, backupPath); err != nil {
+		return fmt.Errorf("backup existing app: %w", err)
+	}
+
+	// Atomically move staging app to target location
+	if err := os.Rename(stagingApp, targetAppPath); err != nil {
+		// Rollback: restore from backup
+		if rbErr := os.Rename(backupPath, targetAppPath); rbErr != nil {
+			return fmt.Errorf("swap failed: %v, rollback also failed: %v", err, rbErr)
+		}
+		return fmt.Errorf("swap failed (rolled back): %w", err)
+	}
+
+	// Success: remove backup
+	os.RemoveAll(backupPath)
+
+	// Touch the app bundle to refresh Finder and LaunchServices metadata
+	exec.Command("touch", targetAppPath).Run()
+
 	return nil
 }

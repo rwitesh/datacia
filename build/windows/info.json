@@ -1,0 +1,15 @@
+{
+	"fixed": {
+		"file_version": "0.1.1"
+	},
+	"info": {
+		"0000": {
+			"ProductVersion": "0.1.1",
+			"CompanyName": "DataCia",
+			"FileDescription": "Your database reimaginzed for speed and clarity",
+			"LegalCopyright": "(c) 2026, DataCia",
+			"ProductName": "DataCia",
+			"Comments": "This is a comment"
+		}
+	}
+}
