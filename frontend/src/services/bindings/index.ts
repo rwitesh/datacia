@@ -19,6 +19,7 @@ export {
   CancelQuery,
   CheckForUpdates,
   Update,
+  RestartApp,
   GetCurrentConnectionInfo,
   GetAppInfo,
   // Connection management functions

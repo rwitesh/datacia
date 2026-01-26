@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { CheckForUpdates, PerformUpdate } from "./bindings/updates";
+import { CheckForUpdates, PerformUpdate, RestartApp } from "./bindings/updates";
 
 export function useCheckForUpdates() {
   return useQuery({
@@ -13,6 +13,14 @@ export function useUpdateApp() {
   return useMutation({
     mutationFn: async () => {
       return PerformUpdate();
+    },
+  })
+}
+
+export function useRestartApp() {
+  return useMutation({
+    mutationFn: async () => {
+      return RestartApp();
     },
   })
 }

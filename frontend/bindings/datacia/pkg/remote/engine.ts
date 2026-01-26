@@ -124,6 +124,10 @@ export function LoadConnection(id: string): $CancellablePromise<{ [_: string]: s
     });
 }
 
+export function RestartApp(): $CancellablePromise<void> {
+    return $Call.ByID(1474822044);
+}
+
 export function RunQuery(queryId: string, queryType: string, sql: string): $CancellablePromise<common$0.QueryResult> {
     return $Call.ByID(1539590401, queryId, queryType, sql).then(($result: any) => {
         return $$createType6($result);

@@ -86,6 +86,16 @@ func (u *Updater) Update() error {
 	return nil
 }
 
+func (u *Updater) Restart() error {
+	// macOS only for now (since we use open -n -a)
+	cmd := exec.Command("open", "-n", "-a", u.AppPath)
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("failed to restart app: %w", err)
+	}
+	os.Exit(0)
+	return nil
+}
+
 func (u *Updater) fetchReleaseMetadata() (*ReleaseMetadata, error) {
 	releaseURL, err := url.Parse(u.ReleaseURL)
 	if err != nil {

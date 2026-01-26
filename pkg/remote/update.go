@@ -12,6 +12,10 @@ func (e *Engine) Update() error {
 	return e.updater.Update()
 }
 
+func (e *Engine) RestartApp() error {
+	return e.updater.Restart()
+}
+
 type AppInfo struct {
 	Version string `json:"version"`
 }

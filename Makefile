@@ -1,7 +1,6 @@
 APP_NAME = DataCia
-OUTPUT_DIR = output
+BASE_OUTPUT = output
 APP_BUNDLE = bin/$(APP_NAME).app
-DMG_NAME = $(APP_NAME).dmg
 
 VOLNAME = $(APP_NAME)
 
@@ -20,15 +19,15 @@ package:
 	wails3 task common:update:build-assets
 	wails3 package
 
-package-mac-arm64:
+package-darwin-arm64:
 	wails3 task common:update:build-assets
 	wails3 task darwin:package ARCH=arm64
 
-package-mac-amd64:
+package-darwin-amd64:
 	wails3 task common:update:build-assets
 	wails3 task darwin:package ARCH=amd64
 
-package-mac-universal:
+package-darwin-universal:
 	wails3 task common:update:build-assets
 	wails3 task darwin:package:universal
 
@@ -44,14 +43,17 @@ create-dmg:
 		"$(OUTPUT_DIR)/$(DMG_NAME)"
 	@echo "DMG created at $(OUTPUT_DIR)/$(DMG_NAME)"
 
-dmg: package ensure-output
-	$(MAKE) create-dmg DMG_NAME=$(APP_NAME).dmg
+dmg-darwin-arm64: OUTPUT_DIR = $(BASE_OUTPUT)/darwin/arm64
+dmg-darwin-arm64: DMG_NAME = $(APP_NAME)_darwin_arm64.dmg
+dmg-darwin-arm64: package-darwin-arm64 ensure-output
+	$(MAKE) create-dmg OUTPUT_DIR=$(OUTPUT_DIR) DMG_NAME=$(DMG_NAME)
 
-dmg-arm64: package-mac-arm64 ensure-output
-	$(MAKE) create-dmg DMG_NAME=$(APP_NAME)_arm64.dmg
+dmg-darwin-amd64: OUTPUT_DIR = $(BASE_OUTPUT)/darwin/amd64
+dmg-darwin-amd64: DMG_NAME = $(APP_NAME)_darwin_amd64.dmg
+dmg-darwin-amd64: package-darwin-amd64 ensure-output
+	$(MAKE) create-dmg OUTPUT_DIR=$(OUTPUT_DIR) DMG_NAME=$(DMG_NAME)
 
-dmg-amd64: package-mac-amd64 ensure-output
-	$(MAKE) create-dmg DMG_NAME=$(APP_NAME)_amd64.dmg
-
-dmg-universal: package-mac-universal ensure-output
-	$(MAKE) create-dmg DMG_NAME=$(APP_NAME)_universal.dmg
+dmg-darwin-universal: OUTPUT_DIR = $(BASE_OUTPUT)/darwin/universal
+dmg-darwin-universal: DMG_NAME = $(APP_NAME)_darwin_universal.dmg
+dmg-darwin-universal: package-darwin-universal ensure-output
+	$(MAKE) create-dmg OUTPUT_DIR=$(OUTPUT_DIR) DMG_NAME=$(DMG_NAME)

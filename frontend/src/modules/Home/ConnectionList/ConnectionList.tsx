@@ -11,6 +11,7 @@ import {
   MenubarLabel,
   MenubarSeparator,
 } from "@/components/ui/menubar";
+import { AppUpdate } from "@/modules/AppUpdate/AppUpdate";
 
 interface ConnectionInfo {
   name: string;
@@ -40,36 +41,42 @@ export function ConnectionList({
   const connectionEntries = Object.entries(savedConnections);
 
   return (
-    <div className="w-1/3 p-3 flex flex-col mt-12">
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-semibold">Connections</h3>
-        <AddConnectionMenu onNavigate={(engine) => navigate(`/connect?engine=${engine}`)} />
+    <div className="w-1/3 p-3 flex flex-col mt-12 h-content justify-between">
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-sm font-semibold">Connections</h3>
+          <AddConnectionMenu onNavigate={(engine) => navigate(`/connect?engine=${engine}`)} />
+        </div>
+
+        {isLoading ? (
+          <div className="text-xs text-muted-foreground">Loading…</div>
+        ) : isError ? (
+          <div className="text-xs text-red-500">Failed to load connections</div>
+        ) : connectionEntries.length > 0 ? (
+          <ul className="text-xs">
+            {connectionEntries.map(([id, info]) => (
+              <ConnectionRow
+                key={id}
+                id={id}
+                name={info.name}
+                engine={info.engine}
+                isActive={currentConnectionId === id}
+                onEdit={onEdit}
+                onConnect={onConnect}
+                onDelete={onDelete}
+              />
+            ))}
+          </ul>
+        ) : (
+          <div className="flex-1 flex justify-center text-muted-foreground text-xs">
+            No saved connections yet
+          </div>
+        )}
       </div>
 
-      {isLoading ? (
-        <div className="text-xs text-muted-foreground">Loading…</div>
-      ) : isError ? (
-        <div className="text-xs text-red-500">Failed to load connections</div>
-      ) : connectionEntries.length > 0 ? (
-        <ul className="text-xs">
-          {connectionEntries.map(([id, info]) => (
-            <ConnectionRow
-              key={id}
-              id={id}
-              name={info.name}
-              engine={info.engine}
-              isActive={currentConnectionId === id}
-              onEdit={onEdit}
-              onConnect={onConnect}
-              onDelete={onDelete}
-            />
-          ))}
-        </ul>
-      ) : (
-        <div className="flex-1 flex justify-center text-muted-foreground text-xs">
-          No saved connections yet
-        </div>
-      )}
+      <div className="py-2 mt-auto">
+        <AppUpdate />
+      </div>
     </div>
   );
 }
@@ -117,9 +124,8 @@ interface ConnectionRowProps {
 function ConnectionRow({ id, name, engine, isActive, onEdit, onConnect, onDelete }: ConnectionRowProps) {
   return (
     <li
-      className={`flex items-center justify-between rounded select-none px-1 cursor-pointer ${
-        isActive ? "bg-muted" : "hover:bg-muted/50"
-      }`}
+      className={`flex items-center justify-between rounded select-none px-1 cursor-pointer ${isActive ? "bg-muted" : "hover:bg-muted/50"
+        }`}
       onClick={() => onEdit(id)}
       onDoubleClick={() => onConnect(id, engine)}
     >
