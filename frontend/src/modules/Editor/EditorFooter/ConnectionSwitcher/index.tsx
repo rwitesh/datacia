@@ -42,23 +42,23 @@ export function ConnectionSwitcher() {
               className="h-7 gap-1.5 px-2 text-xs font-normal"
               disabled={isPending}
             >
-          {isPending ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <DatabaseIcon engine={currentConnection?.engine} size={14} />
-          )}
-          <span className="max-w-[120px] truncate select-none">
-            {currentConnection?.name || currentConnection?.host || "Connected"}
-          </span>
+              {isPending ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <DatabaseIcon engine={currentConnection?.engine} size={14} />
+              )}
+              <span className="max-w-[30vw] truncate select-none">
+                {currentConnection?.name || currentConnection?.host || "Connected"}
+              </span>
               <ChevronDown className="h-3 w-3 opacity-50" />
             </Button>
           </DropdownMenuTrigger>
         </TooltipTrigger>
         <TooltipContent side="top" className="text-xs">
           <div className="flex flex-col gap-1">
-            <div><span className="text-muted-foreground">Engine:</span> {currentConnection?.engine || "-"}</div>
-            <div><span className="text-muted-foreground">Host:</span> {currentConnection?.host || "-"}</div>
-            <div><span className="text-muted-foreground">User:</span> {currentConnection?.username || "-"}</div>
+            <div><span>Engine:</span> {currentConnection?.engine || "-"}</div>
+            <div><span>Host:</span> {currentConnection?.host || "-"}</div>
+            <div><span>User:</span> {currentConnection?.username || "-"}</div>
           </div>
         </TooltipContent>
       </Tooltip>

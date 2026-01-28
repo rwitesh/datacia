@@ -36,12 +36,12 @@ export function ResultBar({ data, onExportPng, viewMode = "data", onViewModeChan
     const getTableDataMutation = useGetTableData();
     const exportDataMutation = useExportData();
 
-    if (!activeTab || !activeTab.results) return null;
+    if (!activeTab) return null;
 
-    const { id, table, limit, offset, isExecuting, orderBy, orderDir, mode, results } = activeTab;
-    const executionTime = results.executionTime ?? 0;
-    const rowCount = results.data?.length ?? 0;
-    const columnCount = results.columns?.length ?? 0;
+    const { id, table, limit, offset, isExecuting, orderBy, orderDir, mode, results, error } = activeTab;
+    const executionTime = results?.executionTime ?? 0;
+    const rowCount = results?.data?.length ?? 0;
+    const columnCount = results?.columns?.length ?? 0;
     const isTableMode = mode === "table";
 
     // Pagination Logic
@@ -156,80 +156,85 @@ export function ResultBar({ data, onExportPng, viewMode = "data", onViewModeChan
                             </ToggleGroupItem>
                         </ToggleGroup>
 
-                        <div className="h-4 w-[1px] bg-border" />
-
-                        <div className="flex items-center">
-                            <Button
-                                size="icon"
-                                variant="ghost"
-                                onClick={handlePrev}
-                                disabled={isExecuting || (offset === 0)}
-                                className="h-7 w-7"
-                            >
-                                <ChevronLeft className="h-4 w-4" />
-                            </Button>
-                            <Button
-                                size="icon"
-                                variant="ghost"
-                                onClick={handleNext}
-                                disabled={isExecuting}
-                                className="h-7 w-7"
-                            >
-                                <ChevronRight className="h-4 w-4" />
-                            </Button>
-                        </div>
-
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground border-l border-border pl-3">
-                            <label className="flex items-center gap-1">
-                                Limit:
-                                <input
-                                    type="number"
-                                    className="w-14 border rounded px-1 text-xs bg-background h-6"
-                                    value={limit ?? ""}
-                                    onChange={(e) => {
-                                        const val = parseInt(e.target.value, 10);
-                                        if (!isNaN(val) && val > 0) updateTab(id, { limit: val });
-                                    }}
-                                    disabled={isExecuting}
-                                />
-                            </label>
-                            <label className="flex items-center gap-1">
-                                Offset:
-                                <input
-                                    type="number"
-                                    className="w-16 border rounded px-1 text-xs bg-background h-6"
-                                    value={offset ?? ""}
-                                    onChange={(e) => {
-                                        const val = parseInt(e.target.value, 10);
-                                        if (!isNaN(val) && val >= 0) updateTab(id, { offset: val });
-                                    }}
-                                    disabled={isExecuting}
-                                />
-                            </label>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                        <span>
-                            <span className="font-medium">Time:</span> {formatExecutionTime(executionTime)}
-                        </span>
-                        {results.type === "read" && (
+                        {viewMode === "data" && (
                             <>
-                                <span>
-                                    <span className="font-medium">Rows:</span> {rowCount.toLocaleString()}
-                                </span>
-                                <span>
-                                    <span className="font-medium">Columns:</span> {columnCount}
-                                </span>
+                                <div className="h-4 w-[1px] bg-border" />
+                                <div className="flex items-center">
+                                    <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        onClick={handlePrev}
+                                        disabled={isExecuting || (offset === 0)}
+                                        className="h-7 w-7"
+                                    >
+                                        <ChevronLeft className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        onClick={handleNext}
+                                        disabled={isExecuting}
+                                        className="h-7 w-7"
+                                    >
+                                        <ChevronRight className="h-4 w-4" />
+                                    </Button>
+                                </div>
+
+                                <div className="flex items-center gap-3 text-xs text-muted-foreground border-l border-border pl-3">
+                                    <label className="flex items-center gap-1">
+                                        Limit:
+                                        <input
+                                            type="number"
+                                            className="w-14 border rounded px-1 text-xs bg-background h-6"
+                                            value={limit ?? ""}
+                                            onChange={(e) => {
+                                                const val = parseInt(e.target.value, 10);
+                                                if (!isNaN(val) && val > 0) updateTab(id, { limit: val });
+                                            }}
+                                            disabled={isExecuting}
+                                        />
+                                    </label>
+                                    <label className="flex items-center gap-1">
+                                        Offset:
+                                        <input
+                                            type="number"
+                                            className="w-16 border rounded px-1 text-xs bg-background h-6"
+                                            value={offset ?? ""}
+                                            onChange={(e) => {
+                                                const val = parseInt(e.target.value, 10);
+                                                if (!isNaN(val) && val >= 0) updateTab(id, { offset: val });
+                                            }}
+                                            disabled={isExecuting}
+                                        />
+                                    </label>
+                                </div>
                             </>
                         )}
                     </div>
+                ) : (
+                    !error && (
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                            <span>
+                                <span className="font-medium">Time:</span> {formatExecutionTime(executionTime)}
+                            </span>
+                            {results?.type === "read" && (
+                                <>
+                                    <span>
+                                        <span className="font-medium">Rows:</span> {rowCount.toLocaleString()}
+                                    </span>
+                                    <span>
+                                        <span className="font-medium">Columns:</span> {columnCount}
+                                    </span>
+                                </>
+                            )}
+                        </div>
+                    )
                 )}
             </div>
 
             {/* Right Side: Actions (Refresh, Export) */}
             <div className="flex items-center gap-2">
-                {isTableMode && (
+                {isTableMode && viewMode === "data" && (
                     <Button
                         size="icon"
                         variant="ghost"
@@ -242,56 +247,60 @@ export function ResultBar({ data, onExportPng, viewMode = "data", onViewModeChan
                     </Button>
                 )}
 
-                <div className="h-4 w-[1px] bg-border mx-1" />
+                {viewMode === "data" && (
+                    <>
+                        <div className="h-4 w-[1px] bg-border mx-1" />
 
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            disabled={isExecuting || isExporting || !hasData}
-                            className="h-7 px-2 text-xs gap-1.5 text-muted-foreground hover:text-foreground"
-                        >
-                            <Download className={`h-3.5 w-3.5 ${isExporting ? "animate-pulse" : ""}`} />
-                            Export
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-44">
-                        <DropdownMenuItem
-                            onSelect={() => handleExport("json")}
-                            disabled={!isLicenseActive}
-                            className="gap-2 text-xs"
-                        >
-                            <FileJson className="h-3.5 w-3.5" />
-                            <span>Export JSON</span>
-                            {!isLicenseActive && (
-                                <Crown className="h-3 w-3 text-amber-500 ml-auto" />
-                            )}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                            onSelect={() => handleExport("csv")}
-                            disabled={!isLicenseActive}
-                            className="gap-2 text-xs"
-                        >
-                            <FileType className="h-3.5 w-3.5" />
-                            <span>Export CSV</span>
-                            {!isLicenseActive && (
-                                <Crown className="h-3 w-3 text-amber-500 ml-auto" />
-                            )}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                            onSelect={handleExportPng}
-                            disabled={!isLicenseActive}
-                            className="gap-2 text-xs"
-                        >
-                            <ImageIcon className="h-3.5 w-3.5" />
-                            <span>Export PNG</span>
-                            {!isLicenseActive && (
-                                <Crown className="h-3 w-3 text-amber-500 ml-auto" />
-                            )}
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    disabled={isExecuting || isExporting || !hasData}
+                                    className="h-7 px-2 text-xs gap-1.5 text-muted-foreground hover:text-foreground"
+                                >
+                                    <Download className={`h-3.5 w-3.5 ${isExporting ? "animate-pulse" : ""}`} />
+                                    Export
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-44">
+                                <DropdownMenuItem
+                                    onSelect={() => handleExport("json")}
+                                    disabled={!isLicenseActive}
+                                    className="gap-2 text-xs"
+                                >
+                                    <FileJson className="h-3.5 w-3.5" />
+                                    <span>Export JSON</span>
+                                    {!isLicenseActive && (
+                                        <Crown className="h-3 w-3 text-amber-500 ml-auto" />
+                                    )}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                    onSelect={() => handleExport("csv")}
+                                    disabled={!isLicenseActive}
+                                    className="gap-2 text-xs"
+                                >
+                                    <FileType className="h-3.5 w-3.5" />
+                                    <span>Export CSV</span>
+                                    {!isLicenseActive && (
+                                        <Crown className="h-3 w-3 text-amber-500 ml-auto" />
+                                    )}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                    onSelect={handleExportPng}
+                                    disabled={!isLicenseActive}
+                                    className="gap-2 text-xs"
+                                >
+                                    <ImageIcon className="h-3.5 w-3.5" />
+                                    <span>Export PNG</span>
+                                    {!isLicenseActive && (
+                                        <Crown className="h-3 w-3 text-amber-500 ml-auto" />
+                                    )}
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </>
+                )}
             </div>
         </div>
     );

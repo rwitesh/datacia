@@ -92,7 +92,7 @@ export const Editor = () => {
   };
 
   return (
-    <div className="h-full w-full flex flex-col bg-card relative">
+    <div className="h-full w-full flex flex-col bg-card relative font-display">
       {/* Loading Overlay */}
       <LoadingOverlay
         isVisible={isInitialLoading || tables.isLoading}
@@ -163,13 +163,13 @@ export const Editor = () => {
                                 <QueryInput />
                               </div>
                             </ResizablePanel>
-                            <ResizableHandle/>
+                            <ResizableHandle />
                           </>
                         )}
                         <ResizablePanel minSize={0} className="min-h-0">
                           <div className="h-full overflow-hidden">
-                            <QueryResult 
-                              onSelectionChange={setSelectedData} 
+                            <QueryResult
+                              onSelectionChange={setSelectedData}
                               onOpenDataView={() => setIsDataViewOpen(true)}
                             />
                           </div>

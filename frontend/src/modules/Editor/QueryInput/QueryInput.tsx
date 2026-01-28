@@ -123,7 +123,7 @@ export function QueryInput() {
 
   return (
     <div className="relative h-full w-full">
-      <div ref={editorEl} className="h-full w-full font-mono text-sm bg-card" />
+      <div ref={editorEl} className="h-full w-full text-sm bg-card" />
 
       {/* Floating Action Buttons */}
       <div className="absolute bottom-3 right-3 flex items-center gap-2 z-10">

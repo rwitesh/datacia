@@ -6,7 +6,9 @@
 import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
 
 /**
- * SetText sets the system clipboard content to the given text.
+ * SetContent sets the system clipboard content to the given text or image.
+ * For images, content should be base64-encoded image data.
+ * For text, content is the plain text string.
  */
 export function SetContent(content: string, contentType: string): $CancellablePromise<void> {
     return $Call.ByID(1967985899, content, contentType);

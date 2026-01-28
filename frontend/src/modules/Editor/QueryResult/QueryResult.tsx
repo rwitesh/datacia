@@ -130,14 +130,14 @@ export function QueryResult({ onSelectionChange, onOpenDataView }: QueryResultPr
   return (
     <div className="h-full flex flex-col overflow-hidden bg-card">
       <div className="flex-1 overflow-hidden relative">
-        {error ? (
-          <ErrorView error={error} />
-        ) : isTableViewMode && viewMode === "ddl" ? (
+        {isTableViewMode && viewMode === "ddl" ? (
           <DDLView
             ddl={ddlData}
             isLoading={getDDLMutation.isPending}
             error={ddlError}
           />
+        ) : error ? (
+          <ErrorView error={error} />
         ) : showDataTable ? (
           <DataTable
             ref={tableRef}

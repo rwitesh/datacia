@@ -13,12 +13,20 @@ export function TablesTab() {
     tables: { data, isLoading, isFetching, error },
     createTab,
     updateTab,
+    tabs,
+    setActiveTab,
   } = useEditorContext();
 
   const getTableDataMutation = useGetTableData();
   const getTableSchemaMutation = useGetTableSchema();
 
   const handleTableClick = async (table: string) => {
+    const existingTab = tabs.find((t) => t.mode === "table" && t.table === table);
+    if (existingTab) {
+      setActiveTab(existingTab.id);
+      return;
+    }
+
     const tab = createTab(table, "table");
     if (!tab.table || tab.limit === undefined || tab.offset === undefined) {
       return;
@@ -61,7 +69,13 @@ export function TablesTab() {
   };
 
   const handleOpenTableSchema = async (table: string) => {
-    const tab = createTab(table, "table");
+    const existingTab = tabs.find((t) => t.mode === "table" && t.table === table);
+    const tab = existingTab || createTab(table, "table");
+
+    if (existingTab) {
+      setActiveTab(existingTab.id);
+    }
+
     if (!tab.table) {
       return;
     }

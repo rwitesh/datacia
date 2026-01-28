@@ -12,11 +12,11 @@ import (
 )
 
 var (
-	ErrSignatureMismatch = errors.New("invalid license signature")
-	ErrClockRollback     = errors.New("system clock rollback detected")
-	ErrGracePeriodOver   = errors.New("internet connection required to validate license")
-	ErrMachineMismatch   = errors.New("hardware mismatch")
-	ErrLicenseExpired    = errors.New("license has expired")
+	ErrSignatureMismatch = errors.New("Invalid license")
+	ErrClockRollback     = errors.New("Invalid license")
+	ErrGracePeriodOver   = errors.New("Failed to validate license")
+	ErrMachineMismatch   = errors.New("Invalid license")
+	ErrLicenseExpired    = errors.New("License has expired")
 )
 
 const (

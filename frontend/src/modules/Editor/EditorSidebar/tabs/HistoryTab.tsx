@@ -5,16 +5,12 @@ import { timeAgo } from "../utils";
 import type { QueryHistoryItem } from "@/services/bindings/database";
 
 export function HistoryTab() {
-  const { createTab, updateTab, activeTab } = useEditorContext();
+  const { createTab, updateTab } = useEditorContext();
   const { data: queryHistory, isLoading: isHistoryLoading } = useGetQueryHistory();
 
   const handleHistoryClick = (sql: string) => {
-    if (activeTab?.mode === 'query') {
-      updateTab(activeTab.id, { sql });
-    } else {
-      const tab = createTab("Query", "query");
-      updateTab(tab.id, { sql });
-    }
+    const tab = createTab("Query", "query");
+    updateTab(tab.id, { sql });
   };
 
   return (
