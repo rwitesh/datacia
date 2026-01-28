@@ -1,0 +1,230 @@
+import { useState } from "react";
+import {
+    Trash2,
+    Edit2,
+    FilePlus,
+    FolderPlus,
+} from "lucide-react";
+import {
+    ContextMenu,
+    ContextMenuContent,
+    ContextMenuItem,
+    ContextMenuTrigger,
+    ContextMenuSeparator
+} from "@/components/ui/context-menu";
+import { Input } from "@/components/ui/input";
+import { useRenameNode, useDeleteNode, useWriteFile } from "@/services/queries";
+import type { FileNode } from "@/services/bindings";
+import { toast } from "sonner";
+import { CreationInput } from "../utils/CreationInput";
+import {
+    getNodeIcon,
+    findAvailableFileName,
+    getDestinationFolder,
+    getFileName,
+} from "./utils";
+
+interface FileTreeItemProps {
+    node: FileNode;
+    depth: number;
+    isExpanded: boolean;
+    isSelected: boolean;
+    creatingState: { type: "file" | "folder"; parentPath: string } | null;
+    onSelect: (path: string, nodeType: string) => void;
+    onOpenFile: (path: string, name: string) => void;
+    onCreateRequest: (type: "file" | "folder", parentPath: string) => void;
+    onCreateSubmit: (name: string) => void;
+    onCancelCreate: () => void;
+    onMove: (src: string, dest: string) => void;
+    tree: FileNode[] | undefined;
+    writeFile: ReturnType<typeof useWriteFile>;
+    children?: React.ReactNode;
+}
+
+export function FileTreeItem({
+    node,
+    depth,
+    isExpanded,
+    isSelected,
+    creatingState,
+    onSelect,
+    onOpenFile,
+    onCreateRequest,
+    onCreateSubmit,
+    onCancelCreate,
+    onMove,
+    tree,
+    writeFile,
+    children,
+}: FileTreeItemProps) {
+    const renameNode = useRenameNode();
+    const deleteNode = useDeleteNode();
+
+    const [renamingPath, setRenamingPath] = useState<string | null>(null);
+    const [renameValue, setRenameValue] = useState("");
+
+    const isFolder = node.type === "folder";
+    const isRenaming = renamingPath === node.path;
+    const isCreatingHere = creatingState && creatingState.parentPath === node.path;
+
+    const handleRename = (path: string) => {
+        if (!renameValue.trim()) {
+            setRenamingPath(null);
+            return;
+        }
+        renameNode.mutate({ path, newName: renameValue });
+        setRenamingPath(null);
+        setRenameValue("");
+    };
+
+    const handleDragStart = (e: React.DragEvent, path: string) => {
+        e.dataTransfer.setData("application/datacia-node", path);
+        e.dataTransfer.effectAllowed = "move";
+    };
+
+    const handleDrop = async (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const files = Array.from(e.dataTransfer.files);
+        const sqlFile = files.find((file) => file.name.endsWith(".sql"));
+
+        if (sqlFile) {
+            try {
+                const content = await sqlFile.text();
+                const fileName = sqlFile.name;
+                const destFolder = getDestinationFolder(node);
+                const availableFileName = findAvailableFileName(fileName, destFolder, tree);
+                const targetPath = destFolder ? `${destFolder}/${availableFileName}` : availableFileName;
+
+                writeFile.mutate(
+                    { path: targetPath, content },
+                    {
+                        onSuccess: () => {
+                            toast.success(`File saved as ${availableFileName}`);
+                        },
+                        onError: (err: Error) => {
+                            toast.error(err.message || "Failed to save file");
+                        }
+                    }
+                );
+            } catch (err: unknown) {
+                const message = err instanceof Error ? err.message : "Failed to read file";
+                toast.error(message);
+            }
+            return;
+        }
+
+        const srcPath = e.dataTransfer.getData("application/datacia-node");
+        if (!srcPath) return;
+
+        const destFolder = getDestinationFolder(node);
+        const fileName = getFileName(srcPath);
+        const newPath = destFolder ? `${destFolder}/${fileName}` : fileName;
+
+        onMove(srcPath, newPath);
+    };
+
+    const handleClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        onSelect(node.path, node.type);
+        if (!isFolder) {
+            onOpenFile(node.path, node.name);
+        }
+    };
+
+    return (
+        <div>
+            <ContextMenu>
+                <ContextMenuTrigger>
+                    <div
+                        className={`flex items-center gap-1.5 px-2 py-1 rounded-sm cursor-pointer text-xs group
+                            ${isSelected
+                                ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                                : "hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+                            }`}
+                        style={{ paddingLeft: `${(depth * 12) + 8}px` }}
+                        onClick={handleClick}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, node.path)}
+                        onDragOver={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                        }}
+                        onDrop={handleDrop}
+                    >
+                        {getNodeIcon(node.type, isExpanded)}
+
+                        {isRenaming ? (
+                            <Input
+                                autoFocus
+                                className="h-5 text-xs py-0 px-1 focus-visible:ring-0 focus-visible:ring-offset-0"
+                                value={renameValue}
+                                onChange={(e) => setRenameValue(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter") handleRename(node.path);
+                                    if (e.key === "Escape") setRenamingPath(null);
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                                onBlur={() => handleRename(node.path)}
+                            />
+                        ) : (
+                            <span className="truncate">{node.name}</span>
+                        )}
+                    </div>
+                </ContextMenuTrigger>
+                <ContextMenuContent>
+                    <ContextMenuItem onSelect={() => onCreateRequest("file", isFolder ? node.path : (node.path.split('/').slice(0, -1).join('/')))}>
+                        <FilePlus className="h-3 w-3 mr-2" />
+                        New Query
+                    </ContextMenuItem>
+
+                    {isFolder && (
+                        <ContextMenuItem onSelect={() => onCreateRequest("folder", node.path)}>
+                            <FolderPlus className="h-3 w-3 mr-2" />
+                            New Folder
+                        </ContextMenuItem>
+                    )}
+
+                    <ContextMenuSeparator />
+
+                    <ContextMenuItem onSelect={() => {
+                        setRenamingPath(node.path);
+                        setRenameValue(node.name);
+                    }}>
+                        <Edit2 className="h-3 w-3 mr-2" />
+                        Rename
+                    </ContextMenuItem>
+                    <ContextMenuItem
+                        className="text-red-500 focus:text-red-500"
+                        onSelect={(e) => {
+                            e.stopPropagation();
+                            deleteNode.mutate(node.path);
+                        }}
+                    >
+                        <Trash2 className="h-3 w-3 mr-2" />
+                        Delete
+                    </ContextMenuItem>
+                </ContextMenuContent>
+            </ContextMenu>
+
+            {/* Rendering children and creation input if this folder is expanded */}
+            {isFolder && isExpanded && (
+                <>
+                    {/* Inline input if creating inside this folder */}
+                    {isCreatingHere && (
+                        <div
+                            className="flex items-center gap-1.5 px-2 py-1"
+                            style={{ paddingLeft: `${((depth + 1) * 12) + 8}px` }}
+                        >
+                            {getNodeIcon(creatingState.type)}
+                            <CreationInput onSubmit={onCreateSubmit} onCancel={onCancelCreate} />
+                        </div>
+                    )}
+
+                    {children}
+                </>
+            )}
+        </div>
+    );
+}
