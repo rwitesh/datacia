@@ -92,10 +92,17 @@ export function useGetDDL() {
   });
 }
 
-export function useGetQueryHistory() {
+export interface QueryHistoryFilters {
+  search?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}
+
+export function useGetQueryHistory(filters: QueryHistoryFilters = {}) {
+  const { search = "", dateFrom = "", dateTo = "" } = filters;
   return useQuery({
-    queryKey: ["query-history"],
-    queryFn: () => GetQueryHistory(50),
+    queryKey: ["query-history", search, dateFrom, dateTo],
+    queryFn: () => GetQueryHistory(50, search, dateFrom, dateTo),
     retry: 3,
     refetchOnWindowFocus: true,
   });

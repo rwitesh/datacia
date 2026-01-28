@@ -305,8 +305,8 @@ func (e *Engine) RunQuery(queryId, queryType, sql string) (common.QueryResult, e
 	return result, err
 }
 
-func (e *Engine) GetQueryHistory(limit int) ([]db.QueryHistoryItem, error) {
-	return e.store.GetQueryHistory(limit)
+func (e *Engine) GetQueryHistory(limit int, search string, dateFrom string, dateTo string) ([]db.QueryHistoryItem, error) {
+	return e.store.GetQueryHistory(limit, search, dateFrom, dateTo)
 }
 
 func (e *Engine) CancelQuery(queryId string) error {

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"datacia/internal/constants"
@@ -212,10 +213,9 @@ func (s *Store) SaveQueryHistory(query string, durationMs int64, status string, 
 	return err
 }
 
-func (s *Store) GetQueryHistory(limit int) ([]QueryHistoryItem, error) {
-	// Group by query to show unique queries with execution count
-	// We select the latest timestamp for each query
-	rows, err := s.db.Query(`
+func (s *Store) GetQueryHistory(limit int, search string, dateFrom string, dateTo string) ([]QueryHistoryItem, error) {
+	// Build dynamic query with optional filters
+	query := `
 		SELECT 
 			id, 
 			query, 
@@ -225,10 +225,39 @@ func (s *Store) GetQueryHistory(limit int) ([]QueryHistoryItem, error) {
 			error_message,
 			COUNT(query) as count
 		FROM query_history
+	`
+	args := []interface{}{}
+	conditions := []string{}
+
+	// Add search filter if provided
+	if search != "" {
+		conditions = append(conditions, "query LIKE ?")
+		args = append(args, "%"+search+"%")
+	}
+
+	// Add date range filters if provided
+	if dateFrom != "" {
+		conditions = append(conditions, "timestamp >= ?")
+		args = append(args, dateFrom)
+	}
+	if dateTo != "" {
+		conditions = append(conditions, "timestamp <= ?")
+		args = append(args, dateTo)
+	}
+
+	// Add WHERE clause only if there are conditions
+	if len(conditions) > 0 {
+		query += " WHERE " + strings.Join(conditions, " AND ")
+	}
+
+	query += `
 		GROUP BY query
 		ORDER BY timestamp DESC
 		LIMIT ?
-	`, limit)
+	`
+	args = append(args, limit)
+
+	rows, err := s.db.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}

@@ -40,6 +40,11 @@ export async function GetDDL(table: string): Promise<string> {
   return WGetDDL(table);
 }
 
-export async function GetQueryHistory(limit: number) {
-  return WGetQueryHistory(limit);
+export async function GetQueryHistory(
+  limit: number,
+  search: string = "",
+  dateFrom: string = "",
+  dateTo: string = ""
+) {
+  return WGetQueryHistory(limit, search, dateFrom, dateTo);
 }

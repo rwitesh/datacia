@@ -78,8 +78,8 @@ export function GetDDL(table: string): $CancellablePromise<string> {
     return $Call.ByID(1892461142, table);
 }
 
-export function GetQueryHistory(limit: number): $CancellablePromise<db$0.QueryHistoryItem[]> {
-    return $Call.ByID(1117816130, limit).then(($result: any) => {
+export function GetQueryHistory(limit: number, search: string, dateFrom: string, dateTo: string): $CancellablePromise<db$0.QueryHistoryItem[]> {
+    return $Call.ByID(1117816130, limit, search, dateFrom, dateTo).then(($result: any) => {
         return $$createType3($result);
     });
 }
