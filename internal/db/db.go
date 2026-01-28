@@ -2,7 +2,7 @@ package db
 
 import (
 	"database/sql"
-	"encoding/json"
+	"encoding/base64"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -42,111 +42,234 @@ func OpenFile(dbPath string, encryptionKey []byte) (*Store, error) {
 		return nil, fmt.Errorf("failed to ping db: %w", err)
 	}
 
-	// Schema: connections
-	_, err = db.Exec(`
-		CREATE TABLE IF NOT EXISTS connections (
-			id TEXT PRIMARY KEY, 
-			name TEXT NOT NULL UNIQUE,
-			config TEXT NOT NULL,
-			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-		)
-	`)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create connections table: %w", err)
+	s := &Store{db: db, encyptionKey: encryptionKey}
+
+	if err := s.initSchema(); err != nil {
+		db.Close()
+		return nil, err
 	}
 
-	// Schema: query_history
-	_, err = db.Exec(`
-		CREATE TABLE IF NOT EXISTS query_history (
-			id TEXT PRIMARY KEY,
-			query TEXT NOT NULL,
-			timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-			duration_ms INTEGER,
-			status TEXT,
-			error_message TEXT
-		)
-	`)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create query_history table: %w", err)
-	}
-
-	return &Store{db: db, encyptionKey: encryptionKey}, nil
+	return s, nil
 }
 
 func (s *Store) Close() error {
 	return s.db.Close()
 }
 
+func (s *Store) initSchema() error {
+	schema := []string{
+		`CREATE TABLE IF NOT EXISTS connections (
+			id TEXT PRIMARY KEY, 
+			name TEXT NOT NULL UNIQUE,
+			engine TEXT NOT NULL,
+			host TEXT,
+			port TEXT,
+			username TEXT,
+			password TEXT,
+			database TEXT,
+			use_ssh INTEGER DEFAULT 0,
+			ssh_host TEXT,
+			ssh_port TEXT,
+			ssh_username TEXT,
+			ssh_password TEXT,
+			use_ssh_key INTEGER DEFAULT 0,
+			ssh_key_path TEXT,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_connections_name ON connections(name)`,
+		`CREATE TABLE IF NOT EXISTS query_history (
+			id TEXT PRIMARY KEY,
+			query TEXT NOT NULL,
+			timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			duration_ms INTEGER,
+			status TEXT,
+			error_message TEXT
+		)`,
+	}
+
+	for _, stmt := range schema {
+		if _, err := s.db.Exec(stmt); err != nil {
+			return fmt.Errorf("failed to execute schema statement: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (s *Store) encryptField(value string) (string, error) {
+	if value == "" {
+		return "", nil
+	}
+	encrypted, err := security.Encrypt(s.encyptionKey, []byte(value))
+	if err != nil {
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString(encrypted), nil
+}
+
+func (s *Store) decryptField(value string) (string, error) {
+	if value == "" {
+		return "", nil
+	}
+	decoded, err := base64.StdEncoding.DecodeString(value)
+	if err != nil {
+		return "", err
+	}
+	decrypted, err := security.Decrypt(s.encyptionKey, decoded)
+	if err != nil {
+		return "", err
+	}
+	return string(decrypted), nil
+}
+
 func (s *Store) SaveConnection(name string, config map[string]string) error {
-	data, err := json.Marshal(config)
+	id := uuid.New().String()
+
+	encPassword, err := s.encryptField(config["password"])
+	if err != nil {
+		return err
+	}
+	encSSHPassword, err := s.encryptField(config["sshPassword"])
 	if err != nil {
 		return err
 	}
 
-	encrpytedData, err := security.Encrypt(s.encyptionKey, data)
-	if err != nil {
-		return fmt.Errorf("unable to encrypt credentials: %w", err)
+	useSSH := 0
+	if config["useSSH"] == "true" {
+		useSSH = 1
+	}
+	useSSHKey := 0
+	if config["useSSHKey"] == "true" {
+		useSSHKey = 1
 	}
 
-	id := uuid.New().String()
+	query := `
+		INSERT INTO connections (
+			id, name, engine, host, port, username, password, database, 
+			use_ssh, ssh_host, ssh_port, ssh_username, ssh_password, 
+			use_ssh_key, ssh_key_path, created_at, updated_at
+		)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+	`
 
-	_, err = s.db.Exec(`
-		INSERT INTO connections (id, name, config, created_at, updated_at)
-		VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-	`, id, name, string(encrpytedData))
+	_, err = s.db.Exec(query,
+		id, name, config["engine"], config["host"], config["port"], config["username"], encPassword, config["database"],
+		useSSH, config["sshHost"], config["sshPort"], config["sshUsername"], encSSHPassword,
+		useSSHKey, config["sshKeyPath"],
+	)
 	return err
 }
 
 func (s *Store) UpdateConnection(id, name string, config map[string]string) error {
-	data, err := json.Marshal(config)
+	encPassword, err := s.encryptField(config["password"])
+	if err != nil {
+		return err
+	}
+	encSSHPassword, err := s.encryptField(config["sshPassword"])
 	if err != nil {
 		return err
 	}
 
-	encrpytedData, err := security.Encrypt(s.encyptionKey, data)
-	if err != nil {
-		return fmt.Errorf("unable to encrypt credentials: %w", err)
+	useSSH := 0
+	if config["useSSH"] == "true" {
+		useSSH = 1
+	}
+	useSSHKey := 0
+	if config["useSSHKey"] == "true" {
+		useSSHKey = 1
 	}
 
-	_, err = s.db.Exec(`
+	// Update columns
+	query := `
 		UPDATE connections
-		SET name = ?, config = ?, updated_at = CURRENT_TIMESTAMP
+		SET name = ?,
+			engine = ?, host = ?, port = ?, username = ?, password = ?, database = ?,
+			use_ssh = ?, ssh_host = ?, ssh_port = ?, ssh_username = ?, ssh_password = ?,
+			use_ssh_key = ?, ssh_key_path = ?,
+			updated_at = CURRENT_TIMESTAMP
 		WHERE id = ?
-	`, name, string(encrpytedData), id)
+	`
+
+	_, err = s.db.Exec(query,
+		name,
+		config["engine"], config["host"], config["port"], config["username"], encPassword, config["database"],
+		useSSH, config["sshHost"], config["sshPort"], config["sshUsername"], encSSHPassword,
+		useSSHKey, config["sshKeyPath"],
+		id,
+	)
 	return err
 }
 
 func (s *Store) LoadConnection(id string) (map[string]string, error) {
-	row := s.db.QueryRow(`SELECT name, config FROM connections WHERE id = ?`, id)
+	query := `
+		SELECT 
+			name, engine, host, port, username, password, database,
+			use_ssh, ssh_host, ssh_port, ssh_username, ssh_password,
+			use_ssh_key, ssh_key_path
+		FROM connections WHERE id = ?
+	`
+	row := s.db.QueryRow(query, id)
 
-	var name string
-	var encrypted string
+	var name, engine, host, port, username, encPassword, database string
+	var useSSH int
+	var sshHost, sshPort, sshUsername, encSSHPassword string
+	var useSSHKey int
+	var sshKeyPath string
 
-	if err := row.Scan(&name, &encrypted); err != nil {
+	if err := row.Scan(
+		&name, &engine, &host, &port, &username, &encPassword, &database,
+		&useSSH, &sshHost, &sshPort, &sshUsername, &encSSHPassword,
+		&useSSHKey, &sshKeyPath,
+	); err != nil {
 		if err == sql.ErrNoRows {
 			return map[string]string{}, nil
 		}
 		return map[string]string{}, err
 	}
 
-	// Decrypt before parsing JSON
-	plain, err := security.Decrypt(s.encyptionKey, []byte(encrypted))
+	password, err := s.decryptField(encPassword)
 	if err != nil {
-		return map[string]string{}, fmt.Errorf("failed to decrypt config: %w", err)
+		return nil, fmt.Errorf("failed to decrypt password: %w", err)
+	}
+	sshPassword, err := s.decryptField(encSSHPassword)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decrypt ssh password: %w", err)
 	}
 
-	var cfg map[string]string
-	if err := json.Unmarshal(plain, &cfg); err != nil {
-		return map[string]string{}, fmt.Errorf("failed to parse decrypted json: %w", err)
+	config := map[string]string{
+		"id":          id, // Include ID? The original didn't explicitly, but typically expected.
+		"name":        name,
+		"engine":      engine,
+		"host":        host,
+		"port":        port,
+		"username":    username,
+		"password":    password,
+		"database":    database,
+		"sshHost":     sshHost,
+		"sshPort":     sshPort,
+		"sshUsername": sshUsername,
+		"sshPassword": sshPassword,
+		"sshKeyPath":  sshKeyPath,
 	}
 
-	cfg["name"] = name
-	return cfg, nil
+	if useSSH == 1 {
+		config["useSSH"] = "true"
+	} else {
+		config["useSSH"] = "false"
+	}
+
+	if useSSHKey == 1 {
+		config["useSSHKey"] = "true"
+	} else {
+		config["useSSHKey"] = "false"
+	}
+
+	return config, nil
 }
 
 func (s *Store) ListConnections() (map[string]common.ConnectionInfo, error) {
-	rows, err := s.db.Query(`SELECT id, name, config FROM connections ORDER BY updated_at DESC`)
+	rows, err := s.db.Query(`SELECT id, name, engine FROM connections ORDER BY updated_at DESC`)
 	if err != nil {
 		return map[string]common.ConnectionInfo{}, err
 	}
@@ -155,24 +278,10 @@ func (s *Store) ListConnections() (map[string]common.ConnectionInfo, error) {
 	connections := map[string]common.ConnectionInfo{}
 
 	for rows.Next() {
-		var id, name, encrypted string
-		if err := rows.Scan(&id, &name, &encrypted); err != nil {
+		var id, name, engine string
+		if err := rows.Scan(&id, &name, &engine); err != nil {
 			return nil, err
 		}
-
-		// Decrypt
-		plain, err := security.Decrypt(s.encyptionKey, []byte(encrypted))
-		if err != nil {
-			return nil, fmt.Errorf("failed to decrypt config for id=%s: %w", id, err)
-		}
-
-		var cfg map[string]string
-		if err := json.Unmarshal(plain, &cfg); err != nil {
-			return nil, fmt.Errorf("failed to parse decrypted config for id=%s: %w", id, err)
-		}
-
-		engine := cfg["engine"]
-
 		connections[id] = common.ConnectionInfo{
 			Name:   name,
 			Engine: engine,
