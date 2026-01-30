@@ -372,7 +372,7 @@ func (e *Engine) SelectSSHKeyFile() (string, error) {
 		return "", errors.New("application instance not available")
 	}
 
-	dialog := application.OpenFileDialog()
+	dialog := e.wailsApp.Dialog.OpenFile()
 	dialog.SetTitle("Select SSH Private Key")
 
 	path, err := dialog.PromptForSingleSelection()
@@ -390,7 +390,7 @@ func (e *Engine) SelectSQLiteFile() (string, error) {
 		return "", errors.New("application instance not available")
 	}
 
-	dialog := application.OpenFileDialog()
+	dialog := e.wailsApp.Dialog.OpenFile()
 	dialog.SetTitle("Select SQLite Database File")
 	dialog.AddFilter("SQLite Database", "*.sqlite;*.db;*.sqlite3")
 	dialog.AddFilter("All Files", "*.*")

@@ -86,7 +86,7 @@ func (s *FileService) ExportDataToFile(format string, data string, suggestedFile
 	}
 
 	// Configure save dialog based on format
-	dialog := application.SaveFileDialog().SetFilename(filename)
+	dialog := s.app.Dialog.SaveFile().SetFilename(filename)
 
 	if ext == ".png" {
 		dialog.AddFilter("PNG Image", "*.png")
