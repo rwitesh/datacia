@@ -1,6 +1,7 @@
 package app
 
 import (
+	"datacia/internal/appinfo"
 	"datacia/internal/clipboard"
 	"datacia/internal/constants"
 	"datacia/internal/db"
@@ -91,6 +92,10 @@ func (a *App) Initialize() error {
 		return fmt.Errorf("failed to initialize security context: %w", err)
 	}
 
+	// Initialize app info
+	appinfo.Init(a.instance)
+	appinfo.SetVersion(version)
+
 	// Init clipboard
 	if err := clip.Init(); err != nil {
 		logger.Logger.Error("Failed to initialize clipboard", zap.Error(err))
@@ -135,6 +140,10 @@ func (a *App) Initialize() error {
 	// Storing, writing, reading, etc. queries
 	queriesService := queries.NewQueriesService(a.instance)
 	a.instance.RegisterService(application.NewService(queriesService))
+
+	// App Info
+	appInfoService := appinfo.NewService(a.instance)
+	a.instance.RegisterService(application.NewService(appInfoService))
 
 	return nil
 }

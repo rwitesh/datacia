@@ -5,7 +5,3 @@ import * as Engine from "./engine.js";
 export {
     Engine
 };
-
-export {
-    AppInfo
-} from "./models.js";

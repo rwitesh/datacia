@@ -15,13 +15,3 @@ func (e *Engine) Update() error {
 func (e *Engine) RestartApp() error {
 	return e.updater.Restart()
 }
-
-type AppInfo struct {
-	Version string `json:"version"`
-}
-
-func (e *Engine) GetAppInfo() AppInfo {
-	return AppInfo{
-		Version: e.updater.CurrentVersion,
-	}
-}

@@ -21,7 +21,6 @@ export {
   Update,
   RestartApp,
   GetCurrentConnectionInfo,
-  GetAppInfo,
   // Connection management functions
   SaveConnection,
   DeleteConnection,
@@ -39,6 +38,10 @@ export {
   // Additional functions
 
 } from "../../../bindings/datacia/pkg/remote/engine";
+
+export {
+  GetAppInfo,
+} from "../../../bindings/datacia/internal/appinfo/service";
 
 // Query service functions
 export {

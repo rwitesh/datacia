@@ -2,21 +2,22 @@ package license
 
 import (
 	"bytes"
+	"datacia/internal/appinfo"
 	"datacia/internal/constants"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
-	"runtime"
 	"time"
 )
 
 func LicenseActivate(licenseKey, machineID string) (*License, error) {
+	ctx := appinfo.Get()
 	reqBody, err := json.Marshal(LicenseData{
 		LicenseKey: licenseKey,
 		MachineID:  machineID,
-		OS:         runtime.GOOS,
-		OSVersion:  runtime.GOARCH,
+		OS:         ctx.OS,
+		OSVersion:  ctx.OSVersion,
 		AppVersion: "1.0.0",
 	})
 	if err != nil {

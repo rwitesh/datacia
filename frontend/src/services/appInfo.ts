@@ -2,10 +2,18 @@ import { useQuery } from "@tanstack/react-query";
 import { GetAppInfo as WGetAppInfo } from "./bindings/index";
 
 
+export interface AppInfo {
+    os: string;
+    os_version: string;
+    arch: string;
+    appearance: string;
+    version: string;
+}
+
 export function useAppInfo() {
-    return useQuery({
+    return useQuery<AppInfo>({
         queryKey: ["app-info"],
-        queryFn: WGetAppInfo,
-        staleTime: Infinity, // Version doesn't change during runtime
+        queryFn: WGetAppInfo as unknown as () => Promise<AppInfo>,
+        staleTime: Infinity,
     });
 }
