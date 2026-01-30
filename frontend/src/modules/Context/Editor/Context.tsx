@@ -9,7 +9,8 @@ export interface Tab {
   results: QueryResult | null;
   error?: string;
   isExecuting: boolean;
-  mode: "query" | "table";
+  type: "query" | "table";
+  mode?: "data" | "ddl";
   queryID?: string;
   limit?: number;
   offset?: number;
@@ -33,7 +34,7 @@ export type EditorContextType = {
   // Tab management
   tabs: Tab[];
   activeTab: Tab | undefined;
-  createTab: (title?: string, mode?: "query" | "table") => Tab;
+  createTab: (title?: string, type?: "query" | "table") => Tab;
   closeTab: (tabId: string) => void;
   setActiveTab: (tabId: string) => void;
   updateTab: (tabId: string, updates: Partial<Tab>) => void;

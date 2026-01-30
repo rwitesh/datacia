@@ -115,7 +115,7 @@ export function QueryInput() {
   }, [activeTab?.id, activeTab?.sql]);
 
   const handleFormat = () => {
-    if (activeTab && activeTab.mode === "query") {
+    if (activeTab && activeTab.type === "query") {
       const formatted = formatSQL(activeTab.sql || "", engine || "sql");
       updateTab(activeTab.id, { sql: formatted });
     }

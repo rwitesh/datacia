@@ -21,7 +21,7 @@ export function TablesTab() {
     const getTableSchemaMutation = useGetTableSchema();
 
     const handleTableClick = async (table: string) => {
-        const existingTab = tabs.find((t) => t.mode === "table" && t.table === table);
+        const existingTab = tabs.find((t) => t.type === "table" && t.table === table);
         if (existingTab) {
             setActiveTab(existingTab.id);
             return;
@@ -69,7 +69,7 @@ export function TablesTab() {
     };
 
     const handleOpenTableSchema = async (table: string) => {
-        const existingTab = tabs.find((t) => t.mode === "table" && t.table === table);
+        const existingTab = tabs.find((t) => t.type === "table" && t.table === table);
         const tab = existingTab || createTab(table, "table");
 
         if (existingTab) {

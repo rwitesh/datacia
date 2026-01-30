@@ -43,7 +43,7 @@ export const Editor = () => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "s") {
         e.preventDefault();
-        if (activeTab && activeTab.mode === "query") {
+        if (activeTab && activeTab.type === "query") {
           if (activeTab.savedPath) {
             writeFile.mutate({
               path: activeTab.savedPath,
@@ -82,7 +82,7 @@ export const Editor = () => {
     if (sqlFile) {
       const text = await sqlFile.text();
 
-      if (activeTab && activeTab.mode === "query") {
+      if (activeTab && activeTab.type === "query") {
         updateTab(activeTab.id, { sql: text });
       } else {
         const newTab = createTab(sqlFile.name, "query");
@@ -152,7 +152,7 @@ export const Editor = () => {
                         direction="vertical"
                         className="h-full"
                       >
-                        {activeTab.mode === "query" && (
+                        {activeTab.type === "query" && (
                           <>
                             <ResizablePanel
                               defaultSize={75}

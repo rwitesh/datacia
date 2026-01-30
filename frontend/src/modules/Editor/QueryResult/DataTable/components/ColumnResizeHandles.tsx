@@ -5,6 +5,7 @@ interface ColumnResizeHandlesProps {
     totalHeight: number;
     onResizeStart: (colIndex: number, startX: number) => void;
     isResizing: boolean;
+    resizingColumnIndex: number;
 }
 
 /**
@@ -16,6 +17,7 @@ export const ColumnResizeHandles = memo(function ColumnResizeHandles({
     totalHeight,
     onResizeStart,
     isResizing,
+    resizingColumnIndex,
 }: ColumnResizeHandlesProps) {
     // Calculate the left positions for each column border
     let accumulatedWidth = 0;
@@ -53,7 +55,7 @@ export const ColumnResizeHandles = memo(function ColumnResizeHandles({
                         className={`
               absolute inset-y-0 left-1/2 -translate-x-1/2 w-[2px]
               transition-colors duration-100
-              ${isResizing ? "bg-blue-500" : "bg-transparent group-hover:bg-blue-500/50"}
+              ${resizingColumnIndex === index ? "bg-blue-500" : "bg-transparent group-hover:bg-blue-500/50"}
             `}
                     />
                 </div>

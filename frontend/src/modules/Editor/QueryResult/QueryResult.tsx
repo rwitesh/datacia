@@ -18,7 +18,6 @@ export function QueryResult({ onSelectionChange, onOpenDataView }: QueryResultPr
   const { activeTab, updateTab } = useEditorContext();
   const getTableDataMutation = useGetTableData();
   const getDDLMutation = useGetDDL();
-  const [viewMode, setViewMode] = React.useState<ViewMode>("data");
   const [ddlData, setDdlData] = React.useState<string>("");
   const [ddlError, setDdlError] = React.useState<string | undefined>();
 
@@ -30,23 +29,17 @@ export function QueryResult({ onSelectionChange, onOpenDataView }: QueryResultPr
   const limit = activeTab?.limit;
   const offset = activeTab?.offset;
 
-  // Reset viewMode to "data" when table changes
-  React.useEffect(() => {
-    setViewMode("data");
-    setDdlData("");
-    setDdlError(undefined);
-  }, [table]);
-
   if (!activeTab) return null;
 
-  const { id, isExecuting, error, results, mode, orderBy, orderDir } = activeTab;
+  const { id, isExecuting, error, results, type, mode, orderBy, orderDir } = activeTab;
   const isReadQuery = results && results.type === "read";
   const isCommandQuery = results && results.type === "command";
-  const isTableViewMode = mode === "table";
+  const isTableViewMode = type === "table";
+  const viewMode = mode ?? "data";
 
   // Fetch DDL when switching to DDL mode
   const handleViewModeChange = (newMode: ViewMode) => {
-    setViewMode(newMode);
+    updateTab(id, { mode: newMode });
     if (newMode === "ddl" && table && !ddlData) {
       getDDLMutation.mutate(table, {
         onSuccess: (ddl) => {

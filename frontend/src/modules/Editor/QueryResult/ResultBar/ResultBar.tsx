@@ -38,11 +38,11 @@ export function ResultBar({ data, onExportPng, viewMode = "data", onViewModeChan
 
     if (!activeTab) return null;
 
-    const { id, table, limit, offset, isExecuting, orderBy, orderDir, mode, results, error } = activeTab;
+    const { id, table, limit, offset, isExecuting, orderBy, orderDir, type, results, error } = activeTab;
     const executionTime = results?.executionTime ?? 0;
     const rowCount = results?.data?.length ?? 0;
     const columnCount = results?.columns?.length ?? 0;
-    const isTableMode = mode === "table";
+    const isTableMode = type === "table";
 
     // Pagination Logic
     const fetchData = (newLimit: number, newOffset: number) => {

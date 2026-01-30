@@ -9,6 +9,7 @@ interface UseColumnResizeProps {
 interface UseColumnResizeReturn {
     columnWidths: number[];
     isResizing: boolean;
+    resizingColumnIndex: number;
     startResize: (colIndex: number, startX: number) => void;
     handleResizeMove: (clientX: number) => void;
     handleResizeEnd: () => void;
@@ -26,7 +27,8 @@ export function useColumnResize({
 }: UseColumnResizeProps): UseColumnResizeReturn {
     // Track user-resized column widths (delta from base width)
     const [resizeDeltas, setResizeDeltas] = useState<Record<string, number>>({});
-    const [isResizing, setIsResizing] = useState(false);
+    const [resizingColumnIndex, setResizingColumnIndex] = useState(-1);
+    const isResizing = resizingColumnIndex !== -1;
 
     // Resize state refs for mouse event handling
     const resizeState = useRef<{
@@ -49,7 +51,7 @@ export function useColumnResize({
                 startX,
                 startWidth: columnWidths[colIndex],
             };
-            setIsResizing(true);
+            setResizingColumnIndex(colIndex);
             onResizing?.(true);
 
             // Add document-level event listeners for drag
@@ -68,7 +70,7 @@ export function useColumnResize({
 
             const handleMouseUp = () => {
                 resizeState.current = null;
-                setIsResizing(false);
+                setResizingColumnIndex(-1);
                 onResizing?.(false);
                 document.removeEventListener("mousemove", handleMouseMove);
                 document.removeEventListener("mouseup", handleMouseUp);
@@ -95,7 +97,7 @@ export function useColumnResize({
 
     const handleResizeEnd = useCallback(() => {
         resizeState.current = null;
-        setIsResizing(false);
+        setResizingColumnIndex(-1);
         onResizing?.(false);
     }, [onResizing]);
 
@@ -111,6 +113,7 @@ export function useColumnResize({
     return {
         columnWidths,
         isResizing,
+        resizingColumnIndex,
         startResize,
         handleResizeMove,
         handleResizeEnd,

@@ -12,7 +12,7 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
   const cancelQueryMutation = useCancelQuery();
 
   const createTab = useCallback(
-    (title?: string, mode: "query" | "table" = "query"): Tab => {
+    (title?: string, type: "query" | "table" = "query"): Tab => {
       const newId = `tab-${Date.now()}-${Math.random()
         .toString(36)
         .substring(2, 9)}`;
@@ -21,14 +21,15 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
       const newTab: Tab = {
         id: newId,
         title: title || `Query ${tabNumber}`,
-        table: mode === "table" ? title : undefined,
+        table: type === "table" ? title : undefined,
         sql: "",
         results: null,
         error: undefined,
         isExecuting: false,
-        mode,
-        limit: mode === "table" ? 50 : undefined,
-        offset: mode === "table" ? 0 : undefined,
+        type,
+        mode: "data",
+        limit: type === "table" ? 50 : undefined,
+        offset: type === "table" ? 0 : undefined,
         pagination: false,
       };
 

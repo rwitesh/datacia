@@ -90,7 +90,7 @@ export const TabBar = () => {
                 onMouseDown={(e) => handleTabClick(e, tab.id)}
                 onDoubleClick={() => handleTabDoubleClick(tab.id, tab.title)}
               >
-                {getTabIcon(tab.mode)}
+                {getTabIcon(tab.type)}
 
                 {editingTabId === tab.id ? (
                   <input

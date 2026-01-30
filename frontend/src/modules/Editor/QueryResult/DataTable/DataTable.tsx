@@ -32,7 +32,6 @@ interface DataTableProps {
   onOpenDataView?: () => void;
   scrollPosition?: { left: number; top: number };
   onScrollChange?: (scroll: { left: number; top: number }) => void;
-  // Pagination offset for serial number calculation
   offset?: number;
 }
 
@@ -134,12 +133,14 @@ export const DataTable = forwardRef<HTMLDivElement, DataTableProps>(function Dat
   );
 
   // Column resize hook - applies user resize deltas to distributed widths
+  const allColumnIds = useMemo(() => ["#", ...columns], [columns]);
   const {
     columnWidths: finalColWidths,
     isResizing,
+    resizingColumnIndex,
     startResize,
   } = useColumnResize({
-    columns,
+    columns: allColumnIds,
     baseWidths: distributedWidths,
   });
 
@@ -226,6 +227,7 @@ export const DataTable = forwardRef<HTMLDivElement, DataTableProps>(function Dat
                       serverSortColumn={currentOrderBy}
                       serverSortDir={currentOrderDir}
                       onServerSort={onServerSort}
+                      onResizeStart={(startX) => startResize(i, startX)}
                     />
                   ))}
                 </tr>
@@ -248,6 +250,7 @@ export const DataTable = forwardRef<HTMLDivElement, DataTableProps>(function Dat
             totalHeight={rowVirtualizer.getTotalSize() + additionalFillerRows * rowHeight}
             onResizeStart={startResize}
             isResizing={isResizing}
+            resizingColumnIndex={resizingColumnIndex}
           />
           {/* Loading overlay - only covers the body, not the header */}
           {isLoading && (

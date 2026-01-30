@@ -15,8 +15,7 @@ interface TableHeaderProps {
     serverSortColumn?: string;
     serverSortDir?: "asc" | "desc";
     onServerSort?: (column: string, direction: "asc" | "desc") => void;
-    onResizeStart?: () => void;
-    onResizeEnd?: () => void;
+    onResizeStart?: (startX: number) => void;
 }
 
 export function TableHeader({
@@ -31,7 +30,6 @@ export function TableHeader({
     serverSortDir,
     onServerSort,
     onResizeStart,
-    onResizeEnd,
 }: TableHeaderProps) {
     const resizeHandleRef = useRef<HTMLDivElement>(null);
     const columnName = header.column.id;
@@ -66,20 +64,11 @@ export function TableHeader({
     const isSorted = !!sortDir;
 
     const handleResizeStart = (e: React.MouseEvent | React.TouchEvent) => {
-        onResizeStart?.();
+        e.preventDefault();
         e.stopPropagation();
 
-        const handler = header.getResizeHandler();
-        if (handler) handler(e);
-
-        const handleResizeEnd = () => {
-            onResizeEnd?.();
-            document.removeEventListener("mouseup", handleResizeEnd);
-            document.removeEventListener("touchend", handleResizeEnd);
-        };
-
-        document.addEventListener("mouseup", handleResizeEnd);
-        document.addEventListener("touchend", handleResizeEnd);
+        const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+        onResizeStart?.(clientX);
     };
 
     const handleMouseDownLocal = (e: React.MouseEvent) => {
