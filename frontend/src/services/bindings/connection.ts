@@ -1,4 +1,4 @@
-import { type DatabaseEngine } from "@/modules/utils/engines";
+import { type DatabaseEngine } from "@/shared/utils/engines";
 import {
   SaveConnection as WSaveConnection,
   DeleteConnection as WDeleteConnection,

@@ -1,13 +1,13 @@
 import "./App.css";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { Routes, Route, HashRouter } from "react-router";
-import { Home } from "@/modules/Home/Home";
-import { DatabaseConnection } from "@/modules/Connection/Connection";
-import { WelcomePanel } from "@/modules/Home/WelcomePanel";
-import { Editor } from "@/modules/Editor/Editor";
-import { AppProvider } from "./modules/Context/App/Provider";
+import { Home } from "@/windows/connection/Home";
+import { DatabaseConnection } from "@/windows/connection/Connection";
+import { WelcomePanel } from "@/windows/connection/WelcomePanel";
+import { Editor } from "@/windows/editor/Editor";
+import { AppProvider } from "@/context/app/Provider";
 import { Toaster } from "sonner";
-import { EditorProvider } from "./modules/Context/Editor/Provider";
+import { EditorProvider } from "@/context/editor/Provider";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const queryClient = new QueryClient();

@@ -42,6 +42,7 @@ create-dmg:
 		-ov -format UDZO \
 		"$(OUTPUT_DIR)/$(DMG_NAME)"
 	@echo "DMG created at $(OUTPUT_DIR)/$(DMG_NAME)"
+	open "$(OUTPUT_DIR)"
 
 dmg-darwin-arm64: OUTPUT_DIR = $(BASE_OUTPUT)/darwin/arm64
 dmg-darwin-arm64: DMG_NAME = $(APP_NAME)_darwin_arm64.dmg
