@@ -35,6 +35,7 @@ export {
   SelectSSHKeyFile,
   SelectSQLiteFile,
   CheckConnectionHealth,
+  OpenConnectionWindow,
   // Additional functions
 
 } from "../../../bindings/datacia/pkg/remote/engine";

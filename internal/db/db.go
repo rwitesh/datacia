@@ -9,11 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"datacia/internal/constants"
+	"datacia/internal/paths"
 	"datacia/internal/security"
 	"datacia/pkg/common"
 
-	"github.com/adrg/xdg"
 	"github.com/google/uuid"
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -25,7 +24,7 @@ type Store struct {
 
 // Open initializes SQLite at $XDG_DATA_HOME/<appName>/data.db and returns a Store
 func Open(encryptionKey []byte) (*Store, error) {
-	dbPath, err := xdg.DataFile(filepath.Join(constants.APP_NAME, "data.db"))
+	dbPath, err := paths.GetDBPath()
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve db path: %w", err)
 	}

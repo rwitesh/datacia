@@ -1,14 +1,10 @@
 package license
 
 import (
+	"datacia/internal/paths"
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
-
-	"datacia/internal/constants"
-
-	"github.com/adrg/xdg"
 )
 
 // SaveLicense saves the license to disk atomically.
@@ -67,5 +63,5 @@ func RemoveLicense() error {
 }
 
 func getLicensePath() (string, error) {
-	return xdg.DataFile(filepath.Join(constants.APP_NAME, "license.bin"))
+	return paths.GetLicensePath()
 }

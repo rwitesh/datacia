@@ -23,6 +23,7 @@ import (
 type UIController interface {
 	OpenEditor()
 	CloseEditor()
+	OpenConnectionWindow()
 }
 
 type Engine struct {
@@ -151,9 +152,17 @@ func (e *Engine) CreateNewConnectionWithSSH(engine, host, port, username, passwo
 
 	if !test && e.uiController != nil {
 		e.uiController.OpenEditor()
+		// Emit connection changed event to update UI
+		e.wailsApp.Event.Emit("connection-changed", nil)
 	}
 
 	return nil
+}
+
+func (e *Engine) OpenConnectionWindow() {
+	if e.uiController != nil {
+		e.uiController.OpenConnectionWindow()
+	}
 }
 func (e *Engine) UpdateConnection(id, name string, config map[string]string) error {
 	return e.store.UpdateConnection(id, name, config)

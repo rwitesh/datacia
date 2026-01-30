@@ -7,10 +7,9 @@ import (
 	"sort"
 	"strings"
 
-	"datacia/internal/constants"
 	"datacia/internal/logger"
+	"datacia/internal/paths"
 
-	"github.com/adrg/xdg"
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"go.uber.org/zap"
 )
@@ -35,10 +34,11 @@ type QueriesService struct {
 }
 
 func NewQueriesService(app *application.App) *QueriesService {
-	// Use XDG data home for queries
-	// xdg.DataHome gives us the base data directory (e.g. ~/.local/share)
-	// We want ~/.local/share/datacia/queries
-	rootDir := filepath.Join(xdg.DataHome, constants.APP_NAME, "queries")
+	// Use centralized queries path
+	rootDir, err := paths.GetQueriesDir()
+	if err != nil {
+		logger.Logger.Error("Error resolving queries root dir", zap.Error(err))
+	}
 
 	if err := os.MkdirAll(rootDir, 0755); err != nil {
 		logger.Logger.Error("Error creating queries root dir", zap.Error(err), zap.String("rootDir", rootDir))

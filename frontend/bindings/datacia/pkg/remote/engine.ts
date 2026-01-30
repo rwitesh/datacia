@@ -124,6 +124,10 @@ export function LoadConnection(id: string): $CancellablePromise<{ [_: string]: s
     });
 }
 
+export function OpenConnectionWindow(): $CancellablePromise<void> {
+    return $Call.ByID(4198244770);
+}
+
 export function RestartApp(): $CancellablePromise<void> {
     return $Call.ByID(1474822044);
 }

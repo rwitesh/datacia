@@ -1,5 +1,6 @@
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useMemo, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { Events } from "@wailsio/runtime";
 import { AppContext } from "./Context";
 import { chooseDialect } from "@/modules/Editor/QueryInput/utils/dialect";
 import { useCurrentConnection } from "@/services/connections";
@@ -27,6 +28,13 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     invalidateConnectionQueries();
     queryClient.invalidateQueries({ queryKey: ["connections"] });
   };
+
+  useEffect(() => {
+    const unsubscribe = Events.On("connection-changed", () => {
+      invalidateConnectionQueries();
+    });
+    return () => unsubscribe();
+  }, [invalidateConnectionQueries]);
 
   const dialect = useMemo(
     () => chooseDialect(currentConnection?.engine || null),

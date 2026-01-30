@@ -164,6 +164,14 @@ func (a *App) createConnectionWindow() error {
 		if a.closingIntentional {
 			return
 		}
+
+		// If editor window is open, just close this window (default behavior) and return
+		// Do not quit the application
+		if a.editorWindow != nil {
+			logger.Logger.Info("Connection window closing, editor remains open")
+			return
+		}
+
 		logger.Logger.Info("Connection window closing, quitting application")
 		a.instance.Quit()
 	})
@@ -229,21 +237,31 @@ func (a *App) OpenEditor() {
 
 	if a.editorWindow != nil {
 		logger.Logger.Debug("Editor window already exists, skipping window transition")
+		a.editorWindow.Show()
+		a.editorWindow.Focus()
+		// Even if editor exists, ensure connection window is closed
+		if a.connectionWindow != nil {
+			a.closingIntentional = true
+			a.connectionWindow.Close()
+			a.connectionWindow = nil
+			a.closingIntentional = false
+		}
 		return
 	}
 
+	// Create new window FIRST
+	if err := a.createEditorWindow(); err != nil {
+		logger.Logger.Error("Failed to open editor window", zap.Error(err))
+		// If failed, do NOT close the connection window so the app doesn't vanish
+		return
+	}
+
+	// If successful, close the old window
 	if a.connectionWindow != nil {
 		a.closingIntentional = true
 		a.connectionWindow.Close()
 		a.connectionWindow = nil
 		a.closingIntentional = false
-	}
-
-	if err := a.createEditorWindow(); err != nil {
-		logger.Logger.Error("Failed to open editor window", zap.Error(err))
-		if err := a.createConnectionWindow(); err != nil {
-			logger.Logger.Fatal("Failed to recover from editor creation failure", zap.Error(err))
-		}
 	}
 }
 
@@ -251,16 +269,51 @@ func (a *App) CloseEditor() {
 	a.windowMutex.Lock()
 	defer a.windowMutex.Unlock()
 
+	if a.connectionWindow != nil {
+		logger.Logger.Debug("Connection window already exists, skipping window transition")
+		a.connectionWindow.Show()
+		a.connectionWindow.Focus()
+		// Ensure editor window is closed if it exists (though usually it shouldn't if we are in this state, but for safety)
+		if a.editorWindow != nil {
+			a.closingIntentional = true
+			a.editorWindow.Close()
+			a.editorWindow = nil
+			a.closingIntentional = false
+		}
+		return
+	}
+
+	// Create new window FIRST
+	if err := a.createConnectionWindow(); err != nil {
+		logger.Logger.Error("Failed to open connection window", zap.Error(err))
+		// If failed, do NOT close the editor window so the app doesn't vanish
+		return
+	}
+
+	// If successful, close the old window
 	if a.editorWindow != nil {
 		a.closingIntentional = true
 		a.editorWindow.Close()
 		a.editorWindow = nil
 		a.closingIntentional = false
 	}
+}
 
+func (a *App) OpenConnectionWindow() {
+	a.windowMutex.Lock()
+	defer a.windowMutex.Unlock()
+
+	if a.connectionWindow != nil {
+		logger.Logger.Debug("Connection window already exists, focusing")
+		a.connectionWindow.Show()
+		a.connectionWindow.Focus()
+		return
+	}
+
+	// Create new window
 	if err := a.createConnectionWindow(); err != nil {
 		logger.Logger.Error("Failed to open connection window", zap.Error(err))
-		a.instance.Quit()
+		return
 	}
 }
 

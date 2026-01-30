@@ -2,7 +2,8 @@ import { useFetchConnections, useCurrentConnection } from "@/services/connection
 import { useSwitchConnection } from "./useSwitchConnection";
 import { type DatabaseEngine } from "@/modules/utils/engines";
 import { DatabaseIcon } from "@/modules/utils/DatabaseIcon";
-import { ChevronDown, Check, Loader2 } from "lucide-react";
+import { ChevronDown, Check, Loader2, Plus } from "lucide-react";
+import { OpenConnectionWindow } from "@/services/bindings";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -100,6 +101,15 @@ export function ConnectionSwitcher() {
             </div>
           </>
         )}
+
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          className="flex items-center gap-2 cursor-pointer text-xs"
+          onClick={() => OpenConnectionWindow()}
+        >
+          <Plus size={12} />
+          <span className="flex-1 truncate">New Connection...</span>
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
