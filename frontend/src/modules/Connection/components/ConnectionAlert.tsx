@@ -3,7 +3,8 @@ import { type FieldError } from "react-hook-form";
 import { Check, Copy, X } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ENGINE_LABELS, FIELD_LABELS } from "../utils/constants";
-import type { DatabaseEngine, FormValues, Status } from "../utils/types";
+import type { FormValues, Status } from "../utils/types";
+import type { DatabaseEngine } from "@/modules/utils/engines";
 
 interface ConnectionAlertProps {
   hasFormErrors: boolean;
@@ -118,7 +119,7 @@ export const ConnectionAlert: React.FC<ConnectionAlertProps> = ({
     const isErrorStatus = status.kind === "error";
 
     if (isInfo) {
-      icon = <span className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin flex-shrink-0" />;
+      icon = <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin flex-shrink-0" />;
       content = null;
     } else if (isErrorStatus) {
       icon = <X className="w-5 h-5 flex-shrink-0" />;
@@ -156,9 +157,9 @@ export const ConnectionAlert: React.FC<ConnectionAlertProps> = ({
   return (
     <Alert variant={variant} className={`h-32 flex gap-3 transition-all duration-500 ease-in-out ${alignStart ? "items-start" : "items-center"}`}>
       {icon}
-      <div className="flex-1 min-h-0 flex flex-col h-full">
+      <div className="flex-1 min-h-0 flex flex-col h-full justify-center">
         <div className="flex items-center justify-between flex-shrink-0">
-          <AlertTitle className="mb-0">{title}</AlertTitle>
+          <AlertTitle className="mb-0 leading-none">{title}</AlertTitle>
           {action}
         </div>
         {content && (

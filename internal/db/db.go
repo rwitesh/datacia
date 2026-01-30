@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -33,6 +34,21 @@ func Open(encryptionKey []byte) (*Store, error) {
 
 // OpenFile initializes SQLite at the given path and returns a Store
 func OpenFile(dbPath string, encryptionKey []byte) (*Store, error) {
+	// Ensure the parent directory exists
+	dir := filepath.Dir(dbPath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create database directory: %w", err)
+	}
+
+	// Create the database file if it doesn't exist
+	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
+		file, err := os.Create(dbPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create database file: %w", err)
+		}
+		file.Close()
+	}
+
 	db, err := sql.Open("sqlite3", dbPath+"?_journal_mode=WAL&_busy_timeout=5000")
 	if err != nil {
 		return nil, fmt.Errorf("failed to open db: %w", err)

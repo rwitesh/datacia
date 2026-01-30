@@ -2,10 +2,15 @@ import React, { useState, useCallback, useLayoutEffect, useEffect, useRef } from
 import {
     type SelectionState,
     type SelectionRange,
-    type CellPosition,
     createCellKey,
     updateSelectedCells,
 } from "../utils/cellSelection";
+
+// Cell type for unified handlers
+export type CellType = 'data' | 'serial' | 'header';
+
+// Selection mode tracks what type of selection is in progress
+type SelectionMode = 'cell' | 'row' | 'column';
 
 interface UseTableSelectionProps {
     columns: string[];
@@ -27,101 +32,192 @@ export function useTableSelection({ columns, data, onSelectionChange, scrollRef,
     const autoScrollAnimationRef = useRef<number | null>(null);
     const lastMousePositionRef = useRef<{ x: number; y: number } | null>(null);
 
-    // Handle mouse down on cell
-    const handleCellMouseDown = useCallback(
-        (row: number, col: number, event: React.MouseEvent) => {
-            // Right click behavior:
-            if (event.button === 2) {
-                // 1. If right-clicking on a cell that is already selected (part of multi-selection), do NOT select/deselect. Keep the current selection so the context menu acts on it.
-                // 2. If right-clicking on an unselected cell, treat it as a normal click (select it), checking the "single selection" logic below which will reset other selections.
+    // Track selection mode and drag start position
+    const selectionModeRef = useRef<SelectionMode>('cell');
+    const dragStartRef = useRef<{ row: number; col: number }>({ row: -1, col: -1 });
 
+    /**
+     * Unified mouse down handler for all cell types
+     * @param cellType - 'data' | 'serial' | 'header'
+     * @param row - Row index (-1 for header cells)
+     * @param col - Column index (-1 for serial cells)
+     * @param event - Mouse event
+     */
+    const handleMouseDown = useCallback(
+        (cellType: CellType, row: number, col: number, event: React.MouseEvent) => {
+            // Right click: preserve existing selection if clicking on selected cell
+            if (event.button === 2) {
                 const cellKey = createCellKey(row, col);
                 if (selection.selectedCells.has(cellKey)) {
-                    // Already selected, ignore right click to preserve multi-selection
                     return;
                 }
-                // Not selected: allow fall-through to normal selection logic (will behave like left click)
             }
 
             event.preventDefault();
 
-            const newPosition: CellPosition = { row, col };
+            const totalRows = data.length;
+            const totalCols = columns.length;
+            if (totalRows === 0) return;
 
-            if (event.shiftKey && selection.ranges.length > 0) {
-                // Shift+Click: Extend last range
-                const lastRange = selection.ranges[selection.ranges.length - 1];
-                const extendedRange: SelectionRange = {
-                    start: lastRange.start,
-                    end: newPosition,
-                };
-                const newRanges = [...selection.ranges.slice(0, -1), extendedRange];
-                const newSelectedCells = updateSelectedCells(newRanges);
+            let newRange: SelectionRange;
+            let mode: SelectionMode;
 
-                setSelection({
-                    ranges: newRanges,
-                    selectedCells: newSelectedCells,
-                    isSelecting: false,
-                    currentRange: null,
-                });
-            } else {
-                // Regular click: Toggle selection if clicking on same single cell, otherwise start new selection
-                const cellKey = createCellKey(row, col);
-                const isSingleCellSelected =
-                    selection.ranges.length === 1 &&
-                    selection.ranges[0].start.row === row &&
-                    selection.ranges[0].start.col === col &&
-                    selection.ranges[0].end.row === row &&
-                    selection.ranges[0].end.col === col;
-
-                if (isSingleCellSelected) {
-                    // Clicking same cell again: unselect
-                    setSelection({
-                        ranges: [],
-                        selectedCells: new Set(),
-                        isSelecting: false,
-                        currentRange: null,
-                    });
-                } else {
-                    // Start new selection
-                    const newRange: SelectionRange = {
-                        start: newPosition,
-                        end: newPosition,
+            switch (cellType) {
+                case 'header': {
+                    // Column header click: select entire column
+                    mode = 'column';
+                    dragStartRef.current = { row: -1, col };
+                    newRange = {
+                        start: { row: 0, col },
+                        end: { row: totalRows - 1, col },
                     };
-                    setSelection({
-                        ranges: [newRange],
-                        selectedCells: new Set([cellKey]),
-                        isSelecting: true,
-                        currentRange: newRange,
-                    });
+                    break;
+                }
+
+                case 'serial': {
+                    // Serial cell click: select entire row
+                    mode = 'row';
+                    dragStartRef.current = { row, col: -1 };
+                    newRange = {
+                        start: { row, col: 0 },
+                        end: { row, col: totalCols - 1 },
+                    };
+                    break;
+                }
+
+                case 'data':
+                default: {
+                    // Data cell click: start rectangular selection
+                    mode = 'cell';
+                    dragStartRef.current = { row, col };
+
+                    // Shift+Click: extend selection
+                    if (event.shiftKey && selection.ranges.length > 0) {
+                        const lastRange = selection.ranges[selection.ranges.length - 1];
+                        newRange = {
+                            start: lastRange.start,
+                            end: { row, col },
+                        };
+                        const newRanges = [...selection.ranges.slice(0, -1), newRange];
+                        const newSelectedCells = updateSelectedCells(newRanges);
+                        setSelection({
+                            ranges: newRanges,
+                            selectedCells: newSelectedCells,
+                            isSelecting: false,
+                            currentRange: null,
+                        });
+                        return;
+                    }
+
+                    // Toggle off if clicking the same single cell
+                    const isSameCell =
+                        selection.ranges.length === 1 &&
+                        selection.ranges[0].start.row === row &&
+                        selection.ranges[0].start.col === col &&
+                        selection.ranges[0].end.row === row &&
+                        selection.ranges[0].end.col === col;
+
+                    if (isSameCell) {
+                        setSelection({
+                            ranges: [],
+                            selectedCells: new Set(),
+                            isSelecting: false,
+                            currentRange: null,
+                        });
+                        return;
+                    }
+
+                    newRange = {
+                        start: { row, col },
+                        end: { row, col },
+                    };
+                    break;
                 }
             }
+
+            selectionModeRef.current = mode;
+            const newSelectedCells = updateSelectedCells([newRange]);
+            setSelection({
+                ranges: [newRange],
+                selectedCells: newSelectedCells,
+                isSelecting: true,
+                currentRange: newRange,
+            });
         },
-        [selection.ranges, selection.selectedCells]
+        [selection.ranges, selection.selectedCells, data.length, columns.length]
     );
 
-    // Handle mouse enter on cell (for dragging)
-    const handleCellMouseEnter = useCallback(
-        (row: number, col: number) => {
-            if (selection.isSelecting && selection.currentRange) {
-                const newEnd: CellPosition = { row, col };
-                const updatedRange: SelectionRange = {
-                    start: selection.currentRange.start,
-                    end: newEnd,
-                };
+    /**
+     * Unified mouse enter handler for all cell types
+     * Extends selection based on current selection mode
+     * @param cellType - 'data' | 'serial' | 'header'
+     * @param row - Row index (-1 for header cells)
+     * @param col - Column index (-1 for serial cells)
+     */
+    const handleMouseEnter = useCallback(
+        (cellType: CellType, row: number, col: number) => {
+            if (!selection.isSelecting) return;
 
-                const otherRanges = selection.ranges.slice(0, -1);
-                const newRanges = [...otherRanges, updatedRange];
-                const newSelectedCells = updateSelectedCells(newRanges);
+            const totalRows = data.length;
+            const totalCols = columns.length;
+            if (totalRows === 0) return;
 
-                setSelection((prev) => ({
-                    ...prev,
-                    ranges: newRanges,
-                    selectedCells: newSelectedCells,
-                    currentRange: updatedRange,
-                }));
+            const startRow = dragStartRef.current.row;
+            const startCol = dragStartRef.current.col;
+            let newRange: SelectionRange;
+
+            switch (selectionModeRef.current) {
+                case 'column': {
+                    // Column mode: extend columns, keep all rows
+                    // Use col from mouse position (prefer header col, fallback to data col)
+                    const targetCol = cellType === 'header' ? col : col;
+                    if (targetCol < 0) return;
+
+                    const minCol = Math.min(startCol, targetCol);
+                    const maxCol = Math.max(startCol, targetCol);
+                    newRange = {
+                        start: { row: 0, col: minCol },
+                        end: { row: totalRows - 1, col: maxCol },
+                    };
+                    break;
+                }
+
+                case 'row': {
+                    // Row mode: extend rows, keep all columns
+                    // Use row from mouse position (prefer serial row, fallback to data row)
+                    const targetRow = cellType === 'serial' ? row : row;
+                    if (targetRow < 0 || targetRow >= totalRows) return;
+
+                    const minRow = Math.min(startRow, targetRow);
+                    const maxRow = Math.max(startRow, targetRow);
+                    newRange = {
+                        start: { row: minRow, col: 0 },
+                        end: { row: maxRow, col: totalCols - 1 },
+                    };
+                    break;
+                }
+
+                case 'cell':
+                default: {
+                    // Cell mode: extend rectangular selection
+                    if (row < 0 || col < 0) return;
+                    newRange = {
+                        start: { row: startRow, col: startCol },
+                        end: { row, col },
+                    };
+                    break;
+                }
             }
+
+            const newSelectedCells = updateSelectedCells([newRange]);
+            setSelection((prev) => ({
+                ...prev,
+                ranges: [newRange],
+                selectedCells: newSelectedCells,
+                currentRange: newRange,
+            }));
         },
-        [selection.isSelecting, selection.currentRange, selection.ranges]
+        [selection.isSelecting, data.length, columns.length]
     );
 
     // Handle mouse up (end selection)
@@ -131,6 +227,8 @@ export function useTableSelection({ columns, data, onSelectionChange, scrollRef,
             isSelecting: false,
             currentRange: null,
         }));
+        selectionModeRef.current = 'cell';
+        dragStartRef.current = { row: -1, col: -1 };
     }, []);
 
     // Add global mouse up listener
@@ -150,20 +248,18 @@ export function useTableSelection({ columns, data, onSelectionChange, scrollRef,
             return;
         }
 
-        const SCROLL_ZONE = 50; // pixels from edge to trigger scroll
-        const SCROLL_SPEED = 10; // pixels per frame
+        const SCROLL_ZONE = 50;
+        const SCROLL_SPEED = 10;
 
         const getCellUnderMouse = (x: number, y: number): { row: number; col: number } | null => {
             if (!scrollRef.current) return null;
 
-            // First, try to find an actual cell element under the mouse
             const element = document.elementFromPoint(x, y);
             if (element) {
                 const cellElement = element.closest('[role="cell"]');
                 if (cellElement) {
                     const rowAttr = cellElement.getAttribute('data-row');
                     const colAttr = cellElement.getAttribute('data-col');
-                    
                     if (rowAttr !== null && colAttr !== null) {
                         return {
                             row: parseInt(rowAttr, 10),
@@ -173,43 +269,33 @@ export function useTableSelection({ columns, data, onSelectionChange, scrollRef,
                 }
             }
 
-            // If no cell found, calculate position based on scroll and mouse coordinates
             const container = scrollRef.current;
             const rect = container.getBoundingClientRect();
-            
-            // Calculate relative position within the scrollable area
             const relativeX = x - rect.left + container.scrollLeft;
             const relativeY = y - rect.top + container.scrollTop;
-            
-            // Account for header height (approximately 32px)
             const HEADER_HEIGHT = 32;
             const contentY = relativeY - HEADER_HEIGHT;
-            
-            // Calculate row and column indices
-            const row = Math.floor(contentY / rowHeight);
-            
-            let col = -1;
+            const rowIdx = Math.floor(contentY / rowHeight);
+
+            let colIdx = -1;
             let accumulatedWidth = 0;
             for (let i = 0; i < colWidths.length; i++) {
                 accumulatedWidth += colWidths[i];
                 if (relativeX < accumulatedWidth) {
-                    col = i;
+                    colIdx = i;
                     break;
                 }
             }
-            
-            // Validate the calculated indices
-            if (row >= 0 && row < data.length && col >= 0 && col < columns.length) {
-                return { row, col };
-            }
 
+            if (rowIdx >= 0 && rowIdx < data.length && colIdx >= 0 && colIdx < columns.length) {
+                return { row: rowIdx, col: colIdx };
+            }
             return null;
         };
 
-        const handleMouseMove = (e: MouseEvent) => {
+        const handleGlobalMouseMove = (e: MouseEvent) => {
             if (!scrollRef.current || !selection.isSelecting) return;
 
-            // Store the current mouse position
             lastMousePositionRef.current = { x: e.clientX, y: e.clientY };
 
             const container = scrollRef.current;
@@ -218,49 +304,42 @@ export function useTableSelection({ columns, data, onSelectionChange, scrollRef,
             let scrollX = 0;
             let scrollY = 0;
 
-            // Check vertical edges
             if (e.clientY < rect.top + SCROLL_ZONE) {
                 scrollY = -SCROLL_SPEED;
             } else if (e.clientY > rect.bottom - SCROLL_ZONE) {
                 scrollY = SCROLL_SPEED;
             }
 
-            // Check horizontal edges
             if (e.clientX < rect.left + SCROLL_ZONE) {
                 scrollX = -SCROLL_SPEED;
             } else if (e.clientX > rect.right - SCROLL_ZONE) {
                 scrollX = SCROLL_SPEED;
             }
 
-            // Perform scroll if needed
             if (scrollX !== 0 || scrollY !== 0) {
                 const scroll = () => {
                     if (!scrollRef.current || !selection.isSelecting) return;
-                    
                     container.scrollBy(scrollX, scrollY);
-                    
-                    // Update selection based on cell under mouse
+
                     if (lastMousePositionRef.current) {
                         const cell = getCellUnderMouse(
                             lastMousePositionRef.current.x,
                             lastMousePositionRef.current.y
                         );
                         if (cell) {
-                            handleCellMouseEnter(cell.row, cell.col);
+                            handleMouseEnter('data', cell.row, cell.col);
                         }
                     }
-                    
-                    // Continue scrolling while mouse is in scroll zone
+
                     if (selection.isSelecting) {
                         autoScrollAnimationRef.current = requestAnimationFrame(scroll);
                     }
                 };
-                
+
                 if (!autoScrollAnimationRef.current) {
                     autoScrollAnimationRef.current = requestAnimationFrame(scroll);
                 }
             } else {
-                // Stop scrolling if mouse is not in scroll zone
                 if (autoScrollAnimationRef.current) {
                     cancelAnimationFrame(autoScrollAnimationRef.current);
                     autoScrollAnimationRef.current = null;
@@ -268,55 +347,27 @@ export function useTableSelection({ columns, data, onSelectionChange, scrollRef,
             }
         };
 
-        document.addEventListener("mousemove", handleMouseMove);
-        
+        document.addEventListener("mousemove", handleGlobalMouseMove);
+
         return () => {
-            document.removeEventListener("mousemove", handleMouseMove);
+            document.removeEventListener("mousemove", handleGlobalMouseMove);
             if (autoScrollAnimationRef.current) {
                 cancelAnimationFrame(autoScrollAnimationRef.current);
                 autoScrollAnimationRef.current = null;
             }
         };
-    }, [selection.isSelecting, scrollRef, handleCellMouseEnter, rowHeight, colWidths, data.length, columns.length]);
-
-    // Handle column header click (select entire column)
-    const handleColumnHeaderClick = useCallback(
-        (colIndex: number, event: React.MouseEvent) => {
-            event.preventDefault();
-            event.stopPropagation();
-
-            const totalDataRows = data.length;
-            if (totalDataRows === 0) return;
-
-            const columnRange: SelectionRange = {
-                start: { row: 0, col: colIndex },
-                end: { row: totalDataRows - 1, col: colIndex },
-            };
-
-            // Select only this column
-            const newSelectedCells = updateSelectedCells([columnRange]);
-            setSelection({
-                ranges: [columnRange],
-                selectedCells: newSelectedCells,
-                isSelecting: false,
-                currentRange: null,
-            });
-        },
-        [data.length]
-    );
+    }, [selection.isSelecting, scrollRef, handleMouseEnter, rowHeight, colWidths, data.length, columns.length]);
 
     // Notify parent about selection changes
     useEffect(() => {
-        const selectedData: Array<Record<string, unknown>> = [];
-
-        // Group selected cells by row
+        const result: Array<Record<string, unknown>> = [];
         const cellsByRow = new Map<number, Set<number>>();
-        
+
         selection.selectedCells.forEach((cellKey) => {
             const [rowStr, colStr] = cellKey.split("-");
             const row = parseInt(rowStr, 10);
             const col = parseInt(colStr, 10);
-            
+
             if (row >= 0 && row < data.length && col >= 0 && col < columns.length) {
                 if (!cellsByRow.has(row)) {
                     cellsByRow.set(row, new Set());
@@ -325,12 +376,10 @@ export function useTableSelection({ columns, data, onSelectionChange, scrollRef,
             }
         });
 
-        // Build selectedData with only selected cells
         cellsByRow.forEach((selectedCols, row) => {
             const rowData: Record<string, unknown> = {};
             let hasData = false;
 
-            // Only include columns that are actually selected
             selectedCols.forEach((col) => {
                 if (col >= 0 && col < columns.length) {
                     const columnKey = columns[col];
@@ -340,19 +389,18 @@ export function useTableSelection({ columns, data, onSelectionChange, scrollRef,
             });
 
             if (hasData) {
-                selectedData.push(rowData);
+                result.push(rowData);
             }
         });
 
-        setSelectedData(selectedData);
-        onSelectionChange(selectedData);
+        setSelectedData(result);
+        onSelectionChange(result);
     }, [selection.selectedCells, data, columns, onSelectionChange]);
 
     return {
         selection,
         selectedData,
-        handleCellMouseDown,
-        handleCellMouseEnter,
-        handleColumnHeaderClick,
+        handleMouseDown,
+        handleMouseEnter,
     };
 }

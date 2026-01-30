@@ -3,6 +3,7 @@ import { type Row as TanStackRow } from "@tanstack/react-table";
 import { TableCell } from "./TableCell";
 import type { DataRow } from "../types";
 import { TableContextMenu } from "./TableContextMenu";
+import type { CellType } from "../hooks/useTableSelection";
 
 
 interface TableRowProps {
@@ -13,8 +14,8 @@ interface TableRowProps {
     totalWidth: number;
     gridTemplateColumns: string;
     selectedCells: Set<string>;
-    onCellMouseDown: (rowIndex: number, colIndex: number, event: React.MouseEvent) => void;
-    onCellMouseEnter: (rowIndex: number, colIndex: number) => void;
+    onMouseDown: (cellType: CellType, row: number, col: number, event: React.MouseEvent) => void;
+    onMouseEnter: (cellType: CellType, row: number, col: number) => void;
     selectedData?: DataRow[];
     onOpenDataView?: () => void;
 }
@@ -27,8 +28,8 @@ export function TableRow({
     totalWidth,
     gridTemplateColumns,
     selectedCells,
-    onCellMouseDown,
-    onCellMouseEnter,
+    onMouseDown,
+    onMouseEnter,
     selectedData = [],
     onOpenDataView,
 }: TableRowProps) {
@@ -55,8 +56,9 @@ export function TableRow({
                         colIndex={ci}
                         colWidth={colWidths[ci]}
                         selectedCells={selectedCells}
-                        onMouseDown={onCellMouseDown}
-                        onMouseEnter={onCellMouseEnter}
+                        isSerialColumn={ci === 0}
+                        onMouseDown={onMouseDown}
+                        onMouseEnter={onMouseEnter}
                     />
                 ))
                 : colWidths.map((w, ci) => (
@@ -79,8 +81,8 @@ export function TableRow({
     }
 
     return (
-        <TableContextMenu 
-            row={row.original} 
+        <TableContextMenu
+            row={row.original}
             selectedData={selectedData}
             onOpenDataView={onOpenDataView}
         >

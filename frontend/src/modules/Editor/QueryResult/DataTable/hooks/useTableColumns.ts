@@ -2,9 +2,25 @@ import { useMemo } from "react";
 import { type ColumnDef, type CellContext } from "@tanstack/react-table";
 import type { DataRow } from "../types";
 
-export function useTableColumns(columns: string[]) {
+// Special column ID for serial number
+export const SERIAL_COLUMN_ID = "#";
+
+export function useTableColumns(columns: string[], offset: number = 0) {
     const columnDefs = useMemo<ColumnDef<DataRow>[]>(() => {
-        return columns.map((colKey, index) => ({
+        // Serial number column
+        const serialColumn: ColumnDef<DataRow> = {
+            id: SERIAL_COLUMN_ID,
+            accessorFn: (_row: DataRow, index: number) => offset + index + 1,
+            header: "#",
+            cell: (info: CellContext<DataRow, unknown>) => {
+                return info.getValue();
+            },
+            enableResizing: false,
+            enableSorting: false,
+        };
+
+        // Data columns
+        const dataColumns = columns.map((colKey, index) => ({
             id: colKey,
             accessorFn: (row: DataRow) => row[colKey],
             header: colKey,
@@ -16,7 +32,9 @@ export function useTableColumns(columns: string[]) {
             },
             enableResizing: index < columns.length - 1, // Disable resize for last column
         }));
-    }, [columns]);
+
+        return [serialColumn, ...dataColumns];
+    }, [columns, offset]);
 
     return columnDefs;
 }

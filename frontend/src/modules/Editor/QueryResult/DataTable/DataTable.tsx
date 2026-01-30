@@ -12,8 +12,10 @@ import type { DataRow } from "./types";
 import { useTableDimensions } from "./hooks/useTableDimensions";
 import { useTableColumns } from "./hooks/useTableColumns";
 import { useTableSelection } from "./hooks/useTableSelection";
+import { useColumnResize } from "./hooks/useColumnResize";
 import { TableHeader } from "./components/TableHeader";
 import { TableRow } from "./components/TableRow";
+import { ColumnResizeHandles } from "./components/ColumnResizeHandles";
 import { calculateContentWidths, distributeExtraSpace } from "./utils/columnWidths";
 
 interface DataTableProps {
@@ -30,6 +32,8 @@ interface DataTableProps {
   onOpenDataView?: () => void;
   scrollPosition?: { left: number; top: number };
   onScrollChange?: (scroll: { left: number; top: number }) => void;
+  // Pagination offset for serial number calculation
+  offset?: number;
 }
 
 export const DataTable = forwardRef<HTMLDivElement, DataTableProps>(function DataTable({
@@ -45,6 +49,7 @@ export const DataTable = forwardRef<HTMLDivElement, DataTableProps>(function Dat
   onOpenDataView,
   scrollPosition,
   onScrollChange,
+  offset = 0,
 }, ref) {
   const [columnSizing, setColumnSizing] = useState<Record<string, number>>({});
   // Only use client-side sorting when not in table-view mode
@@ -53,7 +58,7 @@ export const DataTable = forwardRef<HTMLDivElement, DataTableProps>(function Dat
   const scrollRef = useRef<HTMLDivElement>(null);
   // Separate internal ref for dimensions hook
   const containerRef = useRef<HTMLDivElement>(null);
-  
+
   // Expose scrollRef to parent via forwarded ref
   useImperativeHandle(ref, () => scrollRef.current as HTMLDivElement);
 
@@ -75,7 +80,7 @@ export const DataTable = forwardRef<HTMLDivElement, DataTableProps>(function Dat
 
     const handleScroll = () => {
       if (isScheduled) return;
-      
+
       isScheduled = true;
       rafId = requestAnimationFrame(() => {
         onScrollChange({
@@ -97,7 +102,7 @@ export const DataTable = forwardRef<HTMLDivElement, DataTableProps>(function Dat
 
   // Custom hooks
   const { containerWidth, containerHeight } = useTableDimensions(containerRef);
-  const columnDefs = useTableColumns(columns);
+  const columnDefs = useTableColumns(columns, offset);
 
   // Table setup
   const table = useReactTable({
@@ -117,31 +122,47 @@ export const DataTable = forwardRef<HTMLDivElement, DataTableProps>(function Dat
   const rowHeight = 24;
 
   // Calculate content-based column widths using utility function
-  const colWidths = useMemo(
-    () => calculateContentWidths(headers, data),
-    [headers, data]
+  const baseColWidths = useMemo(
+    () => calculateContentWidths(headers, data, offset),
+    [headers, data, offset]
   );
 
   // Distribute extra space evenly across all columns
-  const { finalColWidths, totalWidth } = useMemo(
-    () => distributeExtraSpace(colWidths, containerWidth),
-    [colWidths, containerWidth]
+  const { finalColWidths: distributedWidths } = useMemo(
+    () => distributeExtraSpace(baseColWidths, containerWidth),
+    [baseColWidths, containerWidth]
+  );
+
+  // Column resize hook - applies user resize deltas to distributed widths
+  const {
+    columnWidths: finalColWidths,
+    isResizing,
+    startResize,
+  } = useColumnResize({
+    columns,
+    baseWidths: distributedWidths,
+  });
+
+  // Calculate total width after resize
+  const totalWidth = useMemo(
+    () => finalColWidths.reduce((a, b) => a + b, 0),
+    [finalColWidths]
   );
 
   // Selection hook - needs rowHeight and colWidths
+  // Note: selection works on data columns (excludes serial # column from selection indices)
   const {
     selection,
     selectedData,
-    handleCellMouseDown,
-    handleCellMouseEnter,
-    handleColumnHeaderClick,
-  } = useTableSelection({ 
-    columns, 
-    data, 
-    onSelectionChange, 
+    handleMouseDown,
+    handleMouseEnter,
+  } = useTableSelection({
+    columns,
+    data,
+    onSelectionChange,
     scrollRef,
     rowHeight,
-    colWidths: finalColWidths,
+    colWidths: finalColWidths.slice(1), // Exclude serial column width for selection
   });
 
   const gridTemplateColumns = useMemo(
@@ -198,7 +219,9 @@ export const DataTable = forwardRef<HTMLDivElement, DataTableProps>(function Dat
                       header={header}
                       colIndex={i}
                       colWidth={finalColWidths[i]}
-                      onColumnClick={handleColumnHeaderClick}
+                      isSerialColumn={i === 0}
+                      onMouseDown={handleMouseDown}
+                      onMouseEnter={handleMouseEnter}
                       isTableViewMode={isTableViewMode}
                       serverSortColumn={currentOrderBy}
                       serverSortDir={currentOrderDir}
@@ -219,6 +242,13 @@ export const DataTable = forwardRef<HTMLDivElement, DataTableProps>(function Dat
             height: rowVirtualizer.getTotalSize() + additionalFillerRows * rowHeight,
           }}
         >
+          {/* Full-height column resize handles */}
+          <ColumnResizeHandles
+            colWidths={finalColWidths}
+            totalHeight={rowVirtualizer.getTotalSize() + additionalFillerRows * rowHeight}
+            onResizeStart={startResize}
+            isResizing={isResizing}
+          />
           {/* Loading overlay - only covers the body, not the header */}
           {isLoading && (
             <div
@@ -244,8 +274,8 @@ export const DataTable = forwardRef<HTMLDivElement, DataTableProps>(function Dat
                 totalWidth={totalWidth}
                 gridTemplateColumns={gridTemplateColumns}
                 selectedCells={selection.selectedCells}
-                onCellMouseDown={handleCellMouseDown}
-                onCellMouseEnter={handleCellMouseEnter}
+                onMouseDown={handleMouseDown}
+                onMouseEnter={handleMouseEnter}
                 selectedData={selectedData as DataRow[]}
                 onOpenDataView={onOpenDataView}
               />

@@ -22,12 +22,13 @@ export function QueryResult({ onSelectionChange, onOpenDataView }: QueryResultPr
   const [ddlData, setDdlData] = React.useState<string>("");
   const [ddlError, setDdlError] = React.useState<string | undefined>();
 
-  if (!activeTab) return null;
+  // Hoisted hooks
+  const tableRef = React.useRef<HTMLDivElement>(null);
+  const { mutate: exportData } = useExportData();
 
-  const { id, isExecuting, error, results, mode, table, limit, offset, orderBy, orderDir } = activeTab;
-  const isReadQuery = results && results.type === "read";
-  const isCommandQuery = results && results.type === "command";
-  const isTableViewMode = mode === "table";
+  const table = activeTab?.table;
+  const limit = activeTab?.limit;
+  const offset = activeTab?.offset;
 
   // Reset viewMode to "data" when table changes
   React.useEffect(() => {
@@ -35,6 +36,13 @@ export function QueryResult({ onSelectionChange, onOpenDataView }: QueryResultPr
     setDdlData("");
     setDdlError(undefined);
   }, [table]);
+
+  if (!activeTab) return null;
+
+  const { id, isExecuting, error, results, mode, orderBy, orderDir } = activeTab;
+  const isReadQuery = results && results.type === "read";
+  const isCommandQuery = results && results.type === "command";
+  const isTableViewMode = mode === "table";
 
   // Fetch DDL when switching to DDL mode
   const handleViewModeChange = (newMode: ViewMode) => {
@@ -102,8 +110,6 @@ export function QueryResult({ onSelectionChange, onOpenDataView }: QueryResultPr
   const showDataTable = isReadQuery || (isExecuting && results?.type === "read");
 
   // Export Logic for Full Result Set
-  const tableRef = React.useRef<HTMLDivElement>(null);
-  const { mutate: exportData } = useExportData();
 
   const handleExportPng = async () => {
     if (!tableRef.current || !results?.data) return;
@@ -152,6 +158,7 @@ export function QueryResult({ onSelectionChange, onOpenDataView }: QueryResultPr
             onOpenDataView={onOpenDataView}
             scrollPosition={activeTab.scroll}
             onScrollChange={handleScrollChange}
+            offset={offset ?? 0}
           />
         ) : isExecuting ? (
           <div className="flex justify-center items-center h-full">
