@@ -7,6 +7,8 @@ const (
 	CONNECTION_WINDOW_HEIGHT = 600
 	EDITOR_WINDOW_WIDTH      = 1024
 	EDITOR_WINDOW_HEIGHT     = 768
+	CONNECTION_WINDOW_NAME   = "datacia-connection"
+	EDITOR_WINDOW_NAME       = "datacia-editor"
 )
 
 const (

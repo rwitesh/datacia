@@ -1,5 +1,4 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router";
 import {
   CreateNewConnection as Connect,
   EstablishConnection,
@@ -14,7 +13,6 @@ export const useConnectDatabase = (opts?: {
   setStatus?: (s: Status) => void;
 }) => {
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
 
   return useMutation<void, Error, ConnectArgs, unknown>({
     mutationFn: async (payload) => {
@@ -46,7 +44,7 @@ export const useConnectDatabase = (opts?: {
       queryClient.invalidateQueries({ queryKey: ["current-connection"] });
       queryClient.invalidateQueries({ queryKey: ["databases"] });
       queryClient.invalidateQueries({ queryKey: ["tables"] });
-      navigate("/editor");
+      // Window transition handled by backend
     },
     onError: (err) => {
       opts?.setStatus?.({

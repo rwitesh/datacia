@@ -13,9 +13,11 @@ import (
 	"embed"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
+	"github.com/wailsapp/wails/v3/pkg/events"
 	"go.uber.org/zap"
 	clip "golang.design/x/clipboard"
 	"gopkg.in/yaml.v3"
@@ -29,10 +31,13 @@ type AppManager interface {
 }
 
 type App struct {
-	instance *application.App
-	window   *application.WebviewWindow
-	engine   *remote.Engine
-	config   *Config
+	instance           *application.App
+	connectionWindow   *application.WebviewWindow
+	editorWindow       *application.WebviewWindow
+	engine             *remote.Engine
+	config             *Config
+	windowMutex        sync.Mutex
+	closingIntentional bool
 }
 
 type Config struct {
@@ -58,7 +63,7 @@ func NewApp(assets embed.FS, config []byte) (*App, error) {
 			Handler: application.AssetFileServerFS(assets),
 		},
 		Mac: application.MacOptions{
-			ApplicationShouldTerminateAfterLastWindowClosed: true,
+			ApplicationShouldTerminateAfterLastWindowClosed: false,
 		},
 	})
 	return &App{instance: app, config: cfg}, nil
@@ -134,9 +139,9 @@ func (a *App) Initialize() error {
 	return nil
 }
 
-func (a *App) CreateMainWindow() error {
-	a.window = a.instance.Window.NewWithOptions(application.WebviewWindowOptions{
-		Name:  constants.APP_NAME,
+func (a *App) createConnectionWindow() error {
+	a.connectionWindow = a.instance.Window.NewWithOptions(application.WebviewWindowOptions{
+		Name:  constants.CONNECTION_WINDOW_NAME,
 		Title: constants.APP_TITLE,
 		URL:   "/",
 		Mac: application.MacWindow{
@@ -149,10 +154,60 @@ func (a *App) CreateMainWindow() error {
 		Height:           constants.CONNECTION_WINDOW_HEIGHT,
 	})
 
-	if a.window == nil {
-		logger.Logger.Error("Failed to create window")
-		return fmt.Errorf("failed to create window")
+	if a.connectionWindow == nil {
+		logger.Logger.Error("Failed to create connection window")
+		return fmt.Errorf("failed to create connection window")
 	}
+
+	a.connectionWindow.Center()
+	a.connectionWindow.RegisterHook(events.Common.WindowClosing, func(e *application.WindowEvent) {
+		if a.closingIntentional {
+			return
+		}
+		logger.Logger.Info("Connection window closing, quitting application")
+		a.instance.Quit()
+	})
+
+	return nil
+}
+
+func (a *App) createEditorWindow() error {
+	a.editorWindow = a.instance.Window.NewWithOptions(application.WebviewWindowOptions{
+		Name:  constants.EDITOR_WINDOW_NAME,
+		Title: constants.APP_TITLE,
+		URL:   "/#/editor",
+		Mac: application.MacWindow{
+			InvisibleTitleBarHeight: 50,
+			Backdrop:                application.MacBackdropTranslucent,
+			TitleBar:                application.MacTitleBarHiddenInset,
+		},
+		BackgroundColour: application.NewRGB(27, 38, 54),
+		Width:            constants.EDITOR_WINDOW_WIDTH,
+		Height:           constants.EDITOR_WINDOW_HEIGHT,
+		MinWidth:         800,
+		MinHeight:        600,
+	})
+
+	if a.editorWindow == nil {
+		logger.Logger.Error("Failed to create editor window")
+		return fmt.Errorf("failed to create editor window")
+	}
+
+	a.editorWindow.Center()
+	a.editorWindow.RegisterHook(events.Common.WindowClosing, func(e *application.WindowEvent) {
+		if a.closingIntentional {
+			return
+		}
+		logger.Logger.Info("Editor window closing, treating as disconnect")
+		if a.engine != nil {
+			_ = a.engine.CloseCurrentConnection(false)
+		}
+		a.editorWindow = nil
+		if err := a.createConnectionWindow(); err != nil {
+			logger.Logger.Error("Failed to create connection window after editor close", zap.Error(err))
+			a.instance.Quit()
+		}
+	})
 
 	return nil
 }
@@ -162,30 +217,56 @@ func (a *App) GetApplication() *application.App {
 }
 
 func (a *App) GetWindow() *application.WebviewWindow {
-	return a.window
+	if a.editorWindow != nil {
+		return a.editorWindow
+	}
+	return a.connectionWindow
 }
 
 func (a *App) OpenEditor() {
-	if a.window != nil {
-		a.window.SetSize(constants.EDITOR_WINDOW_WIDTH, constants.EDITOR_WINDOW_HEIGHT)
-		a.window.Center()
-		a.window.SetResizable(true)
-		a.window.SetMaximiseButtonState(0)
+	a.windowMutex.Lock()
+	defer a.windowMutex.Unlock()
+
+	if a.editorWindow != nil {
+		logger.Logger.Debug("Editor window already exists, skipping window transition")
+		return
+	}
+
+	if a.connectionWindow != nil {
+		a.closingIntentional = true
+		a.connectionWindow.Close()
+		a.connectionWindow = nil
+		a.closingIntentional = false
+	}
+
+	if err := a.createEditorWindow(); err != nil {
+		logger.Logger.Error("Failed to open editor window", zap.Error(err))
+		if err := a.createConnectionWindow(); err != nil {
+			logger.Logger.Fatal("Failed to recover from editor creation failure", zap.Error(err))
+		}
 	}
 }
 
 func (a *App) CloseEditor() {
-	if a.window != nil {
-		a.window.SetSize(constants.CONNECTION_WINDOW_WIDTH, constants.CONNECTION_WINDOW_HEIGHT)
-		a.window.Center()
-		a.window.SetResizable(false)
-		a.window.SetMaximiseButtonState(1)
+	a.windowMutex.Lock()
+	defer a.windowMutex.Unlock()
+
+	if a.editorWindow != nil {
+		a.closingIntentional = true
+		a.editorWindow.Close()
+		a.editorWindow = nil
+		a.closingIntentional = false
+	}
+
+	if err := a.createConnectionWindow(); err != nil {
+		logger.Logger.Error("Failed to open connection window", zap.Error(err))
+		a.instance.Quit()
 	}
 }
 
 func (a *App) Run() error {
-	if err := a.CreateMainWindow(); err != nil {
-		logger.Logger.Error("Failed to create main window", zap.Error(err))
+	if err := a.createConnectionWindow(); err != nil {
+		logger.Logger.Error("Failed to create connection window", zap.Error(err))
 		return err
 	}
 

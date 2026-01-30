@@ -1,4 +1,4 @@
-import { useLocation, useNavigate } from "react-router";
+import { useLocation } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { MenuBar } from "./Menubar";
 import { useAppContext } from "../Context/App/Index";
@@ -9,7 +9,6 @@ import { CloseCurrentConnection } from "@/services/bindings/connection";
 
 export function NavigationBar() {
   const location = useLocation();
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { reload } = useAppContext();
 
@@ -18,8 +17,7 @@ export function NavigationBar() {
       await CloseCurrentConnection();
       // Invalidate current connection query so it refetches (will return null)
       queryClient.invalidateQueries({ queryKey: ["current-connection"] });
-      // Redirect to home after successful disconnection
-      navigate("/");
+      // Window transition handled by backend
     } catch (error: unknown) {
       if (error instanceof Error) {
         console.error("Error disconnecting:", error.message);

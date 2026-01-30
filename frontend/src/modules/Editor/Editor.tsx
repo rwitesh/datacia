@@ -11,16 +11,14 @@ import { useEditorContext } from "../Context/Editor/Index";
 import { EditorFooter } from "./EditorFooter/EditorFooter";
 import { NavigationBar } from "../NavigationBar/NavigationBar";
 import { DataView } from "./DataView/DataView";
-import { LoadingOverlay } from "@/components/ui/loading-overlay";
 import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight, FileUp } from "lucide-react";
 import { useWriteFile } from "@/services/queries";
 import { toast } from "sonner";
 
 export const Editor = () => {
-  const { activeTab, tables, createTab, updateTab } = useEditorContext();
+  const { activeTab, createTab, updateTab } = useEditorContext();
   const [isDataViewOpen, setIsDataViewOpen] = useState(false);
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
   const writeFile = useWriteFile();
 
@@ -28,15 +26,6 @@ export const Editor = () => {
   const [selectedData, setSelectedData] = useState<
     Array<Record<string, unknown>>
   >([]);
-
-  // Handle initial loading state
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsInitialLoading(false);
-    }, 1500); // Show loading for 1.5 seconds
-
-    return () => clearTimeout(timer);
-  }, []);
 
   // Handle Save Shortcut
   useEffect(() => {
@@ -93,13 +82,6 @@ export const Editor = () => {
 
   return (
     <div className="h-full w-full flex flex-col bg-card relative font-display">
-      {/* Loading Overlay */}
-      <LoadingOverlay
-        isVisible={isInitialLoading || tables.isLoading}
-      >
-        Initializing Editor...
-      </LoadingOverlay>
-
       <div className="flex-1 min-h-0">
         <ResizablePanelGroup direction="horizontal" className="h-full w-full">
           <ResizablePanel
@@ -140,8 +122,8 @@ export const Editor = () => {
                   <TabBar />
                 </div>
               </div>
-              {activeTab && (
-                <div className="flex-1 min-h-0">
+              <div className="flex-1 min-h-0 bg-card">
+                {activeTab && (
                   <ResizablePanelGroup
                     direction="horizontal"
                     className="h-full w-full"
@@ -205,8 +187,8 @@ export const Editor = () => {
                       </>
                     )}
                   </ResizablePanelGroup>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </ResizablePanel>
         </ResizablePanelGroup>
