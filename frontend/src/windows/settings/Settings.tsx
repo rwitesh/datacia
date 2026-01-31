@@ -50,15 +50,15 @@ function FontSection() {
   const { mutate: updateSettings } = useUpdateSettings();
   const [showSaved, setShowSaved] = useState(false);
 
-  const [uiFont, setUiFont] = useState(appInfo?.settings?.font?.uiFontFamily || "Inter");
+  const [uiFont, setUiFont] = useState(appInfo?.settings?.font?.uiFontFamily || "system-ui");
   const [uiFontSize, setUiFontSize] = useState(appInfo?.settings?.font?.uiFontSize || 14);
   const [editorFont, setEditorFont] = useState(appInfo?.settings?.font?.editorFontFamily || "JetBrains Mono");
   const [editorFontSize, setEditorFontSize] = useState(appInfo?.settings?.font?.editorFontSize || 14);
 
   useEffect(() => {
     if (appInfo?.settings?.font) {
-      setUiFont(appInfo.settings.font.uiFontFamily || "Inter");
-      setUiFontSize(appInfo.settings.font.uiFontSize || 14);
+      setUiFont(appInfo.settings.font.uiFontFamily || "system-ui");
+      setUiFontSize(appInfo.settings.font.uiFontSize || 12);
       setEditorFont(appInfo.settings.font.editorFontFamily || "JetBrains Mono");
       setEditorFontSize(appInfo.settings.font.editorFontSize || 14);
     }
@@ -84,8 +84,8 @@ function FontSection() {
   };
 
   const resetDefaults = () => {
-    setUiFont("Inter");
-    setUiFontSize(14);
+    setUiFont("system-ui");
+    setUiFontSize(12);
     setEditorFont("JetBrains Mono");
     setEditorFontSize(14);
     setShowSaved(false);
