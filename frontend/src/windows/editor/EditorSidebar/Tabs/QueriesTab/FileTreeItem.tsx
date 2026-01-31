@@ -138,7 +138,7 @@ export function FileTreeItem({
             <ContextMenu>
                 <ContextMenuTrigger>
                     <div
-                        className={`flex items-center gap-1.5 px-2 py-1 rounded-sm cursor-pointer text-xs group
+                        className={`flex items-center gap-1.5 px-2 py-1 rounded-sm cursor-pointer group
                             ${isSelected
                                 ? "bg-sidebar-accent text-sidebar-accent-foreground"
                                 : "hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
@@ -158,7 +158,7 @@ export function FileTreeItem({
                         {isRenaming ? (
                             <Input
                                 autoFocus
-                                className="h-5 text-xs py-0 px-1 focus-visible:ring-0 focus-visible:ring-offset-0"
+                                className="h-5 py-0 px-1 focus-visible:ring-0 focus-visible:ring-offset-0"
                                 value={renameValue}
                                 onChange={(e) => setRenameValue(e.target.value)}
                                 onKeyDown={(e) => {

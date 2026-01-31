@@ -8,16 +8,19 @@ import { drawSelection, keymap } from "@codemirror/view";
 
 import { useEditorContext } from "@/context/editor/Index";
 import { useAppContext } from "@/context/app/Index";
-import { defaultTheme } from "./utils/theme";
+import { getTheme } from "./utils/theme";
 import { formatSQL } from "./utils/formatter";
 import { Button } from "@/components/ui/button";
 import { Play, StopCircle, Paintbrush } from "lucide-react";
+import { useTheme } from "@/components/theme";
 
 export function QueryInput() {
   const editorEl = useRef<HTMLDivElement | null>(null);
   const viewRef = useRef<EditorView | null>(null);
 
   const { dialect, engine } = useAppContext();
+  const { resolvedTheme, tokenColors, editorFontFamily, editorFontSize } = useTheme();
+
   const {
     tables: { data },
     activeTab,
@@ -46,6 +49,8 @@ export function QueryInput() {
 
   // SQL configuration compartment
   const sqlConfig = useMemo(() => new Compartment(), []);
+  // Theme configuration compartment
+  const themeConfig = useMemo(() => new Compartment(), []);
 
   // create editor ONCE
   useEffect(() => {
@@ -58,6 +63,7 @@ export function QueryInput() {
         EditorView.lineWrapping,
 
         sqlConfig.of(sql({ dialect, schema, upperCaseKeywords: true })),
+        themeConfig.of(getTheme(resolvedTheme === "dark", { colors: tokenColors, fontFamily: editorFontFamily, fontSize: editorFontSize })),
 
         autocompletion(),
         closeBrackets(),
@@ -73,8 +79,6 @@ export function QueryInput() {
             });
           }
         }),
-
-        defaultTheme,
       ],
     });
 
@@ -99,6 +103,16 @@ export function QueryInput() {
       effects: sqlConfig.reconfigure(sql({ dialect, schema, upperCaseKeywords: true })),
     });
   }, [dialect, schema, sqlConfig]);
+
+  // dynamically update theme
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) return;
+
+    view.dispatch({
+      effects: themeConfig.reconfigure(getTheme(resolvedTheme === "dark", { colors: tokenColors, fontFamily: editorFontFamily, fontSize: editorFontSize }))
+    });
+  }, [resolvedTheme, themeConfig, tokenColors, editorFontFamily, editorFontSize]);
 
   // sync tab content on tab switch
   useEffect(() => {

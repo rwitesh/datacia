@@ -103,7 +103,7 @@ export function HistoryTab() {
                         placeholder="Search queries..."
                         value={searchQuery}
                         onChange={handleSearchChange}
-                        className="w-full pl-7 pr-2 py-1.5 text-xs bg-sidebar-accent/50 border border-border/50 rounded-md placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-ring/50"
+                        className="w-full pl-7 pr-2 py-1.5 bg-sidebar-accent/50 border border-border/50 rounded-md placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-ring/50"
                     />
                 </div>
 
@@ -114,7 +114,7 @@ export function HistoryTab() {
                             <Button
                                 variant="outline"
                                 size="sm"
-                                className="h-7 text-xs flex-1 justify-start text-left font-normal bg-sidebar-accent/50 border-border/50 hover:bg-sidebar-accent"
+                                className="h-7 flex-1 justify-start text-left font-normal bg-sidebar-accent/50 border-border/50 hover:bg-sidebar-accent"
                             >
                                 <CalendarIcon className="mr-1.5 h-3 w-3" />
                                 {dateRange?.from ? (
@@ -200,7 +200,7 @@ export function HistoryTab() {
                                     </div>
 
                                     {/* Query Text with Keyword Highlighting */}
-                                    <div className="text-xs font-mono text-foreground/90 line-clamp-10 break-all group-hover:text-sidebar-accent-foreground transition-colors">
+                                    <div className="font-mono text-foreground/90 line-clamp-10 break-all group-hover:text-sidebar-accent-foreground transition-colors">
                                         {keywordInfo ? (
                                             <>
                                                 <span className={`${keywordInfo.colorClass} px-1 py-0.5 rounded font-semibold`}>

@@ -12,7 +12,7 @@ import {
   MenubarRadioItem,
   MenubarItem,
 } from "@/components/ui/menubar";
-import { useTheme, type Theme } from "@/components/theme/theme-provider";
+import { useTheme, type Theme } from "@/components/theme";
 import { Bolt, Key, Settings } from "lucide-react";
 import { OpenLicenseWindow, OpenSettingsWindow } from "@/services/bindings";
 import { useAppContext } from "@/context/app/Index";

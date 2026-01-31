@@ -33,3 +33,17 @@ func GetQueriesDir() (string, error) {
 func GetLicensePath() (string, error) {
 	return xdg.DataFile(filepath.Join(constants.APP_NAME, "license.bin"))
 }
+
+// returns the configuration directory
+func GetConfigDir() (string, error) {
+	path, err := xdg.ConfigFile(constants.APP_NAME)
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve config path: %w", err)
+	}
+	return path, nil
+}
+
+// returns the path to the settings file
+func GetSettingsPath() (string, error) {
+	return xdg.ConfigFile(filepath.Join(constants.APP_NAME, "settings.json"))
+}

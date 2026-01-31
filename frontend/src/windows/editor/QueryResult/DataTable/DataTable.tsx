@@ -17,6 +17,7 @@ import { TableHeader } from "./components/TableHeader";
 import { TableRow } from "./components/TableRow";
 import { ColumnResizeHandles } from "./components/ColumnResizeHandles";
 import { calculateContentWidths, distributeExtraSpace } from "./utils/columnWidths";
+import { useTheme } from "@/components/theme";
 
 interface DataTableProps {
   columns: string[];
@@ -50,6 +51,7 @@ export const DataTable = forwardRef<HTMLDivElement, DataTableProps>(function Dat
   onScrollChange,
   offset = 0,
 }, ref) {
+  const { editorFontFamily, editorFontSize } = useTheme();
   const [columnSizing, setColumnSizing] = useState<Record<string, number>>({});
   // Only use client-side sorting when not in table-view mode
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -194,8 +196,13 @@ export const DataTable = forwardRef<HTMLDivElement, DataTableProps>(function Dat
     );
   }
 
+  const fontStyle = {
+    fontFamily: editorFontFamily,
+    fontSize: `${editorFontSize}px`,
+  };
+
   return (
-    <div className="h-full w-full overflow-hidden bg-card">
+    <div className="h-full w-full overflow-hidden bg-card" style={fontStyle}>
       <div
         ref={(el) => {
           scrollRef.current = el;

@@ -146,7 +146,7 @@ export function License() {
   };
 
   return (
-    <div className="h-screen w-screen flex flex-col bg-background text-foreground select-none">
+    <div className="h-screen w-screen flex flex-col bg-card text-foreground select-none">
       {/* Draggable title bar area for system buttons */}
       <div
         className="h-12 shrink-0"

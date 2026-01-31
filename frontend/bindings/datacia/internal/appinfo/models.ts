@@ -5,12 +5,80 @@
 // @ts-ignore: Unused imports
 import { Create as $Create } from "@wailsio/runtime";
 
+export class EditorConfig {
+    "tokenColorsLight": TokenColors;
+    "tokenColorsDark": TokenColors;
+
+    /** Creates a new EditorConfig instance. */
+    constructor($$source: Partial<EditorConfig> = {}) {
+        if (!("tokenColorsLight" in $$source)) {
+            this["tokenColorsLight"] = (new TokenColors());
+        }
+        if (!("tokenColorsDark" in $$source)) {
+            this["tokenColorsDark"] = (new TokenColors());
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new EditorConfig instance from a string or object.
+     */
+    static createFrom($$source: any = {}): EditorConfig {
+        const $$createField0_0 = $$createType0;
+        const $$createField1_0 = $$createType0;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("tokenColorsLight" in $$parsedSource) {
+            $$parsedSource["tokenColorsLight"] = $$createField0_0($$parsedSource["tokenColorsLight"]);
+        }
+        if ("tokenColorsDark" in $$parsedSource) {
+            $$parsedSource["tokenColorsDark"] = $$createField1_0($$parsedSource["tokenColorsDark"]);
+        }
+        return new EditorConfig($$parsedSource as Partial<EditorConfig>);
+    }
+}
+
+export class FontConfig {
+    "uiFontFamily": string;
+    "uiFontSize": number;
+    "editorFontFamily": string;
+    "editorFontSize": number;
+
+    /** Creates a new FontConfig instance. */
+    constructor($$source: Partial<FontConfig> = {}) {
+        if (!("uiFontFamily" in $$source)) {
+            this["uiFontFamily"] = "";
+        }
+        if (!("uiFontSize" in $$source)) {
+            this["uiFontSize"] = 0;
+        }
+        if (!("editorFontFamily" in $$source)) {
+            this["editorFontFamily"] = "";
+        }
+        if (!("editorFontSize" in $$source)) {
+            this["editorFontSize"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new FontConfig instance from a string or object.
+     */
+    static createFrom($$source: any = {}): FontConfig {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new FontConfig($$parsedSource as Partial<FontConfig>);
+    }
+}
+
 export class Info {
     "os": string;
     "os_version": string;
     "arch": string;
     "appearance": string;
     "version": string;
+    "settings": Settings;
+    "activeTokenColors": TokenColors;
 
     /** Creates a new Info instance. */
     constructor($$source: Partial<Info> = {}) {
@@ -29,6 +97,12 @@ export class Info {
         if (!("version" in $$source)) {
             this["version"] = "";
         }
+        if (!("settings" in $$source)) {
+            this["settings"] = (new Settings());
+        }
+        if (!("activeTokenColors" in $$source)) {
+            this["activeTokenColors"] = (new TokenColors());
+        }
 
         Object.assign(this, $$source);
     }
@@ -37,7 +111,118 @@ export class Info {
      * Creates a new Info instance from a string or object.
      */
     static createFrom($$source: any = {}): Info {
+        const $$createField5_0 = $$createType1;
+        const $$createField6_0 = $$createType0;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("settings" in $$parsedSource) {
+            $$parsedSource["settings"] = $$createField5_0($$parsedSource["settings"]);
+        }
+        if ("activeTokenColors" in $$parsedSource) {
+            $$parsedSource["activeTokenColors"] = $$createField6_0($$parsedSource["activeTokenColors"]);
+        }
         return new Info($$parsedSource as Partial<Info>);
     }
 }
+
+export class Settings {
+    "theme": ThemeConfig;
+    "editor": EditorConfig;
+    "font": FontConfig;
+
+    /** Creates a new Settings instance. */
+    constructor($$source: Partial<Settings> = {}) {
+        if (!("theme" in $$source)) {
+            this["theme"] = ThemeConfig.$zero;
+        }
+        if (!("editor" in $$source)) {
+            this["editor"] = (new EditorConfig());
+        }
+        if (!("font" in $$source)) {
+            this["font"] = (new FontConfig());
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new Settings instance from a string or object.
+     */
+    static createFrom($$source: any = {}): Settings {
+        const $$createField1_0 = $$createType2;
+        const $$createField2_0 = $$createType3;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("editor" in $$parsedSource) {
+            $$parsedSource["editor"] = $$createField1_0($$parsedSource["editor"]);
+        }
+        if ("font" in $$parsedSource) {
+            $$parsedSource["font"] = $$createField2_0($$parsedSource["font"]);
+        }
+        return new Settings($$parsedSource as Partial<Settings>);
+    }
+}
+
+export enum ThemeConfig {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero = "",
+
+    ThemeSystem = "system",
+    ThemeLight = "light",
+    ThemeDark = "dark",
+};
+
+export class TokenColors {
+    "keyword": string;
+    "string": string;
+    "number": string;
+    "comment": string;
+    "function": string;
+    "variable": string;
+    "type": string;
+    "operator": string;
+
+    /** Creates a new TokenColors instance. */
+    constructor($$source: Partial<TokenColors> = {}) {
+        if (!("keyword" in $$source)) {
+            this["keyword"] = "";
+        }
+        if (!("string" in $$source)) {
+            this["string"] = "";
+        }
+        if (!("number" in $$source)) {
+            this["number"] = "";
+        }
+        if (!("comment" in $$source)) {
+            this["comment"] = "";
+        }
+        if (!("function" in $$source)) {
+            this["function"] = "";
+        }
+        if (!("variable" in $$source)) {
+            this["variable"] = "";
+        }
+        if (!("type" in $$source)) {
+            this["type"] = "";
+        }
+        if (!("operator" in $$source)) {
+            this["operator"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new TokenColors instance from a string or object.
+     */
+    static createFrom($$source: any = {}): TokenColors {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new TokenColors($$parsedSource as Partial<TokenColors>);
+    }
+}
+
+// Private type creation functions
+const $$createType0 = TokenColors.createFrom;
+const $$createType1 = Settings.createFrom;
+const $$createType2 = EditorConfig.createFrom;
+const $$createType3 = FontConfig.createFrom;

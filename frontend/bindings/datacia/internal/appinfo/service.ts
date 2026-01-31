@@ -15,6 +15,12 @@ export function GetAppInfo(): $CancellablePromise<$models.Info | null> {
     });
 }
 
+export function UpdateSettings(settings: $models.Settings): $CancellablePromise<$models.Info | null> {
+    return $Call.ByID(109348801, settings).then(($result: any) => {
+        return $$createType1($result);
+    });
+}
+
 // Private type creation functions
 const $$createType0 = $models.Info.createFrom;
 const $$createType1 = $Create.Nullable($$createType0);

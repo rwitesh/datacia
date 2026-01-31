@@ -1,6 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=Assistant:wght@200..800&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "./fonts.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -112,8 +112,6 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-
-  --font-display: "JetBrains Mono", "sans-serif";
 }
 
 
@@ -122,7 +120,10 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply text-foreground antialiased font-display;
+    @apply text-foreground antialiased;
+    /* font-family and font-size are set by ThemeProvider via CSS variables */
+    font-family: var(--app-ui-font);
+    font-size: var(--app-ui-font-size);
   }
 
   ::-webkit-scrollbar {

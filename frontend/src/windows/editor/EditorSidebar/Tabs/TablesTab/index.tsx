@@ -9,6 +9,7 @@ import { useEditorContext } from "@/context/editor/Index";
 import { useGetTableData, useGetTableSchema } from "@/services/database";
 
 export function TablesTab() {
+
     const {
         tables: { data, isLoading, isFetching, error },
         createTab,
@@ -113,17 +114,17 @@ export function TablesTab() {
         <div className="flex-1 min-h-0 overflow-y-auto">
             <div className="space-y-1">
                 {isLoading || isFetching ? (
-                    <div className="px-2 py-1.5 text-xs text-muted-foreground bg-muted rounded-md cursor-default select-none flex items-center gap-2">
+                    <div className="px-2 py-1.5 text-muted-foreground bg-muted rounded-md cursor-default select-none flex items-center gap-2">
                         <Loader2 className="h-4 w-4 animate-spin" />
                         <span>Loading...</span>
                     </div>
                 ) : data.length === 0 ? (
                     error ? (
-                        <div className="px-2 py-1.5 text-xs text-red-500 bg-transparent cursor-default select-none">
+                        <div className="px-2 py-1.5  text-red-500 bg-transparent cursor-default select-none">
                             {error.message}
                         </div>
                     ) : (
-                        <div className="px-2 py-1.5 text-xs text-muted-foreground bg-muted rounded-md cursor-default select-none">
+                        <div className="px-2 py-1.5 text-muted-foreground bg-muted rounded-md cursor-default select-none">
                             No tables found
                         </div>
                     )
@@ -132,7 +133,7 @@ export function TablesTab() {
                         <ContextMenu key={t}>
                             <ContextMenuTrigger asChild>
                                 <button
-                                    className="flex w-full items-center gap-2 rounded-md px-2 py-[1px] text-xs hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors duration-200 cursor-pointer"
+                                    className="flex w-full items-center gap-2 rounded-md px-2 py-[1px] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors duration-200 cursor-pointer"
                                     title={t}
                                     onClick={() => handleTableClick(t)}
                                 >
@@ -142,19 +143,16 @@ export function TablesTab() {
                             </ContextMenuTrigger>
                             <ContextMenuContent>
                                 <ContextMenuItem
-                                    className="text-xs"
                                     onClick={() => handleTableClick(t)}
                                 >
                                     View Data
                                 </ContextMenuItem>
                                 <ContextMenuItem
-                                    className="text-xs"
                                     onClick={() => handleOpenTableSchema(t)}
                                 >
                                     View Schema
                                 </ContextMenuItem>
                                 <ContextMenuItem
-                                    className="text-xs"
                                     onClick={() => navigator.clipboard.writeText(t)}
                                 >
                                     Copy name

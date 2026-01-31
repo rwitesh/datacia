@@ -7,5 +7,10 @@ export {
 };
 
 export {
-    Info
+    EditorConfig,
+    FontConfig,
+    Info,
+    Settings,
+    ThemeConfig,
+    TokenColors
 } from "./models.js";

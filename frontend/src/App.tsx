@@ -1,5 +1,5 @@
 import "./App.css";
-import { ThemeProvider } from "@/components/theme/theme-provider";
+import { ThemeProvider } from "@/components/theme";
 import { Routes, Route, HashRouter } from "react-router";
 import { Home } from "@/windows/connection/Home";
 import { DatabaseConnection } from "@/windows/connection/Connection";
@@ -17,8 +17,8 @@ const queryClient = new QueryClient();
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-        <AppProvider>
+      <AppProvider>
+        <ThemeProvider>
           <HashRouter basename="/">
             <div className="h-screen w-screen flex flex-col overflow-hidden">
               <Toaster position="top-center" richColors closeButton />
@@ -40,8 +40,8 @@ function App() {
               </Routes>
             </div>
           </HashRouter>
-        </AppProvider>
-      </ThemeProvider>
+        </ThemeProvider>
+      </AppProvider>
     </QueryClientProvider>
   );
 }

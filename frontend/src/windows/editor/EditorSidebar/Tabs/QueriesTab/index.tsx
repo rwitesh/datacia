@@ -197,7 +197,7 @@ export function QueriesTab() {
             onDrop={handleRootDrop}
         >
             <div className="px-2 border-sidebar-border flex items-center justify-between">
-                <span className="text-xs font-medium text-muted-foreground">Queries</span>
+                <span className="font-medium text-muted-foreground">Queries</span>
                 <div className="flex items-center gap-1">
                     <Button
                         variant="ghost"
@@ -245,7 +245,7 @@ export function QueriesTab() {
                 )}
 
                 {(!tree || tree.length === 0) && !creatingState && (
-                    <div className="px-4 py-8 text-center text-xs text-muted-foreground pointer-events-none">
+                    <div className="px-4 py-8 text-center text-muted-foreground pointer-events-none">
                         No saved queries.
                     </div>
                 )}
