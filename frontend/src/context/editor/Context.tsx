@@ -1,5 +1,6 @@
 import { createContext } from "react";
 import type { QueryResult } from "@/services/bindings/database";
+import type { SelectionGeometry } from "@/windows/editor/QueryResult/DataTable/utils/cellSelection";
 
 export interface Tab {
   id: string;
@@ -19,6 +20,7 @@ export interface Tab {
   orderDir?: "asc" | "desc";
   savedPath?: string;
   scroll?: { left: number; top: number };
+  selection?: SelectionGeometry | null;
 }
 
 export type EditorContextType = {

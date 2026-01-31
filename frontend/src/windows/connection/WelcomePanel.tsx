@@ -1,6 +1,7 @@
 import { useAppContext } from "@/context/app/Index";
-import { Database } from "lucide-react";
 import { StatusBar } from "@/shared/StatusBar/StatusBar";
+
+import logo from "@/assets/logo.png";
 
 export const WelcomePanel = () => {
   const { appVersion } = useAppContext();
@@ -11,7 +12,7 @@ export const WelcomePanel = () => {
 
       <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
         <div className="mb-6 p-4 rounded-full bg-primary/10">
-          <Database className="h-12 w-12 text-primary" />
+          <img src={logo} alt="Datacia" className="h-12 w-12 object-contain" />
         </div>
         <h2 className="text-xl font-semibold mb-2">Datacia</h2>
         <p className="text-muted-foreground text-sm max-w-sm">

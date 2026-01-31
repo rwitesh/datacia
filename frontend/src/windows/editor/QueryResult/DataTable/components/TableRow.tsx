@@ -4,7 +4,7 @@ import { TableCell } from "./TableCell";
 import type { DataRow } from "../types";
 import { TableContextMenu } from "./TableContextMenu";
 import type { CellType } from "../hooks/useTableSelection";
-
+import type { SelectionGeometry } from "../utils/cellSelection";
 
 interface TableRowProps {
     virtualItem: VirtualItem;
@@ -13,10 +13,11 @@ interface TableRowProps {
     colWidths: number[];
     totalWidth: number;
     gridTemplateColumns: string;
-    selectedCells: Set<string>;
+    selection: SelectionGeometry | null;
     onMouseDown: (cellType: CellType, row: number, col: number, event: React.MouseEvent) => void;
     onMouseEnter: (cellType: CellType, row: number, col: number) => void;
-    selectedData?: DataRow[];
+    columns: string[];
+    data: DataRow[];
     onOpenDataView?: () => void;
 }
 
@@ -27,10 +28,11 @@ export function TableRow({
     colWidths,
     totalWidth,
     gridTemplateColumns,
-    selectedCells,
+    selection,
     onMouseDown,
     onMouseEnter,
-    selectedData = [],
+    columns,
+    data,
     onOpenDataView,
 }: TableRowProps) {
     const rowContent = (
@@ -55,7 +57,7 @@ export function TableRow({
                         rowIndex={virtualItem.index}
                         colIndex={ci}
                         colWidth={colWidths[ci]}
-                        selectedCells={selectedCells}
+                        selection={selection}
                         isSerialColumn={ci === 0}
                         onMouseDown={onMouseDown}
                         onMouseEnter={onMouseEnter}
@@ -68,9 +70,7 @@ export function TableRow({
                         className="relative border-r-[0.5px] border-border/60 px-2"
                         style={{ width: w }}
                     >
-                        <div className="h-full flex items-center cursor-default select-none">
-                            {/* Empty content for blank rows */}
-                        </div>
+                        <div className="h-full flex items-center cursor-default select-none" />
                     </div>
                 ))}
         </div>
@@ -83,7 +83,9 @@ export function TableRow({
     return (
         <TableContextMenu
             row={row.original}
-            selectedData={selectedData}
+            selection={selection}
+            columns={columns}
+            data={data}
             onOpenDataView={onOpenDataView}
         >
             {rowContent}

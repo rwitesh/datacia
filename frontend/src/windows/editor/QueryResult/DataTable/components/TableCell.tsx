@@ -1,14 +1,15 @@
 import { flexRender, type Cell } from "@tanstack/react-table";
-import { isCellSelected, getCellBoxShadow } from "../utils/cellSelection";
+import { isCellInSelection, getCellBoxShadow } from "../utils/cellSelection";
 import type { DataRow } from "../types";
 import type { CellType } from "../hooks/useTableSelection";
+import type { SelectionGeometry } from "../utils/cellSelection";
 
 interface TableCellProps {
     cell: Cell<DataRow, unknown>;
     rowIndex: number;
     colIndex: number;
     colWidth: number;
-    selectedCells: Set<string>;
+    selection: SelectionGeometry | null;
     isSerialColumn?: boolean;
     onMouseDown: (cellType: CellType, row: number, col: number, event: React.MouseEvent) => void;
     onMouseEnter: (cellType: CellType, row: number, col: number) => void;
@@ -19,17 +20,15 @@ export function TableCell({
     rowIndex,
     colIndex,
     colWidth,
-    selectedCells,
+    selection,
     isSerialColumn = false,
     onMouseDown,
     onMouseEnter,
 }: TableCellProps) {
-    // For data columns, adjust colIndex by -1 since selection excludes serial column
     const selectionColIndex = isSerialColumn ? -1 : colIndex - 1;
-    const isSelected = !isSerialColumn && isCellSelected(selectedCells, rowIndex, selectionColIndex);
-    const boxShadow = !isSerialColumn ? getCellBoxShadow(selectedCells, rowIndex, selectionColIndex) : undefined;
+    const isSelected = !isSerialColumn && isCellInSelection(selection, rowIndex, selectionColIndex);
+    const boxShadow = !isSerialColumn ? getCellBoxShadow(selection, rowIndex, selectionColIndex) : undefined;
 
-    // Determine cell type for unified handlers
     const cellType: CellType = isSerialColumn ? 'serial' : 'data';
 
     const handleMouseDown = (e: React.MouseEvent) => {

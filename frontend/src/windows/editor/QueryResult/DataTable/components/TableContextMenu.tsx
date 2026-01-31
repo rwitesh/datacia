@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useMemo } from "react";
 import { Copy, FileJson, FileType, Braces, PanelRight, Crown, Image as ImageIcon } from "lucide-react";
 import html2canvaspro from "html2canvas-pro";
 import {
@@ -11,27 +11,35 @@ import { useAppContext } from "@/context/app/Index";
 import { useCopyToClipboard } from "@/services/clipboard";
 import { useExportData, type ExportFormat } from "@/services/export";
 import type { DataRow } from "../types";
+import { type SelectionGeometry, extractSelectedData } from "../utils/cellSelection";
 
 interface TableContextMenuProps {
   children: React.ReactNode;
   row: DataRow;
-  selectedData?: DataRow[];
+  selection: SelectionGeometry | null;
+  columns: string[];
+  data: DataRow[];
   onOpenDataView?: () => void;
 }
 
 export function TableContextMenu({
   children,
   row,
-  selectedData = [],
+  selection,
+  columns,
+  data,
   onOpenDataView,
 }: TableContextMenuProps) {
   const { isLicenseActive } = useAppContext();
-  const dataToUse = selectedData.length > 0 ? selectedData : [row];
+
+  const dataToUse = useMemo(() => {
+    const selectedData = extractSelectedData(selection, columns, data);
+    return selectedData.length > 0 ? selectedData : [row];
+  }, [selection, columns, data, row]);
 
   const copyToClipboardMutation = useCopyToClipboard();
   const exportDataMutation = useExportData();
   const exportRef = useRef<HTMLDivElement>(null);
-
 
   const handleCopyText = () => {
     const text = dataToUse.map((d) => Object.values(d).join("\t")).join("\n");
@@ -60,7 +68,6 @@ export function TableContextMenu({
       });
 
       const dataUrl = canvas.toDataURL("image/png");
-      // Remove the prefix "data:image/png;base64," to get the raw base64 string
       const base64Data = dataUrl.replace(/^data:image\/png;base64,/, "");
 
       copyToClipboardMutation.mutate({ content: base64Data, type: "image" }, {
@@ -72,7 +79,6 @@ export function TableContextMenu({
       console.error("Copy PNG failed:", err);
     }
   };
-
 
   const handleExport = (format: ExportFormat) => {
     if (dataToUse.length === 0) return;
@@ -101,8 +107,8 @@ export function TableContextMenu({
 
     try {
       const canvas = await html2canvaspro(exportRef.current, {
-        backgroundColor: "#ffffff", // Ensure white background
-        scale: 2, // Higher resolution
+        backgroundColor: "#ffffff",
+        scale: 2,
       });
 
       const base64 = canvas.toDataURL("image/png");
@@ -121,31 +127,30 @@ export function TableContextMenu({
     }
   };
 
-
-  const columns = dataToUse.length > 0 ? Object.keys(dataToUse[0]) : [];
+  const displayColumns = dataToUse.length > 0 ? Object.keys(dataToUse[0]) : [];
 
   return (
     <>
       <ContextMenu>
         <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
-        <ContextMenuContent className="w-48">
-          <ContextMenuItem onSelect={onOpenDataView} className="gap-2 text-xs">
+        <ContextMenuContent className="w-48 p-1">
+          <ContextMenuItem onSelect={onOpenDataView} className="gap-2 text-xs py-1">
             <PanelRight className="h-3 w-3" />
             Open DataView
           </ContextMenuItem>
 
-          <ContextMenuItem onSelect={handleCopyText} className="gap-2 text-xs">
+          <ContextMenuItem onSelect={handleCopyText} className="gap-2 text-xs py-1">
             <Copy className="h-3 w-3" />
             Copy
           </ContextMenuItem>
-          <ContextMenuItem onSelect={handleCopyJSON} className="gap-2 text-xs">
+          <ContextMenuItem onSelect={handleCopyJSON} className="gap-2 text-xs py-1">
             <Braces className="h-3 w-3" />
             Copy as JSON
           </ContextMenuItem>
           <ContextMenuItem
             onSelect={handleCopyPng}
             disabled={!isLicenseActive}
-            className="gap-2 text-xs justify-between"
+            className="gap-2 text-xs py-1 justify-between"
           >
             <div className="flex items-center gap-2">
               <ImageIcon className="h-3 w-3" />
@@ -158,7 +163,7 @@ export function TableContextMenu({
           <ContextMenuItem
             onSelect={() => handleExport("json")}
             disabled={!isLicenseActive}
-            className="gap-2 text-xs justify-between"
+            className="gap-2 text-xs py-1 justify-between"
           >
             <div className="flex items-center gap-2">
               <FileJson className="h-3 w-3" />
@@ -171,7 +176,7 @@ export function TableContextMenu({
           <ContextMenuItem
             onSelect={() => handleExport("csv")}
             disabled={!isLicenseActive}
-            className="gap-2 text-xs justify-between"
+            className="gap-2 text-xs py-1 justify-between"
           >
             <div className="flex items-center gap-2">
               <FileType className="h-3 w-3" />
@@ -184,7 +189,7 @@ export function TableContextMenu({
           <ContextMenuItem
             onSelect={handleExportPng}
             disabled={!isLicenseActive}
-            className="gap-2 text-xs justify-between"
+            className="gap-2 text-xs py-1 justify-between"
           >
             <div className="flex items-center gap-2">
               <ImageIcon className="h-3 w-3" />
@@ -205,16 +210,16 @@ export function TableContextMenu({
             <table className="w-full text-xs font-mono border-collapse">
               <thead>
                 <tr>
-                  {columns.map(c => (
+                  {displayColumns.map(c => (
                     <th key={c} className="border p-1 bg-gray-100 font-semibold">{c}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {dataToUse.map((row, i) => (
+                {dataToUse.map((r, i) => (
                   <tr key={i}>
-                    {columns.map(c => (
-                      <td key={c} className="border p-1 whitespace-pre-wrap">{String(row[c] ?? "")}</td>
+                    {displayColumns.map(c => (
+                      <td key={c} className="border p-1 whitespace-pre-wrap">{String(r[c] ?? "")}</td>
                     ))}
                   </tr>
                 ))}
@@ -226,4 +231,3 @@ export function TableContextMenu({
     </>
   );
 }
-

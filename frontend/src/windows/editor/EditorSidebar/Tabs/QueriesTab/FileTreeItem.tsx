@@ -173,15 +173,15 @@ export function FileTreeItem({
                         )}
                     </div>
                 </ContextMenuTrigger>
-                <ContextMenuContent>
-                    <ContextMenuItem onSelect={() => onCreateRequest("file", isFolder ? node.path : (node.path.split('/').slice(0, -1).join('/')))}>
-                        <FilePlus className="h-3 w-3 mr-2" />
+                <ContextMenuContent className="w-48 p-1">
+                    <ContextMenuItem onSelect={() => onCreateRequest("file", isFolder ? node.path : (node.path.split('/').slice(0, -1).join('/')))} className="gap-2 text-xs py-1">
+                        <FilePlus className="h-3 w-3" />
                         New Query
                     </ContextMenuItem>
 
                     {isFolder && (
-                        <ContextMenuItem onSelect={() => onCreateRequest("folder", node.path)}>
-                            <FolderPlus className="h-3 w-3 mr-2" />
+                        <ContextMenuItem onSelect={() => onCreateRequest("folder", node.path)} className="gap-2 text-xs py-1">
+                            <FolderPlus className="h-3 w-3" />
                             New Folder
                         </ContextMenuItem>
                     )}
@@ -191,18 +191,18 @@ export function FileTreeItem({
                     <ContextMenuItem onSelect={() => {
                         setRenamingPath(node.path);
                         setRenameValue(node.name);
-                    }}>
-                        <Edit2 className="h-3 w-3 mr-2" />
+                    }} className="gap-2 text-xs py-1">
+                        <Edit2 className="h-3 w-3" />
                         Rename
                     </ContextMenuItem>
                     <ContextMenuItem
-                        className="text-red-500 focus:text-red-500"
+                        className="gap-2 text-xs py-1 text-red-500 focus:text-red-500"
                         onSelect={(e) => {
                             e.stopPropagation();
                             deleteNode.mutate(node.path);
                         }}
                     >
-                        <Trash2 className="h-3 w-3 mr-2" />
+                        <Trash2 className="h-3 w-3" />
                         Delete
                     </ContextMenuItem>
                 </ContextMenuContent>

@@ -3,9 +3,12 @@ import { Copy, Check, Lock } from "lucide-react";
 import { useAppContext } from "@/context/app/Index";
 import { Button } from "@/components/ui/button";
 import { OpenLicenseWindow } from "@/services/bindings";
+import { type SelectionGeometry, extractSelectedData } from "../QueryResult/DataTable/utils/cellSelection";
 
-type SelectedDataProps = {
-  selectedData: Array<Record<string, unknown>>;
+type DataViewProps = {
+  selection?: SelectionGeometry | null;
+  columns: string[];
+  data: Array<Record<string, unknown>>;
 };
 
 function getColorClass(value: string): string {
@@ -57,9 +60,14 @@ function HighlightedLine({ line }: { line: string }) {
   );
 }
 
-export function DataView({ selectedData }: SelectedDataProps) {
+export function DataView({ selection, columns, data }: DataViewProps) {
   const [copied, setCopied] = useState(false);
   const { isLicenseActive } = useAppContext();
+
+  const selectedData = useMemo(
+    () => extractSelectedData(selection ?? null, columns, data),
+    [selection, columns, data]
+  );
 
   const lines = useMemo(() => {
     const jsonString = JSON.stringify(selectedData, null, 2);

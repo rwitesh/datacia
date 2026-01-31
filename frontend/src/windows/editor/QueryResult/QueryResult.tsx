@@ -5,16 +5,16 @@ import { ResultBar, type ViewMode } from "./ResultBar/ResultBar";
 import { ErrorView } from "./ErrorView/ErrorView";
 import { DDLView } from "./DDLView/DDLView";
 import type { QueryResult as QueryResultType } from "@/services/bindings/database";
+import type { SelectionGeometry } from "./DataTable/utils/cellSelection";
 import html2canvaspro from "html2canvas-pro";
 import React from "react";
 import { useExportData } from "@/services/export";
 
 type QueryResultProps = {
-  onSelectionChange: (selected: Array<Record<string, unknown>>) => void;
   onOpenDataView?: () => void;
 };
 
-export function QueryResult({ onSelectionChange, onOpenDataView }: QueryResultProps) {
+export function QueryResult({ onOpenDataView }: QueryResultProps) {
   const { activeTab, updateTab } = useEditorContext();
   const getTableDataMutation = useGetTableData();
   const getDDLMutation = useGetDDL();
@@ -29,10 +29,25 @@ export function QueryResult({ onSelectionChange, onOpenDataView }: QueryResultPr
   const limit = activeTab?.limit;
   const offset = activeTab?.offset;
 
+  const tabId = activeTab?.id;
+  const showDataTable = Boolean(
+    activeTab &&
+      (String(activeTab.results?.type) === "read" ||
+        (activeTab.isExecuting && String(activeTab.results?.type) === "read"))
+  );
+
+  const handleSelectionChange = React.useCallback(
+    (selection: SelectionGeometry | null) => {
+      if (tabId) {
+        updateTab(tabId, { selection });
+      }
+    },
+    [tabId, updateTab]
+  );
+
   if (!activeTab) return null;
 
   const { id, isExecuting, error, results, type, mode, orderBy, orderDir } = activeTab;
-  const isReadQuery = results && results.type === "read";
   const isCommandQuery = results && results.type === "command";
   const isTableViewMode = type === "table";
   const viewMode = mode ?? "data";
@@ -99,10 +114,6 @@ export function QueryResult({ onSelectionChange, onOpenDataView }: QueryResultPr
     updateTab(id, { scroll });
   };
 
-  // Show DataTable if we have results, even while loading new sorted data
-  const showDataTable = isReadQuery || (isExecuting && results?.type === "read");
-
-  // Export Logic for Full Result Set
 
   const handleExportPng = async () => {
     if (!tableRef.current || !results?.data) return;
@@ -114,7 +125,7 @@ export function QueryResult({ onSelectionChange, onOpenDataView }: QueryResultPr
       });
 
       const base64 = canvas.toDataURL("image/png");
-      const filename = `${table || 'query'}-${results.data.length}-rows.png`;
+      const filename = `${table || 'query'}-${results?.data?.length ?? 0}-rows.png`;
 
       exportData({
         format: "png",
@@ -139,10 +150,11 @@ export function QueryResult({ onSelectionChange, onOpenDataView }: QueryResultPr
           <ErrorView error={error} />
         ) : showDataTable ? (
           <DataTable
+            key={id}
             ref={tableRef}
-            columns={results.columns}
-            data={results.data ?? []}
-            onSelectionChange={onSelectionChange}
+            columns={results?.columns ?? []}
+            data={results?.data ?? []}
+            onSelectionChange={handleSelectionChange}
             isTableViewMode={isTableViewMode}
             currentOrderBy={orderBy}
             currentOrderDir={orderDir}
@@ -152,6 +164,7 @@ export function QueryResult({ onSelectionChange, onOpenDataView }: QueryResultPr
             scrollPosition={activeTab.scroll}
             onScrollChange={handleScrollChange}
             offset={offset ?? 0}
+            initialSelection={activeTab.selection}
           />
         ) : isExecuting ? (
           <div className="flex justify-center items-center h-full">

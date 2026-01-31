@@ -11,21 +11,37 @@ import { useEditorContext } from "@/context/editor/Index";
 import { EditorFooter } from "./EditorFooter/EditorFooter";
 import { NavigationBar } from "@/shared/NavigationBar/NavigationBar";
 import { DataView } from "./DataView/DataView";
-import { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, FileUp } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { FileUp } from "lucide-react";
 import { useWriteFile } from "@/services/queries";
 import { toast } from "sonner";
+import type { ImperativePanelHandle } from "react-resizable-panels";
 
 export const Editor = () => {
   const { activeTab, createTab, updateTab } = useEditorContext();
   const [isDataViewOpen, setIsDataViewOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [resultCollapsed, setResultCollapsed] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const sidebarRef = useRef<ImperativePanelHandle>(null);
+  const resultRef = useRef<ImperativePanelHandle>(null);
   const writeFile = useWriteFile();
 
-  // Selected Data
-  const [selectedData, setSelectedData] = useState<
-    Array<Record<string, unknown>>
-  >([]);
+  const handleToggleSidebar = () => {
+    if (sidebarRef.current?.isCollapsed()) {
+      sidebarRef.current.expand();
+    } else {
+      sidebarRef.current?.collapse();
+    }
+  };
+
+  const handleToggleResult = () => {
+    if (resultRef.current?.isCollapsed()) {
+      resultRef.current.expand();
+    } else {
+      resultRef.current?.collapse();
+    }
+  };
 
   // Handle Save Shortcut
   useEffect(() => {
@@ -85,11 +101,14 @@ export const Editor = () => {
       <div className="flex-1 min-h-0">
         <ResizablePanelGroup direction="horizontal" className="h-full w-full">
           <ResizablePanel
+            id="sidebar"
+            ref={sidebarRef}
             defaultSize={25}
             minSize={0}
             maxSize={100}
             collapsible
-            className="min-w-30"
+            onCollapse={() => setSidebarCollapsed(true)}
+            onExpand={() => setSidebarCollapsed(false)}
           >
             <div className="h-full w-full overflow-hidden">
               <EditorSidebar />
@@ -117,77 +136,79 @@ export const Editor = () => {
                 </div>
               )}
               <div className="shrink-0">
-                <NavigationBar />
+                <NavigationBar
+                  sidebarCollapsed={sidebarCollapsed}
+                  onToggleSidebar={handleToggleSidebar}
+                  resultCollapsed={resultCollapsed}
+                  onToggleResult={handleToggleResult}
+                  dataViewOpen={isDataViewOpen}
+                  onToggleDataView={() => setIsDataViewOpen((v) => !v)}
+                />
                 <div className="border-b border-border">
                   <TabBar />
                 </div>
               </div>
               <div className="flex-1 min-h-0 bg-card">
-                {activeTab && (
-                  <ResizablePanelGroup
-                    direction="horizontal"
-                    className="h-full w-full"
-                  >
-                    {/* Main Query Editor Area */}
-                    <ResizablePanel className="min-w-0">
-                      <ResizablePanelGroup
-                        direction="vertical"
-                        className="h-full"
+                <ResizablePanelGroup
+                  direction="horizontal"
+                  className="h-full w-full"
+                >
+                  {/* Main Query Editor Area */}
+                  <ResizablePanel className="min-w-0">
+                    <ResizablePanelGroup
+                      direction="vertical"
+                      className="h-full"
+                    >
+                      {activeTab?.type === "query" && (
+                        <>
+                          <ResizablePanel
+                            defaultSize={75}
+                            minSize={0}
+                            className="min-h-0"
+                          >
+                            <div className="h-full">
+                              <QueryInput />
+                            </div>
+                          </ResizablePanel>
+                          <ResizableHandle />
+                        </>
+                      )}
+                      <ResizablePanel
+                        id="result"
+                        ref={resultRef}
+                        defaultSize={25}
+                        minSize={0}
+                        collapsible
+                        className="min-h-0"
+                        onCollapse={() => setResultCollapsed(true)}
+                        onExpand={() => setResultCollapsed(false)}
                       >
-                        {activeTab.type === "query" && (
-                          <>
-                            <ResizablePanel
-                              defaultSize={75}
-                              minSize={0}
-                              className="min-h-0"
-                            >
-                              <div className="h-full">
-                                <QueryInput />
-                              </div>
-                            </ResizablePanel>
-                            <ResizableHandle />
-                          </>
-                        )}
-                        <ResizablePanel minSize={0} className="min-h-0">
-                          <div className="h-full overflow-hidden">
-                            <QueryResult
-                              onSelectionChange={setSelectedData}
-                              onOpenDataView={() => setIsDataViewOpen(true)}
-                            />
-                          </div>
-                        </ResizablePanel>
-                      </ResizablePanelGroup>
-                    </ResizablePanel>
+                        <div className="h-full overflow-hidden">
+                          <QueryResult
+                            onOpenDataView={() => setIsDataViewOpen(true)}
+                          />
+                        </div>
+                      </ResizablePanel>
+                    </ResizablePanelGroup>
+                  </ResizablePanel>
 
-                    {/* DataView Sidebar Toggle Button */}
-                    <div className="relative">
-                      <button
-                        onClick={() => setIsDataViewOpen(!isDataViewOpen)}
-                        className={`absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-primary hover:bg-primary/90 text-primary-foreground p-1 shadow-lg border border-primary/20 transition-all hover:shadow-xl hover:scale-105 ${isDataViewOpen ? 'rounded-r-md' : 'rounded-l-md'}`}
-                        style={{ marginLeft: isDataViewOpen ? "0" : "-32px" }}
+                  {/* DataView Sidebar */}
+                  {isDataViewOpen && (
+                    <>
+                      <ResizableHandle />
+                      <ResizablePanel
+                        minSize={15}
+                        defaultSize={42}
                       >
-                        {isDataViewOpen ? (
-                          <ChevronRight className="h-4 w-4" />
-                        ) : (
-                          <ChevronLeft className="h-4 w-4" />
-                        )}
-                      </button>
-                    </div>
-
-                    {/* DataView Sidebar */}
-                    {isDataViewOpen && (
-                      <>
-                        <ResizableHandle />
-                        <ResizablePanel
-                          minSize={15}
-                          defaultSize={42}
-                        >
-                          <DataView selectedData={selectedData} />
-                        </ResizablePanel>
-                      </>
-                    )}
-                  </ResizablePanelGroup>
-                )}
+                        <DataView
+                          selection={activeTab?.selection}
+                          columns={activeTab?.results?.columns ?? []}
+                          data={activeTab?.results?.data ?? []}
+                        />
+                      </ResizablePanel>
+                    </>
+                  )}
+                </ResizablePanelGroup>
               </div>
             </div>
           </ResizablePanel>

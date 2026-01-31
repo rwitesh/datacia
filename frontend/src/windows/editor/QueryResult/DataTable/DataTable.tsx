@@ -9,6 +9,7 @@ import {
 import { useVirtualizer } from "@tanstack/react-virtual";
 
 import type { DataRow } from "./types";
+import type { SelectionGeometry } from "./utils/cellSelection";
 import { useTableDimensions } from "./hooks/useTableDimensions";
 import { useTableColumns } from "./hooks/useTableColumns";
 import { useTableSelection } from "./hooks/useTableSelection";
@@ -22,9 +23,8 @@ import { useTheme } from "@/components/theme";
 interface DataTableProps {
   columns: string[];
   data: DataRow[];
-  onSelectionChange: (selected: Array<DataRow>) => void;
+  onSelectionChange: (selection: SelectionGeometry | null) => void;
   extraBlankRows?: number;
-  // Server-side sorting props (only used in table-view mode)
   isTableViewMode?: boolean;
   currentOrderBy?: string;
   currentOrderDir?: "asc" | "desc";
@@ -34,6 +34,7 @@ interface DataTableProps {
   scrollPosition?: { left: number; top: number };
   onScrollChange?: (scroll: { left: number; top: number }) => void;
   offset?: number;
+  initialSelection?: SelectionGeometry | null;
 }
 
 export const DataTable = forwardRef<HTMLDivElement, DataTableProps>(function DataTable({
@@ -50,6 +51,7 @@ export const DataTable = forwardRef<HTMLDivElement, DataTableProps>(function Dat
   scrollPosition,
   onScrollChange,
   offset = 0,
+  initialSelection,
 }, ref) {
   const { editorFontFamily, editorFontSize } = useTheme();
   const [columnSizing, setColumnSizing] = useState<Record<string, number>>({});
@@ -155,7 +157,6 @@ export const DataTable = forwardRef<HTMLDivElement, DataTableProps>(function Dat
   // Note: selection works on data columns (excludes serial # column from selection indices)
   const {
     selection,
-    selectedData,
     handleMouseDown,
     handleMouseEnter,
   } = useTableSelection({
@@ -164,7 +165,8 @@ export const DataTable = forwardRef<HTMLDivElement, DataTableProps>(function Dat
     onSelectionChange,
     scrollRef,
     rowHeight,
-    colWidths: finalColWidths.slice(1), // Exclude serial column width for selection
+    colWidths: finalColWidths.slice(1),
+    initialSelection,
   });
 
   const gridTemplateColumns = useMemo(
@@ -281,10 +283,11 @@ export const DataTable = forwardRef<HTMLDivElement, DataTableProps>(function Dat
                 colWidths={finalColWidths}
                 totalWidth={totalWidth}
                 gridTemplateColumns={gridTemplateColumns}
-                selectedCells={selection.selectedCells}
+                selection={selection}
                 onMouseDown={handleMouseDown}
                 onMouseEnter={handleMouseEnter}
-                selectedData={selectedData as DataRow[]}
+                columns={columns}
+                data={data}
                 onOpenDataView={onOpenDataView}
               />
             );

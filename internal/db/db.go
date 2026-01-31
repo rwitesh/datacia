@@ -243,17 +243,11 @@ func (s *Store) LoadConnection(id string) (map[string]string, error) {
 		return map[string]string{}, err
 	}
 
-	password, err := s.decryptField(encPassword)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decrypt password: %w", err)
-	}
-	sshPassword, err := s.decryptField(encSSHPassword)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decrypt ssh password: %w", err)
-	}
+	password, _ := s.decryptField(encPassword)
+	sshPassword, _ := s.decryptField(encSSHPassword)
 
 	config := map[string]string{
-		"id":          id, // Include ID? The original didn't explicitly, but typically expected.
+		"id":          id,
 		"name":        name,
 		"engine":      engine,
 		"host":        host,

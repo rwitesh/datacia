@@ -141,19 +141,22 @@ export function TablesTab() {
                                     <span className="truncate">{t}</span>
                                 </button>
                             </ContextMenuTrigger>
-                            <ContextMenuContent>
+                            <ContextMenuContent className="w-48 p-1">
                                 <ContextMenuItem
                                     onClick={() => handleTableClick(t)}
+                                    className="gap-2 text-xs py-1"
                                 >
                                     View Data
                                 </ContextMenuItem>
                                 <ContextMenuItem
                                     onClick={() => handleOpenTableSchema(t)}
+                                    className="gap-2 text-xs py-1"
                                 >
                                     View Schema
                                 </ContextMenuItem>
                                 <ContextMenuItem
                                     onClick={() => navigator.clipboard.writeText(t)}
+                                    className="gap-2 text-xs py-1"
                                 >
                                     Copy name
                                 </ContextMenuItem>
