@@ -306,7 +306,7 @@ func (e *Engine) RunQuery(queryId, queryType, sql string) (common.QueryResult, e
 	start := time.Now()
 	result, err := e.activeClient.RunQuery(queryId, queryType, sql)
 	duration := time.Since(start).Milliseconds()
-	result.ExecutionTime = duration
+	result.TimeElapsed = duration
 
 	status := "success"
 	var errorMessage string

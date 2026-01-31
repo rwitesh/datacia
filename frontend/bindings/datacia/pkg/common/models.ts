@@ -33,15 +33,32 @@ export class ConnectionInfo {
     }
 }
 
+export class QueryLogs {
+    "rowsReturned"?: number | null;
+    "rowsRead"?: number | null;
+    "bytesRead"?: number | null;
+
+    /** Creates a new QueryLogs instance. */
+    constructor($$source: Partial<QueryLogs> = {}) {
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new QueryLogs instance from a string or object.
+     */
+    static createFrom($$source: any = {}): QueryLogs {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new QueryLogs($$parsedSource as Partial<QueryLogs>);
+    }
+}
+
 export class QueryResult {
     "type": QueryType;
     "columns": string[];
     "data": { [_: string]: any }[];
-
-    /**
-     * Time in milliseconds
-     */
-    "executionTime": number;
+    "timeElapsed": number;
+    "logs": QueryLogs;
 
     /** Creates a new QueryResult instance. */
     constructor($$source: Partial<QueryResult> = {}) {
@@ -54,8 +71,11 @@ export class QueryResult {
         if (!("data" in $$source)) {
             this["data"] = [];
         }
-        if (!("executionTime" in $$source)) {
-            this["executionTime"] = 0;
+        if (!("timeElapsed" in $$source)) {
+            this["timeElapsed"] = 0;
+        }
+        if (!("logs" in $$source)) {
+            this["logs"] = (new QueryLogs());
         }
 
         Object.assign(this, $$source);
@@ -67,12 +87,16 @@ export class QueryResult {
     static createFrom($$source: any = {}): QueryResult {
         const $$createField1_0 = $$createType0;
         const $$createField2_0 = $$createType2;
+        const $$createField4_0 = $$createType3;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("columns" in $$parsedSource) {
             $$parsedSource["columns"] = $$createField1_0($$parsedSource["columns"]);
         }
         if ("data" in $$parsedSource) {
             $$parsedSource["data"] = $$createField2_0($$parsedSource["data"]);
+        }
+        if ("logs" in $$parsedSource) {
+            $$parsedSource["logs"] = $$createField4_0($$parsedSource["logs"]);
         }
         return new QueryResult($$parsedSource as Partial<QueryResult>);
     }
@@ -93,3 +117,4 @@ export enum QueryType {
 const $$createType0 = $Create.Array($Create.Any);
 const $$createType1 = $Create.Map($Create.Any, $Create.Any);
 const $$createType2 = $Create.Array($$createType1);
+const $$createType3 = QueryLogs.createFrom;

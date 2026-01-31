@@ -171,12 +171,25 @@ func (ch *ClickHouse) execute(ctx context.Context, conn driver.Conn, sql string,
 	return common.QueryResult{Type: common.QueryTypeCommand}, nil
 }
 
+type queryProgress struct {
+	mu        sync.Mutex
+	rowsRead  uint64
+	bytesRead uint64
+}
+
 func (ch *ClickHouse) query(ctx context.Context, conn driver.Conn, sql string, queryID string) (common.QueryResult, error) {
+	progress := &queryProgress{}
+	progressCB := clickhouse.WithProgress(func(p *clickhouse.Progress) {
+		progress.mu.Lock()
+		progress.rowsRead += p.Rows
+		progress.bytesRead += p.Bytes
+		progress.mu.Unlock()
+	})
 	var queryCtx context.Context
 	if queryID != "" {
-		queryCtx = clickhouse.Context(ctx, clickhouse.WithQueryID(queryID))
+		queryCtx = clickhouse.Context(ctx, progressCB, clickhouse.WithQueryID(queryID))
 	} else {
-		queryCtx = ctx
+		queryCtx = clickhouse.Context(ctx, progressCB)
 	}
 
 	rows, err := conn.Query(queryCtx, sql)
@@ -190,7 +203,25 @@ func (ch *ClickHouse) query(ctx context.Context, conn driver.Conn, sql string, q
 		return common.QueryResult{Type: common.QueryTypeRead}, err
 	}
 
-	return common.QueryResult{Type: common.QueryTypeRead, Columns: columns, Data: data}, nil
+	progress.mu.Lock()
+	rowsRead := progress.rowsRead
+	bytesRead := progress.bytesRead
+	progress.mu.Unlock()
+
+	rowsReturned := uint64(len(data))
+
+	logs := common.QueryLogs{
+		RowsReturned: &rowsReturned,
+		RowsRead:     &rowsRead,
+		BytesRead:    &bytesRead,
+	}
+
+	return common.QueryResult{
+		Type:    common.QueryTypeRead,
+		Columns: columns,
+		Data:    data,
+		Logs:    logs,
+	}, nil
 }
 
 func (ch *ClickHouse) CancelQuery(queryID string) error {

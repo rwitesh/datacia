@@ -3,6 +3,7 @@
 
 export {
     ConnectionInfo,
+    QueryLogs,
     QueryResult,
     QueryType
 } from "./models.js";

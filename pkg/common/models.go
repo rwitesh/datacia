@@ -14,11 +14,18 @@ const (
 	QueryTypeUnknown QueryType = "unknown"
 )
 
+type QueryLogs struct {
+	RowsReturned *uint64 `json:"rowsReturned,omitempty"`
+	RowsRead     *uint64 `json:"rowsRead,omitempty"`
+	BytesRead    *uint64 `json:"bytesRead,omitempty"`
+}
+
 type QueryResult struct {
-	Type          QueryType                `json:"type"`
-	Columns       []string                 `json:"columns"`
-	Data          []map[string]interface{} `json:"data"`
-	ExecutionTime int64                    `json:"executionTime"` // Time in milliseconds
+	Type        QueryType                `json:"type"`
+	Columns     []string                 `json:"columns"`
+	Data        []map[string]interface{} `json:"data"`
+	TimeElapsed int64                    `json:"timeElapsed"`
+	Logs        QueryLogs                `json:"logs"`
 }
 
 type DatabaseInfo struct {
