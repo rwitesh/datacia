@@ -136,7 +136,6 @@ export const DataTable = forwardRef<HTMLDivElement, DataTableProps>(function Dat
   const allColumnIds = useMemo(() => ["#", ...columns], [columns]);
   const {
     columnWidths: finalColWidths,
-    isResizing,
     resizingColumnIndex,
     startResize,
   } = useColumnResize({
@@ -249,7 +248,6 @@ export const DataTable = forwardRef<HTMLDivElement, DataTableProps>(function Dat
             colWidths={finalColWidths}
             totalHeight={rowVirtualizer.getTotalSize() + additionalFillerRows * rowHeight}
             onResizeStart={startResize}
-            isResizing={isResizing}
             resizingColumnIndex={resizingColumnIndex}
           />
           {/* Loading overlay - only covers the body, not the header */}

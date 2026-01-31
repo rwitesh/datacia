@@ -15,7 +15,7 @@ export function useTableColumns(columns: string[], offset: number = 0) {
             cell: (info: CellContext<DataRow, unknown>) => {
                 return info.getValue();
             },
-            enableResizing: false,
+            enableResizing: true,
             enableSorting: false,
         };
 

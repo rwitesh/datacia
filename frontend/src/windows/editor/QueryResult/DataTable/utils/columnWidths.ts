@@ -90,7 +90,8 @@ export function calculateContentWidths(
 }
 
 /**
- * Distributes extra horizontal space evenly across all columns.
+ * Distributes extra horizontal space evenly across data columns (excludes serial column).
+ * The serial column (index 0) keeps its exact calculated width.
  * Returns the adjusted column widths and total width.
  */
 export function distributeExtraSpace(
@@ -100,13 +101,17 @@ export function distributeExtraSpace(
     const finalColWidths = [...colWidths];
     let totalWidth = colWidths.reduce((a, b) => a + b, 0);
 
-    if (containerWidth > totalWidth && finalColWidths.length > 0) {
+    // Only distribute extra space to data columns (skip serial column at index 0)
+    const dataColumnCount = finalColWidths.length - 1;
+    if (containerWidth > totalWidth && dataColumnCount > 0) {
         const extraSpace = containerWidth - totalWidth;
-        const extraPerColumn = Math.floor(extraSpace / finalColWidths.length);
-        const remainder = extraSpace - extraPerColumn * finalColWidths.length;
+        const extraPerColumn = Math.floor(extraSpace / dataColumnCount);
+        const remainder = extraSpace - extraPerColumn * dataColumnCount;
 
-        for (let i = 0; i < finalColWidths.length; i++) {
-            finalColWidths[i] += extraPerColumn + (i < remainder ? 1 : 0);
+        // Start from index 1 to skip serial column
+        for (let i = 1; i < finalColWidths.length; i++) {
+            const dataIndex = i - 1;
+            finalColWidths[i] += extraPerColumn + (dataIndex < remainder ? 1 : 0);
         }
         totalWidth = containerWidth;
     }

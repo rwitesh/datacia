@@ -4,7 +4,6 @@ interface ColumnResizeHandlesProps {
     colWidths: number[];
     totalHeight: number;
     onResizeStart: (colIndex: number, startX: number) => void;
-    isResizing: boolean;
     resizingColumnIndex: number;
 }
 
@@ -16,7 +15,6 @@ export const ColumnResizeHandles = memo(function ColumnResizeHandles({
     colWidths,
     totalHeight,
     onResizeStart,
-    isResizing,
     resizingColumnIndex,
 }: ColumnResizeHandlesProps) {
     // Calculate the left positions for each column border
@@ -34,11 +32,7 @@ export const ColumnResizeHandles = memo(function ColumnResizeHandles({
             {handlePositions.slice(0, -1).map((leftPos, index) => (
                 <div
                     key={`resize-handle-${index}`}
-                    className={`
-            absolute top-0 pointer-events-auto
-            ${isResizing ? "cursor-col-resize" : "cursor-col-resize"}
-            group
-          `}
+                    className="absolute top-0 pointer-events-auto cursor-col-resize group"
                     style={{
                         left: leftPos - 4,
                         width: 8,
@@ -53,10 +47,10 @@ export const ColumnResizeHandles = memo(function ColumnResizeHandles({
                     {/* Visible hover indicator - the thin line */}
                     <div
                         className={`
-              absolute inset-y-0 left-1/2 -translate-x-1/2 w-[2px]
-              transition-colors duration-100
-              ${resizingColumnIndex === index ? "bg-blue-500" : "bg-transparent group-hover:bg-blue-500/50"}
-            `}
+                            absolute inset-y-0 left-1/2 -translate-x-1/2 w-[2px]
+                            transition-colors duration-100
+                            ${resizingColumnIndex === index ? "bg-blue-500" : "bg-transparent group-hover:bg-blue-500/50"}
+                        `}
                     />
                 </div>
             ))}
