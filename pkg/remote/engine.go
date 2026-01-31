@@ -242,9 +242,6 @@ func (e *Engine) ChangeDatabaseByName(database string) error {
 	// Get password directly from the client instead of from GetConnectionInfo
 	// which no longer exposes passwords for security
 	password := e.activeClient.GetPassword()
-	if password == "" {
-		return errors.New("password not available for reconnection")
-	}
 
 	return e.ChangeDatabase(
 		connInfo["engine"],
