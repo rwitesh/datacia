@@ -13,8 +13,8 @@ import {
   MenubarItem,
 } from "@/components/ui/menubar";
 import { useTheme, type Theme } from "@/components/theme/theme-provider";
-import { Bolt, Key } from "lucide-react";
-import { OpenLicenseWindow } from "@/services/bindings";
+import { Bolt, Key, Settings } from "lucide-react";
+import { OpenLicenseWindow, OpenSettingsWindow } from "@/services/bindings";
 import { useAppContext } from "@/context/app/Index";
 
 export function MenuBar() {
@@ -75,6 +75,17 @@ export function MenuBar() {
           >
             <Key className="h-3.5 w-3.5" />
             License
+          </MenubarItem>
+
+          <MenubarItem
+            className="cursor-pointer text-xs flex items-center gap-2"
+            onSelect={(e) => {
+              e.preventDefault();
+              OpenSettingsWindow();
+            }}
+          >
+            <Settings className="h-3.5 w-3.5" />
+            Settings
           </MenubarItem>
 
           {appVersion && (

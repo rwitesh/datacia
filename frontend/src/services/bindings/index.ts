@@ -36,6 +36,7 @@ export {
   CheckConnectionHealth,
   OpenConnectionWindow,
   OpenLicenseWindow,
+  OpenSettingsWindow,
 } from "../../../bindings/datacia/pkg/remote/engine";
 
 export {

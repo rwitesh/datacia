@@ -25,6 +25,7 @@ type UIController interface {
 	CloseEditor()
 	OpenConnectionWindow()
 	OpenLicenseWindow()
+	OpenSettingsWindow()
 }
 
 type Engine struct {
@@ -169,6 +170,12 @@ func (e *Engine) OpenConnectionWindow() {
 func (e *Engine) OpenLicenseWindow() {
 	if e.uiController != nil {
 		e.uiController.OpenLicenseWindow()
+	}
+}
+
+func (e *Engine) OpenSettingsWindow() {
+	if e.uiController != nil {
+		e.uiController.OpenSettingsWindow()
 	}
 }
 

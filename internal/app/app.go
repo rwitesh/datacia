@@ -36,6 +36,7 @@ type App struct {
 	connectionWindow   *application.WebviewWindow
 	editorWindow       *application.WebviewWindow
 	licenseWindow      *application.WebviewWindow
+	settingsWindow     *application.WebviewWindow
 	engine             *remote.Engine
 	config             *Config
 	windowMutex        sync.Mutex
@@ -372,6 +373,55 @@ func (a *App) OpenLicenseWindow() {
 
 	if err := a.createLicenseWindow(); err != nil {
 		logger.Logger.Error("Failed to open license window", zap.Error(err))
+		return
+	}
+}
+
+func (a *App) createSettingsWindow() error {
+	a.settingsWindow = a.instance.Window.NewWithOptions(application.WebviewWindowOptions{
+		Name:  constants.SETTINGS_WINDOW_NAME,
+		Title: "Settings",
+		URL:   "/#/settings",
+		Mac: application.MacWindow{
+			InvisibleTitleBarHeight: 50,
+			Backdrop:                application.MacBackdropTranslucent,
+			TitleBar:                application.MacTitleBarHiddenInset,
+		},
+		BackgroundColour: application.NewRGB(27, 38, 54),
+		Width:            constants.SETTINGS_WINDOW_WIDTH,
+		Height:           constants.SETTINGS_WINDOW_HEIGHT,
+		MinWidth:         constants.SETTINGS_WINDOW_WIDTH,
+		MinHeight:        constants.SETTINGS_WINDOW_HEIGHT,
+		MaxWidth:         constants.SETTINGS_WINDOW_WIDTH,
+		MaxHeight:        constants.SETTINGS_WINDOW_HEIGHT,
+	})
+
+	if a.settingsWindow == nil {
+		logger.Logger.Error("Failed to create settings window")
+		return fmt.Errorf("failed to create settings window")
+	}
+
+	a.settingsWindow.Center()
+	a.settingsWindow.RegisterHook(events.Common.WindowClosing, func(e *application.WindowEvent) {
+		a.settingsWindow = nil
+	})
+
+	return nil
+}
+
+func (a *App) OpenSettingsWindow() {
+	a.windowMutex.Lock()
+	defer a.windowMutex.Unlock()
+
+	if a.settingsWindow != nil {
+		logger.Logger.Debug("Settings window already exists, focusing")
+		a.settingsWindow.Show()
+		a.settingsWindow.Focus()
+		return
+	}
+
+	if err := a.createSettingsWindow(); err != nil {
+		logger.Logger.Error("Failed to open settings window", zap.Error(err))
 		return
 	}
 }

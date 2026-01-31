@@ -1,13 +1,21 @@
 import { useAppContext } from "@/context/app/Index";
-import { Database } from "lucide-react";
+import { Database, Settings } from "lucide-react";
 import { AppLicense } from "@/shared/AppLicense/AppLicense";
+import { OpenSettingsWindow } from "@/services/bindings";
 
 export const WelcomePanel = () => {
     const { appVersion } = useAppContext();
 
     return (
         <div className="h-full relative flex flex-col items-center justify-center text-center p-8">
-            <div className="absolute top-4 right-4">
+            <div className="absolute top-4 right-4 flex items-center gap-2">
+                <button
+                    onClick={() => OpenSettingsWindow()}
+                    className="flex items-center gap-1 px-2 py-1 rounded text-xs text-muted-foreground hover:bg-muted/50 transition-colors"
+                    title="Settings"
+                >
+                    <Settings className="h-3.5 w-3.5" />
+                </button>
                 <AppLicense />
             </div>
 

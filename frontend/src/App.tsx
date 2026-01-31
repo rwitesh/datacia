@@ -6,6 +6,7 @@ import { DatabaseConnection } from "@/windows/connection/Connection";
 import { WelcomePanel } from "@/windows/connection/WelcomePanel";
 import { Editor } from "@/windows/editor/Editor";
 import { License } from "@/windows/license/License";
+import { Settings } from "@/windows/settings/Settings";
 import { AppProvider } from "@/context/app/Provider";
 import { Toaster } from "sonner";
 import { EditorProvider } from "@/context/editor/Provider";
@@ -35,6 +36,7 @@ function App() {
                   }
                 />
                 <Route path="/license" element={<License />} />
+                <Route path="/settings" element={<Settings />} />
               </Routes>
             </div>
           </HashRouter>
