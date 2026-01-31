@@ -11,8 +11,6 @@ import {
   MenubarLabel,
   MenubarSeparator,
 } from "@/components/ui/menubar";
-import { AppUpdate } from "@/shared/AppUpdate/AppUpdate";
-
 interface ConnectionInfo {
   name: string;
   engine: string;
@@ -72,10 +70,6 @@ export function ConnectionList({
             No saved connections yet
           </div>
         )}
-      </div>
-
-      <div className="py-2 mt-auto">
-        <AppUpdate />
       </div>
     </div>
   );

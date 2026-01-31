@@ -6,6 +6,7 @@ import { useConnectionForm } from "./hooks/useConnectionForm";
 import { ConnectionAlert } from "./components/ConnectionAlert";
 import { ConnectionForm } from "./components/ConnectionForm";
 import { ConnectionActions } from "./components/ConnectionActions";
+import { StatusBar } from "@/shared/StatusBar/StatusBar";
 import { isValidEngine } from "@/shared/utils/engines";
 import type { FormValues } from "./utils/types";
 
@@ -67,6 +68,8 @@ export const DatabaseConnection: React.FC = () => {
 
   return (
     <div className="h-full flex flex-col">
+      <StatusBar />
+
       <div className="mb-3 flex-shrink-0" aria-live="polite" role="status">
         <div className="min-h-24">
           <ConnectionAlert

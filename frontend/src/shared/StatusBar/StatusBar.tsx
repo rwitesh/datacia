@@ -1,0 +1,22 @@
+import { Settings } from "lucide-react";
+import { OpenSettingsWindow } from "@/services/bindings";
+import { AppLicense } from "@/shared/AppLicense/AppLicense";
+import { AppUpdate } from "@/shared/AppUpdate/AppUpdate";
+
+export const StatusBar = () => {
+  return (
+    <div className="flex items-center justify-between gap-3 px-3 py-2 border-b border-muted/50">
+      <AppLicense />
+      <div className="flex items-center gap-3">
+        <AppUpdate />
+        <button
+          onClick={() => OpenSettingsWindow()}
+          className="flex items-center gap-1 p-1.5 rounded text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors cursor-pointer"
+          title="Settings"
+        >
+          <Settings className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  );
+};
