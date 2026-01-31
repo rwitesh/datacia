@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useRef } from "react";
 import { Copy, FileJson, FileType, Braces, PanelRight, Crown, Image as ImageIcon } from "lucide-react";
 import html2canvaspro from "html2canvas-pro";
 import {
@@ -8,7 +8,6 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { useAppContext } from "@/context/app/Index";
-import { LicenseDialog } from "@/shared/License/LicenseDialog";
 import { useCopyToClipboard } from "@/services/clipboard";
 import { useExportData, type ExportFormat } from "@/services/export";
 import type { DataRow } from "../types";
@@ -27,7 +26,6 @@ export function TableContextMenu({
   onOpenDataView,
 }: TableContextMenuProps) {
   const { isLicenseActive } = useAppContext();
-  const [isLicenseDialogOpen, setIsLicenseDialogOpen] = useState(false);
   const dataToUse = selectedData.length > 0 ? selectedData : [row];
 
   const copyToClipboardMutation = useCopyToClipboard();
@@ -225,11 +223,6 @@ export function TableContextMenu({
           )}
         </div>
       </div>
-
-      <LicenseDialog
-        open={isLicenseDialogOpen}
-        onOpenChange={setIsLicenseDialogOpen}
-      />
     </>
   );
 }

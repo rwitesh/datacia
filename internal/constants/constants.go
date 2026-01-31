@@ -7,8 +7,11 @@ const (
 	CONNECTION_WINDOW_HEIGHT = 600
 	EDITOR_WINDOW_WIDTH      = 1024
 	EDITOR_WINDOW_HEIGHT     = 768
+	LICENSE_WINDOW_WIDTH     = 450
+	LICENSE_WINDOW_HEIGHT    = 500
 	CONNECTION_WINDOW_NAME   = "datacia-connection"
 	EDITOR_WINDOW_NAME       = "datacia-editor"
+	LICENSE_WINDOW_NAME      = "datacia-license"
 )
 
 const (

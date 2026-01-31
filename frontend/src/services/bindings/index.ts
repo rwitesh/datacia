@@ -35,8 +35,7 @@ export {
   SelectSQLiteFile,
   CheckConnectionHealth,
   OpenConnectionWindow,
-  // Additional functions
-
+  OpenLicenseWindow,
 } from "../../../bindings/datacia/pkg/remote/engine";
 
 export {

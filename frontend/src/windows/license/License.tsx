@@ -1,15 +1,5 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -18,29 +8,27 @@ import {
   useActivateLicense,
   useDeactivateLicense,
 } from "@/services/license";
-import { CheckCircle2, XCircle, Loader2, Key, Shield, AlertCircle, Calendar, User, Mail, Crown } from "lucide-react";
+import {
+  CheckCircle2,
+  XCircle,
+  Loader2,
+  Key,
+  Shield,
+  AlertCircle,
+  Calendar,
+  User,
+  Mail,
+  Crown,
+} from "lucide-react";
+import { Window } from "@wailsio/runtime";
 
-interface LicenseDialogProps {
-  children?: React.ReactNode;
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
-}
-
-export function LicenseDialog({
-  children,
-  open: controlledOpen,
-  onOpenChange,
-}: LicenseDialogProps) {
+export function License() {
   const [licenseKey, setLicenseKey] = useState("");
-  const [internalOpen, setInternalOpen] = useState(false);
   const [message, setMessage] = useState<{
     variant: "destructive" | "success";
     title: string;
     description?: string;
   } | null>(null);
-
-  const isOpen = controlledOpen !== undefined ? controlledOpen : internalOpen;
-  const setIsOpen = onOpenChange || setInternalOpen;
 
   const { data: status, isLoading: isLoadingStatus } = useLicenseStatus();
   const activateMutation = useActivateLicense();
@@ -52,21 +40,17 @@ export function LicenseDialog({
   const customerName = status?.customer_name;
   const customerEmail = status?.customer_email;
   const variantName = status?.variant_name;
-  const hasLicense = isValid || !!maskedKey; // Show license UI if we have a key or valid status
+  const hasLicense = isValid || !!maskedKey;
 
   useEffect(() => {
-    if (!isOpen) {
-      setMessage(null);
-      setLicenseKey("");
-    } else if (status?.error) {
-       // If there is a validation error (from backend GetStatus), show it
-       setMessage({
-         variant: "destructive",
-         title: "License Error",
-         description: status.error,
-       });
+    if (status?.error) {
+      setMessage({
+        variant: "destructive",
+        title: "License Error",
+        description: status.error,
+      });
     }
-  }, [isOpen, status?.error]);
+  }, [status?.error]);
 
   const handleActivate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,11 +76,13 @@ export function LicenseDialog({
         setMessage({
           variant: "destructive",
           title: "Activation failed",
-          description: result.error || result.message || "Failed to activate license.",
+          description:
+            result.error || result.message || "Failed to activate license.",
         });
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to activate license";
+      const message =
+        error instanceof Error ? error.message : "Failed to activate license";
       setMessage({
         variant: "destructive",
         title: "Activation failed",
@@ -119,17 +105,25 @@ export function LicenseDialog({
         setMessage({
           variant: "destructive",
           title: "Deactivation failed",
-          description: result.error || result.message || "Failed to deactivate license.",
+          description:
+            result.error || result.message || "Failed to deactivate license.",
         });
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to deactivate license";
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to deactivate license";
       setMessage({
         variant: "destructive",
         title: "Deactivation failed",
         description: message,
       });
     }
+  };
+
+  const handleClose = () => {
+    Window.Close();
   };
 
   const isLoading =
@@ -141,10 +135,10 @@ export function LicenseDialog({
     if (!dateString) return null;
     try {
       const date = new Date(dateString);
-      return date.toLocaleDateString(undefined, { 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
+      return date.toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
       });
     } catch {
       return null;
@@ -152,20 +146,24 @@ export function LicenseDialog({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      {children && <DialogTrigger asChild>{children}</DialogTrigger>}
-      <DialogContent className="sm:max-w-[500px]" showCloseButton={true}>
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5" />
-            License Management
-          </DialogTitle>
-          <DialogDescription>
-            Activate, deactivate, or check the status of your license.
-          </DialogDescription>
-        </DialogHeader>
+    <div className="h-screen w-screen flex flex-col bg-background text-foreground select-none">
+      {/* Draggable title bar area for system buttons */}
+      <div
+        className="h-12 shrink-0"
+        style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
+      />
 
-        <div className="space-y-6 py-4">
+      {/* Content */}
+      <div className="flex-1 overflow-auto px-6 pb-6">
+        <div className="flex items-center gap-2 mb-2">
+          <Shield className="h-5 w-5" />
+          <span className="font-semibold text-lg">License Management</span>
+        </div>
+        <p className="text-sm text-muted-foreground mb-6">
+          Activate, deactivate, or check the status of your license.
+        </p>
+
+        <div className="space-y-6">
           {message && (
             <Alert variant={message.variant}>
               <AlertTitle>{message.title}</AlertTitle>
@@ -187,56 +185,55 @@ export function LicenseDialog({
               <div className="space-y-2">
                 <div className="flex items-center gap-2 rounded-md border p-3">
                   {hasLicense ? (
-                    <>
-                      <div className="flex-1 space-y-2">
-                        <div className="flex items-center gap-2">
-                          {isValid ? (
-                            <CheckCircle2 className="h-5 w-5 text-green-500" />
-                          ) : (
-                            <AlertCircle className="h-5 w-5 text-amber-500" />
-                          )}
-                          <div className="font-medium text-sm">
-                            {isValid ? "License Active" : "License Invalid"}
-                          </div>
-                          {variantName && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-medium">
-                              <Crown className="h-3 w-3" />
-                              {variantName.charAt(0).toUpperCase() + variantName.slice(1)}
-                            </span>
-                          )}
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center gap-2">
+                        {isValid ? (
+                          <CheckCircle2 className="h-5 w-5 text-green-500" />
+                        ) : (
+                          <AlertCircle className="h-5 w-5 text-amber-500" />
+                        )}
+                        <div className="font-medium text-sm">
+                          {isValid ? "License Active" : "License Invalid"}
                         </div>
-                        <div className="text-xs text-muted-foreground space-y-1.5">
-                          {maskedKey && (
-                            <div className="font-mono flex items-center gap-1">
-                              <Key className="h-3 w-3" />
-                              {maskedKey}
-                            </div>
-                          )}
-                          {expiresAt && (
-                            <div className="flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
-                              Expires: {formatExpiryDate(expiresAt)}
-                            </div>
-                          )}
-                          {(customerName || customerEmail) && (
-                            <div className="pt-1 border-t space-y-1">
-                              {customerName && (
-                                <div className="flex items-center gap-1">
-                                  <User className="h-3 w-3" />
-                                  {customerName}
-                                </div>
-                              )}
-                              {customerEmail && (
-                                <div className="flex items-center gap-1">
-                                  <Mail className="h-3 w-3" />
-                                  {customerEmail}
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
+                        {variantName && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-medium">
+                            <Crown className="h-3 w-3" />
+                            {variantName.charAt(0).toUpperCase() +
+                              variantName.slice(1)}
+                          </span>
+                        )}
                       </div>
-                    </>
+                      <div className="text-xs text-muted-foreground space-y-1.5">
+                        {maskedKey && (
+                          <div className="font-mono flex items-center gap-1">
+                            <Key className="h-3 w-3" />
+                            {maskedKey}
+                          </div>
+                        )}
+                        {expiresAt && (
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            Expires: {formatExpiryDate(expiresAt)}
+                          </div>
+                        )}
+                        {(customerName || customerEmail) && (
+                          <div className="pt-1 border-t space-y-1">
+                            {customerName && (
+                              <div className="flex items-center gap-1">
+                                <User className="h-3 w-3" />
+                                {customerName}
+                              </div>
+                            )}
+                            {customerEmail && (
+                              <div className="flex items-center gap-1">
+                                <Mail className="h-3 w-3" />
+                                {customerEmail}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   ) : (
                     <>
                       <XCircle className="h-5 w-5 text-muted-foreground" />
@@ -267,7 +264,7 @@ export function LicenseDialog({
                   onChange={(e) => setLicenseKey(e.target.value)}
                   placeholder="Enter your license key"
                   disabled={isLoading}
-                  className="font-mono text-sm"
+                  className="font-mono text-sm select-text"
                 />
               </div>
               <Button
@@ -306,15 +303,19 @@ export function LicenseDialog({
             </Button>
           )}
         </div>
+      </div>
 
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button variant="outline" disabled={isLoading}>
-              Close
-            </Button>
-          </DialogClose>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      {/* Footer */}
+      <div className="border-t p-4 shrink-0">
+        <Button
+          variant="outline"
+          onClick={handleClose}
+          disabled={isLoading}
+          className="w-full"
+        >
+          Close
+        </Button>
+      </div>
+    </div>
   );
 }

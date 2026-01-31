@@ -118,6 +118,10 @@ export function OpenConnectionWindow(): $CancellablePromise<void> {
     return $Call.ByID(4198244770);
 }
 
+export function OpenLicenseWindow(): $CancellablePromise<void> {
+    return $Call.ByID(609410173);
+}
+
 export function RestartApp(): $CancellablePromise<void> {
     return $Call.ByID(1474822044);
 }

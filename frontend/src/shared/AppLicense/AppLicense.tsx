@@ -1,7 +1,6 @@
-import { useState } from "react";
 import { useLicenseStatus } from "@/services/license";
 import { AlertCircle, AlertTriangle, Sparkles } from "lucide-react";
-import { LicenseDialog } from "@/shared/License/LicenseDialog";
+import { OpenLicenseWindow } from "@/services/bindings";
 
 // Helper to check if license is expiring soon (within 30 days)
 const isExpiringSoon = (expiresAt?: string): boolean => {
@@ -28,7 +27,6 @@ const getDaysUntilExpiry = (expiresAt?: string): number => {
 };
 
 export const AppLicense = () => {
-    const [licenseDialogOpen, setLicenseDialogOpen] = useState(false);
     const { data: licenseStatus } = useLicenseStatus();
 
     // Determine license display state
@@ -40,15 +38,17 @@ export const AppLicense = () => {
     const showLicenseWarning = hasLicenseError || licenseExpired || licenseExpiringSoon;
     const isLicenseValid = licenseStatus?.valid === true && !hasLicenseError && !licenseExpired;
 
+    const handleOpenLicense = () => {
+        OpenLicenseWindow();
+    };
+
     return (
         <div className="flex items-center text-xs">
-            <LicenseDialog open={licenseDialogOpen} onOpenChange={setLicenseDialogOpen} />
-
             {/* License Status Indicator */}
             {showLicenseWarning && (
                 <div
                     className="flex items-center gap-1 cursor-pointer hover:opacity-80 transition-opacity"
-                    onClick={() => setLicenseDialogOpen(true)}
+                    onClick={handleOpenLicense}
                 >
                     {hasLicenseError ? (
                         <>
@@ -75,7 +75,7 @@ export const AppLicense = () => {
             {isLicenseValid && (
                 <div
                     className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 cursor-pointer hover:bg-amber-500/20 transition-colors"
-                    onClick={() => setLicenseDialogOpen(true)}
+                    onClick={handleOpenLicense}
                     title="Pro License Active"
                 >
                     <Sparkles className="h-3.5 w-3.5" />

@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Copy, Check, Lock } from "lucide-react";
 import { useAppContext } from "@/context/app/Index";
 import { Button } from "@/components/ui/button";
-import { LicenseDialog } from "@/shared/License/LicenseDialog";
+import { OpenLicenseWindow } from "@/services/bindings";
 
 type SelectedDataProps = {
   selectedData: Array<Record<string, unknown>>;
@@ -59,7 +59,6 @@ function HighlightedLine({ line }: { line: string }) {
 
 export function DataView({ selectedData }: SelectedDataProps) {
   const [copied, setCopied] = useState(false);
-  const [isLicenseDialogOpen, setIsLicenseDialogOpen] = useState(false);
   const { isLicenseActive } = useAppContext();
 
   const lines = useMemo(() => {
@@ -131,7 +130,7 @@ export function DataView({ selectedData }: SelectedDataProps) {
               </p>
             </div>
             <Button
-              onClick={() => setIsLicenseDialogOpen(true)}
+              onClick={() => OpenLicenseWindow()}
               className="mt-2"
             >
               Activate License
@@ -139,11 +138,6 @@ export function DataView({ selectedData }: SelectedDataProps) {
           </div>
         </div>
       )}
-
-      <LicenseDialog
-        open={isLicenseDialogOpen}
-        onOpenChange={setIsLicenseDialogOpen}
-      />
     </div>
   );
 }

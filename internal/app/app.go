@@ -35,6 +35,7 @@ type App struct {
 	instance           *application.App
 	connectionWindow   *application.WebviewWindow
 	editorWindow       *application.WebviewWindow
+	licenseWindow      *application.WebviewWindow
 	engine             *remote.Engine
 	config             *Config
 	windowMutex        sync.Mutex
@@ -322,6 +323,55 @@ func (a *App) OpenConnectionWindow() {
 	// Create new window
 	if err := a.createConnectionWindow(); err != nil {
 		logger.Logger.Error("Failed to open connection window", zap.Error(err))
+		return
+	}
+}
+
+func (a *App) createLicenseWindow() error {
+	a.licenseWindow = a.instance.Window.NewWithOptions(application.WebviewWindowOptions{
+		Name:  constants.LICENSE_WINDOW_NAME,
+		Title: "License Management",
+		URL:   "/#/license",
+		Mac: application.MacWindow{
+			InvisibleTitleBarHeight: 50,
+			Backdrop:                application.MacBackdropTranslucent,
+			TitleBar:                application.MacTitleBarHiddenInset,
+		},
+		BackgroundColour: application.NewRGB(27, 38, 54),
+		Width:            constants.LICENSE_WINDOW_WIDTH,
+		Height:           constants.LICENSE_WINDOW_HEIGHT,
+		MinWidth:         constants.LICENSE_WINDOW_WIDTH,
+		MinHeight:        constants.LICENSE_WINDOW_HEIGHT,
+		MaxWidth:         constants.LICENSE_WINDOW_WIDTH,
+		MaxHeight:        constants.LICENSE_WINDOW_HEIGHT,
+	})
+
+	if a.licenseWindow == nil {
+		logger.Logger.Error("Failed to create license window")
+		return fmt.Errorf("failed to create license window")
+	}
+
+	a.licenseWindow.Center()
+	a.licenseWindow.RegisterHook(events.Common.WindowClosing, func(e *application.WindowEvent) {
+		a.licenseWindow = nil
+	})
+
+	return nil
+}
+
+func (a *App) OpenLicenseWindow() {
+	a.windowMutex.Lock()
+	defer a.windowMutex.Unlock()
+
+	if a.licenseWindow != nil {
+		logger.Logger.Debug("License window already exists, focusing")
+		a.licenseWindow.Show()
+		a.licenseWindow.Focus()
+		return
+	}
+
+	if err := a.createLicenseWindow(); err != nil {
+		logger.Logger.Error("Failed to open license window", zap.Error(err))
 		return
 	}
 }

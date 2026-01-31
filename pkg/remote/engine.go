@@ -24,6 +24,7 @@ type UIController interface {
 	OpenEditor()
 	CloseEditor()
 	OpenConnectionWindow()
+	OpenLicenseWindow()
 }
 
 type Engine struct {
@@ -164,6 +165,13 @@ func (e *Engine) OpenConnectionWindow() {
 		e.uiController.OpenConnectionWindow()
 	}
 }
+
+func (e *Engine) OpenLicenseWindow() {
+	if e.uiController != nil {
+		e.uiController.OpenLicenseWindow()
+	}
+}
+
 func (e *Engine) UpdateConnection(id, name string, config map[string]string) error {
 	return e.store.UpdateConnection(id, name, config)
 }

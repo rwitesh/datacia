@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   Menubar,
   MenubarMenu,
@@ -15,13 +14,12 @@ import {
 } from "@/components/ui/menubar";
 import { useTheme, type Theme } from "@/components/theme/theme-provider";
 import { Bolt, Key } from "lucide-react";
-import { LicenseDialog } from "@/shared/License/LicenseDialog";
+import { OpenLicenseWindow } from "@/services/bindings";
 import { useAppContext } from "@/context/app/Index";
 
 export function MenuBar() {
   const { theme, setTheme } = useTheme();
   const { appVersion } = useAppContext();
-  const [isLicenseDialogOpen, setIsLicenseDialogOpen] = useState(false);
 
   return (
     <Menubar className="border-none bg-transparent">
@@ -72,7 +70,7 @@ export function MenuBar() {
             className="cursor-pointer text-xs flex items-center gap-2"
             onSelect={(e) => {
               e.preventDefault();
-              setIsLicenseDialogOpen(true);
+              OpenLicenseWindow();
             }}
           >
             <Key className="h-3.5 w-3.5" />
@@ -89,7 +87,6 @@ export function MenuBar() {
           )}
         </MenubarContent>
       </MenubarMenu>
-      <LicenseDialog open={isLicenseDialogOpen} onOpenChange={setIsLicenseDialogOpen} />
     </Menubar>
   );
 }
