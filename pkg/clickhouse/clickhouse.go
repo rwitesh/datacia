@@ -49,7 +49,7 @@ func (ch *ClickHouse) Connect(host, port, username, password, database string, t
 			"max_execution_time": 300,
 		},
 		Compression: &clickhouse.Compression{
-			Method: clickhouse.CompressionLZ4,
+			Method: clickhouse.CompressionZSTD,
 		},
 		DialTimeout:     10 * time.Second,
 		MaxOpenConns:    10,

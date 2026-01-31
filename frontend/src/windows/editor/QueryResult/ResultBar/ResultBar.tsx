@@ -71,6 +71,7 @@ export function ResultBar({
     error,
   } = activeTab;
   const timeElapsed = results?.timeElapsed;
+
   const logs = results?.logs;
   const hasLogs =
     logs != null &&
@@ -252,7 +253,7 @@ export function ResultBar({
           </div>
         ) : (
           !error &&
-          hasLogs && (
+          (timeElapsed != null || hasLogs) && (
             <div className="flex items-center gap-4 text-xs text-muted-foreground">
               {timeElapsed != null && (
                 <span>
@@ -260,23 +261,27 @@ export function ResultBar({
                   {formatExecutionTime(timeElapsed)}
                 </span>
               )}
-              {logs.rowsReturned != null && (
-                <span>
-                  <span className="font-medium">Rows:</span>{" "}
-                  {Number(logs.rowsReturned).toLocaleString()}
-                </span>
-              )}
-              {logs.rowsRead != null && (
-                <span>
-                  <span className="font-medium">Rows read:</span>{" "}
-                  {Number(logs.rowsRead).toLocaleString()}
-                </span>
-              )}
-              {logs.bytesRead != null && (
-                <span>
-                  <span className="font-medium">Bytes read:</span>{" "}
-                  {formatBytes(Number(logs.bytesRead))}
-                </span>
+              {hasLogs && logs != null && (
+                <>
+                  {logs.rowsReturned != null && (
+                    <span>
+                      <span className="font-medium">Rows:</span>{" "}
+                      {Number(logs.rowsReturned).toLocaleString()}
+                    </span>
+                  )}
+                  {logs.rowsRead != null && (
+                    <span>
+                      <span className="font-medium">Rows read:</span>{" "}
+                      {Number(logs.rowsRead).toLocaleString()}
+                    </span>
+                  )}
+                  {logs.bytesRead != null && (
+                    <span>
+                      <span className="font-medium">Bytes read:</span>{" "}
+                      {formatBytes(Number(logs.bytesRead))}
+                    </span>
+                  )}
+                </>
               )}
             </div>
           )

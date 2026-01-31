@@ -1,4 +1,4 @@
-import { format } from "sql-formatter";
+import { format, type FormatOptionsWithLanguage } from "sql-formatter";
 import { getFormatterLanguage } from "@/shared/utils/engines";
 
 /**
@@ -16,9 +16,11 @@ export const formatSQL = (sql: string, engine: string): string => {
     return format(sql, {
       language: getFormatterLanguage(engine),
       tabWidth: 2,
-      keywordCase: "upper",
+      useTabs: true,
+      dataTypeCase: "upper",
+      logicalOperatorNewline: 'before',
       linesBetweenQueries: 2,
-    } as Parameters<typeof format>[1]);
+    } as FormatOptionsWithLanguage);
   } catch (error) {
     // If formatting fails, return original SQL
     console.error("SQL formatting error:", error);
