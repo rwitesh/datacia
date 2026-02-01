@@ -17,8 +17,9 @@ func LicenseActivate(licenseKey, machineID string) (*License, error) {
 		LicenseKey: licenseKey,
 		MachineID:  machineID,
 		OS:         ctx.OS,
+		OSArch:     ctx.OSArch,
 		OSVersion:  ctx.OSVersion,
-		AppVersion: "1.0.0",
+		AppVersion: ctx.AppVersion,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("marshal request: %w", err)
