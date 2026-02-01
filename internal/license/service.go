@@ -168,8 +168,13 @@ func (s *LicenseService) ValidateOnStart() error {
 		return nil
 	}
 
+	// Skip server validation if already validated within last 24h (at least once per day).
+	if time.Since(license.LastCheck) < 24*time.Hour {
+		lastValidationResult = &ValidateResponse{Valid: true, Message: "License valid"}
+		return nil
+	}
+
 	go func() {
-		// Attempt server validation
 		s.Validate()
 	}()
 

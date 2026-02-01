@@ -79,7 +79,6 @@ export const DatabaseConnection: React.FC = () => {
             fetchedConnectionName={fetchedData?.connectionName}
             status={status}
             displayName={displayName}
-            currentEngine={currentEngine}
             onDismissStatus={() => setStatus(null)}
           />
         </div>

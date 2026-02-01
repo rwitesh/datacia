@@ -63,12 +63,14 @@ func NewApp(assets embed.FS, config []byte) (*App, error) {
 		Name:        constants.APP_NAME,
 		Description: "",
 		Assets: application.AssetOptions{
-			Handler: application.AssetFileServerFS(assets),
+			Handler:        application.AssetFileServerFS(assets),
+			DisableLogging: true,
 		},
 		Mac: application.MacOptions{
 			ApplicationShouldTerminateAfterLastWindowClosed: false,
 		},
 	})
+
 	return &App{instance: app, config: cfg}, nil
 }
 
@@ -339,12 +341,8 @@ func (a *App) createLicenseWindow() error {
 			TitleBar:                application.MacTitleBarHiddenInset,
 		},
 		BackgroundColour: application.NewRGB(27, 38, 54),
-		Width:            constants.LICENSE_WINDOW_WIDTH,
-		Height:           constants.LICENSE_WINDOW_HEIGHT,
 		MinWidth:         constants.LICENSE_WINDOW_WIDTH,
 		MinHeight:        constants.LICENSE_WINDOW_HEIGHT,
-		MaxWidth:         constants.LICENSE_WINDOW_WIDTH,
-		MaxHeight:        constants.LICENSE_WINDOW_HEIGHT,
 	})
 
 	if a.licenseWindow == nil {
@@ -390,10 +388,6 @@ func (a *App) createSettingsWindow() error {
 		BackgroundColour: application.NewRGB(27, 38, 54),
 		Width:            constants.SETTINGS_WINDOW_WIDTH,
 		Height:           constants.SETTINGS_WINDOW_HEIGHT,
-		MinWidth:         constants.SETTINGS_WINDOW_WIDTH,
-		MinHeight:        constants.SETTINGS_WINDOW_HEIGHT,
-		MaxWidth:         constants.SETTINGS_WINDOW_WIDTH,
-		MaxHeight:        constants.SETTINGS_WINDOW_HEIGHT,
 	})
 
 	if a.settingsWindow == nil {

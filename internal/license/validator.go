@@ -20,8 +20,7 @@ var (
 )
 
 const (
-	MaxOfflineDuration = 24 * time.Hour
-	GracePeriod        = 7 * 24 * time.Hour // 7 days grace period after last update
+	GracePeriod = 7 * 24 * time.Hour // 7 days grace period after last successful check
 )
 
 type Verifier struct {
@@ -98,9 +97,9 @@ func (v *Verifier) IsLicenseValid(l *License) error {
 	}
 
 	// 5. Offline Grace Period Check
-	// If it's been more than 24h + 7 days grace period since last check, require internet validation
+	// Allow use for up to 7 days without a successful server check; expiry still checked above.
 	timeSinceLastCheck := time.Since(l.LastCheck)
-	if timeSinceLastCheck > MaxOfflineDuration+GracePeriod {
+	if timeSinceLastCheck > GracePeriod {
 		return ErrGracePeriodOver
 	}
 
