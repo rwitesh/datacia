@@ -19,10 +19,11 @@ type License struct {
 
 type LicenseData struct {
 	LicenseKey string `json:"license_key"`
-	MachineID  string `json:"machine_id"`
 	OS         string `json:"os"`
+	OSArch     string `json:"os_arch"`
 	OSVersion  string `json:"os_version"`
 	AppVersion string `json:"app_version"`
+	MachineID  string `json:"machine_id"`
 }
 
 var license *License

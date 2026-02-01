@@ -18,13 +18,24 @@ import { useWriteFile } from "@/services/queries";
 import { toast } from "sonner";
 import type { ImperativePanelHandle } from "react-resizable-panels";
 
+type ViewPanels = { resultCollapsed: boolean; dataViewOpen: boolean };
+
 export const Editor = () => {
   const { activeTab, createTab, updateTab } = useEditorContext();
-  const [isDataViewOpen, setIsDataViewOpen] = useState(false);
+  const [viewPanels, setViewPanels] = useState<ViewPanels>({
+    resultCollapsed: false,
+    dataViewOpen: false,
+  });
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const sidebarRef = useRef<ImperativePanelHandle>(null);
   const writeFile = useWriteFile();
+
+  const { resultCollapsed, dataViewOpen } = viewPanels;
+  const togglePanel = (panel: keyof ViewPanels) =>
+    setViewPanels((prev) => ({ ...prev, [panel]: !prev[panel] }));
+  const openDataView = () =>
+    setViewPanels((prev) => ({ ...prev, dataViewOpen: true }));
 
   const handleToggleSidebar = () => {
     if (sidebarRef.current?.isCollapsed()) {
@@ -85,6 +96,9 @@ export const Editor = () => {
     }
   };
 
+  const showQueryInput = activeTab?.type === "query";
+  const isResultPanelVisible = !resultCollapsed;
+
   return (
     <div className="h-full w-full flex flex-col bg-card font-display">
       {/* Navigation Bar - Fixed, not resizable */}
@@ -92,10 +106,10 @@ export const Editor = () => {
         <NavigationBar
           sidebarCollapsed={sidebarCollapsed}
           onToggleSidebar={handleToggleSidebar}
-          resultCollapsed={false}
-          onToggleResult={() => {}}
-          dataViewOpen={isDataViewOpen}
-          onToggleDataView={() => setIsDataViewOpen((v) => !v)}
+          resultCollapsed={resultCollapsed}
+          onToggleResult={() => togglePanel("resultCollapsed")}
+          dataViewOpen={dataViewOpen}
+          onToggleDataView={() => togglePanel("dataViewOpen")}
         />
       </div>
 
@@ -150,37 +164,39 @@ export const Editor = () => {
               <div className="flex-1 min-h-0">
                 <ResizablePanelGroup direction="horizontal" className="h-full">
                   {/* Main Editor Area (QueryInput + QueryResult) */}
-                  <ResizablePanel className="min-w-0" defaultSize={isDataViewOpen ? 58 : 100}>
+                  <ResizablePanel className="min-w-0" defaultSize={dataViewOpen ? 58 : 100}>
                     <ResizablePanelGroup direction="vertical" className="h-full">
                       {/* Query Input - Resizable when activeTab is query */}
-                      {activeTab?.type === "query" && (
+                      {showQueryInput && (
                         <>
                           <ResizablePanel
-                            defaultSize={50}
+                            defaultSize={isResultPanelVisible ? 50 : 100}
                             minSize={20}
                             className="min-h-0 overflow-hidden"
                           >
                             <QueryInput />
                           </ResizablePanel>
-                          <ResizableHandle />
+                          {isResultPanelVisible && <ResizableHandle />}
                         </>
                       )}
 
                       {/* Query Result - Resizable */}
-                      <ResizablePanel
-                        defaultSize={activeTab?.type === "query" ? 50 : 100}
-                        minSize={20}
-                        className="min-h-0 overflow-hidden"
-                      >
-                        <QueryResult
-                          onOpenDataView={() => setIsDataViewOpen(true)}
-                        />
-                      </ResizablePanel>
+                      {isResultPanelVisible && (
+                        <ResizablePanel
+                          defaultSize={showQueryInput ? 50 : 100}
+                          minSize={20}
+                          className="min-h-0 overflow-hidden"
+                        >
+                          <QueryResult
+                            onOpenDataView={openDataView}
+                          />
+                        </ResizablePanel>
+                      )}
                     </ResizablePanelGroup>
                   </ResizablePanel>
 
                   {/* Data View - Resizable when open */}
-                  {isDataViewOpen && (
+                  {dataViewOpen && (
                     <>
                       <ResizableHandle />
                       <ResizablePanel

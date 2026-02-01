@@ -51,10 +51,10 @@ type Settings struct {
 type Info struct {
 	OS                string      `json:"os"`
 	OSVersion         string      `json:"os_version"`
-	Arch              string      `json:"arch"`
-	Appearance        string      `json:"appearance"`
-	Version           string      `json:"version"`
+	OSArch            string      `json:"os_arch"`
+	AppVersion        string      `json:"app_version"`
 	Settings          Settings    `json:"settings"`
+	Appearance        string      `json:"appearance"`
 	ActiveTokenColors TokenColors `json:"activeTokenColors"`
 	mu                sync.RWMutex
 }
@@ -77,10 +77,10 @@ func Init(app *application.App) {
 
 	globalInfoOnce.Do(func() {
 		info := &Info{
-			OS:        env.Info().OS,
-			Arch:      env.Info().Arch,
-			Version:   "unknown",
-			OSVersion: env.Info().OSInfo.Version,
+			OS:         env.Info().OS,
+			OSArch:     env.Info().Arch,
+			OSVersion:  env.Info().OSInfo.Version,
+			AppVersion: "unknown",
 			Settings: Settings{
 				Theme: ThemeSystem,
 				Editor: EditorConfig{
@@ -137,21 +137,21 @@ func saveSettings() error {
 	return os.WriteFile(settingsPath, data, 0644)
 }
 
-func SetVersion(version string) {
+func SetAppVersion(version string) {
 	if globalInfo == nil {
 		return
 	}
 	globalInfo.mu.Lock()
 	defer globalInfo.mu.Unlock()
-	globalInfo.Version = version
+	globalInfo.AppVersion = version
 }
 
 func Get() *Info {
 	if globalInfo == nil {
 		return &Info{
-			OS:      runtime.GOOS,
-			Arch:    runtime.GOARCH,
-			Version: "unknown",
+			OS:         runtime.GOOS,
+			OSArch:     runtime.GOARCH,
+			AppVersion: "",
 			Settings: Settings{
 				Theme: ThemeSystem,
 			},

@@ -74,10 +74,10 @@ export class FontConfig {
 export class Info {
     "os": string;
     "os_version": string;
-    "arch": string;
-    "appearance": string;
-    "version": string;
+    "os_arch": string;
+    "app_version": string;
     "settings": Settings;
+    "appearance": string;
     "activeTokenColors": TokenColors;
 
     /** Creates a new Info instance. */
@@ -88,17 +88,17 @@ export class Info {
         if (!("os_version" in $$source)) {
             this["os_version"] = "";
         }
-        if (!("arch" in $$source)) {
-            this["arch"] = "";
+        if (!("os_arch" in $$source)) {
+            this["os_arch"] = "";
         }
-        if (!("appearance" in $$source)) {
-            this["appearance"] = "";
-        }
-        if (!("version" in $$source)) {
-            this["version"] = "";
+        if (!("app_version" in $$source)) {
+            this["app_version"] = "";
         }
         if (!("settings" in $$source)) {
             this["settings"] = (new Settings());
+        }
+        if (!("appearance" in $$source)) {
+            this["appearance"] = "";
         }
         if (!("activeTokenColors" in $$source)) {
             this["activeTokenColors"] = (new TokenColors());
@@ -111,11 +111,11 @@ export class Info {
      * Creates a new Info instance from a string or object.
      */
     static createFrom($$source: any = {}): Info {
-        const $$createField5_0 = $$createType1;
+        const $$createField4_0 = $$createType1;
         const $$createField6_0 = $$createType0;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("settings" in $$parsedSource) {
-            $$parsedSource["settings"] = $$createField5_0($$parsedSource["settings"]);
+            $$parsedSource["settings"] = $$createField4_0($$parsedSource["settings"]);
         }
         if ("activeTokenColors" in $$parsedSource) {
             $$parsedSource["activeTokenColors"] = $$createField6_0($$parsedSource["activeTokenColors"]);

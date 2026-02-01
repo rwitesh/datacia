@@ -98,7 +98,7 @@ func (a *App) Initialize() error {
 
 	// Initialize app info
 	appinfo.Init(a.instance)
-	appinfo.SetVersion(version)
+	appinfo.SetAppVersion(version)
 
 	// Init clipboard
 	if err := clip.Init(); err != nil {

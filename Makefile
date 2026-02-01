@@ -2,10 +2,13 @@ APP_NAME = DataCia
 BASE_OUTPUT = output
 APP_BUNDLE = bin/$(APP_NAME).app
 
-VOLNAME = $(APP_NAME)
+# Extract version from build/config.yml (info.version field)
+VERSION := $(shell grep '  version:' build/config.yml | sed 's/.*"\([^"]*\)".*/\1/')
 
-ensure-output:
-	mkdir -p $(OUTPUT_DIR)
+# Versioned output paths
+VERSIONED_OUTPUT = $(BASE_OUTPUT)/V$(VERSION)
+
+VOLNAME = $(APP_NAME)
 
 .PHONY: build
 build:
@@ -14,10 +17,6 @@ build:
 
 dev:
 	wails3 dev
-
-package:
-	wails3 task common:update:build-assets
-	wails3 package
 
 package-darwin-arm64:
 	wails3 task common:update:build-assets
@@ -42,19 +41,44 @@ create-dmg:
 		-ov -format UDZO \
 		"$(OUTPUT_DIR)/$(DMG_NAME)"
 	@echo "DMG created at $(OUTPUT_DIR)/$(DMG_NAME)"
-	open "$(OUTPUT_DIR)"
 
-dmg-darwin-arm64: OUTPUT_DIR = $(BASE_OUTPUT)/darwin/arm64
-dmg-darwin-arm64: DMG_NAME = $(APP_NAME)_darwin_arm64.dmg
-dmg-darwin-arm64: package-darwin-arm64 ensure-output
+# Clean output before release
+clean-output:
+	rm -rf $(BASE_OUTPUT)
+
+# Release targets (always versioned, always clean first)
+release-darwin-arm64: OUTPUT_DIR = $(VERSIONED_OUTPUT)/darwin/arm64
+release-darwin-arm64: DMG_NAME = $(APP_NAME)_darwin_arm64.dmg
+release-darwin-arm64: clean-output package-darwin-arm64
+	mkdir -p $(OUTPUT_DIR)
 	$(MAKE) create-dmg OUTPUT_DIR=$(OUTPUT_DIR) DMG_NAME=$(DMG_NAME)
 
-dmg-darwin-amd64: OUTPUT_DIR = $(BASE_OUTPUT)/darwin/amd64
-dmg-darwin-amd64: DMG_NAME = $(APP_NAME)_darwin_amd64.dmg
-dmg-darwin-amd64: package-darwin-amd64 ensure-output
+release-darwin-amd64: OUTPUT_DIR = $(VERSIONED_OUTPUT)/darwin/amd64
+release-darwin-amd64: DMG_NAME = $(APP_NAME)_darwin_amd64.dmg
+release-darwin-amd64: clean-output package-darwin-amd64
+	mkdir -p $(OUTPUT_DIR)
 	$(MAKE) create-dmg OUTPUT_DIR=$(OUTPUT_DIR) DMG_NAME=$(DMG_NAME)
 
-dmg-darwin-universal: OUTPUT_DIR = $(BASE_OUTPUT)/darwin/universal
-dmg-darwin-universal: DMG_NAME = $(APP_NAME)_darwin_universal.dmg
-dmg-darwin-universal: package-darwin-universal ensure-output
+release-darwin-universal: OUTPUT_DIR = $(VERSIONED_OUTPUT)/darwin/universal
+release-darwin-universal: DMG_NAME = $(APP_NAME)_darwin_universal.dmg
+release-darwin-universal: clean-output package-darwin-universal
+	mkdir -p $(OUTPUT_DIR)
 	$(MAKE) create-dmg OUTPUT_DIR=$(OUTPUT_DIR) DMG_NAME=$(DMG_NAME)
+
+# Build all release targets
+release-all: clean-output
+	$(MAKE) package-darwin-arm64
+	$(MAKE) create-dmg OUTPUT_DIR=$(VERSIONED_OUTPUT)/darwin/arm64 DMG_NAME=$(APP_NAME)_darwin_arm64.dmg
+	$(MAKE) package-darwin-amd64
+	$(MAKE) create-dmg OUTPUT_DIR=$(VERSIONED_OUTPUT)/darwin/amd64 DMG_NAME=$(APP_NAME)_darwin_amd64.dmg
+	$(MAKE) package-darwin-universal
+	$(MAKE) create-dmg OUTPUT_DIR=$(VERSIONED_OUTPUT)/darwin/universal DMG_NAME=$(APP_NAME)_darwin_universal.dmg
+
+# Upload to Supabase storage
+upload-supabase:
+	@./scripts/upload-supabase.sh "$(VERSIONED_OUTPUT)"
+
+# Show current version
+show-version:
+	@echo "Version: $(VERSION)"
+	@echo "Output path: $(VERSIONED_OUTPUT)"

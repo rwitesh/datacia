@@ -1,0 +1,43 @@
+name: Upload Release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "output/**"
+
+permissions:
+  contents: read
+
+jobs:
+  upload-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check output folder exists
+        run: |
+          if [ ! -d "output" ] || [ -z "$(ls -A output)" ]; then
+            echo "No output folder or empty - skipping upload"
+            exit 0
+          fi
+
+      - name: Upload to Supabase
+        run: |
+          for version_dir in output/V*; do
+            if [ -d "$version_dir" ]; then
+              ./scripts/upload-supabase.sh "$version_dir"
+            fi
+          done
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SUPABASE_BUCKET: ${{ secrets.SUPABASE_BUCKET }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts
+          path: output/V*/**/*
+          retention-days: 30

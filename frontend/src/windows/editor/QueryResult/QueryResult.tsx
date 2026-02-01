@@ -5,7 +5,7 @@ import { ErrorView } from "./ErrorView/ErrorView";
 import { DDLView } from "./DDLView/DDLView";
 import type { QueryResult as QueryResultType } from "@/services/bindings/database";
 import type { SelectionGeometry } from "./DataTable/utils/cellSelection";
-import React from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type QueryResultProps = {
   onOpenDataView?: () => void;
@@ -15,8 +15,8 @@ export function QueryResult({ onOpenDataView }: QueryResultProps) {
   const { activeTab, updateTab, tableRef } = useEditorContext();
   const getTableDataMutation = useGetTableData();
   const getDDLMutation = useGetDDL();
-  const [ddlData, setDdlData] = React.useState<string>("");
-  const [ddlError, setDdlError] = React.useState<string | undefined>();
+  const [ddlData, setDdlData] = useState<string>("");
+  const [ddlError, setDdlError] = useState<string | undefined>();
 
   const table = activeTab?.table;
   const limit = activeTab?.limit;
@@ -29,7 +29,7 @@ export function QueryResult({ onOpenDataView }: QueryResultProps) {
         (activeTab.isExecuting && String(activeTab.results?.type) === "read"))
   );
 
-  const handleSelectionChange = React.useCallback(
+  const handleSelectionChange = useCallback(
     (selection: SelectionGeometry | null) => {
       if (tabId) {
         updateTab(tabId, { selection });
@@ -38,7 +38,7 @@ export function QueryResult({ onOpenDataView }: QueryResultProps) {
     [tabId, updateTab]
   );
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (activeTab?.mode !== "ddl" || !activeTab?.table || ddlData) return;
     getDDLMutation.mutate(activeTab.table, {
       onSuccess: (ddl) => {
@@ -51,12 +51,25 @@ export function QueryResult({ onOpenDataView }: QueryResultProps) {
     });
   }, [activeTab?.mode, activeTab?.table, ddlData, getDDLMutation]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     setDdlData("");
     setDdlError(undefined);
   }, [activeTab?.id, activeTab?.table]);
 
-  if (!activeTab) return null;
+  // Show empty state if no active tab instead of returning null
+  if (!activeTab) {
+    return (
+      <div className="h-full flex flex-col overflow-hidden bg-card">
+        <div className="flex-1 overflow-hidden relative min-h-0">
+          <div className="flex justify-center items-center h-full cursor-default select-none">
+            <span className="text-muted-foreground text-sm">
+              No active tab
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const { id, isExecuting, error, results, type, mode, orderBy, orderDir } = activeTab;
   const isCommandQuery = results && results.type === "command";
