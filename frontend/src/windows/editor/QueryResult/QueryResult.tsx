@@ -147,7 +147,7 @@ export function QueryResult({ onOpenDataView }: QueryResultProps) {
           </div>
         ) : (
           <div className="flex justify-center items-center h-full cursor-default select-none">
-            <span className="text-muted-foreground">
+            <span className="text-muted-foreground text-sm">
               Run a query to see results
             </span>
           </div>

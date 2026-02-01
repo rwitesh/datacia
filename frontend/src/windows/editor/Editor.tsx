@@ -56,8 +56,6 @@ export const Editor = () => {
               content: activeTab.sql || "",
             });
           } else {
-            // Optional: Handle "Save As" flow or prompt user
-            // For now, only files opened from Queries tab support direct saving
             toast("This query is not saved to a file. Create a file in Queries tab first.");
           }
         }
@@ -105,15 +103,13 @@ export const Editor = () => {
             id="sidebar"
             ref={sidebarRef}
             defaultSize={25}
-            minSize={0}
             maxSize={100}
             collapsible
+            className="overflow-hidden"
             onCollapse={() => setSidebarCollapsed(true)}
             onExpand={() => setSidebarCollapsed(false)}
           >
-            <div className="h-full w-full overflow-hidden">
-              <EditorSidebar />
-            </div>
+            <EditorSidebar />
           </ResizablePanel>
           <ResizableHandle />
           <ResizablePanel className="min-w-0">
@@ -154,21 +150,17 @@ export const Editor = () => {
                   direction="horizontal"
                   className="h-full w-full flex-1 min-h-0"
                 >
-                  <ResizablePanel className="min-w-0">
+                  <ResizablePanel className="min-w-0" minSize={0}>
                     <ResizablePanelGroup
                       direction="vertical"
-                      className="h-full"
+                      className="h-full min-h-0"
                     >
                       {activeTab?.type === "query" && (
                         <>
                           <ResizablePanel
-                            defaultSize={75}
-                            minSize={0}
-                            className="min-h-0"
+                            className="min-h-0 overflow-hidden"
                           >
-                            <div className="h-full">
-                              <QueryInput />
-                            </div>
+                            <QueryInput />
                           </ResizablePanel>
                           <ResizableHandle />
                         </>
@@ -177,17 +169,14 @@ export const Editor = () => {
                         id="result"
                         ref={resultRef}
                         defaultSize={25}
-                        minSize={0}
                         collapsible
-                        className="min-h-0"
+                        className="min-h-0 overflow-hidden"
                         onCollapse={() => setResultCollapsed(true)}
                         onExpand={() => setResultCollapsed(false)}
                       >
-                        <div className="h-full overflow-hidden">
-                          <QueryResult
-                            onOpenDataView={() => setIsDataViewOpen(true)}
-                          />
-                        </div>
+                        <QueryResult
+                          onOpenDataView={() => setIsDataViewOpen(true)}
+                        />
                       </ResizablePanel>
                     </ResizablePanelGroup>
                   </ResizablePanel>
@@ -195,7 +184,11 @@ export const Editor = () => {
                   {isDataViewOpen && (
                     <>
                       <ResizableHandle />
-                      <ResizablePanel minSize={15} defaultSize={42}>
+                      <ResizablePanel
+                        minSize={15}
+                        defaultSize={42}
+                        className="min-w-0 overflow-hidden"
+                      >
                         <DataView />
                       </ResizablePanel>
                     </>
