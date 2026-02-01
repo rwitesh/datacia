@@ -22,10 +22,8 @@ export const Editor = () => {
   const { activeTab, createTab, updateTab } = useEditorContext();
   const [isDataViewOpen, setIsDataViewOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [resultCollapsed, setResultCollapsed] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const sidebarRef = useRef<ImperativePanelHandle>(null);
-  const resultRef = useRef<ImperativePanelHandle>(null);
   const writeFile = useWriteFile();
 
   const handleToggleSidebar = () => {
@@ -33,14 +31,6 @@ export const Editor = () => {
       sidebarRef.current.expand();
     } else {
       sidebarRef.current?.collapse();
-    }
-  };
-
-  const handleToggleResult = () => {
-    if (resultRef.current?.isCollapsed()) {
-      resultRef.current.expand();
-    } else {
-      resultRef.current?.collapse();
     }
   };
 
@@ -96,14 +86,28 @@ export const Editor = () => {
   };
 
   return (
-    <div className="h-full w-full flex flex-col bg-card relative font-display">
+    <div className="h-full w-full flex flex-col bg-card font-display">
+      {/* Navigation Bar - Fixed, not resizable */}
+      <div className="shrink-0">
+        <NavigationBar
+          sidebarCollapsed={sidebarCollapsed}
+          onToggleSidebar={handleToggleSidebar}
+          resultCollapsed={false}
+          onToggleResult={() => {}}
+          dataViewOpen={isDataViewOpen}
+          onToggleDataView={() => setIsDataViewOpen((v) => !v)}
+        />
+      </div>
+
+      {/* Main Content Area */}
       <div className="flex-1 min-h-0">
-        <ResizablePanelGroup direction="horizontal" className="h-full w-full">
+        <ResizablePanelGroup direction="horizontal" className="h-full">
+          {/* Left Sidebar - Resizable */}
           <ResizablePanel
             id="sidebar"
             ref={sidebarRef}
             defaultSize={25}
-            maxSize={100}
+            minSize={25}
             collapsible
             className="overflow-hidden"
             onCollapse={() => setSidebarCollapsed(true)}
@@ -111,14 +115,18 @@ export const Editor = () => {
           >
             <EditorSidebar />
           </ResizablePanel>
+
           <ResizableHandle />
-          <ResizablePanel className="min-w-0">
+
+          {/* Right Content Area - Resizable */}
+          <ResizablePanel className="min-w-0" defaultSize={80}>
             <div
               className="flex h-full w-full flex-col overflow-hidden relative"
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
             >
+              {/* Drag & Drop Overlay */}
               {isDragging && (
                 <div className="absolute inset-0 z-50 bg-background/90 backdrop-blur-sm flex flex-col items-center justify-center border-2 border-dashed border-primary m-4 rounded-lg animate-in fade-in duration-200">
                   <div className="bg-primary/10 p-6 rounded-full mb-4">
@@ -132,32 +140,24 @@ export const Editor = () => {
                   </p>
                 </div>
               )}
-              <div className="shrink-0">
-                <NavigationBar
-                  sidebarCollapsed={sidebarCollapsed}
-                  onToggleSidebar={handleToggleSidebar}
-                  resultCollapsed={resultCollapsed}
-                  onToggleResult={handleToggleResult}
-                  dataViewOpen={isDataViewOpen}
-                  onToggleDataView={() => setIsDataViewOpen((v) => !v)}
-                />
-                <div className="border-b border-border">
-                  <TabBar />
-                </div>
+
+              {/* Tab Bar - Fixed, not resizable */}
+              <div className="shrink-0 border-b border-border">
+                <TabBar />
               </div>
-              <div className="flex-1 min-h-0 bg-card flex flex-col">
-                <ResizablePanelGroup
-                  direction="horizontal"
-                  className="h-full w-full flex-1 min-h-0"
-                >
-                  <ResizablePanel className="min-w-0" minSize={0}>
-                    <ResizablePanelGroup
-                      direction="vertical"
-                      className="h-full min-h-0"
-                    >
+
+              {/* Content Area with DataView */}
+              <div className="flex-1 min-h-0">
+                <ResizablePanelGroup direction="horizontal" className="h-full">
+                  {/* Main Editor Area (QueryInput + QueryResult) */}
+                  <ResizablePanel className="min-w-0" defaultSize={isDataViewOpen ? 58 : 100}>
+                    <ResizablePanelGroup direction="vertical" className="h-full">
+                      {/* Query Input - Resizable when activeTab is query */}
                       {activeTab?.type === "query" && (
                         <>
                           <ResizablePanel
+                            defaultSize={50}
+                            minSize={20}
                             className="min-h-0 overflow-hidden"
                           >
                             <QueryInput />
@@ -165,14 +165,12 @@ export const Editor = () => {
                           <ResizableHandle />
                         </>
                       )}
+
+                      {/* Query Result - Resizable */}
                       <ResizablePanel
-                        id="result"
-                        ref={resultRef}
-                        defaultSize={25}
-                        collapsible
+                        defaultSize={activeTab?.type === "query" ? 50 : 100}
+                        minSize={20}
                         className="min-h-0 overflow-hidden"
-                        onCollapse={() => setResultCollapsed(true)}
-                        onExpand={() => setResultCollapsed(false)}
                       >
                         <QueryResult
                           onOpenDataView={() => setIsDataViewOpen(true)}
@@ -181,12 +179,14 @@ export const Editor = () => {
                     </ResizablePanelGroup>
                   </ResizablePanel>
 
+                  {/* Data View - Resizable when open */}
                   {isDataViewOpen && (
                     <>
                       <ResizableHandle />
                       <ResizablePanel
-                        minSize={15}
+                        minSize={25}
                         defaultSize={42}
+                        maxSize={60}
                         className="min-w-0 overflow-hidden"
                       >
                         <DataView />
@@ -194,14 +194,18 @@ export const Editor = () => {
                     </>
                   )}
                 </ResizablePanelGroup>
-                <div className="shrink-0 border-t border-border">
-                  <ResultBar />
-                </div>
+              </div>
+
+              {/* Result Bar - Fixed, not resizable */}
+              <div className="shrink-0 border-t border-border">
+                <ResultBar />
               </div>
             </div>
           </ResizablePanel>
         </ResizablePanelGroup>
       </div>
+
+      {/* Footer - Fixed, not resizable */}
       <div className="shrink-0 border-t">
         <EditorFooter />
       </div>

@@ -11,9 +11,9 @@ import { HistoryTab } from "./Tabs/HistoryTab";
 
 export function EditorSidebar() {
   return (
-    <div className={`h-full min-h-0 w-full flex flex-col select-none cursor-default pt-12 bg-sidebar`}>
+    <div className={`h-full min-h-0 w-full flex flex-col select-none cursor-default bg-sidebar`}>
       <Tabs defaultValue="tables" className="flex flex-1 min-h-0 flex-col">
-        <div className="sticky top-0 z-10 border-b border-sidebar-border bg-sidebar px-2 py-1">
+        <div className="sticky top-0 z-10 border-sidebar-border bg-sidebar px-2 py-1">
           <TabsList className="grid w-full grid-cols-3 bg-transparent p-0">
             <TabsTrigger
               value="tables"

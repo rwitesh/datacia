@@ -160,7 +160,7 @@ func (a *App) createConnectionWindow() error {
 		Mac: application.MacWindow{
 			InvisibleTitleBarHeight: 50,
 			Backdrop:                application.MacBackdropTranslucent,
-			TitleBar:                application.MacTitleBarHiddenInset,
+			TitleBar:                application.MacTitleBarHidden,
 		},
 		BackgroundColour: application.NewRGB(27, 38, 54),
 		Width:            constants.CONNECTION_WINDOW_WIDTH,
@@ -338,7 +338,7 @@ func (a *App) createLicenseWindow() error {
 		Mac: application.MacWindow{
 			InvisibleTitleBarHeight: 50,
 			Backdrop:                application.MacBackdropTranslucent,
-			TitleBar:                application.MacTitleBarHiddenInset,
+			TitleBar:                application.MacTitleBarHidden,
 		},
 		BackgroundColour: application.NewRGB(27, 38, 54),
 		MinWidth:         constants.LICENSE_WINDOW_WIDTH,
@@ -383,7 +383,7 @@ func (a *App) createSettingsWindow() error {
 		Mac: application.MacWindow{
 			InvisibleTitleBarHeight: 50,
 			Backdrop:                application.MacBackdropTranslucent,
-			TitleBar:                application.MacTitleBarHiddenInset,
+			TitleBar:                application.MacTitleBarHidden,
 		},
 		BackgroundColour: application.NewRGB(27, 38, 54),
 		Width:            constants.SETTINGS_WINDOW_WIDTH,

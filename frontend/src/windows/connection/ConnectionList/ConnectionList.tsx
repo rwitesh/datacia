@@ -39,7 +39,7 @@ export function ConnectionList({
   const connectionEntries = Object.entries(savedConnections);
 
   return (
-    <div className="w-1/3 p-3 flex flex-col mt-12 h-content justify-between">
+    <div className="w-1/3 px-3 flex flex-col mt-10  h-content justify-between">
       <div>
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-sm font-semibold">Connections</h3>
