@@ -1,4 +1,4 @@
-import { createContext } from "react";
+import { createContext, type RefObject } from "react";
 import type { QueryResult } from "@/services/bindings/database";
 import type { SelectionGeometry } from "@/windows/editor/QueryResult/DataTable/utils/cellSelection";
 
@@ -48,6 +48,9 @@ export type EditorContextType = {
     pagination?: boolean
   ) => Promise<void>;
   stopQuery: (tabId?: string) => Promise<void>;
+
+  // Result table ref for PNG export
+  tableRef: RefObject<HTMLDivElement | null>;
 };
 
 export const EditorContext = createContext<EditorContextType | undefined>(

@@ -1,29 +1,22 @@
 import { useEditorContext } from "@/context/editor/Index";
 import { useGetTableData, useGetDDL } from "@/services/database";
 import { DataTable } from "./DataTable/DataTable";
-import { ResultBar, type ViewMode } from "./ResultBar/ResultBar";
 import { ErrorView } from "./ErrorView/ErrorView";
 import { DDLView } from "./DDLView/DDLView";
 import type { QueryResult as QueryResultType } from "@/services/bindings/database";
 import type { SelectionGeometry } from "./DataTable/utils/cellSelection";
-import html2canvaspro from "html2canvas-pro";
 import React from "react";
-import { useExportData } from "@/services/export";
 
 type QueryResultProps = {
   onOpenDataView?: () => void;
 };
 
 export function QueryResult({ onOpenDataView }: QueryResultProps) {
-  const { activeTab, updateTab } = useEditorContext();
+  const { activeTab, updateTab, tableRef } = useEditorContext();
   const getTableDataMutation = useGetTableData();
   const getDDLMutation = useGetDDL();
   const [ddlData, setDdlData] = React.useState<string>("");
   const [ddlError, setDdlError] = React.useState<string | undefined>();
-
-  // Hoisted hooks
-  const tableRef = React.useRef<HTMLDivElement>(null);
-  const { mutate: exportData } = useExportData();
 
   const table = activeTab?.table;
   const limit = activeTab?.limit;
@@ -45,6 +38,24 @@ export function QueryResult({ onOpenDataView }: QueryResultProps) {
     [tabId, updateTab]
   );
 
+  React.useEffect(() => {
+    if (activeTab?.mode !== "ddl" || !activeTab?.table || ddlData) return;
+    getDDLMutation.mutate(activeTab.table, {
+      onSuccess: (ddl) => {
+        setDdlData(ddl);
+        setDdlError(undefined);
+      },
+      onError: (err) => {
+        setDdlError(err instanceof Error ? err.message : String(err));
+      },
+    });
+  }, [activeTab?.mode, activeTab?.table, ddlData, getDDLMutation]);
+
+  React.useEffect(() => {
+    setDdlData("");
+    setDdlError(undefined);
+  }, [activeTab?.id, activeTab?.table]);
+
   if (!activeTab) return null;
 
   const { id, isExecuting, error, results, type, mode, orderBy, orderDir } = activeTab;
@@ -52,26 +63,9 @@ export function QueryResult({ onOpenDataView }: QueryResultProps) {
   const isTableViewMode = type === "table";
   const viewMode = mode ?? "data";
 
-  // Fetch DDL when switching to DDL mode
-  const handleViewModeChange = (newMode: ViewMode) => {
-    updateTab(id, { mode: newMode });
-    if (newMode === "ddl" && table && !ddlData) {
-      getDDLMutation.mutate(table, {
-        onSuccess: (ddl) => {
-          setDdlData(ddl);
-          setDdlError(undefined);
-        },
-        onError: (err) => {
-          setDdlError(err instanceof Error ? err.message : String(err));
-        },
-      });
-    }
-  };
-
   const handleServerSort = (column: string, direction: "asc" | "desc") => {
     if (!table || limit === undefined || offset === undefined) return;
 
-    // Update the tab with new sort state and set executing
     updateTab(id, {
       isExecuting: true,
       error: undefined,
@@ -114,32 +108,9 @@ export function QueryResult({ onOpenDataView }: QueryResultProps) {
     updateTab(id, { scroll });
   };
 
-
-  const handleExportPng = async () => {
-    if (!tableRef.current || !results?.data) return;
-
-    try {
-      const canvas = await html2canvaspro(tableRef.current, {
-        backgroundColor: "#ffffff", // Ensure white background
-        scale: 2, // Higher resolution
-      });
-
-      const base64 = canvas.toDataURL("image/png");
-      const filename = `${table || 'query'}-${results?.data?.length ?? 0}-rows.png`;
-
-      exportData({
-        format: "png",
-        suggestedFilename: filename,
-        imageData: base64
-      });
-    } catch (err) {
-      console.error("Export failed:", err);
-    }
-  };
-
   return (
     <div className="h-full flex flex-col overflow-hidden bg-card">
-      <div className="flex-1 overflow-hidden relative">
+      <div className="flex-1 overflow-hidden relative min-h-0">
         {isTableViewMode && viewMode === "ddl" ? (
           <DDLView
             ddl={ddlData}
@@ -182,13 +153,6 @@ export function QueryResult({ onOpenDataView }: QueryResultProps) {
           </div>
         )}
       </div>
-
-      <ResultBar
-        data={results?.data ?? []}
-        onExportPng={handleExportPng}
-        viewMode={viewMode}
-        onViewModeChange={handleViewModeChange}
-      />
     </div>
   );
 }

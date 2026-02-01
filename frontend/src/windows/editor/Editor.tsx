@@ -7,6 +7,7 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { QueryResult } from "./QueryResult/QueryResult";
+import { ResultBar } from "./QueryResult/ResultBar/ResultBar";
 import { useEditorContext } from "@/context/editor/Index";
 import { EditorFooter } from "./EditorFooter/EditorFooter";
 import { NavigationBar } from "@/shared/NavigationBar/NavigationBar";
@@ -148,12 +149,11 @@ export const Editor = () => {
                   <TabBar />
                 </div>
               </div>
-              <div className="flex-1 min-h-0 bg-card">
+              <div className="flex-1 min-h-0 bg-card flex flex-col">
                 <ResizablePanelGroup
                   direction="horizontal"
-                  className="h-full w-full"
+                  className="h-full w-full flex-1 min-h-0"
                 >
-                  {/* Main Query Editor Area */}
                   <ResizablePanel className="min-w-0">
                     <ResizablePanelGroup
                       direction="vertical"
@@ -192,23 +192,18 @@ export const Editor = () => {
                     </ResizablePanelGroup>
                   </ResizablePanel>
 
-                  {/* DataView Sidebar */}
                   {isDataViewOpen && (
                     <>
                       <ResizableHandle />
-                      <ResizablePanel
-                        minSize={15}
-                        defaultSize={42}
-                      >
-                        <DataView
-                          selection={activeTab?.selection}
-                          columns={activeTab?.results?.columns ?? []}
-                          data={activeTab?.results?.data ?? []}
-                        />
+                      <ResizablePanel minSize={15} defaultSize={42}>
+                        <DataView />
                       </ResizablePanel>
                     </>
                   )}
                 </ResizablePanelGroup>
+                <div className="shrink-0 border-t border-border">
+                  <ResultBar />
+                </div>
               </div>
             </div>
           </ResizablePanel>

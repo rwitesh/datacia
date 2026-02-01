@@ -1,15 +1,10 @@
 import { useMemo, useState } from "react";
 import { Copy, Check, Lock } from "lucide-react";
 import { useAppContext } from "@/context/app/Index";
+import { useEditorContext } from "@/context/editor/Index";
 import { Button } from "@/components/ui/button";
 import { OpenLicenseWindow } from "@/services/bindings";
-import { type SelectionGeometry, extractSelectedData } from "../QueryResult/DataTable/utils/cellSelection";
-
-type DataViewProps = {
-  selection?: SelectionGeometry | null;
-  columns: string[];
-  data: Array<Record<string, unknown>>;
-};
+import { extractSelectedData } from "../QueryResult/DataTable/utils/cellSelection";
 
 function getColorClass(value: string): string {
   if (value === "null") {
@@ -60,12 +55,17 @@ function HighlightedLine({ line }: { line: string }) {
   );
 }
 
-export function DataView({ selection, columns, data }: DataViewProps) {
+export function DataView() {
   const [copied, setCopied] = useState(false);
   const { isLicenseActive } = useAppContext();
+  const { activeTab } = useEditorContext();
+
+  const selection = activeTab?.selection ?? null;
+  const columns = activeTab?.results?.columns ?? [];
+  const data = activeTab?.results?.data ?? [];
 
   const selectedData = useMemo(
-    () => extractSelectedData(selection ?? null, columns, data),
+    () => extractSelectedData(selection, columns, data),
     [selection, columns, data]
   );
 

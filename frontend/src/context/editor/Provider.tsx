@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import { useTables, useCancelQuery, useRunQuery } from "@/services/database";
 import { v4 as uuidv4 } from "uuid";
 import { EditorContext, type Tab } from "./Context";
@@ -7,6 +7,7 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
   const { data = [], isLoading, isFetching, error, refetch } = useTables();
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
+  const tableRef = useRef<HTMLDivElement>(null);
 
   const runQueryMutation = useRunQuery();
   const cancelQueryMutation = useCancelQuery();
@@ -164,6 +165,7 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
       updateTab,
       runQuery,
       stopQuery,
+      tableRef,
     }),
     [
       data,

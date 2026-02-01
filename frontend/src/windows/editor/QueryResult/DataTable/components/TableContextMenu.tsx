@@ -1,6 +1,5 @@
 import { useRef, useMemo } from "react";
 import { Copy, FileJson, FileType, Braces, PanelRight, Crown, Image as ImageIcon } from "lucide-react";
-import html2canvaspro from "html2canvas-pro";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -8,8 +7,7 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { useAppContext } from "@/context/app/Index";
-import { useCopyToClipboard } from "@/services/clipboard";
-import { useExportData, type ExportFormat } from "@/services/export";
+import { useExportActions } from "@/services/useExportActions";
 import type { DataRow } from "../types";
 import { type SelectionGeometry, extractSelectedData } from "../utils/cellSelection";
 
@@ -31,101 +29,24 @@ export function TableContextMenu({
   onOpenDataView,
 }: TableContextMenuProps) {
   const { isLicenseActive } = useAppContext();
+  const exportRef = useRef<HTMLDivElement>(null);
 
   const dataToUse = useMemo(() => {
     const selectedData = extractSelectedData(selection, columns, data);
     return selectedData.length > 0 ? selectedData : [row];
   }, [selection, columns, data, row]);
 
-  const copyToClipboardMutation = useCopyToClipboard();
-  const exportDataMutation = useExportData();
-  const exportRef = useRef<HTMLDivElement>(null);
-
-  const handleCopyText = () => {
-    const text = dataToUse.map((d) => Object.values(d).join("\t")).join("\n");
-    copyToClipboardMutation.mutate({ content: text, type: "text" }, {
-      onError: (err) => {
-        console.error("Failed to copy text", err);
-      },
-    });
-  };
-
-  const handleCopyJSON = () => {
-    copyToClipboardMutation.mutate({ content: JSON.stringify(dataToUse, null, 2), type: "text" }, {
-      onError: (err) => {
-        console.error("Failed to copy JSON", err);
-      },
-    });
-  };
-
-  const handleCopyPng = async () => {
-    if (!exportRef.current || dataToUse.length === 0) return;
-
-    try {
-      const canvas = await html2canvaspro(exportRef.current, {
-        backgroundColor: "#ffffff",
-        scale: 2,
-      });
-
-      const dataUrl = canvas.toDataURL("image/png");
-      const base64Data = dataUrl.replace(/^data:image\/png;base64,/, "");
-
-      copyToClipboardMutation.mutate({ content: base64Data, type: "image" }, {
-        onError: (err) => {
-          console.error("Failed to copy PNG", err);
-        },
-      });
-    } catch (err) {
-      console.error("Copy PNG failed:", err);
-    }
-  };
-
-  const handleExport = (format: ExportFormat) => {
-    if (dataToUse.length === 0) return;
-
-    const rowCount = dataToUse.length;
-    const suggestedFilename = rowCount > 1
-      ? `export-${rowCount}-rows.${format}`
-      : `row-export.${format}`;
-
-    exportDataMutation.mutate(
-      {
-        format,
-        data: dataToUse,
-        suggestedFilename,
-      },
-      {
-        onError: (err) => {
-          console.error(`Failed to export as ${format}:`, err);
-        },
-      }
-    );
-  };
-
-  const handleExportPng = async () => {
-    if (!exportRef.current || dataToUse.length === 0) return;
-
-    try {
-      const canvas = await html2canvaspro(exportRef.current, {
-        backgroundColor: "#ffffff",
-        scale: 2,
-      });
-
-      const base64 = canvas.toDataURL("image/png");
-      const rowCount = dataToUse.length;
-      const filename = rowCount > 1
-        ? `export-${rowCount}-rows.png`
-        : `row-export.png`;
-
-      exportDataMutation.mutate({
-        format: "png",
-        suggestedFilename: filename,
-        imageData: base64
-      });
-    } catch (err) {
-      console.error("Export PNG failed:", err);
-    }
-  };
+  const {
+    exportJSON,
+    exportCSV,
+    exportPNG,
+    copyText,
+    copyJSON,
+    copyPNG,
+  } = useExportActions({
+    tableRef: exportRef,
+    data: dataToUse,
+  });
 
   const displayColumns = dataToUse.length > 0 ? Object.keys(dataToUse[0]) : [];
 
@@ -139,16 +60,16 @@ export function TableContextMenu({
             Open DataView
           </ContextMenuItem>
 
-          <ContextMenuItem onSelect={handleCopyText} className="gap-2 text-xs py-1">
+          <ContextMenuItem onSelect={copyText} className="gap-2 text-xs py-1">
             <Copy className="h-3 w-3" />
             Copy
           </ContextMenuItem>
-          <ContextMenuItem onSelect={handleCopyJSON} className="gap-2 text-xs py-1">
+          <ContextMenuItem onSelect={copyJSON} className="gap-2 text-xs py-1">
             <Braces className="h-3 w-3" />
             Copy as JSON
           </ContextMenuItem>
           <ContextMenuItem
-            onSelect={handleCopyPng}
+            onSelect={copyPNG}
             disabled={!isLicenseActive}
             className="gap-2 text-xs py-1 justify-between"
           >
@@ -161,7 +82,7 @@ export function TableContextMenu({
             )}
           </ContextMenuItem>
           <ContextMenuItem
-            onSelect={() => handleExport("json")}
+            onSelect={exportJSON}
             disabled={!isLicenseActive}
             className="gap-2 text-xs py-1 justify-between"
           >
@@ -174,7 +95,7 @@ export function TableContextMenu({
             )}
           </ContextMenuItem>
           <ContextMenuItem
-            onSelect={() => handleExport("csv")}
+            onSelect={exportCSV}
             disabled={!isLicenseActive}
             className="gap-2 text-xs py-1 justify-between"
           >
@@ -187,7 +108,7 @@ export function TableContextMenu({
             )}
           </ContextMenuItem>
           <ContextMenuItem
-            onSelect={handleExportPng}
+            onSelect={exportPNG}
             disabled={!isLicenseActive}
             className="gap-2 text-xs py-1 justify-between"
           >

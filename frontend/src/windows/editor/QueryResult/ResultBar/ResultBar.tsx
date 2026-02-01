@@ -19,7 +19,7 @@ import {
 import { useEditorContext } from "@/context/editor/Index";
 import { useAppContext } from "@/context/app/Index";
 import { useGetTableData } from "@/services/database";
-import { useExportData, type ExportFormat } from "@/services/export";
+import { useExportActions } from "@/services/useExportActions";
 import type { QueryResult } from "@/services/bindings/database";
 
 function formatExecutionTime(ms: number): string {
@@ -38,23 +38,19 @@ function formatBytes(bytes: number): string {
 
 export type ViewMode = "data" | "ddl";
 
-interface ResultBarProps {
-  data?: Record<string, unknown>[];
-  onExportPng?: () => void;
-  viewMode?: ViewMode;
-  onViewModeChange?: (mode: ViewMode) => void;
-}
-
-export function ResultBar({
-  data,
-  onExportPng,
-  viewMode = "data",
-  onViewModeChange,
-}: ResultBarProps) {
-  const { activeTab, updateTab } = useEditorContext();
+export function ResultBar() {
+  const { activeTab, updateTab, tableRef } = useEditorContext();
   const { isLicenseActive } = useAppContext();
   const getTableDataMutation = useGetTableData();
-  const exportDataMutation = useExportData();
+
+  const data = activeTab?.results?.data ?? [];
+  const tableName = activeTab?.table;
+
+  const { exportJSON, exportCSV, exportPNG, isExporting } = useExportActions({
+    tableRef,
+    data,
+    tableName,
+  });
 
   if (!activeTab) return null;
 
@@ -69,7 +65,9 @@ export function ResultBar({
     type,
     results,
     error,
+    mode,
   } = activeTab;
+  const viewMode = mode ?? "data";
   const timeElapsed = results?.timeElapsed;
 
   const logs = results?.logs;
@@ -143,32 +141,7 @@ export function ResultBar({
     }
   };
 
-  // Export Logic
-  const handleExport = (format: ExportFormat) => {
-    if (!data || data.length === 0) return;
-
-    const count = data.length;
-    const suggestedFilename = table
-      ? `${table}-${count}-rows.${format}`
-      : `export-${count}-rows.${format}`;
-
-    exportDataMutation.mutate({
-      format,
-      data,
-      suggestedFilename,
-    });
-  };
-
-  const handleExportPng = async () => {
-    if (!data || data.length === 0) return;
-
-    if (onExportPng) {
-      onExportPng();
-    }
-  };
-
   const hasData = data && data.length > 0;
-  const isExporting = exportDataMutation.isPending;
 
   return (
     <div className="flex items-center justify-between bg-card border-t border-border px-4 py-1.5 select-none h-10">
@@ -181,7 +154,7 @@ export function ResultBar({
               type="single"
               value={viewMode}
               onValueChange={(value) =>
-                value && onViewModeChange?.(value as ViewMode)
+                value && updateTab(id, { mode: value as ViewMode })
               }
               size="sm"
               variant="outline"
@@ -327,7 +300,7 @@ export function ResultBar({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-44">
                 <DropdownMenuItem
-                  onSelect={() => handleExport("json")}
+                  onSelect={exportJSON}
                   disabled={!isLicenseActive}
                   className="gap-2 text-xs"
                 >
@@ -338,7 +311,7 @@ export function ResultBar({
                   )}
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onSelect={() => handleExport("csv")}
+                  onSelect={exportCSV}
                   disabled={!isLicenseActive}
                   className="gap-2 text-xs"
                 >
@@ -349,7 +322,7 @@ export function ResultBar({
                   )}
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onSelect={handleExportPng}
+                  onSelect={exportPNG}
                   disabled={!isLicenseActive}
                   className="gap-2 text-xs"
                 >
