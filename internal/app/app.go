@@ -341,8 +341,8 @@ func (a *App) createLicenseWindow() error {
 			TitleBar:                application.MacTitleBarHidden,
 		},
 		BackgroundColour: application.NewRGB(27, 38, 54),
-		MinWidth:         constants.LICENSE_WINDOW_WIDTH,
-		MinHeight:        constants.LICENSE_WINDOW_HEIGHT,
+		Width:            constants.LICENSE_WINDOW_WIDTH,
+		Height:           constants.LICENSE_WINDOW_HEIGHT,
 	})
 
 	if a.licenseWindow == nil {

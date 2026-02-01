@@ -24,5 +24,5 @@ const (
 )
 
 const (
-	LICENSE_SERVER_URL = "https://datacia-19b61d95a0b0.herokuapp.com"
+	LICENSE_SERVER_URL = "https://api.datacia.app"
 )

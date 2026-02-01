@@ -49,13 +49,13 @@ func (s *LicenseService) Activate(licenseKey string) ActivateResponse {
 	hashedMachineID, err := security.GetHashedMachineID()
 	if err != nil {
 		logger.Logger.Error("Failed to get machine ID", zap.Error(err))
-		return ActivateResponse{Success: false, Error: err.Error()}
+		return ActivateResponse{Success: false, Error: "Activation failed"}
 	}
 
 	response, err := LicenseActivate(licenseKey, hashedMachineID)
 	if err != nil {
 		logger.Logger.Error("Activation failed", zap.Error(err))
-		return ActivateResponse{Success: false, Error: err.Error()}
+		return ActivateResponse{Success: false, Error: "Activation failed"}
 	}
 
 	verifier := NewVerifier()
@@ -66,7 +66,7 @@ func (s *LicenseService) Activate(licenseKey string) ActivateResponse {
 
 	if err := SaveLicense(response); err != nil {
 		logger.Logger.Error("Failed to save license", zap.Error(err))
-		return ActivateResponse{Success: false, Error: err.Error()}
+		return ActivateResponse{Success: false, Error: "Failed to save license"}
 	}
 
 	license = response
