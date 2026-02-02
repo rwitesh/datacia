@@ -81,14 +81,18 @@ export function useGetTableSchema() {
   });
 }
 
-export function useGetDDL() {
-  return useMutation({
-    mutationFn: async (table: string) => {
+export function useGetDDL(table: string | undefined, enabled: boolean) {
+  return useQuery({
+    queryKey: ["ddl", table],
+    queryFn: () => {
       if (!table?.trim()) {
         throw new Error("Table name cannot be empty");
       }
       return GetDDL(table);
     },
+    enabled: enabled && !!table?.trim(),
+    retry: false,
+    staleTime: 5 * 60 * 1000,
   });
 }
 

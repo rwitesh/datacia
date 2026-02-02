@@ -59,7 +59,7 @@ func (p *Postgres) Connect(host, port, username, password, database string, test
 	config.MaxConns = 10
 	config.MinConns = 1
 	config.MaxConnLifetime = time.Hour
-	config.MaxConnIdleTime = time.Minute * 30
+	config.MaxConnIdleTime = time.Minute * 1
 
 	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {

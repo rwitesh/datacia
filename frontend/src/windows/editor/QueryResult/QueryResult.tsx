@@ -5,7 +5,7 @@ import { ErrorView } from "./ErrorView/ErrorView";
 import { DDLView } from "./DDLView/DDLView";
 import type { QueryResult as QueryResultType } from "@/services/bindings/database";
 import type { SelectionGeometry } from "./DataTable/utils/cellSelection";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
 
 type QueryResultProps = {
   onOpenDataView?: () => void;
@@ -14,13 +14,13 @@ type QueryResultProps = {
 export function QueryResult({ onOpenDataView }: QueryResultProps) {
   const { activeTab, updateTab, tableRef } = useEditorContext();
   const getTableDataMutation = useGetTableData();
-  const getDDLMutation = useGetDDL();
-  const [ddlData, setDdlData] = useState<string>("");
-  const [ddlError, setDdlError] = useState<string | undefined>();
 
   const table = activeTab?.table;
   const limit = activeTab?.limit;
   const offset = activeTab?.offset;
+  const isDDLMode = activeTab?.type === "table" && activeTab?.mode === "ddl";
+
+  const ddlQuery = useGetDDL(table, isDDLMode);
 
   const tabId = activeTab?.id;
   const showDataTable = Boolean(
@@ -37,24 +37,6 @@ export function QueryResult({ onOpenDataView }: QueryResultProps) {
     },
     [tabId, updateTab]
   );
-
-  useEffect(() => {
-    if (activeTab?.mode !== "ddl" || !activeTab?.table || ddlData) return;
-    getDDLMutation.mutate(activeTab.table, {
-      onSuccess: (ddl) => {
-        setDdlData(ddl);
-        setDdlError(undefined);
-      },
-      onError: (err) => {
-        setDdlError(err instanceof Error ? err.message : String(err));
-      },
-    });
-  }, [activeTab?.mode, activeTab?.table, ddlData, getDDLMutation]);
-
-  useEffect(() => {
-    setDdlData("");
-    setDdlError(undefined);
-  }, [activeTab?.id, activeTab?.table]);
 
   // Show empty state if no active tab instead of returning null
   if (!activeTab) {
@@ -126,9 +108,9 @@ export function QueryResult({ onOpenDataView }: QueryResultProps) {
       <div className="flex-1 overflow-hidden relative min-h-0">
         {isTableViewMode && viewMode === "ddl" ? (
           <DDLView
-            ddl={ddlData}
-            isLoading={getDDLMutation.isPending}
-            error={ddlError}
+            ddl={ddlQuery.data ?? ""}
+            isLoading={ddlQuery.isLoading}
+            error={ddlQuery.error?.message}
           />
         ) : error ? (
           <ErrorView error={error} />
