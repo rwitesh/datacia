@@ -9,21 +9,16 @@ import (
 )
 
 // SQL keywords that should terminate a suggestion.
+// only break at major clause boundaries to give more complete suggestions.
 var sqlBreakKeywords = []string{
-	// Clauses
-	"WITH", "SELECT", "FROM", "WHERE", "AND", "OR", "ORDER BY", "GROUP BY", "HAVING", "LIMIT", "OFFSET",
-	// Joins
-	"JOIN", "LEFT JOIN", "RIGHT JOIN", "INNER JOIN", "OUTER JOIN", "CROSS JOIN", "FULL JOIN", "ON",
-	// Set operations
+	// Major filtering/grouping clauses (new logical section)
+	"WHERE", "ORDER BY", "GROUP BY", "HAVING", "LIMIT",
+	// Set operations (start new query context)
 	"UNION", "UNION ALL", "EXCEPT", "INTERSECT",
-	// DML
-	"INSERT", "INTO", "VALUES", "UPDATE", "SET", "DELETE",
-	// DDL
-	"CREATE", "DROP", "ALTER", "INDEX", "TABLE", "DATABASE", "VIEW",
-	// Conditionals
-	"CASE", "WHEN", "THEN", "ELSE", "END",
-	// Operators & modifiers
-	"AS", "BETWEEN", "IN", "LIKE", "ILIKE", "IS", "NOT", "NULL", "EXISTS", "DISTINCT", "ASC", "DESC", "RETURNING",
+	// DML statements (start new statement)
+	"INSERT", "UPDATE", "DELETE",
+	// DDL statements (start new statement)
+	"CREATE", "DROP", "ALTER",
 }
 
 var whitespaceRegex = regexp.MustCompile(`\s+`)
