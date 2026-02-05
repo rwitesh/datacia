@@ -6,6 +6,7 @@ import (
 	"datacia/internal/constants"
 	"datacia/internal/db"
 	"datacia/internal/files"
+	"datacia/internal/intellisense"
 	"datacia/internal/license"
 	"datacia/internal/logger"
 	"datacia/internal/queries"
@@ -148,6 +149,10 @@ func (a *App) Initialize() error {
 	// App Info
 	appInfoService := appinfo.NewService(a.instance)
 	a.instance.RegisterService(application.NewService(appInfoService))
+
+	// Intellisense (ghost text suggestions)
+	intellisenseService := intellisense.NewService(a.instance, engine.GetStore())
+	a.instance.RegisterService(application.NewService(intellisenseService))
 
 	return nil
 }

@@ -8,8 +8,10 @@ import { drawSelection, keymap } from "@codemirror/view";
 
 import { useEditorContext } from "@/context/editor/Index";
 import { useAppContext } from "@/context/app/Index";
+import { GetSuggestion } from "@/services/bindings/intellisense";
 import { getTheme } from "./utils/theme";
 import { formatSQL } from "./utils/formatter";
+import { ghostText } from "./extensions/ghostText";
 import { Button } from "@/components/ui/button";
 import { Play, StopCircle, Paintbrush } from "lucide-react";
 import { useTheme } from "@/components/theme";
@@ -19,7 +21,8 @@ export function QueryInput() {
   const viewRef = useRef<EditorView | null>(null);
 
   const { dialect, engine } = useAppContext();
-  const { resolvedTheme, tokenColors, editorFontFamily, editorFontSize } = useTheme();
+  const { resolvedTheme, tokenColors, editorFontFamily, editorFontSize } =
+    useTheme();
 
   const {
     tables: { data },
@@ -38,6 +41,7 @@ export function QueryInput() {
   // store mutable refs to avoid effect re-runs
   const latestTabId = useRef(tabId);
   const latestUpdateTab = useRef(updateTab);
+  const latestEngine = useRef(engine);
 
   useEffect(() => {
     latestTabId.current = tabId;
@@ -46,6 +50,10 @@ export function QueryInput() {
   useEffect(() => {
     latestUpdateTab.current = updateTab;
   }, [updateTab]);
+
+  useEffect(() => {
+    latestEngine.current = engine;
+  }, [engine]);
 
   // SQL configuration compartment
   const sqlConfig = useMemo(() => new Compartment(), []);
@@ -63,7 +71,21 @@ export function QueryInput() {
         EditorView.lineWrapping,
 
         sqlConfig.of(sql({ dialect, schema, upperCaseKeywords: true })),
-        themeConfig.of(getTheme(resolvedTheme === "dark", { colors: tokenColors, fontFamily: editorFontFamily, fontSize: editorFontSize })),
+        themeConfig.of(
+          getTheme(resolvedTheme === "dark", {
+            colors: tokenColors,
+            fontFamily: editorFontFamily,
+            fontSize: editorFontSize,
+          }),
+        ),
+
+        // Ghost text extension — must be before autocompletion() so Tab keymap has priority
+        ghostText({
+          delay: 400,
+          minInputLength: 2,
+          getSuggestion: (input) =>
+            GetSuggestion(input, latestEngine.current ?? ""),
+        }),
 
         autocompletion(),
         closeBrackets(),
@@ -100,7 +122,9 @@ export function QueryInput() {
     if (!view) return;
 
     view.dispatch({
-      effects: sqlConfig.reconfigure(sql({ dialect, schema, upperCaseKeywords: true })),
+      effects: sqlConfig.reconfigure(
+        sql({ dialect, schema, upperCaseKeywords: true }),
+      ),
     });
   }, [dialect, schema, sqlConfig]);
 
@@ -110,9 +134,21 @@ export function QueryInput() {
     if (!view) return;
 
     view.dispatch({
-      effects: themeConfig.reconfigure(getTheme(resolvedTheme === "dark", { colors: tokenColors, fontFamily: editorFontFamily, fontSize: editorFontSize }))
+      effects: themeConfig.reconfigure(
+        getTheme(resolvedTheme === "dark", {
+          colors: tokenColors,
+          fontFamily: editorFontFamily,
+          fontSize: editorFontSize,
+        }),
+      ),
     });
-  }, [resolvedTheme, themeConfig, tokenColors, editorFontFamily, editorFontSize]);
+  }, [
+    resolvedTheme,
+    themeConfig,
+    tokenColors,
+    editorFontFamily,
+    editorFontSize,
+  ]);
 
   // sync tab content on tab switch
   useEffect(() => {

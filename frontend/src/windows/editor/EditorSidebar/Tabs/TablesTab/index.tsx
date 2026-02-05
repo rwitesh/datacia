@@ -11,7 +11,7 @@ import { useGetTableData, useGetTableSchema } from "@/services/database";
 export function TablesTab() {
 
     const {
-        tables: { data, isLoading, isFetching, error },
+        tables: { data, isLoading, error },
         createTab,
         updateTab,
         tabs,
@@ -110,10 +110,14 @@ export function TablesTab() {
         });
     };
 
+    // Only show loading spinner on initial load, not during background refetch
+    // This way users see the current list while fresh data loads
+    const showLoading = isLoading && data.length === 0;
+
     return (
         <div className="flex-1 min-h-0 overflow-y-auto">
             <div className="space-y-1">
-                {isLoading || isFetching ? (
+                {showLoading ? (
                     <div className="px-2 py-1.5 text-muted-foreground bg-muted rounded-md cursor-default select-none flex items-center gap-2">
                         <Loader2 className="h-4 w-4 animate-spin" />
                         <span>Loading...</span>

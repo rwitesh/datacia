@@ -315,19 +315,24 @@ func (e *Engine) RunQuery(queryId, queryType, sql string) (common.QueryResult, e
 		errorMessage = err.Error()
 	}
 
-	// Save to history asynchronously
-	go func(sql string, duration int64, status string, errorMessage string) {
-		saveErr := e.store.SaveQueryHistory(sql, duration, status, errorMessage)
+	engine := ""
+	if connInfo, connErr := e.activeClient.GetConnectionInfo(); connErr == nil {
+		engine = connInfo["engine"]
+	}
+
+	// Save to history asynchronously ("" engine is stored so filter can skip when engine == "")
+	go func(engine, sql string, duration int64, status string, errorMessage string) {
+		saveErr := e.store.SaveQueryHistory(engine, sql, duration, status, errorMessage)
 		if saveErr != nil {
 			logger.Logger.Error("Failed to save query history", zap.Error(saveErr))
 		}
-	}(sql, duration, status, errorMessage)
+	}(engine, sql, duration, status, errorMessage)
 
 	return result, err
 }
 
-func (e *Engine) GetQueryHistory(limit int, search string, dateFrom string, dateTo string) ([]db.QueryHistoryItem, error) {
-	return e.store.GetQueryHistory(limit, search, dateFrom, dateTo)
+func (e *Engine) GetQueryHistory(limit int, search string, dateFrom string, dateTo string, status string, engine string) ([]db.QueryHistoryItem, error) {
+	return e.store.GetQueryHistory(limit, search, dateFrom, dateTo, status, engine)
 }
 
 func (e *Engine) CancelQuery(queryId string) error {

@@ -3,7 +3,7 @@ import PostgreSQLIcon from "@/assets/postgres.svg";
 import MySQLIcon from "@/assets/mysql.svg";
 import SQLiteIcon from "@/assets/sqlite.svg";
 import { MySQL, PostgreSQL, SQLDialect, SQLite, StandardSQL } from "@codemirror/lang-sql";
-import { ClickhouseDialect } from "@/windows/editor/QueryInput/dialect/clickhouse";
+import { ClickhouseDialect } from "@/windows/editor/QueryInput/dialects/clickhouse";
 
 
 export const POSTGRES = "postgres" as const;
