@@ -44,7 +44,9 @@ export async function GetQueryHistory(
   limit: number,
   search: string = "",
   dateFrom: string = "",
-  dateTo: string = ""
+  dateTo: string = "",
+  status: string = "",
+  engine: string = ""
 ) {
-  return WGetQueryHistory(limit, search, dateFrom, dateTo);
+  return WGetQueryHistory(limit, search, dateFrom, dateTo, status, engine);
 }

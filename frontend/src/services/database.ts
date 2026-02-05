@@ -34,6 +34,8 @@ export function useRunQuery() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["query-history"] });
+      // Refresh tables list to reflect any DDL changes (CREATE, DROP, ALTER, etc.)
+      queryClient.invalidateQueries({ queryKey: ["tables"] });
     },
   });
 }
@@ -100,13 +102,15 @@ export interface QueryHistoryFilters {
   search?: string;
   dateFrom?: string;
   dateTo?: string;
+  status?: string;
+  engine?: string;
 }
 
 export function useGetQueryHistory(filters: QueryHistoryFilters = {}) {
-  const { search = "", dateFrom = "", dateTo = "" } = filters;
+  const { search = "", dateFrom = "", dateTo = "", status = "", engine = "" } = filters;
   return useQuery({
-    queryKey: ["query-history", search, dateFrom, dateTo],
-    queryFn: () => GetQueryHistory(50, search, dateFrom, dateTo),
+    queryKey: ["query-history", search, dateFrom, dateTo, status, engine],
+    queryFn: () => GetQueryHistory(50, search, dateFrom, dateTo, status, engine),
     retry: 3,
     refetchOnWindowFocus: true,
   });

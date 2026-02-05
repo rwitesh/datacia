@@ -138,7 +138,7 @@ export function QueryResult({ onOpenDataView }: QueryResultProps) {
           </div>
         ) : isCommandQuery ? (
           <div className="flex justify-center items-center h-full cursor-default select-none">
-            <span className="text-green-600">Query executed successfully</span>
+            <span className="text-green-600 text-sm">Query executed successfully</span>
           </div>
         ) : (
           <div className="flex justify-center items-center h-full cursor-default select-none">

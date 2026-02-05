@@ -95,6 +95,7 @@ func (s *Store) initSchema() error {
 		`CREATE INDEX IF NOT EXISTS idx_connections_name ON connections(name)`,
 		`CREATE TABLE IF NOT EXISTS query_history (
 			id TEXT PRIMARY KEY,
+			engine TEXT NOT NULL,
 			query TEXT NOT NULL,
 			timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 			duration_ms INTEGER,
@@ -322,17 +323,16 @@ type QueryHistoryItem struct {
 	Count        int64  `json:"count"`
 }
 
-func (s *Store) SaveQueryHistory(query string, durationMs int64, status string, errorMessage string) error {
+func (s *Store) SaveQueryHistory(engine string, query string, durationMs int64, status string, errorMessage string) error {
 	id := uuid.New().String()
 	_, err := s.db.Exec(`
-		INSERT INTO query_history (id, query, duration_ms, status, error_message, timestamp)
-		VALUES (?, ?, ?, ?, ?, ?)
-	`, id, query, durationMs, status, errorMessage, time.Now().UTC().Format(time.RFC3339))
+		INSERT INTO query_history (id, engine, query, duration_ms, status, error_message, timestamp)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
+	`, id, engine, query, durationMs, status, errorMessage, time.Now().UTC().Format(time.RFC3339))
 	return err
 }
 
-func (s *Store) GetQueryHistory(limit int, search string, dateFrom string, dateTo string) ([]QueryHistoryItem, error) {
-	// Build dynamic query with optional filters
+func (s *Store) GetQueryHistory(limit int, search string, dateFrom string, dateTo string, status string, engine string) ([]QueryHistoryItem, error) {
 	query := `
 		SELECT 
 			id, 
@@ -346,6 +346,11 @@ func (s *Store) GetQueryHistory(limit int, search string, dateFrom string, dateT
 	`
 	args := []interface{}{}
 	conditions := []string{}
+
+	if engine != "" {
+		conditions = append(conditions, "engine = ?")
+		args = append(args, engine)
+	}
 
 	// Add search filter if provided
 	if search != "" {
@@ -361,6 +366,12 @@ func (s *Store) GetQueryHistory(limit int, search string, dateFrom string, dateT
 	if dateTo != "" {
 		conditions = append(conditions, "timestamp <= ?")
 		args = append(args, dateTo)
+	}
+
+	// Add status filter if provided
+	if status != "" {
+		conditions = append(conditions, "status = ?")
+		args = append(args, status)
 	}
 
 	// Add WHERE clause only if there are conditions

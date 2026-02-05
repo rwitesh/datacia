@@ -8,7 +8,7 @@ import { useGetQueryHistory } from "@/services/database";
 import { timeAgo } from "../../utils";
 import type { QueryHistoryItem } from "@/services/bindings/database";
 import { getFirstKeyword, highlightSearchMatch } from "./utils";
-import { format, endOfDay, startOfDay, differenceInHours } from "date-fns";
+import { format, startOfDay, endOfDay, differenceInHours } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
@@ -16,8 +16,15 @@ import type { DateRange } from "react-day-picker";
 
 const DEBOUNCE_DELAY = 300;
 
-// Format timestamp: show "ago" only within 24 hours when date filter is active
-const formatTimestamp = (timestamp: string, hasDateFilter: boolean, timeAgoFn: (ts: string) => string): string => {
+/**
+ * Format timestamp for display.
+ * Shows relative time ("2 hours ago") within 24 hours, otherwise shows full date.
+ */
+function formatTimestamp(
+    timestamp: string,
+    hasDateFilter: boolean,
+    timeAgoFn: (ts: string) => string
+): string {
     const now = new Date();
     const ts = new Date(timestamp);
     const hoursDiff = differenceInHours(now, ts);
@@ -27,19 +34,25 @@ const formatTimestamp = (timestamp: string, hasDateFilter: boolean, timeAgoFn: (
         return format(ts, "MMM d, yyyy h:mm a");
     }
 
-    // Otherwise use relative time
     return timeAgoFn(timestamp);
-};
+}
 
 export function HistoryTab() {
     const { createTab, updateTab } = useEditorContext();
+
     const [searchQuery, setSearchQuery] = useState("");
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+    const [debouncedDateRange, setDebouncedDateRange] = useState<DateRange | undefined>(undefined);
 
-    // Create stable debounced setter using lodash.debounce
+    // Create stable debounced setters using lodash.debounce
     const debouncedSetSearch = useMemo(
         () => debounce((value: string) => setDebouncedSearchQuery(value), DEBOUNCE_DELAY),
+        []
+    );
+
+    const debouncedSetDateRange = useMemo(
+        () => debounce((value: DateRange | undefined) => setDebouncedDateRange(value), DEBOUNCE_DELAY),
         []
     );
 
@@ -47,36 +60,53 @@ export function HistoryTab() {
     useEffect(() => {
         return () => {
             debouncedSetSearch.cancel();
+            debouncedSetDateRange.cancel();
         };
-    }, [debouncedSetSearch]);
+    }, [debouncedSetSearch, debouncedSetDateRange]);
 
     // Handle search input change with debounce
-    const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value;
-        setSearchQuery(value);
-        debouncedSetSearch(value);
-    }, [debouncedSetSearch]);
+    const handleSearchChange = useCallback(
+        (e: React.ChangeEvent<HTMLInputElement>) => {
+            const value = e.target.value;
+            setSearchQuery(value);
+            debouncedSetSearch(value);
+        },
+        [debouncedSetSearch]
+    );
 
-    // Format dates for backend query (ISO format)
-    const dateFrom = useMemo(() => {
-        if (!dateRange?.from) return "";
-        return startOfDay(dateRange.from).toISOString();
-    }, [dateRange?.from]);
+    // Handle date range change with debounce
+    const handleDateRangeChange = useCallback(
+        (value: DateRange | undefined) => {
+            setDateRange(value);
+            debouncedSetDateRange(value);
+        },
+        [debouncedSetDateRange]
+    );
 
-    const dateTo = useMemo(() => {
-        if (!dateRange?.to) return "";
-        return endOfDay(dateRange.to).toISOString();
-    }, [dateRange?.to]);
+    // Build filter params for SQLite query
+    const filters = useMemo(() => {
+        const dateFrom = debouncedDateRange?.from
+            ? startOfDay(debouncedDateRange.from).toISOString()
+            : "";
+        const dateTo = debouncedDateRange?.to
+            ? endOfDay(debouncedDateRange.to).toISOString()
+            : debouncedDateRange?.from
+                ? endOfDay(debouncedDateRange.from).toISOString()
+                : "";
+        return {
+            search: debouncedSearchQuery,
+            dateFrom,
+            dateTo
+        };
+    }, [debouncedSearchQuery, debouncedDateRange]);
 
-    const { data: queryHistory, isFetching } = useGetQueryHistory({
-        search: debouncedSearchQuery,
-        dateFrom,
-        dateTo,
-    });
+    // Fetch history with filters applied on SQLite (server-side filtering)
+    const { data: historyData, isFetching } = useGetQueryHistory(filters);
 
     // Show loading when debounce is pending or data is fetching
-    const isPending = searchQuery !== debouncedSearchQuery;
-    const isLoading = isPending || isFetching;
+    const isSearchPending = searchQuery !== debouncedSearchQuery;
+    const isDatePending = dateRange !== debouncedDateRange;
+    const isLoading = isSearchPending || isDatePending || isFetching;
 
     const handleHistoryClick = (sql: string) => {
         const tab = createTab("Query", "query");
@@ -84,10 +114,10 @@ export function HistoryTab() {
     };
 
     const clearDateRange = () => {
-        setDateRange(undefined);
+        handleDateRangeChange(undefined);
     };
 
-    const isEmpty = !queryHistory || queryHistory.length === 0;
+    const isEmpty = !historyData || historyData.length === 0;
     const hasFilters = searchQuery.trim() || dateRange?.from;
     const emptyMessage = hasFilters ? "No matching queries found" : "No query history found";
 
@@ -135,7 +165,7 @@ export function HistoryTab() {
                                 mode="range"
                                 defaultMonth={dateRange?.from}
                                 selected={dateRange}
-                                onSelect={setDateRange}
+                                onSelect={handleDateRangeChange}
                                 numberOfMonths={2}
                                 disabled={(date) => date > new Date()}
                             />
@@ -169,7 +199,7 @@ export function HistoryTab() {
                     </div>
                 ) : (
                     <div className="flex flex-col px-1">
-                        {queryHistory.map((item: QueryHistoryItem) => {
+                        {historyData?.map((item: QueryHistoryItem) => {
                             const keywordInfo = getFirstKeyword(item.query);
                             return (
                                 <button
