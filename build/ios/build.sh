@@ -4,8 +4,8 @@ set -e
 # Build configuration
 APP_NAME="DataCia"
 BUNDLE_ID="app.datacia"
-VERSION="0.7.21"
-BUILD_NUMBER="0.7.21"
+VERSION="0.8.2"
+BUILD_NUMBER="0.8.2"
 BUILD_DIR="build/ios"
 TARGET="simulator"
 
