@@ -2,6 +2,7 @@ version: '3'
 
 includes:
   common: ./build/Taskfile.yml
+  windows: ./build/windows/Taskfile.yml
   darwin: ./build/darwin/Taskfile.yml
 
 vars:

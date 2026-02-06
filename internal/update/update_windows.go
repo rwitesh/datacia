@@ -39,13 +39,21 @@ func (u *Updater) Update() error {
 		return errors.New("no update available")
 	}
 
-	msiPath, err := u.downloadFile(metadata.URL)
+	installerPath, err := u.downloadFile(metadata.URL)
 	if err != nil {
 		return fmt.Errorf("failed to download newer version: %w", err)
 	}
-	defer os.Remove(msiPath)
+	defer os.Remove(installerPath)
 
-	if err := u.installMSI(msiPath); err != nil {
+	switch strings.ToLower(filepath.Ext(installerPath)) {
+	case ".exe":
+		err = u.installEXE(installerPath)
+	case ".msi":
+		err = u.installMSI(installerPath)
+	default:
+		return fmt.Errorf("unsupported installer format: %s", filepath.Ext(installerPath))
+	}
+	if err != nil {
 		return fmt.Errorf("failed to install update: %w", err)
 	}
 
@@ -63,6 +71,15 @@ func (u *Updater) Restart() error {
 		return fmt.Errorf("failed to restart app: %w", err)
 	}
 	os.Exit(0)
+	return nil
+}
+
+func (u *Updater) installEXE(exePath string) error {
+	cmd := exec.Command(exePath, "/S")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("installer failed: %v (%s)", err, out)
+	}
 	return nil
 }
 
