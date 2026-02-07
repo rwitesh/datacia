@@ -9,7 +9,7 @@ require (
 	github.com/go-sql-driver/mysql v1.9.3
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.7.6
-	github.com/mattn/go-sqlite3 v1.14.32
+	github.com/mattn/go-sqlite3 v1.14.33
 	github.com/microsoft/go-deviceid v1.0.0
 	github.com/wailsapp/wails/v3 v3.0.0-alpha.64
 	go.uber.org/zap v1.27.1

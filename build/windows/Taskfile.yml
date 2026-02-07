@@ -50,7 +50,7 @@ tasks:
       BUILD_FLAGS: '{{if eq .DEV "true"}}-buildvcs=false -gcflags=all="-l"{{else}}-tags production -trimpath -buildvcs=false -ldflags="-w -s -H windowsgui"{{end}}'
     env:
       GOOS: windows
-      CGO_ENABLED: '{{.CGO_ENABLED | default "0"}}'
+      CGO_ENABLED: '1'
       GOARCH: '{{.ARCH | default ARCH}}'
 
   build:docker:
