@@ -32,7 +32,7 @@ export const DATABASE_ENGINES: Record<DatabaseEngine, EngineConfig> = {
   [CLICKHOUSE]: {
     label: "ClickHouse",
     icon: ClickhouseIcon,
-    defaultPort: "9000",
+    defaultPort: "8123",
     formatterLanguage: "sql",
     dialect: ClickhouseDialect,
   },

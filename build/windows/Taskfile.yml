@@ -133,10 +133,10 @@ tasks:
     summary: Creates an MSIX package
     deps:
       - task: build
+    dir: '{{.ROOT_DIR}}'
     cmds:
       - |-
         wails3 tool msix \
-          --config "{{.ROOT_DIR}}/wails.json" \
           --name "{{.APP_NAME}}" \
           --executable "{{.ROOT_DIR}}/{{.BIN_DIR}}/{{.APP_NAME}}.exe" \
           --arch "{{.ARCH}}" \

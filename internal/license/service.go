@@ -97,10 +97,10 @@ func (s *LicenseService) Deactivate() DeactivateResponse {
 	hashedMachineID, err := security.GetHashedMachineID()
 	if err != nil {
 		logger.Logger.Error("Failed to get machine ID for deactivation", zap.Error(err))
-		return DeactivateResponse{Success: false, Error: "Failed to identy machine."}
+		return DeactivateResponse{Success: false, Error: "Failed to identify machine."}
 	}
 
-	if err := LicenseDeactivate(license.Key, hashedMachineID); err != nil {
+	if err := LicenseDeactivate(license.Signature, hashedMachineID); err != nil {
 		logger.Logger.Error("Server deactivation failed", zap.Error(err))
 		return DeactivateResponse{Success: false, Error: "Server deactivation failed."}
 	}
@@ -128,7 +128,7 @@ func (s *LicenseService) Validate() ValidateResponse {
 		return ValidateResponse{Valid: false, Error: err.Error()}
 	}
 
-	response, err := LicenseValidate(license.Key, hashedMachineID)
+	response, err := LicenseValidate(license.Signature, hashedMachineID)
 	if err != nil {
 		logger.Logger.Error("Validation failed", zap.Error(err))
 		return ValidateResponse{Valid: false, Error: err.Error()}
@@ -211,4 +211,11 @@ func (s *LicenseService) GetStatus() map[string]interface{} {
 	}
 
 	return status
+}
+
+func GetLicenseID() string {
+	if license == nil {
+		return ""
+	}
+	return license.ID
 }

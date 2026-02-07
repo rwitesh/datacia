@@ -3,8 +3,10 @@ import { Copy, Check, Lock } from "lucide-react";
 import { useAppContext } from "@/context/app/Index";
 import { useEditorContext } from "@/context/editor/Index";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { OpenLicenseWindow } from "@/services/bindings";
 import { extractSelectedData } from "../QueryResult/DataTable/utils/cellSelection";
+import { AIChat } from "./AIChat";
 
 function getColorClass(value: string): string {
   if (value === "null") {
@@ -55,18 +57,25 @@ function HighlightedLine({ line }: { line: string }) {
   );
 }
 
-export function DataView() {
+interface DataViewProps {
+  activeTab?: "data" | "ai";
+  onTabChange?: (tab: "data" | "ai") => void;
+}
+
+export function DataView({ activeTab: controlledTab, onTabChange }: DataViewProps) {
   const [copied, setCopied] = useState(false);
   const { isLicenseActive } = useAppContext();
   const { activeTab } = useEditorContext();
 
   const selection = activeTab?.selection ?? null;
-  const columns = activeTab?.results?.columns ?? [];
-  const data = activeTab?.results?.data ?? [];
 
   const selectedData = useMemo(
-    () => extractSelectedData(selection, columns, data),
-    [selection, columns, data]
+    () => extractSelectedData(
+      selection,
+      activeTab?.results?.columns ?? [],
+      activeTab?.results?.data ?? [],
+    ),
+    [selection, activeTab?.results?.columns, activeTab?.results?.data]
   );
 
   const lines = useMemo(() => {
@@ -89,41 +98,57 @@ export function DataView() {
 
   return (
     <div className="h-full w-full flex flex-col relative">
-      <div className={`flex items-center justify-between px-1 py-1 border-b border-border/50 ${!isLicenseActive ? 'blur-sm' : ''}`}>
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-primary/10 text-primary border border-primary/20">
-          {rowCount} {rowCount === 1 ? 'row' : 'rows'}
-        </span>
-          <button
-            type="button"
-            aria-label="Copy JSON to clipboard"
-            title={copied ? "Copied!" : "Copy to clipboard"}
-            onClick={handleCopy}
-            onPointerLeave={() => setCopied(false)}
-            onBlur={() => setCopied(false)}
-            className="p-1.5 rounded-md hover:bg-muted transition-all duration-200 group"
-          >
-            {copied ? (
-              <Check className="w-3.5 h-3.5 text-emerald-500 transition-transform duration-200 scale-110" />
-            ) : (
-              <Copy className="w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground transition-colors duration-200" />
-            )}
-            <span className="sr-only">
-              {copied ? "Copied to clipboard" : "Copy JSON"}
+      <Tabs value={controlledTab ?? "data"} onValueChange={(v) => onTabChange?.(v as "data" | "ai")} className="h-full flex flex-col gap-0">
+        <div className={`flex items-center justify-between px-1 py-1 border-b border-border/50 ${!isLicenseActive ? 'blur-sm' : ''}`}>
+          <TabsList className="h-6 p-1">
+            <TabsTrigger value="data" className="text-xs px-2 h-5 max-w-32 cursor-pointer">
+              Data
+            </TabsTrigger>
+            <TabsTrigger value="ai" className="text-xs px-2 h-5 max-w-32 cursor-pointer">
+              AI
+            </TabsTrigger>
+          </TabsList>
+          <div className="flex items-center gap-1">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-primary/10 text-primary border border-primary/20">
+              {rowCount} {rowCount === 1 ? 'row' : 'rows'}
             </span>
-          </button>
-      </div>
-
-      <div className="flex-1 overflow-auto relative">
-        <div className={`p-4 ${!isLicenseActive ? 'blur-sm select-none pointer-events-none' : ''}`}>
-          <code className="block text-xs font-mono leading-relaxed">
-            {lines.map((line, index) => (
-              <div key={index} className="whitespace-pre-wrap break-words">
-                <HighlightedLine line={line} />
-              </div>
-            ))}
-          </code>
+            <button
+              type="button"
+              aria-label="Copy JSON to clipboard"
+              title={copied ? "Copied!" : "Copy to clipboard"}
+              onClick={handleCopy}
+              onPointerLeave={() => setCopied(false)}
+              onBlur={() => setCopied(false)}
+              className="p-1.5 rounded-md hover:bg-muted transition-all duration-200 group"
+            >
+              {copied ? (
+                <Check className="w-3.5 h-3.5 text-emerald-500 transition-transform duration-200 scale-110" />
+              ) : (
+                <Copy className="w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground transition-colors duration-200" />
+              )}
+              <span className="sr-only">
+                {copied ? "Copied to clipboard" : "Copy JSON"}
+              </span>
+            </button>
+          </div>
         </div>
-      </div>
+
+        <TabsContent value="data" className="flex-1 overflow-auto mt-0">
+          <div className={`p-4 ${!isLicenseActive ? 'blur-sm select-none pointer-events-none' : ''}`}>
+            <code className="block text-xs font-mono leading-relaxed">
+              {lines.map((line, index) => (
+                <div key={index} className="whitespace-pre-wrap break-words">
+                  <HighlightedLine line={line} />
+                </div>
+              ))}
+            </code>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="ai" className="flex-1 overflow-hidden mt-0">
+          <AIChat />
+        </TabsContent>
+      </Tabs>
 
       {!isLicenseActive && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 z-[5]">

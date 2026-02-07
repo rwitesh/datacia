@@ -1,6 +1,7 @@
 package app
 
 import (
+	"datacia/internal/ai"
 	"datacia/internal/appinfo"
 	"datacia/internal/clipboard"
 	"datacia/internal/constants"
@@ -153,6 +154,10 @@ func (a *App) Initialize() error {
 	// Intellisense (ghost text suggestions)
 	intellisenseService := intellisense.NewService(a.instance, engine.GetStore())
 	a.instance.RegisterService(application.NewService(intellisenseService))
+
+	// AI chat service
+	aiService := ai.NewService(a.instance)
+	a.instance.RegisterService(application.NewService(aiService))
 
 	return nil
 }

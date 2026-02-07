@@ -26,6 +26,11 @@ type LicenseData struct {
 	MachineID  string `json:"machine_id"`
 }
 
+type SignatureRequest struct {
+	Signature string `json:"signature"`
+	MachineID string `json:"machine_id"`
+}
+
 var license *License
 
 // CanonicalString generates the deterministic string for signing/verification:

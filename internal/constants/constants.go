@@ -24,5 +24,6 @@ const (
 )
 
 const (
-	LICENSE_SERVER_URL = "https://api.datacia.app"
+	SERVER_URL = "https://api.datacia.app"
+	// SERVER_URL = "http://localhost:3000"
 )

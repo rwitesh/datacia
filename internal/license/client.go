@@ -32,10 +32,10 @@ func LicenseActivate(licenseKey, machineID string) (*License, error) {
 	return &l, nil
 }
 
-func LicenseDeactivate(licenseKey, machineID string) error {
-	reqBody, err := json.Marshal(LicenseData{
-		LicenseKey: licenseKey,
-		MachineID:  machineID,
+func LicenseDeactivate(signature []byte, machineID string) error {
+	reqBody, err := json.Marshal(SignatureRequest{
+		Signature: string(signature),
+		MachineID: machineID,
 	})
 	if err != nil {
 		return fmt.Errorf("marshal request: %w", err)
@@ -44,10 +44,10 @@ func LicenseDeactivate(licenseKey, machineID string) error {
 	return executeRequest("deactivate", reqBody, nil)
 }
 
-func LicenseValidate(licenseKey, machineID string) (*License, error) {
-	reqBody, err := json.Marshal(LicenseData{
-		LicenseKey: licenseKey,
-		MachineID:  machineID,
+func LicenseValidate(signature []byte, machineID string) (*License, error) {
+	reqBody, err := json.Marshal(SignatureRequest{
+		Signature: string(signature),
+		MachineID: machineID,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("marshal request: %w", err)
@@ -63,7 +63,7 @@ func LicenseValidate(licenseKey, machineID string) (*License, error) {
 func executeRequest(endpoint string, body []byte, target interface{}) error {
 	req, err := http.NewRequest(
 		http.MethodPost,
-		fmt.Sprintf("%s/%s", constants.LICENSE_SERVER_URL, endpoint),
+		fmt.Sprintf("%s/%s", constants.SERVER_URL, endpoint),
 		bytes.NewReader(body),
 	)
 	if err != nil {

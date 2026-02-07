@@ -26,6 +26,7 @@ export const Editor = () => {
     resultCollapsed: false,
     dataViewOpen: false,
   });
+  const [dataViewTab, setDataViewTab] = useState<"data" | "ai">("data");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const sidebarRef = useRef<ImperativePanelHandle>(null);
@@ -36,6 +37,11 @@ export const Editor = () => {
     setViewPanels((prev) => ({ ...prev, [panel]: !prev[panel] }));
   const openDataView = () =>
     setViewPanels((prev) => ({ ...prev, dataViewOpen: true }));
+  const toggleAIChat = () => {
+    const isAIOpen = dataViewOpen && dataViewTab === "ai";
+    setDataViewTab("ai");
+    setViewPanels((prev) => ({ ...prev, dataViewOpen: !isAIOpen }));
+  };
 
   const handleToggleSidebar = () => {
     if (sidebarRef.current?.isCollapsed()) {
@@ -205,7 +211,7 @@ export const Editor = () => {
                         maxSize={60}
                         className="min-w-0 overflow-hidden"
                       >
-                        <DataView />
+                        <DataView activeTab={dataViewTab} onTabChange={setDataViewTab} />
                       </ResizablePanel>
                     </>
                   )}
@@ -223,7 +229,7 @@ export const Editor = () => {
 
       {/* Footer - Fixed, not resizable */}
       <div className="shrink-0 border-t">
-        <EditorFooter />
+        <EditorFooter onToggleAI={toggleAIChat} aiActive={dataViewOpen && dataViewTab === "ai"} />
       </div>
     </div>
   );
