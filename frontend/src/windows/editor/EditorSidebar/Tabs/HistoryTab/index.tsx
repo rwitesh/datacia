@@ -5,10 +5,17 @@ import { Loader2, CheckCircle2, XCircle, Search, CalendarIcon, X } from "lucide-
 import { debounce } from "lodash";
 import { useEditorContext } from "@/context/editor/Index";
 import { useGetQueryHistory } from "@/services/database";
-import { timeAgo } from "../../utils";
+import {
+    timeAgo,
+    startOfDay,
+    endOfDay,
+    differenceInHours,
+    formatDateTime,
+    formatDateShort,
+    formatDateLong
+} from "@/windows/editor/EditorSidebar/utils";
 import type { QueryHistoryItem } from "@/services/bindings/database";
 import { getFirstKeyword, highlightSearchMatch } from "./utils";
-import { format, startOfDay, endOfDay, differenceInHours } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
@@ -31,7 +38,7 @@ function formatTimestamp(
 
     // If date filter is active and timestamp is more than 24 hours ago, show actual date
     if (hasDateFilter && hoursDiff >= 24) {
-        return format(ts, "MMM d, yyyy h:mm a");
+        return formatDateTime(ts);
     }
 
     return timeAgoFn(timestamp);
@@ -150,10 +157,10 @@ export function HistoryTab() {
                                 {dateRange?.from ? (
                                     dateRange.to ? (
                                         <span>
-                                            {format(dateRange.from, "MMM d")} - {format(dateRange.to, "MMM d")}
+                                            {formatDateShort(dateRange.from)} - {formatDateShort(dateRange.to)}
                                         </span>
                                     ) : (
-                                        format(dateRange.from, "MMM d, yyyy")
+                                        formatDateLong(dateRange.from)
                                     )
                                 ) : (
                                     <span className="text-muted-foreground">Filter by date</span>

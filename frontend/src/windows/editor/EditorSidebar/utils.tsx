@@ -1,3 +1,33 @@
+export function startOfDay(d: Date): Date {
+    const out = new Date(d);
+    out.setHours(0, 0, 0, 0);
+    return out;
+}
+
+export function endOfDay(d: Date): Date {
+    const out = new Date(d);
+    out.setHours(23, 59, 59, 999);
+    return out;
+}
+
+export function differenceInHours(a: Date, b: Date): number {
+    return Math.floor((a.getTime() - b.getTime()) / (1000 * 60 * 60));
+}
+
+export function formatDateShort(d: Date): string {
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+export function formatDateLong(d: Date): string {
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+export function formatDateTime(d: Date): string {
+    const date = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+    return `${date} ${time}`;
+}
+
 export const timeAgo = (timestamp: string) => {
     const now = new Date();
     const ts = new Date(timestamp);
