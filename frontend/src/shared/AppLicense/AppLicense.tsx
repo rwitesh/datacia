@@ -43,7 +43,7 @@ export const AppLicense = () => {
     };
 
     return (
-        <div className="flex items-center text-xs cursor-pointer">
+        <div className="flex items-center text-xs cursor-pointer gap-1">
             {/* License Status Indicator */}
             {showLicenseWarning && (
                 <div

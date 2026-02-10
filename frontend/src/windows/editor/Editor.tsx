@@ -26,7 +26,7 @@ export const Editor = () => {
     resultCollapsed: false,
     dataViewOpen: false,
   });
-  const [dataViewTab, setDataViewTab] = useState<"data" | "ai">("data");
+  const [dataViewTab, setDataViewTab] = useState<"data" | "ai">("ai");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const sidebarRef = useRef<ImperativePanelHandle>(null);
@@ -35,8 +35,10 @@ export const Editor = () => {
   const { resultCollapsed, dataViewOpen } = viewPanels;
   const togglePanel = (panel: keyof ViewPanels) =>
     setViewPanels((prev) => ({ ...prev, [panel]: !prev[panel] }));
-  const openDataView = () =>
+  const openDataView = () =>{
+    setDataViewTab("data");
     setViewPanels((prev) => ({ ...prev, dataViewOpen: true }));
+  };
   const toggleAIChat = () => {
     const isAIOpen = dataViewOpen && dataViewTab === "ai";
     setDataViewTab("ai");
@@ -63,7 +65,9 @@ export const Editor = () => {
               content: activeTab.sql || "",
             });
           } else {
-            toast("This query is not saved to a file. Create a file in Queries tab first.");
+            toast(
+              "This query is not saved to a file. Create a file in Queries tab first.",
+            );
           }
         }
       }
@@ -170,8 +174,14 @@ export const Editor = () => {
               <div className="flex-1 min-h-0">
                 <ResizablePanelGroup direction="horizontal" className="h-full">
                   {/* Main Editor Area (QueryInput + QueryResult) */}
-                  <ResizablePanel className="min-w-0" defaultSize={dataViewOpen ? 58 : 100}>
-                    <ResizablePanelGroup direction="vertical" className="h-full">
+                  <ResizablePanel
+                    className="min-w-0"
+                    defaultSize={dataViewOpen ? 58 : 100}
+                  >
+                    <ResizablePanelGroup
+                      direction="vertical"
+                      className="h-full"
+                    >
                       {/* Query Input - Resizable when activeTab is query */}
                       {showQueryInput && (
                         <>
@@ -193,9 +203,7 @@ export const Editor = () => {
                           minSize={20}
                           className="min-h-0 overflow-hidden"
                         >
-                          <QueryResult
-                            onOpenDataView={openDataView}
-                          />
+                          <QueryResult onOpenDataView={openDataView} />
                         </ResizablePanel>
                       )}
                     </ResizablePanelGroup>
@@ -211,7 +219,10 @@ export const Editor = () => {
                         maxSize={60}
                         className="min-w-0 overflow-hidden"
                       >
-                        <DataView activeTab={dataViewTab} onTabChange={setDataViewTab} />
+                        <DataView
+                          activeTab={dataViewTab}
+                          onTabChange={setDataViewTab}
+                        />
                       </ResizablePanel>
                     </>
                   )}
@@ -229,7 +240,10 @@ export const Editor = () => {
 
       {/* Footer - Fixed, not resizable */}
       <div className="shrink-0 border-t">
-        <EditorFooter onToggleAI={toggleAIChat} aiActive={dataViewOpen && dataViewTab === "ai"} />
+        <EditorFooter
+          onToggleAI={toggleAIChat}
+          aiActive={dataViewOpen && dataViewTab === "ai"}
+        />
       </div>
     </div>
   );

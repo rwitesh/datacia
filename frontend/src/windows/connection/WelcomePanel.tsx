@@ -1,5 +1,6 @@
 import { useAppContext } from "@/context/app/Index";
 import { StatusBar } from "@/shared/StatusBar/StatusBar";
+import { AppUpdate } from "@/shared/AppUpdate/AppUpdate";
 
 import logo from "@/assets/logo.png";
 
@@ -8,7 +9,7 @@ export const WelcomePanel = () => {
 
   return (
     <div className="h-full flex flex-col">
-      <StatusBar />
+      <StatusBar showUpdate={false} />
 
       <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
         <div className="mb-6 p-4 rounded-full bg-primary/10">
@@ -21,9 +22,10 @@ export const WelcomePanel = () => {
         </p>
 
         {appVersion && (
-          <p className="mt-8 text-xs text-muted-foreground/60">
-            Version {appVersion}
-          </p>
+          <div className="mt-8 flex flex-col items-center gap-2 text-xs text-muted-foreground/60">
+            <p>Version {appVersion}</p>
+            <AppUpdate />
+          </div>
         )}
       </div>
     </div>

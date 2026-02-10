@@ -200,7 +200,7 @@ export function AIChat() {
                   Ask anything about your data
                 </p>
                 <p className="text-[11px] text-muted-foreground">
-                  Get insights, write queries, or explore your schema
+                  Ask questions, write queries, and get insights
                 </p>
               </div>
             </div>

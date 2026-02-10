@@ -201,10 +201,6 @@ func (s *LicenseService) GetStatus() map[string]interface{} {
 			status["expires_at"] = license.ExpiresAt.Format(time.RFC3339)
 		}
 
-		if license.CustomerName != "" {
-			status["customer_name"] = license.CustomerName
-		}
-
 		if license.CustomerEmail != "" {
 			status["customer_email"] = license.CustomerEmail
 		}

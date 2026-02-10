@@ -16,7 +16,6 @@ import {
   Shield,
   AlertCircle,
   Calendar,
-  User,
   Mail,
   Crown,
 } from "lucide-react";
@@ -37,7 +36,6 @@ export function License() {
   const isValid = status?.valid ?? false;
   const maskedKey = status?.license_key;
   const expiresAt = status?.expires_at;
-  const customerName = status?.customer_name;
   const customerEmail = status?.customer_email;
   const variantName = status?.variant_name;
   const hasLicense = isValid || !!maskedKey;
@@ -216,20 +214,12 @@ export function License() {
                             Expires: {formatExpiryDate(expiresAt)}
                           </div>
                         )}
-                        {(customerName || customerEmail) && (
+                        {customerEmail && (
                           <div className="pt-1 border-t space-y-1">
-                            {customerName && (
-                              <div className="flex items-center gap-1">
-                                <User className="h-3 w-3" />
-                                {customerName}
-                              </div>
-                            )}
-                            {customerEmail && (
-                              <div className="flex items-center gap-1">
-                                <Mail className="h-3 w-3" />
-                                {customerEmail}
-                              </div>
-                            )}
+                            <div className="flex items-center gap-1">
+                              <Mail className="h-3 w-3" />
+                              {customerEmail}
+                            </div>
                           </div>
                         )}
                       </div>
