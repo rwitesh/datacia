@@ -32,8 +32,8 @@ export const DATABASE_ENGINES: Record<DatabaseEngine, EngineConfig> = {
   [CLICKHOUSE]: {
     label: "ClickHouse",
     icon: ClickhouseIcon,
-    defaultPort: "8123",
-    formatterLanguage: "sql",
+    defaultPort: "9000",
+    formatterLanguage: "postgresql",
     dialect: ClickhouseDialect,
   },
   [MYSQL]: {

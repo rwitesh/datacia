@@ -153,7 +153,13 @@ export function AIChat() {
     setMessages((prev) => [...prev, { role: "user", content: trimmed }]);
     setInput("");
 
-    const context = activeTab?.sql || "";
+    const sql = activeTab?.sql || "";
+    const error = activeTab?.error;
+    const context =
+      error != null && error.trim() !== ""
+        ? JSON.stringify({ sql, error })
+        : sql;
+        
     sendMessage.mutate(
       { engine, context, message: trimmed },
       {

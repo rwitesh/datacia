@@ -22,6 +22,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     queryClient.invalidateQueries({ queryKey: ["query-history"] });
     queryClient.invalidateQueries({ queryKey: ["connection-health"] });
     queryClient.invalidateQueries({ queryKey: ["current-connection"] });
+    queryClient.invalidateQueries({ queryKey: ["license-status"] });
   }, [queryClient]);
 
   const reload = () => {

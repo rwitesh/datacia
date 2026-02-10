@@ -8,7 +8,7 @@ const isExpiringSoon = (expiresAt?: string): boolean => {
     const expiryDate = new Date(expiresAt);
     const now = new Date();
     const daysUntilExpiry = (expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
-    return daysUntilExpiry > 0 && daysUntilExpiry <= 30;
+    return daysUntilExpiry > 0 && daysUntilExpiry <= 3;
 };
 
 // Helper to check if license is expired
@@ -64,7 +64,7 @@ export const AppLicense = () => {
                         <>
                             <AlertTriangle className="h-3 w-3 text-amber-500" />
                             <span className="text-amber-500">
-                                License expires in {daysUntilExpiry} day{daysUntilExpiry !== 1 ? 's' : ''}
+                                License renews in {daysUntilExpiry} day{daysUntilExpiry !== 1 ? 's' : ''}
                             </span>
                         </>
                     ) : null}

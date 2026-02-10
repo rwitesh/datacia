@@ -39,8 +39,7 @@ func New() *ClickHouse {
 
 func (ch *ClickHouse) Connect(host, port, username, password, database string, test bool) error {
 	connection, err := clickhouse.Open(&clickhouse.Options{
-		Addr:     []string{fmt.Sprintf("%s:%s", host, port)},
-		Protocol: clickhouse.HTTP,
+		Addr: []string{fmt.Sprintf("%s:%s", host, port)},
 		Auth: clickhouse.Auth{
 			Database: database,
 			Username: username,
