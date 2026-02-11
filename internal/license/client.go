@@ -32,9 +32,9 @@ func LicenseActivate(licenseKey, machineID string) (*License, error) {
 	return &l, nil
 }
 
-func LicenseDeactivate(signature []byte, machineID string) error {
-	reqBody, err := json.Marshal(SignatureRequest{
-		Signature: string(signature),
+func LicenseDeactivate(token string, machineID string) error {
+	reqBody, err := json.Marshal(TokenRequest{
+		Token:     token,
 		MachineID: machineID,
 	})
 	if err != nil {
@@ -44,9 +44,9 @@ func LicenseDeactivate(signature []byte, machineID string) error {
 	return executeRequest("deactivate", reqBody, nil)
 }
 
-func LicenseValidate(signature []byte, machineID string) (*License, error) {
-	reqBody, err := json.Marshal(SignatureRequest{
-		Signature: string(signature),
+func LicenseValidate(token string, machineID string) (*License, error) {
+	reqBody, err := json.Marshal(TokenRequest{
+		Token:     token,
 		MachineID: machineID,
 	})
 	if err != nil {

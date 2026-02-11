@@ -1,24 +1,43 @@
 package security
 
-import "crypto/ed25519"
+import (
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
+	"log"
+)
 
-// Key part 1: 0-15
-var pk_part1 = []byte{
-    0xfa, 0x50, 0xec, 0xa5, 0x32, 0x38, 0x44, 0x41,
-    0x0a, 0xf5, 0x82, 0x5d, 0xc5, 0x17, 0x80, 0xd5,
+const rsaPublicKeyPEM = `-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApnYk3y2wsiyXZ7XKQK8Y
+6lwdEsklr/WSNJXoCPS+LI3f0I8kypw7jneUFDsTjKDJkg0sUQKPqFG9JGNB3DEC
+/iK4BbFN+dYefYKdR5qibKc1+S76dLV9rPasNpVaJYxIKaji1l2r6nEJco77ShP9
+AhFu0ON3KyNqw/o31VjkX17c1UqtYMWGh/tJEIVZjaIlOb5vxyW6q4iNl4qJ4xK/
+CNIBFTmD3/QmDlonxUirSHjDi/5TIVrJK0Y/dR/jGSFxjNX/ouEIY9xO+lfHUobW
+wTYIYL5FgTDUBdvh06xYvzMwKvxX0vXeZMjIujS3qXPWnBbsyf+3SNeoAVNfNHot
+PwIDAQAB
+-----END PUBLIC KEY-----`
+
+var rsaPublicKey *rsa.PublicKey
+
+func init() {
+	block, _ := pem.Decode([]byte(rsaPublicKeyPEM))
+	if block == nil {
+		log.Fatal("failed to decode RSA public key PEM")
+	}
+
+	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		log.Fatal("failed to parse RSA public key: ", err)
+	}
+
+	key, ok := pub.(*rsa.PublicKey)
+	if !ok {
+		log.Fatal("key is not RSA public key")
+	}
+
+	rsaPublicKey = key
 }
 
-// Key part 2: 16-31
-var pk_part2 = []byte{
-    0x08, 0x8e, 0x42, 0x2d, 0xa8, 0x23, 0x45, 0xc7,
-    0xad, 0x23, 0xa0, 0x44, 0x74, 0xcc, 0xbd, 0x4f,
-}
-
-// GetPublicKey reconstructs the Ed25519 public key from scattered parts.
-// This prevents simple string search/replace attacks in the binary.
-func GetPublicKey() ed25519.PublicKey {
-    key := make([]byte, 32)
-    copy(key[0:16], pk_part1)
-    copy(key[16:32], pk_part2)
-    return ed25519.PublicKey(key)
+func GetRSAPublicKey() *rsa.PublicKey {
+	return rsaPublicKey
 }

@@ -1,11 +1,11 @@
 package license
 
-import "fmt"
+import (
+	"time"
+)
 
-// MaskLicenseKey masks a license key for display purposes.
-func MaskLicenseKey(key string) string {
-	if len(key) <= 8 {
-		return "xxxx-xxxx"
-	}
-	return fmt.Sprintf("%s-xxxx-xxxx-%s", key[:4], key[len(key)-4:])
+func isSameDay(t1, t2 time.Time) bool {
+	y1, m1, d1 := t1.Date()
+	y2, m2, d2 := t2.Date()
+	return y1 == y2 && m1 == m2 && d1 == d2
 }

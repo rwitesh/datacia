@@ -1,19 +1,13 @@
 package license
 
-import (
-	"fmt"
-	"time"
-)
+import "time"
 
 type License struct {
 	ID        string    `json:"id"`
 	Key       string    `json:"key"`
-	MachineId string    `json:"machine_id"`
-	CreatedAt time.Time `json:"created_at"`
-	ExpiresAt time.Time `json:"expires_at"`
 	Email     string    `json:"email"`
-	Signature []byte    `json:"signature"`
-	LastCheck time.Time `json:"last_check"`
+	ExpiresAt time.Time `json:"expires_at"`
+	Token     string    `json:"token"`
 }
 
 type LicenseData struct {
@@ -25,31 +19,9 @@ type LicenseData struct {
 	MachineID  string `json:"machine_id"`
 }
 
-type SignatureRequest struct {
-	Signature string `json:"signature"`
+type TokenRequest struct {
+	Token     string `json:"token"`
 	MachineID string `json:"machine_id"`
 }
 
 var license *License
-
-// CanonicalString generates the deterministic string for signing/verification:
-// Format: license_key:machine_id:expiry_timestamp:last_check_timestamp
-// Timestamps are Unix seconds. 0 for empty/nil timestamps if verified (though we expect them).
-func (l *License) CanonicalString() string {
-	expiry := int64(0)
-	if !l.ExpiresAt.IsZero() {
-		expiry = l.ExpiresAt.Unix()
-	}
-
-	lastCheck := int64(0)
-	if !l.LastCheck.IsZero() {
-		lastCheck = l.LastCheck.Unix()
-	}
-
-	return fmt.Sprintf("%s:%s:%d:%d",
-		l.Key,
-		l.MachineId,
-		expiry,
-		lastCheck,
-	)
-}

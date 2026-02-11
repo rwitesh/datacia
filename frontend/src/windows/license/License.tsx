@@ -16,8 +16,8 @@ import {
   Shield,
   AlertCircle,
   Calendar,
-  Mail,
   Crown,
+  Mail,
 } from "lucide-react";
 import { Window } from "@wailsio/runtime";
 
@@ -35,8 +35,8 @@ export function License() {
 
   const isValid = status?.valid ?? false;
   const maskedKey = status?.license_key;
+  const email = status?.email;
   const expiresAt = status?.expires_at;
-  const customerEmail = status?.customer_email;
   const variantName = status?.variant_name;
   const hasLicense = isValid || !!maskedKey;
 
@@ -203,6 +203,12 @@ export function License() {
                         )}
                       </div>
                       <div className="text-xs text-muted-foreground space-y-1.5">
+                        {email && (
+                          <div className="flex items-center gap-1">
+                            <Mail className="h-3 w-3" />
+                            {email}
+                          </div>
+                        )}
                         {maskedKey && (
                           <div className="font-mono flex items-center gap-1">
                             <Key className="h-3 w-3" />
@@ -213,14 +219,6 @@ export function License() {
                           <div className="flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
                             Expires: {formatExpiryDate(expiresAt)}
-                          </div>
-                        )}
-                        {customerEmail && (
-                          <div className="pt-1 border-t space-y-1">
-                            <div className="flex items-center gap-1">
-                              <Mail className="h-3 w-3" />
-                              {customerEmail}
-                            </div>
                           </div>
                         )}
                       </div>

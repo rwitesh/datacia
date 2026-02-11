@@ -1,12 +1,10 @@
 package license
 
 import (
-	"datacia/internal/logger"
 	"datacia/internal/security"
 	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
-	"go.uber.org/zap"
 )
 
 type LicenseService struct {
@@ -14,23 +12,17 @@ type LicenseService struct {
 	loadError error
 }
 
-// cached validation status
 var lastValidationResult *Response
 
 func NewLicenseService(app *application.App) *LicenseService {
-	// Try to load license on startup
 	loaded, err := LoadLicense()
 
 	service := &LicenseService{app: app}
 
 	if err == nil && loaded != nil {
 		license = loaded
-		logger.Logger.Info("License loaded from disk")
 	} else if err != nil {
-		logger.Logger.Error("Failed to load license", zap.Error(err))
-		// Capture the load error (tampering, etc)
 		service.loadError = err
-		// We set lastValidationResult to show this error immediately if requested
 		lastValidationResult = &Response{Success: false, Message: err.Error()}
 	}
 
@@ -44,35 +36,27 @@ type Response struct {
 }
 
 func (s *LicenseService) Activate(licenseKey string) Response {
-	logger.Logger.Info("Activating license", zap.String("key", MaskLicenseKey(licenseKey)))
-
 	hashedMachineID, err := security.GetMachineID()
 	if err != nil {
-		logger.Logger.Error("Failed to get machine ID", zap.Error(err))
 		return Response{Success: false, Error: "Device identification failed"}
 	}
 
 	response, err := LicenseActivate(licenseKey, hashedMachineID)
 	if err != nil {
-		logger.Logger.Error("Activation failed", zap.Error(err))
 		return Response{Success: false, Error: err.Error()}
 	}
 
 	verifier := NewVerifier()
-	if err := verifier.VerifySignature(response); err != nil {
-		logger.Logger.Error("Signature verification failed during activation", zap.Error(err))
+	if err := verifier.VerifyToken(response); err != nil {
 		return Response{Success: false, Error: err.Error()}
 	}
 
 	if err := SaveLicense(response); err != nil {
-		logger.Logger.Error("Failed to save license", zap.Error(err))
 		return Response{Success: false, Error: "Failed to save license"}
 	}
 
 	license = response
-	logger.Logger.Info("License activated and verified successfully")
 
-	// Trigger background validation
 	go s.ValidateOnStart()
 
 	return Response{
@@ -82,20 +66,16 @@ func (s *LicenseService) Activate(licenseKey string) Response {
 }
 
 func (s *LicenseService) Deactivate() Response {
-	logger.Logger.Info("Deactivating license")
-
 	if license == nil {
 		return Response{Success: false, Message: "No license found"}
 	}
 
 	hashedMachineID, err := security.GetMachineID()
 	if err != nil {
-		logger.Logger.Error("Failed to get machine ID for deactivation", zap.Error(err))
 		return Response{Success: false, Error: "Failed to identify machine."}
 	}
 
-	if err := LicenseDeactivate(license.Signature, hashedMachineID); err != nil {
-		logger.Logger.Error("Server deactivation failed", zap.Error(err))
+	if err := LicenseDeactivate(license.Token, hashedMachineID); err != nil {
 		return Response{Success: false, Error: err.Error()}
 	}
 
@@ -112,29 +92,24 @@ func (s *LicenseService) Validate() Response {
 
 	hashedMachineID, err := security.GetMachineID()
 	if err != nil {
-		logger.Logger.Error("Failed to get machine ID", zap.Error(err))
 		return Response{Success: false, Error: err.Error()}
 	}
 
-	response, err := LicenseValidate(license.Signature, hashedMachineID)
+	response, err := LicenseValidate(license.Token, hashedMachineID)
 	if err != nil {
-		logger.Logger.Error("Validation failed", zap.Error(err))
 		return Response{Success: false, Error: err.Error()}
 	}
 
 	verifier := NewVerifier()
-	if err := verifier.VerifySignature(response); err != nil {
-		logger.Logger.Error("Signature verification failed during validation", zap.Error(err))
-		return Response{Success: false, Error: "License signature verification failed"}
+	if err := verifier.VerifyToken(response); err != nil {
+		return Response{Success: false, Error: "License token verification failed"}
 	}
 
 	if err := SaveLicense(response); err != nil {
-		logger.Logger.Error("Failed to save license", zap.Error(err))
 		return Response{Success: false, Error: err.Error()}
 	}
 
 	license = response
-	logger.Logger.Info("License validated and updated successfully")
 
 	return Response{Success: true, Message: "License valid"}
 }
@@ -149,17 +124,20 @@ func (s *LicenseService) ValidateOnStart() error {
 	err := verifier.IsLicenseValid(license)
 
 	if err != nil {
-		logger.Logger.Error("License validation failed during start", zap.Error(err))
-
 		lastValidationResult = &Response{Success: false, Error: err.Error()}
-
 		return nil
 	}
 
-	// Skip server validation if already validated within last 24h (at least once per day).
-	if time.Since(license.LastCheck) < 24*time.Hour {
-		lastValidationResult = &Response{Success: true, Message: "License valid"}
-		return nil
+	// Use JWT iat to check if already validated today
+	claims, err := verifier.ParseClaims(license.Token)
+	if err == nil && claims.IssuedAt != nil {
+		if isSameDay(claims.IssuedAt.Time, time.Now()) {
+			lastValidationResult = &Response{
+				Success: true,
+				Message: "License valid",
+			}
+			return nil
+		}
 	}
 
 	go func() {
@@ -176,7 +154,6 @@ func (s *LicenseService) GetStatus() map[string]interface{} {
 	}
 
 	if license != nil {
-		// Use cached validation result
 		if lastValidationResult != nil {
 			status["valid"] = lastValidationResult.Success
 			if lastValidationResult.Error != "" {
@@ -184,13 +161,14 @@ func (s *LicenseService) GetStatus() map[string]interface{} {
 			}
 		}
 
-		status["license_key"] = MaskLicenseKey(license.Key)
-		if !license.ExpiresAt.IsZero() {
-			status["expires_at"] = license.ExpiresAt.Format(time.RFC3339)
-		}
+		status["license_key"] = license.Key
+		status["email"] = license.Email
 
-		if license.Email != "" {
-			status["email"] = license.Email
+		// Extract expires_at from JWT claims
+		verifier := NewVerifier()
+		claims, err := verifier.ParseClaims(license.Token)
+		if err == nil && claims.ExpiresAt != nil {
+			status["expires_at"] = claims.ExpiresAt.Time.Format(time.RFC3339)
 		}
 	}
 

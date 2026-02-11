@@ -3,34 +3,29 @@ import {
   Deactivate as WDeactivate,
   GetStatus as WGetStatus,
 } from "../../../bindings/datacia/internal/license/licenseservice";
-import type {
-  ActivateResponse,
-  DeactivateResponse,
-  ValidateResponse,
-} from "../../../bindings/datacia/internal/license/models";
+import type { Response } from "../../../bindings/datacia/internal/license/models";
 
-export type { ActivateResponse, DeactivateResponse, ValidateResponse };
+export type LicenseResponse = Response;
 
 export interface LicenseStatus {
   valid: boolean;
   license_key?: string;
+  email?: string;
   expires_at?: string;
-  customer_name?: string;
-  customer_email?: string;
   variant_name?: string;
   error?: string;
 }
 
 export async function ActivateLicense(
   licenseKey: string
-): Promise<ActivateResponse> {
+): Promise<LicenseResponse> {
   if (!licenseKey?.trim()) {
     throw new Error("License key cannot be empty");
   }
   return WActivate(licenseKey.trim());
 }
 
-export async function DeactivateLicense(): Promise<DeactivateResponse> {
+export async function DeactivateLicense(): Promise<LicenseResponse> {
   return WDeactivate();
 }
 
