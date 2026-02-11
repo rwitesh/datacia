@@ -151,39 +151,21 @@ func DecryptString(ciphertext string) (string, error) {
 	return string(plaintext), nil
 }
 
-// GetMachineID retrieves a unique machine identifier.
+// GetMachineID retrieves the machine identifier (SHA-256 hash of device ID).
 // If SecurityContext is initialized, it returns the cached value.
-// Otherwise, it fetches it directly from the device.
+// Otherwise, it computes it on-the-fly.
 func GetMachineID() (string, error) {
 	ctx, err := GetSecurityContext()
 	if err == nil {
 		return ctx.GetMachineID(), nil
 	}
-	
-	// Fall back to direct retrieval if context not initialized
+
 	id, err := deviceid.Get()
 	if err != nil {
-		return "", fmt.Errorf("failed to retrieve machine ID: %w. This may be due to insufficient permissions or unsupported platform", err)
+		return "", fmt.Errorf("failed to retrieve machine ID: %w", err)
 	}
 	if id == "" {
 		return "", fmt.Errorf("machine ID is empty - hardware identification unavailable")
-	}
-	return id, nil
-}
-
-// GetHashedMachineID retrieves the SHA-256 hash of the machine ID.
-// If SecurityContext is initialized, it returns the cached value.
-// Otherwise, it computes it on-the-fly.
-func GetHashedMachineID() (string, error) {
-	ctx, err := GetSecurityContext()
-	if err == nil {
-		return ctx.GetHashedMachineID(), nil
-	}
-	
-	// Fall back to computing on-the-fly if context not initialized
-	id, err := GetMachineID()
-	if err != nil {
-		return "", err
 	}
 	return Sha256Hex(id), nil
 }
@@ -197,12 +179,6 @@ func DeriveHardwareEncryptionKey() ([]byte, error) {
 		return nil, fmt.Errorf("failed to get machine ID for key derivation: %w", err)
 	}
 
-	// Derive 32-byte key using PBKDF2
-	// Password: Machine ID
-	// Salt: App-specific salt
-	// Iterations: 4,096 (recommended minimum)
-	// Key length: 32 bytes (AES-256)
-	// Hash: SHA-256
 	key := pbkdf2.Key(
 		[]byte(machineID),
 		[]byte(constants.AppSalt),

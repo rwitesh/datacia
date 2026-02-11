@@ -46,7 +46,7 @@ type ActivateResponse struct {
 func (s *LicenseService) Activate(licenseKey string) ActivateResponse {
 	logger.Logger.Info("Activating license", zap.String("key", MaskLicenseKey(licenseKey)))
 
-	hashedMachineID, err := security.GetHashedMachineID()
+	hashedMachineID, err := security.GetMachineID()
 	if err != nil {
 		logger.Logger.Error("Failed to get machine ID", zap.Error(err))
 		return ActivateResponse{Success: false, Error: "Activation failed"}
@@ -94,7 +94,7 @@ func (s *LicenseService) Deactivate() DeactivateResponse {
 		return DeactivateResponse{Success: false, Error: "No license found"}
 	}
 
-	hashedMachineID, err := security.GetHashedMachineID()
+	hashedMachineID, err := security.GetMachineID()
 	if err != nil {
 		logger.Logger.Error("Failed to get machine ID for deactivation", zap.Error(err))
 		return DeactivateResponse{Success: false, Error: "Failed to identify machine."}
@@ -122,7 +122,7 @@ func (s *LicenseService) Validate() ValidateResponse {
 		return ValidateResponse{Valid: false, Message: "No license found"}
 	}
 
-	hashedMachineID, err := security.GetHashedMachineID()
+	hashedMachineID, err := security.GetMachineID()
 	if err != nil {
 		logger.Logger.Error("Failed to get machine ID", zap.Error(err))
 		return ValidateResponse{Valid: false, Error: err.Error()}
@@ -201,8 +201,8 @@ func (s *LicenseService) GetStatus() map[string]interface{} {
 			status["expires_at"] = license.ExpiresAt.Format(time.RFC3339)
 		}
 
-		if license.CustomerEmail != "" {
-			status["customer_email"] = license.CustomerEmail
+		if license.Email != "" {
+			status["email"] = license.Email
 		}
 	}
 

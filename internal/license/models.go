@@ -6,15 +6,14 @@ import (
 )
 
 type License struct {
-	ID            string    `json:"id"`
-	Key           string    `json:"key"`
-	MachineId     string    `json:"machine_id"`
-	CreatedAt     time.Time `json:"created_at"`
-	ExpiresAt     time.Time `json:"expires_at"`
-	CustomerName  string    `json:"customer_name,omitempty"`
-	CustomerEmail string    `json:"customer_email,omitempty"`
-	Signature     []byte    `json:"signature"`
-	LastCheck     time.Time `json:"last_check"`
+	ID        string    `json:"id"`
+	Key       string    `json:"key"`
+	MachineId string    `json:"machine_id"`
+	CreatedAt time.Time `json:"created_at"`
+	ExpiresAt time.Time `json:"expires_at"`
+	Email     string    `json:"email"`
+	Signature []byte    `json:"signature"`
+	LastCheck time.Time `json:"last_check"`
 }
 
 type LicenseData struct {

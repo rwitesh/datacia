@@ -29,9 +29,33 @@ func GetQueriesDir() (string, error) {
 	return filepath.Join(xdg.DataHome, constants.APP_NAME, "queries"), nil
 }
 
-// returns the path to the license file
-func GetLicensePath() (string, error) {
-	return xdg.DataFile(filepath.Join(constants.APP_NAME, "license.bin"))
+type LicenseShardPaths struct {
+	Identity string // id, key, machine_id, created_at
+	Temporal string // expires_at, last_check
+	Auth     string // customer_name, customer_email, signature
+}
+
+func GetLicenseShardPaths() (*LicenseShardPaths, error) {
+	identity, err := xdg.DataFile(filepath.Join(constants.APP_NAME, ".dci_meta"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve identity shard path: %w", err)
+	}
+
+	temporal, err := xdg.StateFile(filepath.Join(constants.APP_NAME, ".dci_state"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve temporal shard path: %w", err)
+	}
+
+	auth, err := xdg.ConfigFile(filepath.Join(constants.APP_NAME, ".dci_auth"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve auth shard path: %w", err)
+	}
+
+	return &LicenseShardPaths{
+		Identity: identity,
+		Temporal: temporal,
+		Auth:     auth,
+	}, nil
 }
 
 // returns the configuration directory

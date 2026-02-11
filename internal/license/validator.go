@@ -74,7 +74,7 @@ func (v *Verifier) IsLicenseValid(l *License) error {
 	// 2. Machine ID Check
 	// Note: We compare against hashed current machine ID
 	// The License struct holds the hash.
-	currentMachineHash, err := security.GetHashedMachineID()
+	currentMachineHash, err := security.GetMachineID()
 	if err != nil {
 		return err
 	}
