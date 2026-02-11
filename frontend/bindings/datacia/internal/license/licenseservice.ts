@@ -9,27 +9,27 @@ import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Cr
 // @ts-ignore: Unused imports
 import * as $models from "./models.js";
 
-export function Activate(licenseKey: string): $CancellablePromise<$models.ActivateResponse> {
+export function Activate(licenseKey: string): $CancellablePromise<$models.Response> {
     return $Call.ByID(3382125627, licenseKey).then(($result: any) => {
         return $$createType0($result);
     });
 }
 
-export function Deactivate(): $CancellablePromise<$models.DeactivateResponse> {
+export function Deactivate(): $CancellablePromise<$models.Response> {
     return $Call.ByID(3380019912).then(($result: any) => {
-        return $$createType1($result);
+        return $$createType0($result);
     });
 }
 
 export function GetStatus(): $CancellablePromise<{ [_: string]: any }> {
     return $Call.ByID(408498648).then(($result: any) => {
-        return $$createType2($result);
+        return $$createType1($result);
     });
 }
 
-export function Validate(): $CancellablePromise<$models.ValidateResponse> {
+export function Validate(): $CancellablePromise<$models.Response> {
     return $Call.ByID(3725401140).then(($result: any) => {
-        return $$createType3($result);
+        return $$createType0($result);
     });
 }
 
@@ -38,7 +38,5 @@ export function ValidateOnStart(): $CancellablePromise<void> {
 }
 
 // Private type creation functions
-const $$createType0 = $models.ActivateResponse.createFrom;
-const $$createType1 = $models.DeactivateResponse.createFrom;
-const $$createType2 = $Create.Map($Create.Any, $Create.Any);
-const $$createType3 = $models.ValidateResponse.createFrom;
+const $$createType0 = $models.Response.createFrom;
+const $$createType1 = $Create.Map($Create.Any, $Create.Any);

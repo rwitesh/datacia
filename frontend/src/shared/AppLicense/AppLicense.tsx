@@ -74,12 +74,24 @@ export const AppLicense = () => {
             {/* PRO Badge - shown when license is valid */}
             {isLicenseValid && (
                 <div
-                    className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 cursor-pointer hover:bg-amber-500/20 transition-colors"
+                    className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 cursor-pointer hover:bg-blue-500/20 transition-colors"
                     onClick={handleOpenLicense}
                     title="Pro License Active"
                 >
                     <Sparkles className="h-3.5 w-3.5" />
                     <span className="text-xs font-semibold">Pro</span>
+                </div>
+            )}
+
+            {/* Upgrade CTA - shown when no license and no warning */}
+            {!isLicenseValid && !showLicenseWarning && (
+                <div
+                    className="flex items-center gap-1 px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/30 text-blue-600 dark:text-blue-400 cursor-pointer hover:bg-blue-500/20 transition-colors"
+                    onClick={handleOpenLicense}
+                    title="Upgrade to Pro"
+                >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    <span className="text-xs font-semibold">Upgrade to Pro</span>
                 </div>
             )}
         </div>

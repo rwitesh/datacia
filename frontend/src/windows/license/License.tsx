@@ -64,6 +64,7 @@ export function License() {
 
     try {
       const result = await activateMutation.mutateAsync(licenseKey);
+      console.log(result);
       if (result.success) {
         setMessage({
           variant: "success",
@@ -75,7 +76,7 @@ export function License() {
           variant: "destructive",
           title: "Activation failed",
           description:
-            result.error || result.message || "Failed to activate license.",
+            result.error || "Failed to activate license.",
         });
       }
     } catch (error) {
@@ -104,7 +105,7 @@ export function License() {
           variant: "destructive",
           title: "Deactivation failed",
           description:
-            result.error || result.message || "Failed to deactivate license.",
+            result.error || "Failed to deactivate license.",
         });
       }
     } catch (error) {
@@ -242,69 +243,66 @@ export function License() {
 
           {/* Activate License Form */}
           {!hasLicense && (
-            <form onSubmit={handleActivate} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="license-key" className="flex items-center gap-2">
-                  <Key className="h-4 w-4" />
-                  License Key
-                </Label>
-                <Input
-                  id="license-key"
-                  value={licenseKey}
-                  onChange={(e) => setLicenseKey(e.target.value)}
-                  placeholder="Enter your license key"
-                  disabled={isLoading}
-                  className="font-mono text-sm select-text"
-                />
-              </div>
-              <Button
-                type="submit"
-                disabled={isLoading || !licenseKey.trim()}
-                className="w-full cursor-pointer"
-              >
-                {activateMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Activating...
-                  </>
-                ) : (
-                  "Activate License"
-                )}
-              </Button>
-            </form>
-          )}
-
-          {/* License Actions */}
-          {hasLicense && (
-            <Button
-              onClick={handleDeactivate}
-              disabled={isLoading}
-              variant="destructive"
-              className="w-full cursor-pointer"
-            >
-              {deactivateMutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Deactivating...
-                </>
-              ) : (
-                "Deactivate License"
-              )}
-            </Button>
+            <div className="space-y-2">
+              <Label htmlFor="license-key" className="flex items-center gap-2">
+                <Key className="h-4 w-4" />
+                License Key
+              </Label>
+              <Input
+                id="license-key"
+                value={licenseKey}
+                onChange={(e) => setLicenseKey(e.target.value)}
+                placeholder="Enter your license key"
+                disabled={isLoading}
+                className="font-mono text-sm select-text"
+              />
+            </div>
           )}
         </div>
       </div>
 
       {/* Footer */}
-      <div className="border-t p-4 shrink-0">
+      <div className="border-t p-4 shrink-0 flex items-center gap-2">
         <Button
           variant="outline"
           onClick={handleClose}
           disabled={isLoading}
-          className="w-full"
+          className="flex-1 cursor-pointer"
         >
-          Close
+          Cancel
         </Button>
+        {hasLicense ? (
+          <Button
+            onClick={handleDeactivate}
+            disabled={isLoading}
+            variant="destructive"
+            className="flex-1 cursor-pointer"
+          >
+            {deactivateMutation.isPending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Deactivating...
+              </>
+            ) : (
+              "Deactivate License"
+            )}
+          </Button>
+        ) : (
+          <Button
+            onClick={handleActivate}
+            disabled={isLoading || !licenseKey.trim()}
+            className="flex-1 cursor-pointer"
+          >
+            {activateMutation.isPending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Activating...
+              </>
+            ) : (
+              "Activate License"
+            )}
+          </Button>
+        )}
       </div>
     </div>
   );

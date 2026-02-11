@@ -5,13 +5,13 @@
 // @ts-ignore: Unused imports
 import { Create as $Create } from "@wailsio/runtime";
 
-export class ActivateResponse {
+export class Response {
     "success": boolean;
     "message": string;
     "error"?: string;
 
-    /** Creates a new ActivateResponse instance. */
-    constructor($$source: Partial<ActivateResponse> = {}) {
+    /** Creates a new Response instance. */
+    constructor($$source: Partial<Response> = {}) {
         if (!("success" in $$source)) {
             this["success"] = false;
         }
@@ -23,62 +23,10 @@ export class ActivateResponse {
     }
 
     /**
-     * Creates a new ActivateResponse instance from a string or object.
+     * Creates a new Response instance from a string or object.
      */
-    static createFrom($$source: any = {}): ActivateResponse {
+    static createFrom($$source: any = {}): Response {
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        return new ActivateResponse($$parsedSource as Partial<ActivateResponse>);
-    }
-}
-
-export class DeactivateResponse {
-    "success": boolean;
-    "message": string;
-    "error"?: string;
-
-    /** Creates a new DeactivateResponse instance. */
-    constructor($$source: Partial<DeactivateResponse> = {}) {
-        if (!("success" in $$source)) {
-            this["success"] = false;
-        }
-        if (!("message" in $$source)) {
-            this["message"] = "";
-        }
-
-        Object.assign(this, $$source);
-    }
-
-    /**
-     * Creates a new DeactivateResponse instance from a string or object.
-     */
-    static createFrom($$source: any = {}): DeactivateResponse {
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        return new DeactivateResponse($$parsedSource as Partial<DeactivateResponse>);
-    }
-}
-
-export class ValidateResponse {
-    "valid": boolean;
-    "message": string;
-    "error"?: string;
-
-    /** Creates a new ValidateResponse instance. */
-    constructor($$source: Partial<ValidateResponse> = {}) {
-        if (!("valid" in $$source)) {
-            this["valid"] = false;
-        }
-        if (!("message" in $$source)) {
-            this["message"] = "";
-        }
-
-        Object.assign(this, $$source);
-    }
-
-    /**
-     * Creates a new ValidateResponse instance from a string or object.
-     */
-    static createFrom($$source: any = {}): ValidateResponse {
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        return new ValidateResponse($$parsedSource as Partial<ValidateResponse>);
+        return new Response($$parsedSource as Partial<Response>);
     }
 }

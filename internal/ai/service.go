@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
+
 	"net/http"
 	"time"
 
@@ -73,17 +73,16 @@ func (s *Service) SendMessage(engine, context, message string) (string, error) {
 	var result response
 	if err := json.Unmarshal(respBody, &result); err != nil {
 		if resp.StatusCode != http.StatusOK {
-			return "", fmt.Errorf("request failed (%d): %s", resp.StatusCode, string(respBody))
+			return "", fmt.Errorf("%s", http.StatusText(resp.StatusCode))
 		}
 		return string(respBody), nil
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		log.Println(result)
 		if result.Error != "" {
 			return "", fmt.Errorf("%s", result.Error)
 		}
-		return "", fmt.Errorf("request failed (%d): %s", resp.StatusCode, string(respBody))
+		return "", fmt.Errorf("%s", http.StatusText(resp.StatusCode))
 	}
 
 	return result.Message, nil

@@ -7,7 +7,5 @@ export {
 };
 
 export {
-    ActivateResponse,
-    DeactivateResponse,
-    ValidateResponse
+    Response
 } from "./models.js";

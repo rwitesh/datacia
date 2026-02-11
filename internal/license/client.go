@@ -80,7 +80,13 @@ func executeRequest(endpoint string, body []byte, target interface{}) error {
 
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("server error: %s - %s", resp.Status, string(respBody))
+		var errResp struct {
+			Error string `json:"error"`
+		}
+		if json.Unmarshal(respBody, &errResp) == nil && errResp.Error != "" {
+			return fmt.Errorf("%s", errResp.Error)
+		}
+		return fmt.Errorf("%s", http.StatusText(resp.StatusCode))
 	}
 
 	if target != nil {

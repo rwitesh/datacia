@@ -15,7 +15,7 @@ type LicenseService struct {
 }
 
 // cached validation status
-var lastValidationResult *ValidateResponse
+var lastValidationResult *Response
 
 func NewLicenseService(app *application.App) *LicenseService {
 	// Try to load license on startup
@@ -31,42 +31,42 @@ func NewLicenseService(app *application.App) *LicenseService {
 		// Capture the load error (tampering, etc)
 		service.loadError = err
 		// We set lastValidationResult to show this error immediately if requested
-		lastValidationResult = &ValidateResponse{Valid: false, Error: err.Error()}
+		lastValidationResult = &Response{Success: false, Message: err.Error()}
 	}
 
 	return service
 }
 
-type ActivateResponse struct {
+type Response struct {
 	Success bool   `json:"success"`
 	Message string `json:"message"`
 	Error   string `json:"error,omitempty"`
 }
 
-func (s *LicenseService) Activate(licenseKey string) ActivateResponse {
+func (s *LicenseService) Activate(licenseKey string) Response {
 	logger.Logger.Info("Activating license", zap.String("key", MaskLicenseKey(licenseKey)))
 
 	hashedMachineID, err := security.GetMachineID()
 	if err != nil {
 		logger.Logger.Error("Failed to get machine ID", zap.Error(err))
-		return ActivateResponse{Success: false, Error: "Activation failed"}
+		return Response{Success: false, Error: "Device identification failed"}
 	}
 
 	response, err := LicenseActivate(licenseKey, hashedMachineID)
 	if err != nil {
 		logger.Logger.Error("Activation failed", zap.Error(err))
-		return ActivateResponse{Success: false, Error: "Activation failed"}
+		return Response{Success: false, Error: err.Error()}
 	}
 
 	verifier := NewVerifier()
 	if err := verifier.VerifySignature(response); err != nil {
 		logger.Logger.Error("Signature verification failed during activation", zap.Error(err))
-		return ActivateResponse{Success: false, Error: "License signature verification failed"}
+		return Response{Success: false, Error: err.Error()}
 	}
 
 	if err := SaveLicense(response); err != nil {
 		logger.Logger.Error("Failed to save license", zap.Error(err))
-		return ActivateResponse{Success: false, Error: "Failed to save license"}
+		return Response{Success: false, Error: "Failed to save license"}
 	}
 
 	license = response
@@ -75,80 +75,68 @@ func (s *LicenseService) Activate(licenseKey string) ActivateResponse {
 	// Trigger background validation
 	go s.ValidateOnStart()
 
-	return ActivateResponse{
+	return Response{
 		Success: true,
 		Message: "License activated successfully",
 	}
 }
 
-type DeactivateResponse struct {
-	Success bool   `json:"success"`
-	Message string `json:"message"`
-	Error   string `json:"error,omitempty"`
-}
-
-func (s *LicenseService) Deactivate() DeactivateResponse {
+func (s *LicenseService) Deactivate() Response {
 	logger.Logger.Info("Deactivating license")
 
 	if license == nil {
-		return DeactivateResponse{Success: false, Error: "No license found"}
+		return Response{Success: false, Message: "No license found"}
 	}
 
 	hashedMachineID, err := security.GetMachineID()
 	if err != nil {
 		logger.Logger.Error("Failed to get machine ID for deactivation", zap.Error(err))
-		return DeactivateResponse{Success: false, Error: "Failed to identify machine."}
+		return Response{Success: false, Error: "Failed to identify machine."}
 	}
 
 	if err := LicenseDeactivate(license.Signature, hashedMachineID); err != nil {
 		logger.Logger.Error("Server deactivation failed", zap.Error(err))
-		return DeactivateResponse{Success: false, Error: "Server deactivation failed."}
+		return Response{Success: false, Error: err.Error()}
 	}
 
 	_ = RemoveLicense()
 
 	license = nil
-	return DeactivateResponse{Success: true, Message: "License deactivated"}
+	return Response{Success: true, Message: "License deactivated"}
 }
 
-type ValidateResponse struct {
-	Valid   bool   `json:"valid"`
-	Message string `json:"message"`
-	Error   string `json:"error,omitempty"`
-}
-
-func (s *LicenseService) Validate() ValidateResponse {
+func (s *LicenseService) Validate() Response {
 	if license == nil {
-		return ValidateResponse{Valid: false, Message: "No license found"}
+		return Response{Success: false, Message: "No license found"}
 	}
 
 	hashedMachineID, err := security.GetMachineID()
 	if err != nil {
 		logger.Logger.Error("Failed to get machine ID", zap.Error(err))
-		return ValidateResponse{Valid: false, Error: err.Error()}
+		return Response{Success: false, Error: err.Error()}
 	}
 
 	response, err := LicenseValidate(license.Signature, hashedMachineID)
 	if err != nil {
 		logger.Logger.Error("Validation failed", zap.Error(err))
-		return ValidateResponse{Valid: false, Error: err.Error()}
+		return Response{Success: false, Error: err.Error()}
 	}
 
 	verifier := NewVerifier()
 	if err := verifier.VerifySignature(response); err != nil {
 		logger.Logger.Error("Signature verification failed during validation", zap.Error(err))
-		return ValidateResponse{Valid: false, Error: "License signature verification failed"}
+		return Response{Success: false, Error: "License signature verification failed"}
 	}
 
 	if err := SaveLicense(response); err != nil {
 		logger.Logger.Error("Failed to save license", zap.Error(err))
-		return ValidateResponse{Valid: false, Error: err.Error()}
+		return Response{Success: false, Error: err.Error()}
 	}
 
 	license = response
 	logger.Logger.Info("License validated and updated successfully")
 
-	return ValidateResponse{Valid: true, Message: "License valid"}
+	return Response{Success: true, Message: "License valid"}
 }
 
 func (s *LicenseService) ValidateOnStart() error {
@@ -163,14 +151,14 @@ func (s *LicenseService) ValidateOnStart() error {
 	if err != nil {
 		logger.Logger.Error("License validation failed during start", zap.Error(err))
 
-		lastValidationResult = &ValidateResponse{Valid: false, Error: err.Error()}
+		lastValidationResult = &Response{Success: false, Error: err.Error()}
 
 		return nil
 	}
 
 	// Skip server validation if already validated within last 24h (at least once per day).
 	if time.Since(license.LastCheck) < 24*time.Hour {
-		lastValidationResult = &ValidateResponse{Valid: true, Message: "License valid"}
+		lastValidationResult = &Response{Success: true, Message: "License valid"}
 		return nil
 	}
 
@@ -178,7 +166,7 @@ func (s *LicenseService) ValidateOnStart() error {
 		s.Validate()
 	}()
 
-	lastValidationResult = &ValidateResponse{Valid: true, Message: "License valid"}
+	lastValidationResult = &Response{Success: true, Message: "License valid"}
 	return nil
 }
 
@@ -190,7 +178,7 @@ func (s *LicenseService) GetStatus() map[string]interface{} {
 	if license != nil {
 		// Use cached validation result
 		if lastValidationResult != nil {
-			status["valid"] = lastValidationResult.Valid
+			status["valid"] = lastValidationResult.Success
 			if lastValidationResult.Error != "" {
 				status["error"] = lastValidationResult.Error
 			}
