@@ -11,55 +11,55 @@ import (
 )
 
 var (
-	ErrInvalidToken    = errors.New("Invalid license")
-	ErrClockRollback   = errors.New("Invalid license")
-	ErrGracePeriodOver = errors.New("Failed to validate license")
-	ErrMachineMismatch = errors.New("Invalid license")
-	ErrLicenseExpired  = errors.New("License has expired")
+	errInvalidToken    = errors.New("Invalid license")
+	errClockRollback   = errors.New("Invalid license")
+	errGracePeriodOver = errors.New("Failed to validate license")
+	errMachineMismatch = errors.New("Invalid license")
+	errLicenseExpired  = errors.New("License has expired")
 )
 
 const (
-	GracePeriod = 7 * 24 * time.Hour
+	gracePeriod = 7 * 24 * time.Hour
 )
 
-type LicenseClaims struct {
+type licenseClaims struct {
 	LicenseID string `json:"lid"`
 	MachineID string `json:"mid"`
 	jwt.RegisteredClaims
 }
 
-type Verifier struct {
+type verifier struct {
 	publicKey *rsa.PublicKey
 }
 
-func NewVerifier() *Verifier {
-	return &Verifier{
+func newVerifier() *verifier {
+	return &verifier{
 		publicKey: security.GetRSAPublicKey(),
 	}
 }
 
-func (v *Verifier) ParseClaims(token string) (*LicenseClaims, error) {
-	parsed, err := jwt.ParseWithClaims(token, &LicenseClaims{}, func(token *jwt.Token) (interface{}, error) {
+func (v *verifier) parseClaims(token string) (*licenseClaims, error) {
+	parsed, err := jwt.ParseWithClaims(token, &licenseClaims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
-			return nil, ErrInvalidToken
+			return nil, errInvalidToken
 		}
 		return v.publicKey, nil
 	}, jwt.WithIssuer("datacia"))
 
 	if err != nil {
-		return nil, ErrInvalidToken
+		return nil, errInvalidToken
 	}
 
-	claims, ok := parsed.Claims.(*LicenseClaims)
+	claims, ok := parsed.Claims.(*licenseClaims)
 	if !ok || !parsed.Valid {
-		return nil, ErrInvalidToken
+		return nil, errInvalidToken
 	}
 
 	return claims, nil
 }
 
-func (v *Verifier) VerifyToken(l *License) error {
-	claims, err := v.ParseClaims(l.Token)
+func (v *verifier) verifyToken(l *License) error {
+	claims, err := v.parseClaims(l.Token)
 	if err != nil {
 		return err
 	}
@@ -70,18 +70,18 @@ func (v *Verifier) VerifyToken(l *License) error {
 	}
 
 	if claims.MachineID != currentMachineId {
-		return ErrMachineMismatch
+		return errMachineMismatch
 	}
 
 	return nil
 }
 
-func (v *Verifier) IsLicenseValid(l *License) error {
+func (v *verifier) isLicenseValid(l *License) error {
 	if l == nil {
 		return errors.New("no license provided")
 	}
 
-	claims, err := v.ParseClaims(l.Token)
+	claims, err := v.parseClaims(l.Token)
 	if err != nil {
 		return err
 	}
@@ -90,31 +90,29 @@ func (v *Verifier) IsLicenseValid(l *License) error {
 	if err != nil {
 		return err
 	}
+	// Machine ID check
 	if claims.MachineID != currentMachineHash {
-		return ErrMachineMismatch
+		return errMachineMismatch
 	}
 
-	// Use JWT iat (issued at) as the last successful server check time.
-	// This is tamper-proof — modifying iat invalidates the RSA signature.
 	issuedAt := claims.IssuedAt.Time
-
 	now := time.Now()
+
+	// Clock rollback check
 	if now.Add(5 * time.Minute).Before(issuedAt) {
-		return ErrClockRollback
+		return errClockRollback
 	}
 
 	timeSinceLastCheck := now.Sub(issuedAt)
 
-	// Expiry check with grace period
 	if claims.ExpiresAt != nil && now.After(claims.ExpiresAt.Time) {
-		if timeSinceLastCheck > GracePeriod {
-			return ErrLicenseExpired
+		if timeSinceLastCheck > gracePeriod {
+			return errLicenseExpired
 		}
 	}
 
-	// Offline grace period
-	if timeSinceLastCheck > GracePeriod {
-		return ErrGracePeriodOver
+	if timeSinceLastCheck > gracePeriod {
+		return errGracePeriodOver
 	}
 
 	return nil

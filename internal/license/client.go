@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-func LicenseActivate(licenseKey, machineID string) (*License, error) {
+func licenseActivate(licenseKey, machineID string) (*License, error) {
 	ctx := appinfo.Get()
 	reqBody, err := json.Marshal(LicenseData{
 		LicenseKey: licenseKey,
@@ -22,7 +22,7 @@ func LicenseActivate(licenseKey, machineID string) (*License, error) {
 		AppVersion: ctx.AppVersion,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("marshal request: %w", err)
+		return nil, err
 	}
 
 	var l License
@@ -32,25 +32,25 @@ func LicenseActivate(licenseKey, machineID string) (*License, error) {
 	return &l, nil
 }
 
-func LicenseDeactivate(token string, machineID string) error {
+func licenseDeactivate(token string, machineID string) error {
 	reqBody, err := json.Marshal(TokenRequest{
 		Token:     token,
 		MachineID: machineID,
 	})
 	if err != nil {
-		return fmt.Errorf("marshal request: %w", err)
+		return err
 	}
 
 	return executeRequest("deactivate", reqBody, nil)
 }
 
-func LicenseValidate(token string, machineID string) (*License, error) {
+func licenseValidate(token string, machineID string) (*License, error) {
 	reqBody, err := json.Marshal(TokenRequest{
 		Token:     token,
 		MachineID: machineID,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("marshal request: %w", err)
+		return nil, err
 	}
 
 	var l License
@@ -58,6 +58,14 @@ func LicenseValidate(token string, machineID string) (*License, error) {
 		return nil, err
 	}
 	return &l, nil
+}
+
+type NetworkError struct {
+	Msg string
+}
+
+func (e *NetworkError) Error() string {
+	return e.Msg
 }
 
 func executeRequest(endpoint string, body []byte, target interface{}) error {
@@ -74,9 +82,13 @@ func executeRequest(endpoint string, body []byte, target interface{}) error {
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("request failed: %w", err)
+		return &NetworkError{Msg: err.Error()}
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode >= 500 {
+		return &NetworkError{Msg: fmt.Sprintf("Server error: %s", http.StatusText(resp.StatusCode))}
+	}
 
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
@@ -91,7 +103,7 @@ func executeRequest(endpoint string, body []byte, target interface{}) error {
 
 	if target != nil {
 		if err := json.NewDecoder(resp.Body).Decode(target); err != nil {
-			return fmt.Errorf("invalid server response: %w", err)
+			return err
 		}
 	}
 

@@ -23,5 +23,3 @@ type TokenRequest struct {
 	Token     string `json:"token"`
 	MachineID string `json:"machine_id"`
 }
-
-var license *License

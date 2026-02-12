@@ -15,7 +15,7 @@ type storedLicense struct {
 	Token string `json:"token"`
 }
 
-func SaveLicense(l *License) error {
+func saveLicense(l *License) error {
 	path, err := paths.GetLicensePath()
 	if err != nil {
 		return err
@@ -50,7 +50,7 @@ func SaveLicense(l *License) error {
 	return nil
 }
 
-func LoadLicense() (*License, error) {
+func loadLicense() (*License, error) {
 	path, err := paths.GetLicensePath()
 	if err != nil {
 		return nil, err
@@ -82,7 +82,7 @@ func LoadLicense() (*License, error) {
 	}, nil
 }
 
-func RemoveLicense() error {
+func removeLicense() error {
 	path, err := paths.GetLicensePath()
 	if err != nil {
 		return err

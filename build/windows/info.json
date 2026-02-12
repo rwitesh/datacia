@@ -1,10 +1,10 @@
 {
 	"fixed": {
-		"file_version": "0.8.51"
+		"file_version": "0.8.52"
 	},
 	"info": {
 		"0000": {
-			"ProductVersion": "0.8.51",
+			"ProductVersion": "0.8.52",
 			"CompanyName": "DataCia",
 			"FileDescription": "Your database reimaginzed for speed and clarity",
 			"LegalCopyright": "(c) 2026, DataCia",

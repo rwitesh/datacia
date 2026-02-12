@@ -51,6 +51,7 @@ type Config struct {
 	} `yaml:"info"`
 	Other []struct {
 		ReleaseURL string `yaml:"release_url"`
+		ServerURL  string `yaml:"server_url"`
 	} `yaml:"other"`
 }
 
@@ -106,12 +107,6 @@ func (a *App) Initialize() error {
 	if err := clip.Init(); err != nil {
 		logger.Logger.Error("Failed to initialize clipboard", zap.Error(err))
 		return fmt.Errorf("failed to initialize clipboard: %w", err)
-	}
-
-	// Load license from local storage if it exists
-	if _, err := license.LoadLicense(); err != nil {
-		logger.Logger.Warn("Failed to load license", zap.Error(err))
-		// Continue even if license loading fails - it might not exist or be corrupted
 	}
 
 	engine, err := remote.New(a, version, releaseURL)

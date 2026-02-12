@@ -2,31 +2,17 @@ package license
 
 import (
 	"datacia/internal/security"
+	"sync"
 	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 type LicenseService struct {
-	app       *application.App
-	loadError error
-}
-
-var lastValidationResult *Response
-
-func NewLicenseService(app *application.App) *LicenseService {
-	loaded, err := LoadLicense()
-
-	service := &LicenseService{app: app}
-
-	if err == nil && loaded != nil {
-		license = loaded
-	} else if err != nil {
-		service.loadError = err
-		lastValidationResult = &Response{Success: false, Message: err.Error()}
-	}
-
-	return service
+	app        *application.App
+	mu         sync.RWMutex
+	license    *License
+	validation *Response
 }
 
 type Response struct {
@@ -35,149 +21,214 @@ type Response struct {
 	Error   string `json:"error,omitempty"`
 }
 
+var instance *LicenseService
+
+func NewLicenseService(app *application.App) *LicenseService {
+	s := &LicenseService{app: app}
+
+	loaded, err := loadLicense()
+	if err != nil {
+		s.validation = &Response{Success: false, Message: err.Error()}
+	} else if loaded != nil {
+		s.license = loaded
+	}
+
+	instance = s
+	return s
+}
+
 func (s *LicenseService) Activate(licenseKey string) Response {
 	hashedMachineID, err := security.GetMachineID()
 	if err != nil {
 		return Response{Success: false, Error: "Device identification failed"}
 	}
 
-	response, err := LicenseActivate(licenseKey, hashedMachineID)
+	l, err := licenseActivate(licenseKey, hashedMachineID)
 	if err != nil {
 		return Response{Success: false, Error: err.Error()}
 	}
 
-	verifier := NewVerifier()
-	if err := verifier.VerifyToken(response); err != nil {
+	verifier := newVerifier()
+	if err := verifier.verifyToken(l); err != nil {
 		return Response{Success: false, Error: err.Error()}
 	}
 
-	if err := SaveLicense(response); err != nil {
+	if err := saveLicense(l); err != nil {
 		return Response{Success: false, Error: "Failed to save license"}
 	}
 
-	license = response
+	s.mu.Lock()
+	s.license = l
+	s.validation = &Response{Success: true, Message: "License activated successfully"}
+	result := *s.validation
+	s.mu.Unlock()
 
-	go s.ValidateOnStart()
-
-	return Response{
-		Success: true,
-		Message: "License activated successfully",
-	}
+	s.emitChanged()
+	return result
 }
 
 func (s *LicenseService) Deactivate() Response {
-	if license == nil {
+	s.mu.RLock()
+	if s.license == nil {
+		s.mu.RUnlock()
 		return Response{Success: false, Message: "No license found"}
 	}
+	token := s.license.Token
+	s.mu.RUnlock()
 
 	hashedMachineID, err := security.GetMachineID()
 	if err != nil {
 		return Response{Success: false, Error: "Failed to identify machine."}
 	}
 
-	if err := LicenseDeactivate(license.Token, hashedMachineID); err != nil {
+	if err := licenseDeactivate(token, hashedMachineID); err != nil {
 		return Response{Success: false, Error: err.Error()}
 	}
 
-	_ = RemoveLicense()
+	_ = removeLicense()
 
-	license = nil
-	return Response{Success: true, Message: "License deactivated"}
+	s.mu.Lock()
+	s.license = nil
+	s.validation = &Response{Success: true, Message: "License deactivated"}
+	result := *s.validation
+	s.mu.Unlock()
+
+	s.emitChanged()
+	return result
 }
 
 func (s *LicenseService) Validate() Response {
+	s.mu.RLock()
+	license := s.license
+	s.mu.RUnlock()
+
 	if license == nil {
-		return Response{Success: false, Message: "No license found"}
+		return s.setResult(Response{Success: false, Message: "No license found"})
 	}
 
 	hashedMachineID, err := security.GetMachineID()
 	if err != nil {
-		return Response{Success: false, Error: err.Error()}
+		return s.setResult(Response{Success: false, Error: err.Error()})
 	}
 
-	response, err := LicenseValidate(license.Token, hashedMachineID)
-	if err != nil {
-		return Response{Success: false, Error: err.Error()}
-	}
+	var l *License
+	var error error
+	const maxRetries = 2
 
-	verifier := NewVerifier()
-	if err := verifier.VerifyToken(response); err != nil {
-		return Response{Success: false, Error: "License token verification failed"}
-	}
-
-	if err := SaveLicense(response); err != nil {
-		return Response{Success: false, Error: err.Error()}
-	}
-
-	license = response
-
-	return Response{Success: true, Message: "License valid"}
-}
-
-func (s *LicenseService) ValidateOnStart() error {
-	if license == nil {
-		lastValidationResult = nil
-		return nil
-	}
-
-	verifier := NewVerifier()
-	err := verifier.IsLicenseValid(license)
-
-	if err != nil {
-		lastValidationResult = &Response{Success: false, Error: err.Error()}
-		return nil
-	}
-
-	// Use JWT iat to check if already validated today
-	claims, err := verifier.ParseClaims(license.Token)
-	if err == nil && claims.IssuedAt != nil {
-		if isSameDay(claims.IssuedAt.Time, time.Now()) {
-			lastValidationResult = &Response{
-				Success: true,
-				Message: "License valid",
+	for i := 0; i < maxRetries; i++ {
+		l, error = licenseValidate(license.Token, hashedMachineID)
+		if error == nil {
+			// Validation successful, update local license
+			if err := saveLicense(l); err != nil {
+				return s.setResult(Response{Success: false, Error: err.Error()})
 			}
-			return nil
+
+			s.mu.Lock()
+			s.license = l
+			s.mu.Unlock()
+
+			return s.setResult(Response{Success: true, Message: "License valid"})
+		}
+
+		// Only retry on NetworkError
+		if _, isNetErr := error.(*NetworkError); !isNetErr {
+			break
+		}
+
+		if i < maxRetries-1 {
+			time.Sleep(2 * time.Second) // Reduced retry wait
 		}
 	}
 
-	go func() {
-		s.Validate()
-	}()
+	if error != nil {
+		// If it's a network error, try offline validation (grace period)
+		if _, isNetErr := error.(*NetworkError); isNetErr {
+			verifier := newVerifier()
+			if err := verifier.isLicenseValid(license); err == nil {
+				// Valid offline
+				return s.setResult(Response{Success: true, Message: "License valid (offline)"})
+			}
+			// If offline check fails (e.g. grace period over), we return that error
+		}
 
-	lastValidationResult = &Response{Success: true, Message: "License valid"}
+		// Return the actual validation error
+		return s.setResult(Response{Success: false, Error: error.Error()})
+	}
+
+	return s.setResult(Response{Success: true, Message: "License valid"})
+
+}
+
+func (s *LicenseService) ValidateOnStart() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.license == nil {
+		s.validation = nil
+		return nil
+	}
+
+	if err := newVerifier().isLicenseValid(s.license); err != nil {
+		s.validation = &Response{Success: false, Error: err.Error()}
+		return nil
+	}
+
+	s.validation = &Response{Success: true, Message: "License valid"}
+	go s.Validate()
+
 	return nil
 }
 
 func (s *LicenseService) GetStatus() map[string]interface{} {
-	status := map[string]interface{}{
-		"valid": false,
-	}
+	status := map[string]interface{}{"valid": false}
 
-	if license != nil {
-		if lastValidationResult != nil {
-			status["valid"] = lastValidationResult.Success
-			if lastValidationResult.Error != "" {
-				status["error"] = lastValidationResult.Error
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if s.license != nil {
+		if s.validation != nil {
+			status["valid"] = s.validation.Success
+			if s.validation.Error != "" {
+				status["error"] = s.validation.Error
 			}
 		}
 
-		status["license_key"] = license.Key
-		status["email"] = license.Email
+		status["license_key"] = s.license.Key
+		status["email"] = s.license.Email
 
-		// Extract expires_at from JWT claims
-		verifier := NewVerifier()
-		claims, err := verifier.ParseClaims(license.Token)
-		if err == nil && claims.ExpiresAt != nil {
-			status["expires_at"] = claims.ExpiresAt.Time.Format(time.RFC3339)
+		if !s.license.ExpiresAt.IsZero() {
+			status["expires_at"] = s.license.ExpiresAt.Format(time.RFC3339)
 		}
 	}
 
 	return status
 }
 
+func (s *LicenseService) setResult(r Response) Response {
+	s.mu.Lock()
+	s.validation = &r
+	s.mu.Unlock()
+
+	s.emitChanged()
+	return r
+}
+
+func (s *LicenseService) emitChanged() {
+	if s.app != nil {
+		s.app.Event.Emit("license-changed", nil)
+	}
+}
+
 func GetLicenseID() string {
-	if license == nil {
+	if instance == nil {
 		return ""
 	}
-	return license.ID
+
+	instance.mu.RLock()
+	defer instance.mu.RUnlock()
+
+	if instance.license == nil {
+		return ""
+	}
+	return instance.license.ID
 }

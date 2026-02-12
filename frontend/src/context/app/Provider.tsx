@@ -37,6 +37,13 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     return () => unsubscribe();
   }, [invalidateConnectionQueries]);
 
+  useEffect(() => {
+    const unsubscribe = Events.On("license-changed", () => {
+      queryClient.refetchQueries({ queryKey: ["license-status"] });
+    });
+    return () => unsubscribe();
+  }, [queryClient]);
+
   const dialect = useMemo(
     () => chooseDialect(currentConnection?.engine || null),
     [currentConnection?.engine]

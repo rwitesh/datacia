@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   ActivateLicense,
   DeactivateLicense,
@@ -16,25 +16,17 @@ export function useLicenseStatus() {
 }
 
 export function useActivateLicense() {
-  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (licenseKey: string) => {
       return ActivateLicense(licenseKey);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["license-status"] });
     },
   });
 }
 
 export function useDeactivateLicense() {
-  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async () => {
       return DeactivateLicense();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["license-status"] });
     },
   });
 }
