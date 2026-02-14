@@ -7,41 +7,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-
 	"net/http"
 	"time"
-
-	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
-type Service struct {
-	app *application.App
-}
-
-type request struct {
-	Engine    string `json:"engine"`
-	Context   string `json:"context"`
-	Message   string `json:"message"`
-	LicenseID string `json:"license_id"`
-}
-
-type response struct {
-	Message string `json:"message"`
-	Error   string `json:"error"`
-}
-
-func NewService(app *application.App) *Service {
-	return &Service{app: app}
-}
-
-func (s *Service) SendMessage(engine, context, message string) (string, error) {
-	if engine == "" {
-		return "", fmt.Errorf("engine is required")
-	}
-	if message == "" {
-		return "", fmt.Errorf("message is required")
-	}
-
+func (s *Service) sendInbuilt(engine, context, message string) (string, error) {
 	body, err := json.Marshal(request{
 		Engine:    engine,
 		Context:   context,

@@ -5,6 +5,6 @@
 // @ts-ignore: Unused imports
 import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
 
-export function SendMessage(engine: string, context: string, message: string): $CancellablePromise<string> {
-    return $Call.ByID(3335267621, engine, context, message);
+export function SendMessage(engine: string, context: string, message: string, model: string): $CancellablePromise<string> {
+    return $Call.ByID(3335267621, engine, context, message, model);
 }

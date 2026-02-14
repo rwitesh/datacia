@@ -1,15 +1,8 @@
 import { useEffect, useState } from "react"
-import { useAppInfo, useUpdateSettings } from "@/services/appInfo"
-import { ThemeConfig } from "@/services/appInfo"
+import { useSettings, useUpdateSettings } from "@/services/settings"
+import { ThemeConfig } from "@/services/settings"
 import { useQueryClient } from "@tanstack/react-query"
-import {
-  ThemeProviderContext,
-  type Theme,
-  DEFAULT_EDITOR_FONT_FAMILY,
-  DEFAULT_EDITOR_FONT_SIZE,
-  DEFAULT_UI_FONT_FAMILY,
-  DEFAULT_UI_FONT_SIZE,
-} from "./context"
+import { ThemeProviderContext, type Theme, EMPTY_TOKEN_COLORS, initialState } from "./context"
 import { Events } from "@wailsio/runtime"
 
 type ThemeProviderProps = {
@@ -20,24 +13,27 @@ export function ThemeProvider({
   children,
   ...props
 }: ThemeProviderProps) {
-  const { data: appInfo } = useAppInfo();
+  const { data: settings } = useSettings();
   const { mutate: updateSettings } = useUpdateSettings();
   const [resolvedTheme, setResolvedTheme] = useState<"dark" | "light">("dark");
   const queryClient = useQueryClient();
 
-  const theme = (appInfo?.settings?.theme as Theme) || 'system';
-  const tokenColorsLight = appInfo?.settings?.editor?.tokenColorsLight;
-  const tokenColorsDark = appInfo?.settings?.editor?.tokenColorsDark;
+  const theme = (settings?.settings?.theme as Theme) || "system";
+  const editorLight = settings?.settings?.editor?.light;
+  const editorDark = settings?.settings?.editor?.dark;
+  const defaultLight = settings?.defaultTokenColorsLight;
+  const defaultDark = settings?.defaultTokenColorsDark;
 
-  const tokenColors = resolvedTheme === "dark"
-    ? tokenColorsDark
-    : tokenColorsLight;
+  const tokenColors =
+    (resolvedTheme === "dark" ? editorDark : editorLight) ??
+    (resolvedTheme === "dark" ? defaultDark : defaultLight) ??
+    EMPTY_TOKEN_COLORS;
 
-  // Font values with defaults
-  const editorFontFamily = appInfo?.settings?.font?.editorFontFamily || DEFAULT_EDITOR_FONT_FAMILY;
-  const editorFontSize = appInfo?.settings?.font?.editorFontSize || DEFAULT_EDITOR_FONT_SIZE;
-  const uiFontFamily = appInfo?.settings?.font?.uiFontFamily || DEFAULT_UI_FONT_FAMILY;
-  const uiFontSize = appInfo?.settings?.font?.uiFontSize || DEFAULT_UI_FONT_SIZE;
+  const font = settings?.settings?.font;
+  const editorFontFamily = font?.editorFontFamily ?? initialState.editorFontFamily;
+  const editorFontSize = font?.editorFontSize ?? initialState.editorFontSize;
+  const uiFontFamily = font?.uiFontFamily ?? initialState.uiFontFamily;
+  const uiFontSize = font?.uiFontSize ?? initialState.uiFontSize;
 
 
 
@@ -80,7 +76,7 @@ export function ThemeProvider({
   // Listen for settings changes from other windows
   useEffect(() => {
     const unsubscribe = Events.On("app:settings-changed", () => {
-      queryClient.invalidateQueries({ queryKey: ["app-info"] });
+      queryClient.invalidateQueries({ queryKey: ["settings"] });
     });
 
     return () => unsubscribe();
@@ -104,9 +100,9 @@ export function ThemeProvider({
     uiFontFamily,
     uiFontSize,
     setTheme: (newTheme: Theme) => {
-      if (!appInfo) return;
+      if (!settings) return;
       const newSettings = {
-        ...appInfo.settings,
+        ...settings.settings,
         theme: newTheme as unknown as ThemeConfig
       };
       updateSettings(newSettings);

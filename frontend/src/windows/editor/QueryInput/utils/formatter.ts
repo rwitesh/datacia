@@ -1,6 +1,12 @@
 import { format, type FormatOptionsWithLanguage } from "sql-formatter";
 import { getFormatterLanguage } from "@/shared/utils/engines";
 
+
+function normalizeSQL(sql: string): string {
+  // Replace `identifier` with "identifier", escaping any " inside
+  return sql.replace(/`([^`]*)`/g, (_, ident) => `"${ident.replace(/"/g, '""')}"`);
+}
+
 /**
  * Formats SQL query using sql-formatter library
  * Engine-specific formatting is handled automatically via centralized config
@@ -12,9 +18,12 @@ import { getFormatterLanguage } from "@/shared/utils/engines";
 export const formatSQL = (sql: string, engine: string): string => {
   if (!sql) return "";
 
+  const formatterLanguage = getFormatterLanguage(engine);
+  const normalized = normalizeSQL(sql);
+
   try {
-    return format(sql, {
-      language: getFormatterLanguage(engine),
+    return format(normalized, {
+      language: formatterLanguage,
       tabWidth: 2,
       useTabs: true,
       dataTypeCase: "upper",

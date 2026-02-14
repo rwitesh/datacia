@@ -1,32 +1,39 @@
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useState, useMemo, type CSSProperties } from "react";
+import { useSearchParams } from "react-router";
 import { Button } from "@/components/ui/button";
 import { Settings as SettingsIcon } from "lucide-react";
 import { Window } from "@wailsio/runtime";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useAppInfo, useUpdateSettings, type Settings as AppSettings } from "@/services/appInfo";
+import { useSettings, useUpdateSettings, type Settings as AppSettings } from "@/services/settings";
 import { AppearanceSection } from "./appearance";
-
+import { AISection } from "./ai";
 
 export function Settings() {
-  const { data: appInfo } = useAppInfo();
+  const [searchParams] = useSearchParams();
+  const tabFromUrl = searchParams.get("tab");
+  const initialTab = useMemo(
+    () => (tabFromUrl === "ai" ? "ai" : "settings"),
+    [tabFromUrl]
+  );
+  const [activeTab, setActiveTab] = useState(initialTab);
+
+  const { data: settings } = useSettings();
   const { mutate: updateSettings, isPending } = useUpdateSettings();
-  const [settings, setSettings] = useState<AppSettings | null>(null);
+  const [formSettings, setFormSettings] = useState<AppSettings | null>(null);
   const [showSaved, setShowSaved] = useState(false);
 
   useEffect(() => {
-    if (appInfo?.settings) {
-      setSettings(appInfo.settings);
-    }
-  }, [appInfo]);
+    if (settings?.settings) setFormSettings({ ...settings.settings });
+  }, [settings]);
 
   const handleCancel = () => {
     Window.Close();
   };
 
   const handleSave = () => {
-    if (!settings) return;
+    if (!formSettings) return;
     setShowSaved(false);
-    updateSettings(settings, {
+    updateSettings(formSettings, {
       onSuccess: () => {
         setShowSaved(true);
       },
@@ -41,7 +48,7 @@ export function Settings() {
       />
 
       <div className="flex-1 flex flex-col min-h-0">
-        <Tabs defaultValue="settings" className="flex flex-1 flex-col min-h-0">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-1 flex-col min-h-0">
           <div className="px-5 pt-3 pb-2 border-b">
             <div className="flex items-center justify-between gap-4">
               <div>
@@ -55,7 +62,10 @@ export function Settings() {
               </div>
               <TabsList className="h-8 shrink-0">
                 <TabsTrigger value="settings" className="text-xs h-7 px-3">
-                  Settings
+                  Appearance
+                </TabsTrigger>
+                <TabsTrigger value="ai" className="text-xs h-7 px-3">
+                  AI
                 </TabsTrigger>
                 {/* <TabsTrigger value="license" className="text-xs h-7 px-3">
                   License
@@ -66,13 +76,30 @@ export function Settings() {
 
           <div className="flex-1 overflow-auto px-5 pb-5 pt-4">
             <TabsContent value="settings" className="mt-0">
-              {settings ? (
+              {formSettings ? (
                 <div className="space-y-6">
                   <AppearanceSection
-                    settings={settings}
+                    settings={formSettings}
                     onChange={(next) => {
                       setShowSaved(false);
-                      setSettings(next);
+                      setFormSettings(next);
+                    }}
+                  />
+                </div>
+              ) : (
+                <div className="text-xs text-muted-foreground px-1">
+                  Loading settings...
+                </div>
+              )}
+            </TabsContent>
+            <TabsContent value="ai" className="mt-0">
+              {formSettings ? (
+                <div className="space-y-6">
+                  <AISection
+                    settings={formSettings}
+                    onChange={(next) => {
+                      setShowSaved(false);
+                      setFormSettings(next);
                     }}
                   />
                 </div>
@@ -106,7 +133,7 @@ export function Settings() {
           <Button
             onClick={handleSave}
             className="h-8 text-xs px-3 cursor-pointer"
-            disabled={!settings || isPending}
+            disabled={!formSettings || isPending}
           >
             Save changes
           </Button>

@@ -7,8 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { useTheme } from "@/components/theme";
-import type { Settings as AppSettings, EditorConfig, TokenColors } from "@/services/appInfo";
-import { DEFAULT_LIGHT_COLORS, DEFAULT_DARK_COLORS } from "@/windows/editor/QueryInput/utils/theme";
+import { useSettings } from "@/services/settings";
+import type { Settings as AppSettings, EditorConfig, TokenColors } from "@/services/settings";
 
 type AppearanceSectionProps = {
   settings: AppSettings;
@@ -49,21 +49,24 @@ const TOKEN_LABELS: Record<string, string> = {
 
 export function AppearanceSection({ settings, onChange }: AppearanceSectionProps) {
   const { theme, setTheme } = useTheme();
+  const { data: settingsData } = useSettings();
 
   const font = settings.font;
   const editor = settings.editor;
+  const defaultTokenColorsLight = settingsData?.defaultTokenColorsLight;
+  const defaultTokenColorsDark = settingsData?.defaultTokenColorsDark;
 
-  const [uiFont, setUiFont] = useState(font?.uiFontFamily || "system-ui");
-  const [uiFontSize, setUiFontSize] = useState(font?.uiFontSize || 14);
-  const [editorFont, setEditorFont] = useState(font?.editorFontFamily || "JetBrains Mono");
-  const [editorFontSize, setEditorFontSize] = useState(font?.editorFontSize || 14);
+  const [uiFont, setUiFont] = useState(font?.uiFontFamily ?? "JetBrains Mono");
+  const [uiFontSize, setUiFontSize] = useState(font?.uiFontSize ?? 14);
+  const [editorFont, setEditorFont] = useState(font?.editorFontFamily ?? "JetBrains Mono");
+  const [editorFontSize, setEditorFontSize] = useState(font?.editorFontSize ?? 14);
 
   useEffect(() => {
     if (font) {
-      setUiFont(font.uiFontFamily || "system-ui");
-      setUiFontSize(font.uiFontSize || 12);
-      setEditorFont(font.editorFontFamily || "JetBrains Mono");
-      setEditorFontSize(font.editorFontSize || 14);
+      setUiFont(font.uiFontFamily ?? "JetBrains Mono");
+      setUiFontSize(font.uiFontSize ?? 14);
+      setEditorFont(font.editorFontFamily ?? "JetBrains Mono");
+      setEditorFontSize(font.editorFontSize ?? 14);
     }
   }, [font]);
 
@@ -76,8 +79,8 @@ export function AppearanceSection({ settings, onChange }: AppearanceSectionProps
 
   const resetFontDefaults = () => {
     const nextFont = {
-      uiFontFamily: "system-ui",
-      uiFontSize: 12,
+      uiFontFamily: "JetBrains Mono",
+      uiFontSize: 14,
       editorFontFamily: "JetBrains Mono",
       editorFontSize: 14,
     };
@@ -96,28 +99,24 @@ export function AppearanceSection({ settings, onChange }: AppearanceSectionProps
   };
 
   const renderColorGrid = (mode: "light" | "dark") => {
-    const currentColors = mode === "light" ? editor.tokenColorsLight : editor.tokenColorsDark;
-    const defaultColors = mode === "light" ? DEFAULT_LIGHT_COLORS : DEFAULT_DARK_COLORS;
-
+    const currentColors = mode === "light" ? editor.light : editor.dark;
     return (
       <div className="grid grid-cols-2 gap-3 pt-4">
         {Object.entries(TOKEN_LABELS).map(([key, label]) => {
           const k = key as keyof TokenColors;
-          const colorValue = currentColors[k];
-          const defaultColor = defaultColors[key];
-          const displayColor = colorValue || defaultColor;
+          const displayColor = currentColors?.[k] ?? "";
 
           const handleColorChange = (value: string) => {
             const nextEditor: EditorConfig = {
               ...editor,
-              tokenColorsLight: { ...(editor.tokenColorsLight || ({} as TokenColors)) },
-              tokenColorsDark: { ...(editor.tokenColorsDark || ({} as TokenColors)) },
+              light: { ...(editor.light ?? ({} as TokenColors)) },
+              dark: { ...(editor.dark ?? ({} as TokenColors)) },
             };
 
             if (mode === "light") {
-              nextEditor.tokenColorsLight[k] = value;
+              nextEditor.light[k] = value;
             } else {
-              nextEditor.tokenColorsDark[k] = value;
+              nextEditor.dark[k] = value;
             }
 
             handleEditorChange(nextEditor);
@@ -132,20 +131,19 @@ export function AppearanceSection({ settings, onChange }: AppearanceSectionProps
                 <div className="relative w-6 h-6 rounded-full border shadow-sm overflow-hidden shrink-0 group">
                   <div
                     className="absolute inset-0 w-full h-full"
-                    style={{ backgroundColor: displayColor }}
+                    style={{ backgroundColor: displayColor || "transparent" }}
                   />
                   <Input
                     type="color"
                     id={`color-${mode}-${key}`}
-                    value={displayColor}
+                    value={displayColor || "#000000"}
                     onChange={(e) => handleColorChange(e.target.value)}
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer p-0 border-0"
                   />
                 </div>
                 <Input
                   type="text"
-                  value={colorValue || ""}
-                  placeholder={`Default: ${defaultColor}`}
+                  value={displayColor}
                   onChange={(e) => handleColorChange(e.target.value)}
                   className="h-7 text-xs font-mono uppercase px-2"
                 />
@@ -377,8 +375,8 @@ export function AppearanceSection({ settings, onChange }: AppearanceSectionProps
                   onClick={() => {
                     const nextEditor: EditorConfig = {
                       ...editor,
-                      tokenColorsLight: {} as TokenColors,
-                      tokenColorsDark: {} as TokenColors,
+                      light: defaultTokenColorsLight ?? ({} as TokenColors),
+                      dark: defaultTokenColorsDark ?? ({} as TokenColors),
                     };
                     handleEditorChange(nextEditor);
                   }}

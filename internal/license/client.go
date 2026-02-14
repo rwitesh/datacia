@@ -2,7 +2,7 @@ package license
 
 import (
 	"bytes"
-	"datacia/internal/appinfo"
+	"datacia/internal/settings"
 	"datacia/internal/constants"
 	"encoding/json"
 	"fmt"
@@ -12,7 +12,7 @@ import (
 )
 
 func licenseActivate(licenseKey, machineID string) (*License, error) {
-	ctx := appinfo.Get()
+	ctx := settings.Get()
 	reqBody, err := json.Marshal(LicenseData{
 		LicenseKey: licenseKey,
 		MachineID:  machineID,

@@ -12,7 +12,7 @@ export const StatusBar = ({ showUpdate = true }: {showUpdate?: boolean}) => {
       <div className="flex items-center gap-3">
         {showUpdate && <AppUpdate />}
         <button
-          onClick={() => OpenSettingsWindow()}
+          onClick={() => OpenSettingsWindow("")}
           className="flex items-center gap-1 p-1.5 rounded text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors cursor-pointer"
           title="Settings"
         >

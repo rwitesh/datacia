@@ -11,7 +11,7 @@ import { ResultBar } from "./QueryResult/ResultBar/ResultBar";
 import { useEditorContext } from "@/context/editor/Index";
 import { EditorFooter } from "./EditorFooter/EditorFooter";
 import { NavigationBar } from "@/shared/NavigationBar/NavigationBar";
-import { DataView } from "./DataView/DataView";
+import { DataView } from "./DataView";
 import { useState, useEffect, useRef } from "react";
 import { FileUp } from "lucide-react";
 import { useWriteFile } from "@/services/queries";

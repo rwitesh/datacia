@@ -11,11 +11,11 @@ import (
 )
 
 var (
-	errInvalidToken    = errors.New("Invalid license")
-	errClockRollback   = errors.New("Invalid license")
-	errGracePeriodOver = errors.New("Failed to validate license")
-	errMachineMismatch = errors.New("Invalid license")
-	errLicenseExpired  = errors.New("License has expired")
+	errInvalidToken    = errors.New("invalid license token")
+	errClockRollback   = errors.New("clock rollback detected")
+	errGracePeriodOver = errors.New("revalidate license")
+	errMachineMismatch = errors.New("hardware mismatch")
+	errLicenseExpired  = errors.New("license expired")
 )
 
 const (

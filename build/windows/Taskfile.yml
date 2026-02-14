@@ -69,6 +69,7 @@ tasks:
       - task: generate:syso
       - docker run --rm -v "{{.ROOT_DIR}}:/app" {{.GO_CACHE_MOUNT}} {{.REPLACE_MOUNTS}} -e APP_NAME="{{.APP_NAME}}" {{.CROSS_IMAGE}} windows {{.DOCKER_ARCH}}
       - docker run --rm -v "{{.ROOT_DIR}}:/app" alpine chown -R $(id -u):$(id -g) /app/bin
+      - cp "{{.BIN_DIR}}/{{.APP_NAME}}-windows-{{.DOCKER_ARCH}}.exe" "{{.BIN_DIR}}/{{.APP_NAME}}.exe"
       - rm -f *.syso
     vars:
       DOCKER_ARCH: '{{.ARCH | default "amd64"}}'

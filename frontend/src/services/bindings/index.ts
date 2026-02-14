@@ -41,7 +41,7 @@ export {
 
 export {
   GetAppInfo,
-} from "../../../bindings/datacia/internal/appinfo/service";
+} from "../../../bindings/datacia/internal/settings/service";
 
 // Query service functions
 export {

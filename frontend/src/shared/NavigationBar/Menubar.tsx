@@ -81,7 +81,7 @@ export function MenuBar() {
             className="cursor-pointer text-xs flex items-center gap-2"
             onSelect={(e) => {
               e.preventDefault();
-              OpenSettingsWindow();
+              OpenSettingsWindow("");
             }}
           >
             <Settings className="h-3.5 w-3.5" />

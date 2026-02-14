@@ -1,42 +1,9 @@
 import { EditorView } from "@codemirror/view";
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { tags as t } from "@lezer/highlight";
+import type { TokenColors } from "@/services/settings";
 
-export const DEFAULT_LIGHT_COLORS: Record<string, string> = {
-  keyword: "#d73a49",
-  string: "#032f62",
-  number: "#005cc5",
-  comment: "#6a737d",
-  function: "#6f42c1",
-  variable: "#24292e",
-  type: "#e36209",
-  operator: "#24292e",
-};
-
-export const DEFAULT_DARK_COLORS: Record<string, string> = {
-  keyword: "#ff7b72",
-  string: "#a5d6ff",
-  number: "#79c0ff",
-  comment: "#8b949e",
-  function: "#d2a8ff",
-  variable: "#c9d1d9",
-  type: "#ffa657",
-  operator: "#c9d1d9",
-};
-
-type TokenColors = {
-  keyword?: string;
-  string?: string;
-  number?: string;
-  comment?: string;
-  function?: string;
-  variable?: string;
-  type?: string;
-  operator?: string;
-};
-
-
-function createHighlightStyle(colors: Required<TokenColors>) {
+function createHighlightStyle(colors: TokenColors) {
   return HighlightStyle.define([
     { tag: t.keyword, color: colors.keyword, fontWeight: "bold" },
     { tag: [t.name, t.deleted, t.character, t.propertyName, t.macroName], color: colors.variable },
@@ -60,23 +27,12 @@ function createHighlightStyle(colors: Required<TokenColors>) {
 export const getTheme = (
   isDark: boolean,
   settings: {
-    colors?: TokenColors;
+    colors: TokenColors;
     fontFamily: string;
     fontSize: number;
   }
 ) => {
-  const { colors = {}, fontFamily, fontSize } = settings;
-  const defaults = isDark ? DEFAULT_DARK_COLORS : DEFAULT_LIGHT_COLORS;
-
-  // Merge defaults with user settings, preferring user settings only if they are not empty
-  const finalColors = { ...defaults } as Required<TokenColors>;
-  Object.keys(colors).forEach((key) => {
-    const k = key as keyof TokenColors;
-    if (colors[k]) {
-      finalColors[k] = colors[k]!;
-    }
-  });
-
+  const { colors, fontFamily, fontSize } = settings;
   const baseTheme = EditorView.theme({
     "&": {
       height: "100%",
@@ -139,5 +95,5 @@ export const getTheme = (
     },
   }, { dark: isDark });
 
-  return [baseTheme, syntaxHighlighting(createHighlightStyle(finalColors))];
+  return [baseTheme, syntaxHighlighting(createHighlightStyle(colors))];
 };

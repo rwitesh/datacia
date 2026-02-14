@@ -5,17 +5,78 @@
 // @ts-ignore: Unused imports
 import { Create as $Create } from "@wailsio/runtime";
 
+export class AIConfig {
+    "gemini": AIProviderConfig;
+
+    /** Creates a new AIConfig instance. */
+    constructor($$source: Partial<AIConfig> = {}) {
+        if (!("gemini" in $$source)) {
+            this["gemini"] = (new AIProviderConfig());
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new AIConfig instance from a string or object.
+     */
+    static createFrom($$source: any = {}): AIConfig {
+        const $$createField0_0 = $$createType0;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("gemini" in $$parsedSource) {
+            $$parsedSource["gemini"] = $$createField0_0($$parsedSource["gemini"]);
+        }
+        return new AIConfig($$parsedSource as Partial<AIConfig>);
+    }
+}
+
+export class AIProviderConfig {
+    "enabled": boolean;
+    "key": string;
+    "models": string[];
+
+    /** Creates a new AIProviderConfig instance. */
+    constructor($$source: Partial<AIProviderConfig> = {}) {
+        if (!("enabled" in $$source)) {
+            this["enabled"] = false;
+        }
+        if (!("key" in $$source)) {
+            this["key"] = "";
+        }
+        if (!("models" in $$source)) {
+            this["models"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new AIProviderConfig instance from a string or object.
+     */
+    static createFrom($$source: any = {}): AIProviderConfig {
+        const $$createField2_0 = $$createType1;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("models" in $$parsedSource) {
+            $$parsedSource["models"] = $$createField2_0($$parsedSource["models"]);
+        }
+        return new AIProviderConfig($$parsedSource as Partial<AIProviderConfig>);
+    }
+}
+
+/**
+ * EditorConfig holds token colors per theme: editor.light and editor.dark in JSON.
+ */
 export class EditorConfig {
-    "tokenColorsLight": TokenColors;
-    "tokenColorsDark": TokenColors;
+    "light": TokenColors;
+    "dark": TokenColors;
 
     /** Creates a new EditorConfig instance. */
     constructor($$source: Partial<EditorConfig> = {}) {
-        if (!("tokenColorsLight" in $$source)) {
-            this["tokenColorsLight"] = (new TokenColors());
+        if (!("light" in $$source)) {
+            this["light"] = (new TokenColors());
         }
-        if (!("tokenColorsDark" in $$source)) {
-            this["tokenColorsDark"] = (new TokenColors());
+        if (!("dark" in $$source)) {
+            this["dark"] = (new TokenColors());
         }
 
         Object.assign(this, $$source);
@@ -25,14 +86,14 @@ export class EditorConfig {
      * Creates a new EditorConfig instance from a string or object.
      */
     static createFrom($$source: any = {}): EditorConfig {
-        const $$createField0_0 = $$createType0;
-        const $$createField1_0 = $$createType0;
+        const $$createField0_0 = $$createType2;
+        const $$createField1_0 = $$createType2;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        if ("tokenColorsLight" in $$parsedSource) {
-            $$parsedSource["tokenColorsLight"] = $$createField0_0($$parsedSource["tokenColorsLight"]);
+        if ("light" in $$parsedSource) {
+            $$parsedSource["light"] = $$createField0_0($$parsedSource["light"]);
         }
-        if ("tokenColorsDark" in $$parsedSource) {
-            $$parsedSource["tokenColorsDark"] = $$createField1_0($$parsedSource["tokenColorsDark"]);
+        if ("dark" in $$parsedSource) {
+            $$parsedSource["dark"] = $$createField1_0($$parsedSource["dark"]);
         }
         return new EditorConfig($$parsedSource as Partial<EditorConfig>);
     }
@@ -71,6 +132,9 @@ export class FontConfig {
     }
 }
 
+/**
+ * Info is the app/settings info returned to the frontend (OS, version, settings, defaults).
+ */
 export class Info {
     "os": string;
     "os_version": string;
@@ -79,6 +143,8 @@ export class Info {
     "settings": Settings;
     "appearance": string;
     "activeTokenColors": TokenColors;
+    "defaultTokenColorsLight": TokenColors;
+    "defaultTokenColorsDark": TokenColors;
 
     /** Creates a new Info instance. */
     constructor($$source: Partial<Info> = {}) {
@@ -103,6 +169,12 @@ export class Info {
         if (!("activeTokenColors" in $$source)) {
             this["activeTokenColors"] = (new TokenColors());
         }
+        if (!("defaultTokenColorsLight" in $$source)) {
+            this["defaultTokenColorsLight"] = (new TokenColors());
+        }
+        if (!("defaultTokenColorsDark" in $$source)) {
+            this["defaultTokenColorsDark"] = (new TokenColors());
+        }
 
         Object.assign(this, $$source);
     }
@@ -111,14 +183,22 @@ export class Info {
      * Creates a new Info instance from a string or object.
      */
     static createFrom($$source: any = {}): Info {
-        const $$createField4_0 = $$createType1;
-        const $$createField6_0 = $$createType0;
+        const $$createField4_0 = $$createType3;
+        const $$createField6_0 = $$createType2;
+        const $$createField7_0 = $$createType2;
+        const $$createField8_0 = $$createType2;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("settings" in $$parsedSource) {
             $$parsedSource["settings"] = $$createField4_0($$parsedSource["settings"]);
         }
         if ("activeTokenColors" in $$parsedSource) {
             $$parsedSource["activeTokenColors"] = $$createField6_0($$parsedSource["activeTokenColors"]);
+        }
+        if ("defaultTokenColorsLight" in $$parsedSource) {
+            $$parsedSource["defaultTokenColorsLight"] = $$createField7_0($$parsedSource["defaultTokenColorsLight"]);
+        }
+        if ("defaultTokenColorsDark" in $$parsedSource) {
+            $$parsedSource["defaultTokenColorsDark"] = $$createField8_0($$parsedSource["defaultTokenColorsDark"]);
         }
         return new Info($$parsedSource as Partial<Info>);
     }
@@ -128,6 +208,7 @@ export class Settings {
     "theme": ThemeConfig;
     "editor": EditorConfig;
     "font": FontConfig;
+    "ai": AIConfig;
 
     /** Creates a new Settings instance. */
     constructor($$source: Partial<Settings> = {}) {
@@ -140,6 +221,9 @@ export class Settings {
         if (!("font" in $$source)) {
             this["font"] = (new FontConfig());
         }
+        if (!("ai" in $$source)) {
+            this["ai"] = (new AIConfig());
+        }
 
         Object.assign(this, $$source);
     }
@@ -148,14 +232,18 @@ export class Settings {
      * Creates a new Settings instance from a string or object.
      */
     static createFrom($$source: any = {}): Settings {
-        const $$createField1_0 = $$createType2;
-        const $$createField2_0 = $$createType3;
+        const $$createField1_0 = $$createType4;
+        const $$createField2_0 = $$createType5;
+        const $$createField3_0 = $$createType6;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("editor" in $$parsedSource) {
             $$parsedSource["editor"] = $$createField1_0($$parsedSource["editor"]);
         }
         if ("font" in $$parsedSource) {
             $$parsedSource["font"] = $$createField2_0($$parsedSource["font"]);
+        }
+        if ("ai" in $$parsedSource) {
+            $$parsedSource["ai"] = $$createField3_0($$parsedSource["ai"]);
         }
         return new Settings($$parsedSource as Partial<Settings>);
     }
@@ -222,7 +310,10 @@ export class TokenColors {
 }
 
 // Private type creation functions
-const $$createType0 = TokenColors.createFrom;
-const $$createType1 = Settings.createFrom;
-const $$createType2 = EditorConfig.createFrom;
-const $$createType3 = FontConfig.createFrom;
+const $$createType0 = AIProviderConfig.createFrom;
+const $$createType1 = $Create.Array($Create.Any);
+const $$createType2 = TokenColors.createFrom;
+const $$createType3 = Settings.createFrom;
+const $$createType4 = EditorConfig.createFrom;
+const $$createType5 = FontConfig.createFrom;
+const $$createType6 = AIConfig.createFrom;

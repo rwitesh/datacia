@@ -2,7 +2,6 @@ package license
 
 import (
 	"datacia/internal/paths"
-	"datacia/internal/security"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -33,13 +32,8 @@ func saveLicense(l *License) error {
 		return err
 	}
 
-	encrypted, err := security.EncryptString(string(jsonBytes))
-	if err != nil {
-		return err
-	}
-
 	tmpPath := path + ".tmp"
-	if err := os.WriteFile(tmpPath, []byte(encrypted), 0600); err != nil {
+	if err := os.WriteFile(tmpPath, jsonBytes, 0600); err != nil {
 		return err
 	}
 
@@ -64,13 +58,8 @@ func loadLicense() (*License, error) {
 		return nil, err
 	}
 
-	decrypted, err := security.DecryptString(string(raw))
-	if err != nil {
-		return nil, fmt.Errorf("license data corrupted: %w", err)
-	}
-
 	var data storedLicense
-	if err := json.Unmarshal([]byte(decrypted), &data); err != nil {
+	if err := json.Unmarshal(raw, &data); err != nil {
 		return nil, fmt.Errorf("invalid license data: %w", err)
 	}
 

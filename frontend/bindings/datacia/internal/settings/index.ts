@@ -7,6 +7,8 @@ export {
 };
 
 export {
+    AIConfig,
+    AIProviderConfig,
     EditorConfig,
     FontConfig,
     Info,

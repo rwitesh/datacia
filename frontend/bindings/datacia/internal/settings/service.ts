@@ -10,13 +10,13 @@ import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Cr
 import * as $models from "./models.js";
 
 export function GetAppInfo(): $CancellablePromise<$models.Info | null> {
-    return $Call.ByID(2829984514).then(($result: any) => {
+    return $Call.ByID(2519051210).then(($result: any) => {
         return $$createType1($result);
     });
 }
 
 export function UpdateSettings(settings: $models.Settings): $CancellablePromise<$models.Info | null> {
-    return $Call.ByID(109348801, settings).then(($result: any) => {
+    return $Call.ByID(2695642745, settings).then(($result: any) => {
         return $$createType1($result);
     });
 }

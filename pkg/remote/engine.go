@@ -25,7 +25,7 @@ type UIController interface {
 	CloseEditor()
 	OpenConnectionWindow()
 	OpenLicenseWindow()
-	OpenSettingsWindow()
+	OpenSettingsWindow(tab string)
 }
 
 type Engine struct {
@@ -173,9 +173,9 @@ func (e *Engine) OpenLicenseWindow() {
 	}
 }
 
-func (e *Engine) OpenSettingsWindow() {
+func (e *Engine) OpenSettingsWindow(tab string) {
 	if e.uiController != nil {
-		e.uiController.OpenSettingsWindow()
+		e.uiController.OpenSettingsWindow(tab)
 	}
 }
 

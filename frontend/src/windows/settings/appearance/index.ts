@@ -1,2 +1,2 @@
-export * from "./AppearanceSection";
+export * from "./Appearance";
 

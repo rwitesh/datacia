@@ -6,60 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { OpenLicenseWindow } from "@/services/bindings";
 import { extractSelectedData } from "../QueryResult/DataTable/utils/cellSelection";
-import { AIChat } from "./AIChat";
+import { AIChat } from "./ai";
+import { DataTabContent } from "./data";
 
-function getColorClass(value: string): string {
-  if (value === "null") {
-    return "text-red-500 dark:text-red-400";
-  }
+export type DataViewTab = "data" | "ai";
 
-  if (value === "true" || value === "false") {
-    return "text-amber-600 dark:text-amber-400";
-  }
-
-  if (/^-?\d+\.?\d*$/.test(value.trim())) {
-    return "text-blue-600 dark:text-blue-400";
-  }
-
-  if (value.startsWith('"') && value.endsWith('"')) {
-    return "text-emerald-600 dark:text-emerald-400";
-  }
-
-  return "text-muted-foreground";
-}
-
-function HighlightedLine({ line }: { line: string }) {
-  const parts = line.split(/("(?:[^"\\]|\\.)*")/g);
-
-  return (
-    <>
-      {parts.map((part, index) => {
-        if (!part) return null;
-
-        const nextPart = parts[index + 1] || "";
-        const isKey = part.startsWith('"') && nextPart.trim().startsWith(":");
-
-        if (isKey) {
-          return (
-            <span key={index} className="text-purple-600 dark:text-purple-400">
-              {part}
-            </span>
-          );
-        }
-
-        return (
-          <span key={index} className={getColorClass(part)}>
-            {part}
-          </span>
-        );
-      })}
-    </>
-  );
-}
-
-interface DataViewProps {
-  activeTab?: "data" | "ai";
-  onTabChange?: (tab: "data" | "ai") => void;
+export interface DataViewProps {
+  activeTab?: DataViewTab;
+  onTabChange?: (tab: DataViewTab) => void;
 }
 
 export function DataView({ activeTab: controlledTab, onTabChange }: DataViewProps) {
@@ -79,6 +33,7 @@ export function DataView({ activeTab: controlledTab, onTabChange }: DataViewProp
   );
 
   const lines = useMemo(() => {
+    if (selectedData.length === 0) return [];
     const jsonString = JSON.stringify(selectedData, null, 2);
     const compacted = jsonString.replace(/\},\n\s*\{/g, "}, {");
     return compacted.split("\n");
@@ -96,10 +51,19 @@ export function DataView({ activeTab: controlledTab, onTabChange }: DataViewProp
 
   const rowCount = selectedData.length;
 
+  const handleTabChange = (v: string) => onTabChange?.(v as DataViewTab);
+
+  const activeTabValue = controlledTab ?? "data";
+  const showDataActivationOverride = !isLicenseActive && activeTabValue === "data";
+
   return (
     <div className="h-full w-full flex flex-col relative">
-      <Tabs value={controlledTab ?? "data"} onValueChange={(v) => onTabChange?.(v as "data" | "ai")} className="h-full flex flex-col gap-0">
-        <div className={`flex items-center justify-between px-1 py-1 border-b border-border/50 ${!isLicenseActive ? 'blur-sm' : ''}`}>
+      <Tabs
+        value={activeTabValue}
+        onValueChange={handleTabChange}
+        className="h-full flex flex-col gap-0"
+      >
+        <div className="flex items-center justify-between px-1 py-1 border-b border-border/50">
           <TabsList className="h-6 p-1">
             <TabsTrigger value="data" className="text-xs px-2 h-5 max-w-32 cursor-pointer">
               Data
@@ -134,15 +98,7 @@ export function DataView({ activeTab: controlledTab, onTabChange }: DataViewProp
         </div>
 
         <TabsContent value="data" className="flex-1 overflow-auto mt-0">
-          <div className={`p-4 ${!isLicenseActive ? 'blur-sm select-none pointer-events-none' : ''}`}>
-            <code className="block text-xs font-mono leading-relaxed">
-              {lines.map((line, index) => (
-                <div key={index} className="whitespace-pre-wrap break-words">
-                  <HighlightedLine line={line} />
-                </div>
-              ))}
-            </code>
-          </div>
+          <DataTabContent lines={lines} disabled={!isLicenseActive} />
         </TabsContent>
 
         <TabsContent value="ai" className="flex-1 overflow-hidden mt-0">
@@ -150,8 +106,8 @@ export function DataView({ activeTab: controlledTab, onTabChange }: DataViewProp
         </TabsContent>
       </Tabs>
 
-      {!isLicenseActive && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 z-[5]">
+      {showDataActivationOverride && (
+        <div className="absolute top-8 left-0 right-0 bottom-0 flex flex-col items-center justify-center bg-background/80 z-[5]">
           <div className="flex flex-col items-center gap-4 p-6 text-center max-w-sm">
             <div className="rounded-full bg-primary/10 p-4">
               <Lock className="w-8 h-8 text-primary" />
@@ -159,7 +115,7 @@ export function DataView({ activeTab: controlledTab, onTabChange }: DataViewProp
             <div className="space-y-2">
               <h3 className="text-lg font-semibold">Upgrade Required</h3>
               <p className="text-sm text-muted-foreground">
-                Activate with license to access DataView panel.
+                Activate with license to access the Data tab.
               </p>
             </div>
             <Button

@@ -2,7 +2,6 @@ package app
 
 import (
 	"datacia/internal/ai"
-	"datacia/internal/appinfo"
 	"datacia/internal/clipboard"
 	"datacia/internal/constants"
 	"datacia/internal/db"
@@ -12,6 +11,7 @@ import (
 	"datacia/internal/logger"
 	"datacia/internal/queries"
 	"datacia/internal/security"
+	"datacia/internal/settings"
 	"datacia/pkg/remote"
 	"embed"
 	"errors"
@@ -99,9 +99,9 @@ func (a *App) Initialize() error {
 		return fmt.Errorf("failed to initialize security context: %w", err)
 	}
 
-	// Initialize app info
-	appinfo.Init(a.instance)
-	appinfo.SetAppVersion(version)
+	// Initialize settings
+	settings.Init(a.instance)
+	settings.SetAppVersion(version)
 
 	// Init clipboard
 	if err := clip.Init(); err != nil {
@@ -142,9 +142,9 @@ func (a *App) Initialize() error {
 	queriesService := queries.NewQueriesService(a.instance)
 	a.instance.RegisterService(application.NewService(queriesService))
 
-	// App Info
-	appInfoService := appinfo.NewService(a.instance)
-	a.instance.RegisterService(application.NewService(appInfoService))
+	// Settings service (app info + settings)
+	settingsService := settings.NewService(a.instance)
+	a.instance.RegisterService(application.NewService(settingsService))
 
 	// Intellisense (ghost text suggestions)
 	intellisenseService := intellisense.NewService(a.instance, engine.GetStore())
@@ -166,6 +166,9 @@ func (a *App) createConnectionWindow() error {
 			InvisibleTitleBarHeight: 50,
 			Backdrop:                application.MacBackdropTranslucent,
 			TitleBar:                application.MacTitleBarHidden,
+		},
+		Windows: application.WindowsWindow{
+			DisableFramelessWindowDecorations: true,
 		},
 		BackgroundColour: application.NewRGB(27, 38, 54),
 		Width:            constants.CONNECTION_WINDOW_WIDTH,
@@ -206,6 +209,9 @@ func (a *App) createEditorWindow() error {
 			InvisibleTitleBarHeight: 50,
 			Backdrop:                application.MacBackdropTranslucent,
 			TitleBar:                application.MacTitleBarHiddenInset,
+		},
+		Windows: application.WindowsWindow{
+			DisableFramelessWindowDecorations: true,
 		},
 		BackgroundColour: application.NewRGB(27, 38, 54),
 		Width:            constants.EDITOR_WINDOW_WIDTH,
@@ -345,6 +351,9 @@ func (a *App) createLicenseWindow() error {
 			Backdrop:                application.MacBackdropTranslucent,
 			TitleBar:                application.MacTitleBarHidden,
 		},
+		Windows: application.WindowsWindow{
+			DisableFramelessWindowDecorations: true,
+		},
 		BackgroundColour: application.NewRGB(27, 38, 54),
 		Width:            constants.LICENSE_WINDOW_WIDTH,
 		Height:           constants.LICENSE_WINDOW_HEIGHT,
@@ -380,15 +389,22 @@ func (a *App) OpenLicenseWindow() {
 	}
 }
 
-func (a *App) createSettingsWindow() error {
+func (a *App) createSettingsWindow(tab string) error {
+	url := "/#/settings"
+	if tab == "ai" {
+		url = "/#/settings?tab=ai"
+	}
 	a.settingsWindow = a.instance.Window.NewWithOptions(application.WebviewWindowOptions{
 		Name:  constants.SETTINGS_WINDOW_NAME,
 		Title: "Settings",
-		URL:   "/#/settings",
+		URL:   url,
 		Mac: application.MacWindow{
 			InvisibleTitleBarHeight: 50,
 			Backdrop:                application.MacBackdropTranslucent,
 			TitleBar:                application.MacTitleBarHidden,
+		},
+		Windows: application.WindowsWindow{
+			DisableFramelessWindowDecorations: true,
 		},
 		BackgroundColour: application.NewRGB(27, 38, 54),
 		Width:            constants.SETTINGS_WINDOW_WIDTH,
@@ -408,7 +424,7 @@ func (a *App) createSettingsWindow() error {
 	return nil
 }
 
-func (a *App) OpenSettingsWindow() {
+func (a *App) OpenSettingsWindow(tab string) {
 	a.windowMutex.Lock()
 	defer a.windowMutex.Unlock()
 
@@ -419,7 +435,7 @@ func (a *App) OpenSettingsWindow() {
 		return
 	}
 
-	if err := a.createSettingsWindow(); err != nil {
+	if err := a.createSettingsWindow(tab); err != nil {
 		logger.Logger.Error("Failed to open settings window", zap.Error(err))
 		return
 	}

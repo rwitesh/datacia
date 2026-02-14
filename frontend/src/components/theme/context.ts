@@ -1,17 +1,24 @@
 import { createContext } from "react"
-import type { TokenColors } from "@/services/appInfo"
+import type { TokenColors } from "@/services/settings"
 
 export type Theme = "dark" | "light" | "system"
 
-export const DEFAULT_EDITOR_FONT_FAMILY = "JetBrains Mono"
-export const DEFAULT_EDITOR_FONT_SIZE = 14
-export const DEFAULT_UI_FONT_FAMILY = "Inter"
-export const DEFAULT_UI_FONT_SIZE = 14
+/** Placeholder so tokenColors is never undefined before settings load. No hex values defined in UI. */
+export const EMPTY_TOKEN_COLORS: TokenColors = {
+  keyword: "",
+  string: "",
+  number: "",
+  comment: "",
+  function: "",
+  variable: "",
+  type: "",
+  operator: "",
+}
 
 export type ThemeProviderState = {
   theme: Theme
   resolvedTheme: "dark" | "light"
-  tokenColors?: TokenColors
+  tokenColors: TokenColors
   editorFontFamily: string
   editorFontSize: number
   uiFontFamily: string
@@ -22,10 +29,11 @@ export type ThemeProviderState = {
 export const initialState: ThemeProviderState = {
   theme: "system",
   resolvedTheme: "dark",
-  editorFontFamily: DEFAULT_EDITOR_FONT_FAMILY,
-  editorFontSize: DEFAULT_EDITOR_FONT_SIZE,
-  uiFontFamily: DEFAULT_UI_FONT_FAMILY,
-  uiFontSize: DEFAULT_UI_FONT_SIZE,
+  tokenColors: EMPTY_TOKEN_COLORS,
+  editorFontFamily: "JetBrains Mono",
+  editorFontSize: 14,
+  uiFontFamily: "JetBrains Mono",
+  uiFontSize: 14,
   setTheme: () => null,
 }
 
