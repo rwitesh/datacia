@@ -109,6 +109,10 @@ release-all: clean-output
 upload-supabase:
 	@./scripts/upload-supabase.sh "$(VERSIONED_OUTPUT)"
 
+# Upload to Cloudflare R2 storage
+upload-cloudflare:
+	@./scripts/upload-cloudflare-r2.sh "$(VERSIONED_OUTPUT)"
+
 # Show current version
 show-version:
 	@echo "Version: $(VERSION)"

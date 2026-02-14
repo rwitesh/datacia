@@ -10,7 +10,7 @@ info:
   productIdentifier: "app.datacia" # The unique product identifier
   description: "Your database reimaginzed for speed and clarity" # The application description
   copyright: "(c) 2026, DataCia" # Copyright text
-  version: "0.9.54" # The version of the application
+  version: "0.9.55" # The version of the application
 
 # Dev mode configuration
 dev_mode:
@@ -56,7 +56,3 @@ fileAssociations:
 #    iconName: jpegFileIcon
 #    role: Editor
 #    mimeType: image/jpeg  # (optional)
-
-# Other data
-other:
-  - release_url: "https://oiszqebmbeyxjrwhlgxy.supabase.co/functions/v1/update"

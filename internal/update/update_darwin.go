@@ -3,6 +3,7 @@
 package update
 
 import (
+	"datacia/internal/constants"
 	"errors"
 	"fmt"
 	"os"
@@ -11,7 +12,7 @@ import (
 	"strings"
 )
 
-func NewUpdater(version, releaseURL string) (*Updater, error) {
+func NewUpdater(version string) (*Updater, error) {
 	exe, err := os.Executable()
 	if err != nil {
 		return nil, fmt.Errorf("cannot resolve executable path: %w", err)
@@ -32,6 +33,7 @@ func NewUpdater(version, releaseURL string) (*Updater, error) {
 		return nil, fmt.Errorf("invalid bundle: expected .app root at %s", appRoot)
 	}
 
+	releaseURL := strings.TrimSuffix(constants.SERVER_URL, "/") + "/update"
 	return &Updater{
 		ReleaseURL:     releaseURL,
 		CurrentVersion: strings.TrimSpace(version),

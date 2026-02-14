@@ -2,7 +2,6 @@ package update
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -70,7 +69,7 @@ func (u *Updater) IsNewerVersion(meta *ReleaseMetadata) bool {
 func (u *Updater) IsUpdateAvailable() (*ReleaseMetadata, error) {
 	metadata, err := u.fetchReleaseMetadata()
 	if err != nil {
-		return nil, errors.New("failed to check for updates")
+		return nil, err
 	}
 	if u.IsNewerVersion(metadata) {
 		return metadata, nil

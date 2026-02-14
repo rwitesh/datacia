@@ -37,7 +37,7 @@ type Engine struct {
 	updater      *update.Updater
 }
 
-func New(uiController UIController, version, releaseURL string) (*Engine, error) {
+func New(uiController UIController, version string) (*Engine, error) {
 	// Get encryption key from security context (cached at startup)
 	ctx, err := security.GetSecurityContext()
 	if err != nil {
@@ -50,7 +50,7 @@ func New(uiController UIController, version, releaseURL string) (*Engine, error)
 		return nil, fmt.Errorf("failed to initialize database: %w", err)
 	}
 
-	updater, err := update.NewUpdater(version, releaseURL)
+	updater, err := update.NewUpdater(version)
 	if err != nil {
 		return nil, err
 	}

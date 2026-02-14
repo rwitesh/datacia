@@ -23,17 +23,19 @@ jobs:
             exit 0
           fi
 
-      - name: Upload to Supabase
+      - name: Upload to Cloudflare R2
         run: |
+          chmod +x scripts/upload-cloudflare-r2.sh
           for version_dir in output/V*; do
             if [ -d "$version_dir" ]; then
-              ./scripts/upload-supabase.sh "$version_dir"
+              ./scripts/upload-cloudflare-r2.sh "$version_dir"
             fi
           done
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-          SUPABASE_BUCKET: ${{ secrets.SUPABASE_BUCKET }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
