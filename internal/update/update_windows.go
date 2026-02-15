@@ -22,7 +22,7 @@ func NewUpdater(version string) (*Updater, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot resolve executable path: %w", err)
 	}
-	releaseURL := strings.TrimSuffix(constants.SERVER_URL, "/") + "/update"
+	releaseURL := strings.TrimSuffix(constants.SERVER_URL, "/") + "/download"
 	return &Updater{
 		ReleaseURL:     releaseURL,
 		CurrentVersion: strings.TrimSpace(version),

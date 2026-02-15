@@ -3,6 +3,7 @@ import { useCheckForUpdates, useUpdateApp, useRestartApp } from "@/services/upda
 
 export const AppUpdate = () => {
     const { data: updateAvailable, error, isLoading: checkLoading } = useCheckForUpdates();
+
     const {
         mutate: updateApp,
         isPending: isUpdating,

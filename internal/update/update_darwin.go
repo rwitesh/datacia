@@ -33,7 +33,7 @@ func NewUpdater(version string) (*Updater, error) {
 		return nil, fmt.Errorf("invalid bundle: expected .app root at %s", appRoot)
 	}
 
-	releaseURL := strings.TrimSuffix(constants.SERVER_URL, "/") + "/update"
+	releaseURL := strings.TrimSuffix(constants.SERVER_URL, "/") + "/download"
 	return &Updater{
 		ReleaseURL:     releaseURL,
 		CurrentVersion: strings.TrimSpace(version),

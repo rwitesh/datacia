@@ -83,7 +83,13 @@ func (u *Updater) IsUpdateAvailable() (*ReleaseMetadata, error) {
 }
 
 func (u *Updater) downloadFile(fileURL string) (string, error) {
-	tmp := filepath.Join(os.TempDir(), filepath.Base(fileURL))
+	name := "update.bin"
+	if parsed, err := url.Parse(fileURL); err == nil && parsed.Path != "" {
+		if base := filepath.Base(parsed.Path); base != "" && base != "." {
+			name = base
+		}
+	}
+	tmp := filepath.Join(os.TempDir(), name)
 	out, err := os.Create(tmp)
 	if err != nil {
 		return "", err
