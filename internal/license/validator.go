@@ -76,7 +76,7 @@ func (v *verifier) verifyToken(l *License) error {
 	return nil
 }
 
-func (v *verifier) isLicenseValid(l *License) error {
+func (v *verifier) ValidateOffline(l *License) error {
 	if l == nil {
 		return errors.New("no license provided")
 	}

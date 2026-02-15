@@ -27,14 +27,16 @@ export function GetStatus(): $CancellablePromise<{ [_: string]: any }> {
     });
 }
 
-export function Validate(): $CancellablePromise<$models.Response> {
-    return $Call.ByID(3725401140).then(($result: any) => {
+export function ValidateOnStart(): $CancellablePromise<$models.Response> {
+    return $Call.ByID(1025287207).then(($result: any) => {
         return $$createType0($result);
     });
 }
 
-export function ValidateOnStart(): $CancellablePromise<void> {
-    return $Call.ByID(1025287207);
+export function ValidateOnline(): $CancellablePromise<$models.Response> {
+    return $Call.ByID(2040225871).then(($result: any) => {
+        return $$createType0($result);
+    });
 }
 
 // Private type creation functions

@@ -1,11 +1,13 @@
 package license
 
 import (
+	"datacia/internal/logger"
 	"datacia/internal/security"
 	"sync"
 	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
+	"go.uber.org/zap"
 )
 
 type LicenseService struct {
@@ -97,7 +99,8 @@ func (s *LicenseService) Deactivate() Response {
 	return result
 }
 
-func (s *LicenseService) Validate() Response {
+func (s *LicenseService) ValidateOnline() Response {
+	logger.Logger.Info("License ValidateOnline called")
 	s.mu.RLock()
 	license := s.license
 	s.mu.RUnlock()
@@ -112,12 +115,13 @@ func (s *LicenseService) Validate() Response {
 	}
 
 	var l *License
-	var error error
+	var validateErr error
 	const maxRetries = 2
 
 	for i := 0; i < maxRetries; i++ {
-		l, error = licenseValidate(license.Token, hashedMachineID)
-		if error == nil {
+		l, validateErr = licenseValidate(license.Token, hashedMachineID)
+		logger.Logger.Debug("License ValidateOnline attempt", zap.Int("attempt", i+1), zap.Error(validateErr))
+		if validateErr == nil {
 			// Validation successful, update local license
 			if err := saveLicense(l); err != nil {
 				return s.setResult(Response{Success: false, Error: err.Error()})
@@ -131,7 +135,7 @@ func (s *LicenseService) Validate() Response {
 		}
 
 		// Only retry on NetworkError
-		if _, isNetErr := error.(*NetworkError); !isNetErr {
+		if _, isNetErr := validateErr.(*NetworkError); !isNetErr {
 			break
 		}
 
@@ -140,11 +144,11 @@ func (s *LicenseService) Validate() Response {
 		}
 	}
 
-	if error != nil {
+	if validateErr != nil {
 		// If it's a network error, try offline validation (grace period)
-		if _, isNetErr := error.(*NetworkError); isNetErr {
+		if _, isNetErr := validateErr.(*NetworkError); isNetErr {
 			verifier := newVerifier()
-			if err := verifier.isLicenseValid(license); err == nil {
+			if err := verifier.ValidateOffline(license); err == nil {
 				// Valid offline
 				return s.setResult(Response{Success: true, Message: "License valid (offline)"})
 			}
@@ -152,31 +156,34 @@ func (s *LicenseService) Validate() Response {
 		}
 
 		// Return the actual validation error
-		return s.setResult(Response{Success: false, Error: error.Error()})
+		return s.setResult(Response{Success: false, Error: validateErr.Error()})
 	}
 
 	return s.setResult(Response{Success: true, Message: "License valid"})
 
 }
 
-func (s *LicenseService) ValidateOnStart() error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (s *LicenseService) ValidateOnStart() Response {
+	logger.Logger.Info("License ValidateOnStart called")
+	s.mu.RLock()
+	license := s.license
+	s.mu.RUnlock()
 
-	if s.license == nil {
-		s.validation = nil
-		return nil
+	if license == nil {
+		logger.Logger.Debug("License ValidateOnStart: no license")
+		return s.setResult(Response{Success: false, Message: "No license found"})
 	}
 
-	if err := newVerifier().isLicenseValid(s.license); err != nil {
-		s.validation = &Response{Success: false, Error: err.Error()}
-		return nil
+	verifier := newVerifier()
+	if err := verifier.ValidateOffline(license); err != nil {
+		// Local check failed (e.g. expired). Try network first before showing expired.
+		logger.Logger.Info("License ValidateOnStart: offline check failed, calling ValidateOnline", zap.Error(err))
+		return s.ValidateOnline()
 	}
 
-	s.validation = &Response{Success: true, Message: "License valid"}
-	go s.Validate()
-
-	return nil
+	r := s.setResult(Response{Success: true, Message: "License valid"})
+	go s.ValidateOnline()
+	return r
 }
 
 func (s *LicenseService) GetStatus() map[string]interface{} {
@@ -208,7 +215,6 @@ func (s *LicenseService) setResult(r Response) Response {
 	s.mu.Lock()
 	s.validation = &r
 	s.mu.Unlock()
-
 	s.emitChanged()
 	return r
 }

@@ -1,7 +1,9 @@
 package update
 
 import (
+	"datacia/internal/logger"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
+	"go.uber.org/zap"
 )
 
 type ReleaseMetadata struct {
@@ -50,6 +53,7 @@ func (u *Updater) fetchReleaseMetadata() (*ReleaseMetadata, error) {
 	if err := json.NewDecoder(response.Body).Decode(&metadata); err != nil {
 		return nil, err
 	}
+
 	return &metadata, nil
 }
 
@@ -69,7 +73,8 @@ func (u *Updater) IsNewerVersion(meta *ReleaseMetadata) bool {
 func (u *Updater) IsUpdateAvailable() (*ReleaseMetadata, error) {
 	metadata, err := u.fetchReleaseMetadata()
 	if err != nil {
-		return nil, err
+		logger.Logger.Error("Failed to check for updates", zap.Error(err))
+		return nil, errors.New("Failed to check for updates")
 	}
 	if u.IsNewerVersion(metadata) {
 		return metadata, nil

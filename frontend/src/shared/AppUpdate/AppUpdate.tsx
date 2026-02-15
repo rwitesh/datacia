@@ -2,7 +2,7 @@ import { Download, AlertCircle, Loader2, CheckCircle2 } from "lucide-react";
 import { useCheckForUpdates, useUpdateApp, useRestartApp } from "@/services/updates";
 
 export const AppUpdate = () => {
-    const { data: updateAvailable, error: checkError, isLoading: checkLoading } = useCheckForUpdates();
+    const { data: updateAvailable, error, isLoading: checkLoading } = useCheckForUpdates();
     const {
         mutate: updateApp,
         isPending: isUpdating,
@@ -25,15 +25,15 @@ export const AppUpdate = () => {
     return (
         <div className="flex items-center gap-1.5 text-xs">
             {/* Update check failed */}
-            {!checkLoading && checkError && (
+            {!checkLoading && error && (
                 <>
                     <AlertCircle className="h-3 w-3 text-destructive" />
-                    <span className="text-destructive">{checkError.message}</span>
+                    <span className="text-destructive">{error.message}</span>
                 </>
             )}
 
             {/* Update in progress */}
-            {!checkLoading && !checkError && isUpdating && (
+            {!checkLoading && !error && isUpdating && (
                 <>
                     <Loader2 className="h-3 w-3 animate-spin" />
                     <span>Updating...</span>
@@ -41,7 +41,7 @@ export const AppUpdate = () => {
             )}
 
             {/* Update failed */}
-            {!checkLoading && !checkError && updateError && (
+            {!checkLoading && !error && updateError && (
                 <>
                     <AlertCircle className="h-3 w-3 text-destructive" />
                     <span
@@ -54,7 +54,7 @@ export const AppUpdate = () => {
             )}
 
             {/* Update success */}
-            {!checkLoading && !checkError && updateSuccess && (
+            {!checkLoading && !error && updateSuccess && (
                 <>
                     <CheckCircle2 className="h-3 w-3 text-green-500" />
                     <span className="text-green-500">Updated successfully</span>
@@ -69,7 +69,7 @@ export const AppUpdate = () => {
             )}
 
             {/* Update available */}
-            {!checkLoading && !checkError && updateAvailable === true && !isUpdating && !updateSuccess && !updateError && (
+            {!checkLoading && !error && updateAvailable === true && !isUpdating && !updateSuccess && !updateError && (
                 <>
                     <Download
                         className="h-3 w-3 text-blue-500 cursor-pointer"
