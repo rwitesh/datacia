@@ -121,8 +121,8 @@ type DatabaseClient interface {
 const (
 	CONNECT_TIMEOUT   = 10 * time.Second
 	META_TIMEOUT      = 10 * time.Second
-	CHANGE_DB_TIMEOUT = 5 * time.Second
-	QUERY_TIMEOUT     = 10 * time.Second
+	CHANGE_DB_TIMEOUT = 10 * time.Second
+	QUERY_TIMEOUT     = 30 * time.Second
 )
 
 func NewTimeoutContext(d time.Duration) (context.Context, context.CancelFunc) {

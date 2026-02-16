@@ -4,12 +4,14 @@ import { DeleteConnection } from "@/services/bindings/connection";
 import { useFetchConnections } from "@/services/connections";
 import { useConnectDatabase } from "@/windows/connection/hooks/useConnectDatabase";
 import { ConnectionList } from "./ConnectionList/ConnectionList";
+import { useAppContext } from "@/context/app/Index";
 
 export const Home = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
   const connectMutation = useConnectDatabase();
+  const { settings } = useAppContext();
 
   // Get the current connection ID from URL query params
   const currentConnectionId = useMemo(() => {
@@ -49,7 +51,7 @@ export const Home = () => {
   };
 
   return (
-    <div className="flex min-h-screen min-w-screen select-none cursor-default bg-background dark:bg-transparent">
+    <div className={`flex min-h-screen min-w-screen select-none cursor-default bg-background ${settings?.os === "darwin" ? "dark:bg-transparent" : "dark:bg-muted"}`}>
       <ConnectionList
         savedConnections={savedConnections}
         currentConnectionId={currentConnectionId}

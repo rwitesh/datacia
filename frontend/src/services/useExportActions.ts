@@ -1,5 +1,6 @@
 import type { RefObject } from "react";
 import html2canvaspro from "html2canvas-pro";
+import { useTheme } from "@/components/theme";
 import { useExportData, type ExportFormat } from "./export";
 import { useCopyToClipboard } from "./clipboard";
 
@@ -14,8 +15,11 @@ export function useExportActions({
   data,
   tableName,
 }: UseExportActionsOptions) {
+  const { resolvedTheme } = useTheme();
   const exportMutation = useExportData();
   const copyMutation = useCopyToClipboard();
+
+  const pngBackgroundColor = resolvedTheme === "dark" ? "#0f0f10" : "#ffffff";
 
   const getFilename = (format: ExportFormat) => {
     const count = data.length;
@@ -48,14 +52,15 @@ export function useExportActions({
 
     try {
       const canvas = await html2canvaspro(tableRef.current, {
-        backgroundColor: "#ffffff",
+        backgroundColor: pngBackgroundColor,
         scale: 2,
       });
-      const base64 = canvas.toDataURL("image/png");
+      const dataUrl = canvas.toDataURL("image/png");
+      const base64Data = dataUrl.replace(/^data:image\/png;base64,/, "");
       exportMutation.mutate({
         format: "png",
         suggestedFilename: getFilename("png"),
-        imageData: base64,
+        imageData: base64Data,
       });
     } catch (err) {
       console.error("Export PNG failed:", err);
@@ -84,7 +89,7 @@ export function useExportActions({
 
     try {
       const canvas = await html2canvaspro(tableRef.current, {
-        backgroundColor: "#ffffff",
+        backgroundColor: pngBackgroundColor,
         scale: 2,
       });
       const dataUrl = canvas.toDataURL("image/png");

@@ -63,22 +63,25 @@ export const TabBar = () => {
       case "table":
         return <Table2 className="h-3.5 w-3.5 shrink-0 text-blue-500" />;
       default:
-        return <FileCode className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />;
+        return (
+          <FileCode className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+        );
     }
   };
 
   return (
-    <div className="flex items-center overflow-hidden bg-muted/30 h-10">
-      <div className="flex items-center overflow-x-auto flex-1 scrollbar-thin gap-0.5 p-1 h-full">
+    <div className="flex items-center overflow-hidden">
+      <div className="flex items-center overflow-x-auto overflow-y-hidden flex-1 scrollbar-thin gap-0.5 px-1 h-full">
         {tabs.map((tab) => {
           const isActive = activeTab?.id === tab.id;
           return (
             <div
               key={tab.id}
-              className={`flex items-center group relative min-w-36 max-w-48 select-none rounded-md transition-all duration-200 ${isActive
+              className={`flex items-center group relative min-w-36 max-w-48 select-none rounded-md transition-all duration-200 ${
+                isActive
                   ? "bg-background shadow-sm ring-1 ring-border/50"
                   : "bg-transparent hover:bg-background/50"
-                }`}
+              }`}
             >
               {/* Active indicator */}
               {isActive && (
@@ -86,7 +89,7 @@ export const TabBar = () => {
               )}
 
               <div
-                className="flex items-center gap-2 px-3 py-1.5 cursor-pointer flex-1 min-w-0"
+                className="flex items-center gap-2 px-3 py-1 cursor-pointer flex-1 min-w-0"
                 onMouseDown={(e) => handleTabClick(e, tab.id)}
                 onDoubleClick={() => handleTabDoubleClick(tab.id, tab.title)}
               >
@@ -104,7 +107,9 @@ export const TabBar = () => {
                     onClick={(e) => e.stopPropagation()}
                   />
                 ) : (
-                  <span className={`text-sm truncate flex-1 min-w-0 ${isActive ? "font-medium" : "text-muted-foreground"}`}>
+                  <span
+                    className={`text-sm truncate flex-1 min-w-0 ${isActive ? "font-medium" : "text-muted-foreground"}`}
+                  >
                     {tab.title}
                   </span>
                 )}
@@ -127,7 +132,7 @@ export const TabBar = () => {
         <Button
           variant="ghost"
           size="sm"
-          className="h-7 px-3 hover:bg-background cursor-pointer text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors rounded-md"
+          className="h-7 px-3 hover:bg-background cursor-pointer text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors rounded-md select-none"
           onClick={handleCreateTab}
           title="New SQL tab"
         >
@@ -137,4 +142,3 @@ export const TabBar = () => {
     </div>
   );
 };
-

@@ -204,7 +204,7 @@ export const DataTable = forwardRef<HTMLDivElement, DataTableProps>(function Dat
   };
 
   return (
-    <div className="h-full w-full overflow-hidden bg-card" style={fontStyle}>
+    <div className="h-full w-full overflow-hidden bg-background" style={fontStyle}>
       <div
         ref={(el) => {
           scrollRef.current = el;
@@ -216,7 +216,7 @@ export const DataTable = forwardRef<HTMLDivElement, DataTableProps>(function Dat
         {/* Header */}
         <div className="sticky top-0 z-10">
           <table
-            className="table-fixed border-separate border-spacing-0 text-xs cursor-default select-none"
+            className="table-fixed text-xs cursor-default select-none"
             style={{ width: totalWidth }}
           >
             <thead>

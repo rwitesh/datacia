@@ -11,7 +11,7 @@ interface EditorFooterProps {
 
 export const EditorFooter = ({ onToggleAI, aiActive }: EditorFooterProps) => {
   return (
-    <div className="flex items-center justify-between px-5 py-1 bg-background text-xs text-muted-foreground w-full cursor-default gap-1.5 min-h-6">
+    <div className="flex items-center justify-between px-5 py-1 text-xs text-muted-foreground w-full cursor-default gap-1.5 min-h-6">
       {/* Left side - Connection Health and Switcher */}
       <div className="flex items-center gap-3">
         <ConnectionHealthIndicator />

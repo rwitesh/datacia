@@ -230,7 +230,7 @@ export const Editor = () => {
               </div>
 
               {/* Result Bar - Fixed, not resizable */}
-              <div className="shrink-0 border-t border-border">
+              <div className="shrink-0">
                 <ResultBar />
               </div>
             </div>
@@ -239,7 +239,7 @@ export const Editor = () => {
       </div>
 
       {/* Footer - Fixed, not resizable */}
-      <div className="shrink-0 border-t">
+      <div className="shrink-0 border-t border-border">
         <EditorFooter
           onToggleAI={toggleAIChat}
           aiActive={dataViewOpen && dataViewTab === "ai"}

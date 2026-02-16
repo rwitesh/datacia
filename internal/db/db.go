@@ -9,11 +9,13 @@ import (
 	"strings"
 	"time"
 
+	"datacia/internal/logger"
 	"datacia/internal/paths"
 	"datacia/internal/security"
 	"datacia/pkg/common"
 
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -108,6 +110,11 @@ func (s *Store) initSchema() error {
 		if _, err := s.db.Exec(stmt); err != nil {
 			return fmt.Errorf("failed to execute schema statement: %w", err)
 		}
+	}
+
+	cutoff := time.Now().UTC().Add(-365 * 24 * time.Hour).Format(time.RFC3339)
+	if _, err := s.db.Exec(`DELETE FROM query_history WHERE timestamp < ?`, cutoff); err != nil {
+		logger.Logger.Error("Failed to prune query history", zap.Error(err))
 	}
 
 	return nil

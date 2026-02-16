@@ -1,8 +1,10 @@
 import { flexRender, type Cell } from "@tanstack/react-table";
 import { isCellInSelection, getCellBoxShadow } from "../utils/cellSelection";
+import { parseTimestamp, formatTimestampTooltip } from "../utils/timestamp";
 import type { DataRow } from "../types";
 import type { CellType } from "../hooks/useTableSelection";
 import type { SelectionGeometry } from "../utils/cellSelection";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface TableCellProps {
     cell: Cell<DataRow, unknown>;
@@ -39,6 +41,18 @@ export function TableCell({
         onMouseEnter(cellType, rowIndex, selectionColIndex);
     };
 
+    const rawValue = cell.getValue();
+    const timestampDate =
+        !isSerialColumn && rawValue !== undefined ? parseTimestamp(rawValue) : null;
+    const tooltipStrings =
+        timestampDate !== null ? formatTimestampTooltip(timestampDate) : null;
+
+    const cellContent = (
+        <div className="overflow-hidden text-ellipsis whitespace-nowrap text-xs h-full flex items-center cursor-default select-none">
+            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+        </div>
+    );
+
     return (
         <div
             key={cell.id}
@@ -58,9 +72,21 @@ export function TableCell({
             onMouseDown={handleMouseDown}
             onMouseEnter={handleMouseEnter}
         >
-            <div className="overflow-hidden text-ellipsis whitespace-nowrap text-xs h-full flex items-center cursor-default select-none">
-                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-            </div>
+            {tooltipStrings ? (
+                <TooltipProvider delayDuration={350}>
+                    <Tooltip>
+                        <TooltipTrigger asChild>{cellContent}</TooltipTrigger>
+                        <TooltipContent side="top" className="text-xs">
+                            <div className="flex flex-col gap-0.5">
+                                <span>Local: {tooltipStrings.local}</span>
+                                <span>UTC: {tooltipStrings.utc}</span>
+                            </div>
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+            ) : (
+                cellContent
+            )}
         </div>
     );
 }

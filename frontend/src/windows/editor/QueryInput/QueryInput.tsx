@@ -20,7 +20,7 @@ export function QueryInput() {
   const editorEl = useRef<HTMLDivElement | null>(null);
   const viewRef = useRef<EditorView | null>(null);
 
-  const { dialect, engine } = useAppContext();
+  const { dialect, engine, isLicenseActive } = useAppContext();
   const { resolvedTheme, tokenColors, editorFontFamily, editorFontSize } =
     useTheme();
 
@@ -59,6 +59,8 @@ export function QueryInput() {
   const sqlConfig = useMemo(() => new Compartment(), []);
   // Theme configuration compartment
   const themeConfig = useMemo(() => new Compartment(), []);
+  // Ghost/inline text — only when pro (license) is active
+  const ghostTextConfig = useMemo(() => new Compartment(), []);
 
   // create editor ONCE
   useEffect(() => {
@@ -79,13 +81,7 @@ export function QueryInput() {
           }),
         ),
 
-        // Ghost text extension — must be before autocompletion() so Tab keymap has priority
-        ghostText({
-          delay: 400,
-          minInputLength: 2,
-          getSuggestion: (input) =>
-            GetSuggestion(input, latestEngine.current ?? ""),
-        }),
+        ghostTextConfig.of([]),
 
         autocompletion(),
         closeBrackets(),
@@ -150,6 +146,26 @@ export function QueryInput() {
     editorFontSize,
   ]);
 
+  // Ghost/inline text only when pro (license) is active — create fresh extension
+  // when enabling so CodeMirror compartment applies it (reused ref can be skipped)
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) return;
+
+    view.dispatch({
+      effects: ghostTextConfig.reconfigure(
+        isLicenseActive
+          ? ghostText({
+              delay: 400,
+              minInputLength: 2,
+              getSuggestion: (input) =>
+                GetSuggestion(input, latestEngine.current ?? ""),
+            })
+          : [],
+      ),
+    });
+  }, [isLicenseActive, ghostTextConfig]);
+
   // sync tab content on tab switch
   useEffect(() => {
     const view = viewRef.current;
@@ -173,7 +189,7 @@ export function QueryInput() {
 
   return (
     <div className="relative h-full w-full">
-      <div ref={editorEl} className="h-full w-full text-sm bg-card" />
+      <div ref={editorEl} className="h-full w-full" />
 
       {/* Floating Action Buttons */}
       <div className="absolute bottom-3 right-3 flex items-center gap-2 z-10">

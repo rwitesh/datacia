@@ -18,9 +18,7 @@ const (
 )
 
 const (
-	// AppSalt is a hardcoded salt used in PBKDF2 key derivation.
-	// This should be a random 32-byte string
-	AppSalt = "DataCiaAppSalt2026!SecureRandomBytes32"
+	AppSalt = "5f0I4G3KftuiSNKUL9Mvtwhz4kMgyLoAwebUoqRdJJ8="
 )
 
 const (

@@ -70,7 +70,7 @@ export function NavigationBar({
     "cursor-pointer my-1 mx-0.5 data-[state=on]:bg-muted hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50";
 
   return (
-    <div className="flex cursor-default border-b border-border bg-transparent w-full justify-end">
+    <div className="flex cursor-default border-b border-border w-full justify-end">
       <div className="flex items-center">
         {hasViewToggles && (
           <TooltipProvider delayDuration={300}>

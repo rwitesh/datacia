@@ -58,7 +58,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     engine: currentConnection?.engine || "",
     licenseStatus,
     isLicenseActive,
-    appVersion: settings?.app_version ?? "",
+    settings,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

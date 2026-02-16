@@ -5,7 +5,7 @@ import { AppUpdate } from "@/shared/AppUpdate/AppUpdate";
 import logo from "@/assets/logo.png";
 
 export const WelcomePanel = () => {
-  const { appVersion } = useAppContext();
+  const { settings } = useAppContext();
 
   return (
     <div className="h-full flex flex-col">
@@ -21,9 +21,9 @@ export const WelcomePanel = () => {
           to get started.
         </p>
 
-        {appVersion && (
+        {settings?.app_version && (
           <div className="mt-8 flex flex-col items-center gap-2 text-xs text-muted-foreground/60">
-            <p>Version {appVersion}</p>
+            <p>Version {settings.app_version}</p>
             <AppUpdate />
           </div>
         )}
