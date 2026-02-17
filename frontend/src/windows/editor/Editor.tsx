@@ -17,6 +17,7 @@ import { FileUp } from "lucide-react";
 import { useWriteFile } from "@/services/queries";
 import { toast } from "sonner";
 import type { ImperativePanelHandle } from "react-resizable-panels";
+import { ScriptMode } from "./ScriptMode/ScriptMode";
 
 type ViewPanels = { resultCollapsed: boolean; dataViewOpen: boolean };
 
@@ -29,13 +30,14 @@ export const Editor = () => {
   const [dataViewTab, setDataViewTab] = useState<"data" | "ai">("ai");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [isScriptMode, setIsScriptMode] = useState(false);
   const sidebarRef = useRef<ImperativePanelHandle>(null);
   const writeFile = useWriteFile();
 
   const { resultCollapsed, dataViewOpen } = viewPanels;
   const togglePanel = (panel: keyof ViewPanels) =>
     setViewPanels((prev) => ({ ...prev, [panel]: !prev[panel] }));
-  const openDataView = () =>{
+  const openDataView = () => {
     setDataViewTab("data");
     setViewPanels((prev) => ({ ...prev, dataViewOpen: true }));
   };
@@ -101,6 +103,7 @@ export const Editor = () => {
         updateTab(activeTab.id, { sql: text });
       } else {
         const newTab = createTab(sqlFile.name, "query");
+        if (!newTab) return;
         updateTab(newTab.id, { sql: text });
       }
     }
@@ -120,6 +123,8 @@ export const Editor = () => {
           onToggleResult={() => togglePanel("resultCollapsed")}
           dataViewOpen={dataViewOpen}
           onToggleDataView={() => togglePanel("dataViewOpen")}
+          isScriptMode={isScriptMode}
+          onToggleScriptMode={() => setIsScriptMode(!isScriptMode)}
         />
       </div>
 
@@ -144,96 +149,100 @@ export const Editor = () => {
 
           {/* Right Content Area - Resizable */}
           <ResizablePanel className="min-w-0" defaultSize={80}>
-            <div
-              className="flex h-full w-full flex-col overflow-hidden relative"
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-            >
-              {/* Drag & Drop Overlay */}
-              {isDragging && (
-                <div className="absolute inset-0 z-50 bg-background/90 backdrop-blur-sm flex flex-col items-center justify-center border-2 border-dashed border-primary m-4 rounded-lg animate-in fade-in duration-200">
-                  <div className="bg-primary/10 p-6 rounded-full mb-4">
-                    <FileUp className="w-12 h-12 text-primary" />
+            {isScriptMode ? (
+              <ScriptMode />
+            ) : (
+              <div
+                className="flex h-full w-full flex-col overflow-hidden relative"
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+              >
+                {/* Drag & Drop Overlay */}
+                {isDragging && (
+                  <div className="absolute inset-0 z-50 bg-background/90 backdrop-blur-sm flex flex-col items-center justify-center border-2 border-dashed border-primary m-4 rounded-lg animate-in fade-in duration-200">
+                    <div className="bg-primary/10 p-6 rounded-full mb-4">
+                      <FileUp className="w-12 h-12 text-primary" />
+                    </div>
+                    <h3 className="text-2xl font-semibold text-primary mb-2">
+                      Import SQL File
+                    </h3>
+                    <p className="text-muted-foreground text-lg">
+                      Drop your .sql file here to open it in the editor
+                    </p>
                   </div>
-                  <h3 className="text-2xl font-semibold text-primary mb-2">
-                    Import SQL File
-                  </h3>
-                  <p className="text-muted-foreground text-lg">
-                    Drop your .sql file here to open it in the editor
-                  </p>
+                )}
+
+                {/* Tab Bar - Fixed, not resizable */}
+                <div className="shrink-0 border-b border-border">
+                  <TabBar />
                 </div>
-              )}
 
-              {/* Tab Bar - Fixed, not resizable */}
-              <div className="shrink-0 border-b border-border">
-                <TabBar />
-              </div>
-
-              {/* Content Area with DataView */}
-              <div className="flex-1 min-h-0">
-                <ResizablePanelGroup direction="horizontal" className="h-full">
-                  {/* Main Editor Area (QueryInput + QueryResult) */}
-                  <ResizablePanel
-                    className="min-w-0"
-                    defaultSize={dataViewOpen ? 58 : 100}
-                  >
-                    <ResizablePanelGroup
-                      direction="vertical"
-                      className="h-full"
+                {/* Content Area with DataView */}
+                <div className="flex-1 min-h-0">
+                  <ResizablePanelGroup direction="horizontal" className="h-full">
+                    {/* Main Editor Area (QueryInput + QueryResult) */}
+                    <ResizablePanel
+                      className="min-w-0"
+                      defaultSize={dataViewOpen ? 58 : 100}
                     >
-                      {/* Query Input - Resizable when activeTab is query */}
-                      {showQueryInput && (
-                        <>
+                      <ResizablePanelGroup
+                        direction="vertical"
+                        className="h-full"
+                      >
+                        {/* Query Input - Resizable when activeTab is query */}
+                        {showQueryInput && (
+                          <>
+                            <ResizablePanel
+                              defaultSize={isResultPanelVisible ? 50 : 100}
+                              minSize={20}
+                              className="min-h-0 overflow-hidden"
+                            >
+                              <QueryInput />
+                            </ResizablePanel>
+                            {isResultPanelVisible && <ResizableHandle />}
+                          </>
+                        )}
+
+                        {/* Query Result - Resizable */}
+                        {isResultPanelVisible && (
                           <ResizablePanel
-                            defaultSize={isResultPanelVisible ? 50 : 100}
+                            defaultSize={showQueryInput ? 50 : 100}
                             minSize={20}
                             className="min-h-0 overflow-hidden"
                           >
-                            <QueryInput />
+                            <QueryResult onOpenDataView={openDataView} />
                           </ResizablePanel>
-                          {isResultPanelVisible && <ResizableHandle />}
-                        </>
-                      )}
+                        )}
+                      </ResizablePanelGroup>
+                    </ResizablePanel>
 
-                      {/* Query Result - Resizable */}
-                      {isResultPanelVisible && (
+                    {/* Data View - Resizable when open */}
+                    {dataViewOpen && (
+                      <>
+                        <ResizableHandle />
                         <ResizablePanel
-                          defaultSize={showQueryInput ? 50 : 100}
-                          minSize={20}
-                          className="min-h-0 overflow-hidden"
+                          minSize={25}
+                          defaultSize={42}
+                          maxSize={60}
+                          className="min-w-0 overflow-hidden"
                         >
-                          <QueryResult onOpenDataView={openDataView} />
+                          <DataView
+                            activeTab={dataViewTab}
+                            onTabChange={setDataViewTab}
+                          />
                         </ResizablePanel>
-                      )}
-                    </ResizablePanelGroup>
-                  </ResizablePanel>
+                      </>
+                    )}
+                  </ResizablePanelGroup>
+                </div>
 
-                  {/* Data View - Resizable when open */}
-                  {dataViewOpen && (
-                    <>
-                      <ResizableHandle />
-                      <ResizablePanel
-                        minSize={25}
-                        defaultSize={42}
-                        maxSize={60}
-                        className="min-w-0 overflow-hidden"
-                      >
-                        <DataView
-                          activeTab={dataViewTab}
-                          onTabChange={setDataViewTab}
-                        />
-                      </ResizablePanel>
-                    </>
-                  )}
-                </ResizablePanelGroup>
+                {/* Result Bar - Fixed, not resizable */}
+                <div className="shrink-0">
+                  <ResultBar />
+                </div>
               </div>
-
-              {/* Result Bar - Fixed, not resizable */}
-              <div className="shrink-0">
-                <ResultBar />
-              </div>
-            </div>
+            )}
           </ResizablePanel>
         </ResizablePanelGroup>
       </div>

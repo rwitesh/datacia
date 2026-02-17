@@ -4,7 +4,9 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { Loader2, CheckCircle2, XCircle, Search, CalendarIcon, X } from "lucide-react";
 import { debounce } from "lodash";
 import { useEditorContext } from "@/context/editor/Index";
+import { useAppContext } from "@/context/app/Index";
 import { useGetQueryHistory } from "@/services/database";
+import { OpenLicenseWindow } from "@/services/bindings";
 import {
     timeAgo,
     startOfDay,
@@ -22,6 +24,17 @@ import { Button } from "@/components/ui/button";
 import type { DateRange } from "react-day-picker";
 
 const DEBOUNCE_DELAY = 300;
+
+/** True if date is within the "yesterday to today" window (inclusive) at day granularity. */
+function isWithinYesterdayToToday(date: Date): boolean {
+    const d = startOfDay(date).getTime();
+    const now = new Date();
+    const todayStart = startOfDay(now).getTime();
+    const yesterdayStart = new Date(now);
+    yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+    const yesterdayStartTime = startOfDay(yesterdayStart).getTime();
+    return d === todayStart || d === yesterdayStartTime;
+}
 
 /**
  * Format timestamp for display.
@@ -46,6 +59,7 @@ function formatTimestamp(
 
 export function HistoryTab() {
     const { createTab, updateTab } = useEditorContext();
+    const { isLicenseActive } = useAppContext();
 
     const [searchQuery, setSearchQuery] = useState("");
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
@@ -101,11 +115,11 @@ export function HistoryTab() {
                 ? endOfDay(debouncedDateRange.from).toISOString()
                 : "";
         return {
-            search: debouncedSearchQuery,
+            search: isLicenseActive ? debouncedSearchQuery : "",
             dateFrom,
             dateTo
         };
-    }, [debouncedSearchQuery, debouncedDateRange]);
+    }, [isLicenseActive, debouncedSearchQuery, debouncedDateRange]);
 
     // Fetch history with filters applied on SQLite (server-side filtering)
     const { data: historyData, isFetching } = useGetQueryHistory(filters);
@@ -137,10 +151,15 @@ export function HistoryTab() {
                     <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                     <input
                         type="text"
-                        placeholder="Search queries..."
+                        placeholder={ "Search queries..."}
                         value={searchQuery}
                         onChange={handleSearchChange}
-                        className="w-full pl-7 pr-2 py-1.5 bg-sidebar-accent/50 border border-border/50 rounded-md placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-ring/50"
+                        readOnly={!isLicenseActive}
+                        onFocus={() => {
+                            if (!isLicenseActive) OpenLicenseWindow();
+                        }}
+                        title={!isLicenseActive ? "Activate license to search history" : undefined}
+                        className="w-full pl-7 pr-2 py-1.5 bg-sidebar-accent/50 border border-border/50 rounded-md placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-ring/50 read-only:cursor-pointer"
                     />
                 </div>
 
@@ -174,7 +193,14 @@ export function HistoryTab() {
                                 selected={dateRange}
                                 onSelect={handleDateRangeChange}
                                 numberOfMonths={2}
-                                disabled={(date) => date > new Date()}
+                                disabled={(date) => {
+                                    const now = new Date();
+                                    if (date > now) return true;
+                                    if (!isLicenseActive) return !isWithinYesterdayToToday(date);
+                                    const oneYearAgo = new Date(now);
+                                    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+                                    return startOfDay(date) < startOfDay(oneYearAgo);
+                                }}
                             />
                         </PopoverContent>
                     </Popover>

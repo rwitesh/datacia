@@ -14,6 +14,7 @@ import {
   PanelRightOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { CloseCurrentConnection } from "@/services/bindings/connection";
 import {
   Tooltip,
@@ -29,6 +30,8 @@ type EditorViewToggles = {
   onToggleResult: () => void;
   dataViewOpen: boolean;
   onToggleDataView: () => void;
+  isScriptMode: boolean;
+  onToggleScriptMode: () => void;
 };
 
 type NavigationBarProps = Partial<EditorViewToggles>;
@@ -40,6 +43,8 @@ export function NavigationBar({
   onToggleResult,
   dataViewOpen,
   onToggleDataView,
+  isScriptMode,
+  onToggleScriptMode,
 }: NavigationBarProps = {}) {
   const location = useLocation();
   const queryClient = useQueryClient();
@@ -132,6 +137,39 @@ export function NavigationBar({
               <TooltipContent side="bottom">Toggle DataView</TooltipContent>
             </Tooltip>
           </TooltipProvider>
+        )}
+        {hasViewToggles && onToggleScriptMode && (
+          <div className="mr-2 flex items-center border-r border-border pr-2">
+            <ToggleGroup
+              type="single"
+              value={isScriptMode ? "script" : "sql"}
+              onValueChange={(val) => {
+                if (!val) return;
+                if (
+                  (val === "script" && !isScriptMode) ||
+                  (val === "sql" && isScriptMode)
+                ) {
+                  onToggleScriptMode();
+                }
+              }}
+              className="gap-1 bg-muted/50 p-0.5 rounded-lg border border-border"
+            >
+              <ToggleGroupItem
+                value="sql"
+                size="sm"
+                className="h-6 px-2 text-xs rounded-md data-[state=on]:bg-background data-[state=on]:shadow-sm transition-all"
+              >
+                SQL
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value="script"
+                size="sm"
+                className="h-6 px-2 text-xs rounded-md data-[state=on]:bg-background data-[state=on]:shadow-sm transition-all text-emerald-600 font-medium"
+              >
+                Script
+              </ToggleGroupItem>
+            </ToggleGroup>
+          </div>
         )}
         {isEditorPage && (
           <>

@@ -11,12 +11,17 @@ import {
   SelectSQLiteFile,
 } from "@/services/bindings/connection";
 import { DEFAULT_PORTS } from "../utils/constants";
-import type { DatabaseEngine, FormValues, Status } from "../utils/types";
+import type { DatabaseEngine } from "@/shared/utils/engines";
+import type { FormValues, Status } from "../utils/types";
 import {
   validateForSave,
   validateForTestConnect,
   validationSchema,
 } from "../utils/validation";
+import { FREE_PLAN_MAX_CONNECTIONS } from "../utils/constants";
+import { useFetchConnections } from "@/services/connections";
+import { useLicenseStatus } from "@/services/license";
+import { toast } from "sonner";
 import { useConnectDatabase } from "./useConnectDatabase";
 interface FetchedConnectionData {
   name?: string;
@@ -47,6 +52,11 @@ export const useConnectionForm = ({
   fetchedData
 }: UseConnectionFormProps) => {
   const queryClient = useQueryClient();
+  const { data: savedConnections = {} } = useFetchConnections();
+  const { data: licenseStatus } = useLicenseStatus();
+  const isFreePlan = licenseStatus?.valid !== true;
+  const connectionCount = Object.keys(savedConnections).length;
+  const atFreePlanLimit = isFreePlan && connectionCount >= FREE_PLAN_MAX_CONNECTIONS;
 
 
   const [status, setStatus] = useState<Status>(null);
@@ -240,6 +250,16 @@ export const useConnectionForm = ({
     const validationErrors = validateForSave(values);
     applyValidationErrors(validationErrors);
     if (Object.keys(validationErrors).length > 0) return;
+
+    // Free plan: allow up to 2 saved connections; only applies when creating a new connection
+    if (!connectionId && atFreePlanLimit) {
+      toast.error(
+        `Free plan allows up to ${FREE_PLAN_MAX_CONNECTIONS} connections. Upgrade to save more.`,
+        { id: "connection-limit" }
+      );
+      return;
+    }
+
     saveMutation.mutate();
   };
 

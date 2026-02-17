@@ -10,6 +10,9 @@ export const ENGINE_LABELS: Record<DatabaseEngine, string> = Object.fromEntries(
   Object.entries(DATABASE_ENGINES).map(([key, config]) => [key, config.label])
 ) as Record<DatabaseEngine, string>;
 
+/** Maximum saved connections allowed on the free plan (no active license). */
+export const FREE_PLAN_MAX_CONNECTIONS = 2;
+
 // Field labels for form validation messages
 export const FIELD_LABELS: Record<keyof FormValues, string> = {
   connectionName: "Connection Name",

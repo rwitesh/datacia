@@ -1,0 +1,188 @@
+import { useEffect, useMemo, useRef } from "react";
+import { EditorView } from "codemirror";
+import { EditorState, Compartment } from "@codemirror/state";
+import { autocompletion, closeBrackets } from "@codemirror/autocomplete";
+import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
+import { sql } from "@codemirror/lang-sql";
+import { drawSelection, keymap } from "@codemirror/view";
+
+import { useEditorContext } from "@/context/editor/Index";
+import { useAppContext } from "@/context/app/Index";
+import { GetSuggestion } from "@/services/bindings/intellisense";
+import { getTheme } from "../QueryInput/utils/theme";
+import { ghostText } from "../QueryInput/extensions/ghostText";
+import { useTheme } from "@/components/theme";
+
+interface SQLCodeEditorProps {
+    value: string;
+    onChange: (value: string) => void;
+    className?: string;
+}
+
+export function SQLCodeEditor({ value, onChange, className }: SQLCodeEditorProps) {
+    const editorEl = useRef<HTMLDivElement | null>(null);
+    const viewRef = useRef<EditorView | null>(null);
+
+    const { dialect, engine, isLicenseActive } = useAppContext();
+    const { resolvedTheme, tokenColors, editorFontFamily, editorFontSize } =
+        useTheme();
+
+    const {
+        tables: { data },
+    } = useEditorContext();
+
+    const schema = useMemo(() => {
+        return Object.fromEntries((data || []).map((t) => [t, []]));
+    }, [data]);
+
+    // store mutable refs to avoid effect re-runs
+    const latestOnChange = useRef(onChange);
+    const latestEngine = useRef(engine);
+
+    useEffect(() => {
+        latestOnChange.current = onChange;
+    }, [onChange]);
+
+    useEffect(() => {
+        latestEngine.current = engine;
+    }, [engine]);
+
+    // SQL configuration compartment
+    const sqlConfig = useMemo(() => new Compartment(), []);
+    // Theme configuration compartment
+    const themeConfig = useMemo(() => new Compartment(), []);
+    // Ghost/inline text — only when pro (license) is active
+    const ghostTextConfig = useMemo(() => new Compartment(), []);
+
+    // create editor ONCE
+    useEffect(() => {
+        if (!editorEl.current) return;
+
+        const state = EditorState.create({
+            doc: value,
+            extensions: [
+                drawSelection(),
+                EditorView.lineWrapping,
+                EditorView.theme({
+                    "&": { height: "100%" },
+                    ".cm-scroller": { overflow: "auto" },
+                }),
+
+                sqlConfig.of(sql({ dialect, schema, upperCaseKeywords: true })),
+                themeConfig.of(
+                    getTheme(resolvedTheme === "dark", {
+                        colors: tokenColors,
+                        fontFamily: editorFontFamily,
+                        fontSize: editorFontSize,
+                    }),
+                ),
+
+                ghostTextConfig.of([]),
+
+                autocompletion(),
+                closeBrackets(),
+                history(),
+                keymap.of([...historyKeymap, ...defaultKeymap]),
+
+                EditorView.updateListener.of((v) => {
+                    if (!v.docChanged) return;
+                    latestOnChange.current(v.state.doc.toString());
+                }),
+            ],
+        });
+
+        const view = new EditorView({
+            state,
+            parent: editorEl.current,
+        });
+
+        viewRef.current = view;
+
+        return () => view.destroy();
+        // run ONCE
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Update value from props if it changed externally (not by typing)
+    // This is tricky with CodeMirror loops.
+    // We generally assume the parent checks if value changed before passing it down,
+    // or we only update if it's significantly different.
+    // But for simple "controlled" component pattern:
+    useEffect(() => {
+        const view = viewRef.current;
+        if (!view) return;
+        const doc = view.state.doc.toString();
+        if (doc !== value) {
+            // Only update if difference is external (e.g. from parent state update not initiated by this editor)
+            // But since we call onChange on every keystroke, parent updates state, passed back here.
+            // If we dispatch here, we might reset cursor.
+            // CodeMirror handles this usually if we are careful.
+            // However, `QueryInput` does:
+            // if (doc !== expected) { view.dispatch(...) }
+            // So let's do the same.
+            view.dispatch({
+                changes: { from: 0, to: doc.length, insert: value },
+            });
+        }
+    }, [value]);
+
+
+    // dynamically update dialect + schema
+    useEffect(() => {
+        const view = viewRef.current;
+        if (!view) return;
+
+        view.dispatch({
+            effects: sqlConfig.reconfigure(
+                sql({ dialect, schema, upperCaseKeywords: true }),
+            ),
+        });
+    }, [dialect, schema, sqlConfig]);
+
+    // dynamically update theme
+    useEffect(() => {
+        const view = viewRef.current;
+        if (!view) return;
+
+        view.dispatch({
+            effects: themeConfig.reconfigure(
+                getTheme(resolvedTheme === "dark", {
+                    colors: tokenColors,
+                    fontFamily: editorFontFamily,
+                    fontSize: editorFontSize,
+                }),
+            ),
+        });
+    }, [
+        resolvedTheme,
+        themeConfig,
+        tokenColors,
+        editorFontFamily,
+        editorFontSize,
+    ]);
+
+    // Ghost/inline text only when pro (license) is active
+    useEffect(() => {
+        const view = viewRef.current;
+        if (!view) return;
+
+        view.dispatch({
+            effects: ghostTextConfig.reconfigure(
+                isLicenseActive
+                    ? ghostText({
+                        delay: 400,
+                        minInputLength: 2,
+                        getSuggestion: (input) =>
+                            GetSuggestion(input, latestEngine.current ?? ""),
+                    })
+                    : [],
+            ),
+        });
+    }, [isLicenseActive, ghostTextConfig]);
+
+    return (
+        <div className={`relative h-full w-full ${className}`}>
+            <div ref={editorEl} className="h-full w-full" />
+        </div>
+    );
+}
