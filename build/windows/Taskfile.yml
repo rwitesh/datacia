@@ -92,14 +92,14 @@ tasks:
           done | tr '\n' ' '
 
   package:
-    summary: Packages the application
+    summary: Packages the application (ARCH=universal | amd64 | arm64; default universal)
     cmds:
-      - task: '{{if eq (.FORMAT | default "nsis") "msix"}}create:msix:package{{else}}create:nsis:installer{{end}}'
+      - task: '{{if eq (.FORMAT | default "nsis") "msix"}}create:msix:package{{else if eq .ARCH "universal"}}create:nsis:installer:universal{{else}}create:nsis:installer{{end}}'
         vars:
           ARCH: '{{.ARCH}}'
     vars:
       FORMAT: '{{.FORMAT | default "nsis"}}'
-      ARCH: '{{.ARCH | default ARCH}}'
+      ARCH: '{{.ARCH | default "universal"}}'
 
   generate:syso:
     summary: Generates Windows `.syso` file
@@ -128,6 +128,33 @@ tasks:
     vars:
       ARCH: '{{.ARCH | default ARCH}}'
       ARG_FLAG: '{{if eq .ARCH "amd64"}}AMD64{{else}}ARM64{{end}}'
+
+  create:nsis:installer:universal:
+    summary: Creates a single NSIS installer with both amd64 and arm64 binaries
+    dir: build/windows/nsis
+    deps:
+      - task: build
+        vars:
+          ARCH: amd64
+    cmds:
+      - cmd: copy "{{.ROOT_DIR}}\{{.BIN_DIR}}\{{.APP_NAME}}.exe" "{{.ROOT_DIR}}\{{.BIN_DIR}}\{{.APP_NAME}}-amd64.exe"
+        platforms: [windows]
+      - cmd: cp "{{.ROOT_DIR}}/{{.BIN_DIR}}/{{.APP_NAME}}.exe" "{{.ROOT_DIR}}/{{.BIN_DIR}}/{{.APP_NAME}}-amd64.exe"
+        platforms: [linux, darwin]
+      - task: build
+        vars:
+          ARCH: arm64
+      - cmd: copy "{{.ROOT_DIR}}\{{.BIN_DIR}}\{{.APP_NAME}}.exe" "{{.ROOT_DIR}}\{{.BIN_DIR}}\{{.APP_NAME}}-arm64.exe"
+        platforms: [windows]
+      - cmd: cp "{{.ROOT_DIR}}/{{.BIN_DIR}}/{{.APP_NAME}}.exe" "{{.ROOT_DIR}}/{{.BIN_DIR}}/{{.APP_NAME}}-arm64.exe"
+        platforms: [linux, darwin]
+      - wails3 generate webview2bootstrapper -dir "{{.ROOT_DIR}}/build/windows/nsis"
+      - | 
+        {{if eq OS "windows"}}
+        makensis -DARG_WAILS_AMD64_BINARY="{{.ROOT_DIR}}\{{.BIN_DIR}}\{{.APP_NAME}}-amd64.exe" -DARG_WAILS_ARM64_BINARY="{{.ROOT_DIR}}\{{.BIN_DIR}}\{{.APP_NAME}}-arm64.exe" project.nsi
+        {{else}}
+        makensis -DARG_WAILS_AMD64_BINARY="{{.ROOT_DIR}}/{{.BIN_DIR}}/{{.APP_NAME}}-amd64.exe" -DARG_WAILS_ARM64_BINARY="{{.ROOT_DIR}}/{{.BIN_DIR}}/{{.APP_NAME}}-arm64.exe" project.nsi
+        {{end}}
 
   create:msix:package:
     summary: Creates an MSIX package

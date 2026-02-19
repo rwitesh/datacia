@@ -38,16 +38,17 @@ package-windows-nsis-arm64:
 	wails3 task common:update:build-assets
 	wails3 task windows:package ARCH=arm64
 
+package-windows-nsis-universal:
+	wails3 task common:update:build-assets
+	wails3 task windows:package ARCH=universal
+
 create-dmg:
 	@if [ ! -d "$(APP_BUNDLE)" ]; then \
 		echo "Error: $(APP_BUNDLE) missing. Packaging failed."; \
 		exit 1; \
 	fi
-	mkdir -p "$(OUTPUT_DIR)"
-	hdiutil create -volname "$(VOLNAME)" \
-		-srcfolder "$(APP_BUNDLE)" \
-		-ov -format UDZO \
-		"$(OUTPUT_DIR)/$(DMG_NAME)"
+	@BG=""; [ -f build/darwin/dmg-background.png ] && BG="build/darwin/dmg-background.png"; \
+	./scripts/create-dmg-with-layout.sh "$(APP_BUNDLE)" "$(OUTPUT_DIR)/$(DMG_NAME)" "$(VOLNAME)" "$(APP_NAME)" $$BG
 	@echo "DMG created at $(OUTPUT_DIR)/$(DMG_NAME)"
 
 create-nsis-installer:
@@ -65,45 +66,44 @@ clean-output:
 
 # Release targets (always versioned, always clean first)
 release-darwin-arm64: OUTPUT_DIR = $(VERSIONED_OUTPUT)/darwin/arm64
-release-darwin-arm64: DMG_NAME = $(APP_NAME)_darwin_arm64.dmg
+release-darwin-arm64: DMG_NAME = $(APP_NAME).dmg
 release-darwin-arm64: clean-output package-darwin-arm64
 	mkdir -p $(OUTPUT_DIR)
 	$(MAKE) create-dmg OUTPUT_DIR=$(OUTPUT_DIR) DMG_NAME=$(DMG_NAME)
 
 release-darwin-amd64: OUTPUT_DIR = $(VERSIONED_OUTPUT)/darwin/amd64
-release-darwin-amd64: DMG_NAME = $(APP_NAME)_darwin_amd64.dmg
+release-darwin-amd64: DMG_NAME = $(APP_NAME).dmg
 release-darwin-amd64: clean-output package-darwin-amd64
 	mkdir -p $(OUTPUT_DIR)
 	$(MAKE) create-dmg OUTPUT_DIR=$(OUTPUT_DIR) DMG_NAME=$(DMG_NAME)
 
 release-darwin-universal: OUTPUT_DIR = $(VERSIONED_OUTPUT)/darwin/universal
-release-darwin-universal: DMG_NAME = $(APP_NAME)_darwin_universal.dmg
+release-darwin-universal: DMG_NAME = $(APP_NAME).dmg
 release-darwin-universal: clean-output package-darwin-universal
 	mkdir -p $(OUTPUT_DIR)
 	$(MAKE) create-dmg OUTPUT_DIR=$(OUTPUT_DIR) DMG_NAME=$(DMG_NAME)
 
 release-windows-nsis-amd64: OUTPUT_DIR = $(VERSIONED_OUTPUT)/windows/amd64
-release-windows-nsis-amd64: INSTALLER_NAME = $(APP_NAME)_windows_amd64_installer.exe
+release-windows-nsis-amd64: INSTALLER_NAME = $(APP_NAME).exe
 release-windows-nsis-amd64: clean-output package-windows-nsis-amd64
 	$(MAKE) create-nsis-installer OUTPUT_DIR=$(OUTPUT_DIR) INSTALLER_SRC=$(APP_NAME)-amd64-installer.exe INSTALLER_NAME=$(INSTALLER_NAME)
 
 release-windows-nsis-arm64: OUTPUT_DIR = $(VERSIONED_OUTPUT)/windows/arm64
-release-windows-nsis-arm64: INSTALLER_NAME = $(APP_NAME)_windows_arm64_installer.exe
+release-windows-nsis-arm64: INSTALLER_NAME = $(APP_NAME).exe
 release-windows-nsis-arm64: clean-output package-windows-nsis-arm64
 	$(MAKE) create-nsis-installer OUTPUT_DIR=$(OUTPUT_DIR) INSTALLER_SRC=$(APP_NAME)-arm64-installer.exe INSTALLER_NAME=$(INSTALLER_NAME)
 
-# Build all release targets
+release-windows-nsis-universal: OUTPUT_DIR = $(VERSIONED_OUTPUT)/windows/universal
+release-windows-nsis-universal: INSTALLER_NAME = $(APP_NAME).exe
+release-windows-nsis-universal: clean-output package-windows-nsis-universal
+	$(MAKE) create-nsis-installer OUTPUT_DIR=$(OUTPUT_DIR) INSTALLER_SRC=$(APP_NAME)-amd64_arm64-installer.exe INSTALLER_NAME=$(INSTALLER_NAME)
+
+# Build all release targets (Darwin universal + Windows universal only)
 release-all: clean-output
-	$(MAKE) package-darwin-arm64
-	$(MAKE) create-dmg OUTPUT_DIR=$(VERSIONED_OUTPUT)/darwin/arm64 DMG_NAME=$(APP_NAME)_darwin_arm64.dmg
-	$(MAKE) package-darwin-amd64
-	$(MAKE) create-dmg OUTPUT_DIR=$(VERSIONED_OUTPUT)/darwin/amd64 DMG_NAME=$(APP_NAME)_darwin_amd64.dmg
 	$(MAKE) package-darwin-universal
-	$(MAKE) create-dmg OUTPUT_DIR=$(VERSIONED_OUTPUT)/darwin/universal DMG_NAME=$(APP_NAME)_darwin_universal.dmg
-	$(MAKE) package-windows-nsis-amd64
-	$(MAKE) create-nsis-installer OUTPUT_DIR=$(VERSIONED_OUTPUT)/windows/amd64 INSTALLER_SRC=$(APP_NAME)-amd64-installer.exe INSTALLER_NAME=$(APP_NAME)_windows_amd64_installer.exe
-	$(MAKE) package-windows-nsis-arm64
-	$(MAKE) create-nsis-installer OUTPUT_DIR=$(VERSIONED_OUTPUT)/windows/arm64 INSTALLER_SRC=$(APP_NAME)-arm64-installer.exe INSTALLER_NAME=$(APP_NAME)_windows_arm64_installer.exe
+	$(MAKE) create-dmg OUTPUT_DIR=$(VERSIONED_OUTPUT)/darwin/universal DMG_NAME=$(APP_NAME).dmg
+	$(MAKE) package-windows-nsis-universal
+	$(MAKE) create-nsis-installer OUTPUT_DIR=$(VERSIONED_OUTPUT)/windows/universal INSTALLER_SRC=$(APP_NAME)-amd64_arm64-installer.exe INSTALLER_NAME=$(APP_NAME).exe
 
 # Upload to Supabase storage
 upload-supabase:
