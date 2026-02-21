@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 type SQLiteClient interface {
@@ -43,7 +43,7 @@ func (s *SQLite) Connect(host, port, username, password, database string, test b
 		return errors.New("database file path is required")
 	}
 
-	db, err := sql.Open("sqlite3", database+"?_busy_timeout=5000")
+	db, err := sql.Open("sqlite", database+"?_busy_timeout=5000")
 	if err != nil {
 		return err
 	}

@@ -85,10 +85,11 @@ tasks:
       - wails3 update build-assets -name "{{.APP_NAME}}" -binaryname "{{.APP_NAME}}" -config config.yml -dir .
 
   setup:docker:
-    summary: Builds Docker image for cross-compilation (~800MB download)
+    summary: (Optional) Builds Docker image for CGO cross-compilation (~800MB download)
     desc: |
-      Builds the Docker image needed for cross-compiling to any platform.
-      Run this once to enable cross-platform builds from any OS.
+      Builds the Docker image for cross-compiling with CGO (e.g. if you add CGO deps later).
+      Not required for Windows builds—we use pure-Go SQLite (modernc.org/sqlite) and native Go cross-compile.
+      Run this only if you need CGO when cross-compiling from non-Windows to Windows.
     cmds:
       - docker build -t wails-cross -f build/docker/Dockerfile.cross build/docker/
     preconditions:
