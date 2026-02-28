@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"datacia/internal/logger"
 	"datacia/internal/paths"
 )
 
@@ -14,28 +15,36 @@ func loadSettings() {
 	}
 	settingsPath, err := paths.GetSettingsPath()
 	if err != nil {
+		logger.Warn("settings.loadSettings", err, "Failed to resolve settings path")
 		return
 	}
 	data, err := os.ReadFile(settingsPath)
 	if err != nil {
+		logger.Warn("settings.loadSettings", err, "Failed to read settings file, using defaults")
 		if err := os.MkdirAll(filepath.Dir(settingsPath), 0755); err != nil {
+			logger.Warn("settings.loadSettings", err, "Failed to create settings directory")
 			return
 		}
 		def := defaultSettings()
 		globalInfo.mu.Lock()
 		globalInfo.Settings = def
 		globalInfo.mu.Unlock()
-		_ = saveSettings()
+		if err := saveSettings(); err != nil {
+			logger.Warn("settings.loadSettings", err, "Failed to save default settings")
+		}
 		return
 	}
 	var s Settings
 	if err := json.Unmarshal(data, &s); err != nil {
+		logger.Warn("settings.loadSettings", err, "Failed to parse settings file, resetting to defaults")
 		def := defaultSettings()
 		globalInfo.mu.Lock()
 		globalInfo.Settings = def
 		globalInfo.mu.Unlock()
 		_ = os.MkdirAll(filepath.Dir(settingsPath), 0755)
-		_ = saveSettings()
+		if err := saveSettings(); err != nil {
+			logger.Warn("settings.loadSettings", err, "Failed to save reset settings")
+		}
 		return
 	}
 	s.Editor.Light = fillTokenColorsDefaults(s.Editor.Light, defaultTokenColorsLight())
@@ -44,7 +53,9 @@ func loadSettings() {
 	globalInfo.mu.Lock()
 	globalInfo.Settings = s
 	globalInfo.mu.Unlock()
-	_ = saveSettings()
+	if err := saveSettings(); err != nil {
+		logger.Warn("settings.loadSettings", err, "Failed to persist settings")
+	}
 }
 
 func saveSettings() error {

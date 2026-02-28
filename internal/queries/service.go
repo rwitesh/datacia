@@ -10,8 +10,8 @@ import (
 	"datacia/internal/logger"
 	"datacia/internal/paths"
 
+	"github.com/sirupsen/logrus"
 	"github.com/wailsapp/wails/v3/pkg/application"
-	"go.uber.org/zap"
 )
 
 type FileType string
@@ -37,11 +37,11 @@ func NewQueriesService(app *application.App) *QueriesService {
 	// Use centralized queries path
 	rootDir, err := paths.GetQueriesDir()
 	if err != nil {
-		logger.Logger.Error("Error resolving queries root dir", zap.Error(err))
+		logger.Error("queries.NewQueriesService", err, "Failed to resolve queries root dir")
 	}
 
 	if err := os.MkdirAll(rootDir, 0755); err != nil {
-		logger.Logger.Error("Error creating queries root dir", zap.Error(err), zap.String("rootDir", rootDir))
+		logger.ErrorWithFields("queries.NewQueriesService", err, "Failed to create queries root dir", logrus.Fields{"rootDir": rootDir})
 	}
 
 	return &QueriesService{

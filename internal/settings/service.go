@@ -4,6 +4,7 @@ import (
 	"runtime"
 	"sync"
 
+	"datacia/internal/logger"
 	"datacia/internal/paths"
 	"datacia/internal/security"
 
@@ -121,6 +122,7 @@ func (s *Service) UpdateSettings(settings Settings) *Info {
 		if err == nil {
 			next.AI.Gemini.Key = enc
 		} else {
+			logger.Warn("settings.UpdateSettings", err, "Failed to encrypt AI API key, keeping previous")
 			next.AI.Gemini.Key = current.AI.Gemini.Key
 		}
 	} else {

@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
-	"go.uber.org/zap"
 )
 
 type UIController interface {
@@ -324,7 +323,7 @@ func (e *Engine) RunQuery(queryId, queryType, sql string) (common.QueryResult, e
 	go func(engine, sql string, duration int64, status string, errorMessage string) {
 		saveErr := e.store.SaveQueryHistory(engine, sql, duration, status, errorMessage)
 		if saveErr != nil {
-			logger.Logger.Error("Failed to save query history", zap.Error(saveErr))
+			logger.Error("remote.RunQuery", saveErr, "Failed to save query history")
 		}
 	}(engine, sql, duration, status, errorMessage)
 

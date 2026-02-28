@@ -19,9 +19,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
-	"go.uber.org/zap"
 	clip "golang.design/x/clipboard"
 	"gopkg.in/yaml.v3"
 )
@@ -54,8 +54,8 @@ type Config struct {
 func NewApp(assets embed.FS, config []byte) (*App, error) {
 	var cfg *Config
 	if err := yaml.Unmarshal(config, &cfg); err != nil {
-		logger.Logger.Error("Failed to parse config.yml", zap.Error(err))
-		return nil, fmt.Errorf("failed to parse config.yml: %w", err)
+		logger.Error("app.NewApp", err, "Failed to parse config.yml")
+		return nil, err
 	}
 
 	app := application.New(application.Options{
@@ -76,14 +76,13 @@ func NewApp(assets embed.FS, config []byte) (*App, error) {
 func (a *App) Initialize() error {
 	version := a.config.Info.Version
 	if version == "" {
-		logger.Logger.Error("Version cannot be empty in config")
+		logger.Error("app.Initialize", nil, "Version cannot be empty in config")
 		return errors.New("version cannot be empty")
 	}
 
-	// Initialize security context once at startup
 	if err := security.InitSecurityContext(); err != nil {
-		logger.Logger.Error("Failed to initialize security context", zap.Error(err))
-		return fmt.Errorf("failed to initialize security context: %w", err)
+		logger.Error("app.Initialize", err, "Failed to initialize security context")
+		return err
 	}
 
 	// Initialize settings
@@ -92,13 +91,13 @@ func (a *App) Initialize() error {
 
 	// Init clipboard
 	if err := clip.Init(); err != nil {
-		logger.Logger.Error("Failed to initialize clipboard", zap.Error(err))
-		return fmt.Errorf("failed to initialize clipboard: %w", err)
+		logger.Error("app.Initialize", err, "Failed to initialize clipboard")
+		return err
 	}
 
 	engine, err := remote.New(a, version)
 	if err != nil {
-		logger.Logger.Error("Failed to create remote engine", zap.Error(err), zap.String("version", version))
+		logger.ErrorWithFields("app.Initialize", err, "Failed to create remote engine", logrus.Fields{"version": version})
 		return err
 	}
 
@@ -115,7 +114,7 @@ func (a *App) Initialize() error {
 	// Validate license on startup (non-blocking)
 	resp := licenseService.ValidateOnStart()
 	if !resp.Success && resp.Error != "" {
-		logger.Logger.Warn("License validation on start", zap.Bool("success", resp.Success), zap.String("error", resp.Error))
+		logger.WarnWithFields("app.Initialize", nil, "License validation on start", logrus.Fields{"success": resp.Success, "error": resp.Error})
 	}
 
 	// Saving files // exporting data
@@ -164,7 +163,7 @@ func (a *App) createConnectionWindow() error {
 	})
 
 	if a.connectionWindow == nil {
-		logger.Logger.Error("Failed to create connection window")
+		logger.Error("app.createConnectionWindow", nil, "Failed to create connection window")
 		return fmt.Errorf("failed to create connection window")
 	}
 
@@ -177,11 +176,11 @@ func (a *App) createConnectionWindow() error {
 		// If editor window is open, just close this window (default behavior) and return
 		// Do not quit the application
 		if a.editorWindow != nil {
-			logger.Logger.Info("Connection window closing, editor remains open")
+			logger.Debug("app.createConnectionWindow", "Connection window closing, editor remains open")
 			return
 		}
 
-		logger.Logger.Info("Connection window closing, quitting application")
+		logger.Info("app.createConnectionWindow", "Connection window closing, quitting application")
 		a.instance.Quit()
 	})
 
@@ -209,7 +208,7 @@ func (a *App) createEditorWindow() error {
 	})
 
 	if a.editorWindow == nil {
-		logger.Logger.Error("Failed to create editor window")
+		logger.Error("app.createEditorWindow", nil, "Failed to create editor window")
 		return fmt.Errorf("failed to create editor window")
 	}
 
@@ -218,13 +217,13 @@ func (a *App) createEditorWindow() error {
 		if a.closingIntentional {
 			return
 		}
-		logger.Logger.Info("Editor window closing, treating as disconnect")
+		logger.Info("app.createEditorWindow", "Editor window closing, treating as disconnect")
 		if a.engine != nil {
 			_ = a.engine.CloseCurrentConnection(false)
 		}
 		a.editorWindow = nil
 		if err := a.createConnectionWindow(); err != nil {
-			logger.Logger.Error("Failed to create connection window after editor close", zap.Error(err))
+			logger.Error("app.createEditorWindow", err, "Failed to create connection window after editor close")
 			a.instance.Quit()
 		}
 	})
@@ -248,7 +247,7 @@ func (a *App) OpenEditor() {
 	defer a.windowMutex.Unlock()
 
 	if a.editorWindow != nil {
-		logger.Logger.Debug("Editor window already exists, skipping window transition")
+		logger.Debug("app.OpenEditor", "Editor window already exists, skipping window transition")
 		a.editorWindow.Show()
 		a.editorWindow.Focus()
 		// Even if editor exists, ensure connection window is closed
@@ -263,7 +262,7 @@ func (a *App) OpenEditor() {
 
 	// Create new window FIRST
 	if err := a.createEditorWindow(); err != nil {
-		logger.Logger.Error("Failed to open editor window", zap.Error(err))
+		logger.Error("app.OpenEditor", err, "Failed to open editor window")
 		// If failed, do NOT close the connection window so the app doesn't vanish
 		return
 	}
@@ -282,7 +281,7 @@ func (a *App) CloseEditor() {
 	defer a.windowMutex.Unlock()
 
 	if a.connectionWindow != nil {
-		logger.Logger.Debug("Connection window already exists, skipping window transition")
+		logger.Debug("app.CloseEditor", "Connection window already exists, skipping window transition")
 		a.connectionWindow.Show()
 		a.connectionWindow.Focus()
 		// Ensure editor window is closed if it exists (though usually it shouldn't if we are in this state, but for safety)
@@ -297,7 +296,7 @@ func (a *App) CloseEditor() {
 
 	// Create new window FIRST
 	if err := a.createConnectionWindow(); err != nil {
-		logger.Logger.Error("Failed to open connection window", zap.Error(err))
+		logger.Error("app.CloseEditor", err, "Failed to open connection window")
 		// If failed, do NOT close the editor window so the app doesn't vanish
 		return
 	}
@@ -316,7 +315,7 @@ func (a *App) OpenConnectionWindow() {
 	defer a.windowMutex.Unlock()
 
 	if a.connectionWindow != nil {
-		logger.Logger.Debug("Connection window already exists, focusing")
+		logger.Debug("app.OpenConnectionWindow", "Connection window already exists, focusing")
 		a.connectionWindow.Show()
 		a.connectionWindow.Focus()
 		return
@@ -324,7 +323,7 @@ func (a *App) OpenConnectionWindow() {
 
 	// Create new window
 	if err := a.createConnectionWindow(); err != nil {
-		logger.Logger.Error("Failed to open connection window", zap.Error(err))
+		logger.Error("app.OpenConnectionWindow", err, "Failed to open connection window")
 		return
 	}
 }
@@ -348,7 +347,7 @@ func (a *App) createLicenseWindow() error {
 	})
 
 	if a.licenseWindow == nil {
-		logger.Logger.Error("Failed to create license window")
+		logger.Error("app.createLicenseWindow", nil, "Failed to create license window")
 		return fmt.Errorf("failed to create license window")
 	}
 
@@ -365,14 +364,14 @@ func (a *App) OpenLicenseWindow() {
 	defer a.windowMutex.Unlock()
 
 	if a.licenseWindow != nil {
-		logger.Logger.Debug("License window already exists, focusing")
+		logger.Debug("app.OpenLicenseWindow", "License window already exists, focusing")
 		a.licenseWindow.Show()
 		a.licenseWindow.Focus()
 		return
 	}
 
 	if err := a.createLicenseWindow(); err != nil {
-		logger.Logger.Error("Failed to open license window", zap.Error(err))
+		logger.Error("app.OpenLicenseWindow", err, "Failed to open license window")
 		return
 	}
 }
@@ -400,7 +399,7 @@ func (a *App) createSettingsWindow(tab string) error {
 	})
 
 	if a.settingsWindow == nil {
-		logger.Logger.Error("Failed to create settings window")
+		logger.Error("app.createSettingsWindow", nil, "Failed to create settings window")
 		return fmt.Errorf("failed to create settings window")
 	}
 
@@ -417,21 +416,21 @@ func (a *App) OpenSettingsWindow(tab string) {
 	defer a.windowMutex.Unlock()
 
 	if a.settingsWindow != nil {
-		logger.Logger.Debug("Settings window already exists, focusing")
+		logger.Debug("app.OpenSettingsWindow", "Settings window already exists, focusing")
 		a.settingsWindow.Show()
 		a.settingsWindow.Focus()
 		return
 	}
 
 	if err := a.createSettingsWindow(tab); err != nil {
-		logger.Logger.Error("Failed to open settings window", zap.Error(err))
+		logger.Error("app.OpenSettingsWindow", err, "Failed to open settings window")
 		return
 	}
 }
 
 func (a *App) Run() error {
 	if err := a.createConnectionWindow(); err != nil {
-		logger.Logger.Error("Failed to create connection window", zap.Error(err))
+		logger.Error("app.Run", err, "Failed to create connection window")
 		return err
 	}
 
@@ -445,7 +444,7 @@ func (a *App) Run() error {
 
 	err := a.instance.Run()
 	if err != nil {
-		logger.Logger.Error("Application run failed", zap.Error(err))
+		logger.Error("app.Run", err, "Application run failed")
 	}
 	return err
 }

@@ -14,7 +14,6 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
-	"go.uber.org/zap"
 )
 
 type ReleaseMetadata struct {
@@ -73,7 +72,7 @@ func (u *Updater) IsNewerVersion(meta *ReleaseMetadata) bool {
 func (u *Updater) IsUpdateAvailable() (*ReleaseMetadata, error) {
 	metadata, err := u.fetchReleaseMetadata()
 	if err != nil {
-		logger.Logger.Error("Failed to check for updates", zap.Error(err))
+		logger.Error("update.IsUpdateAvailable", err, "Failed to check for updates")
 		return nil, errors.New("Failed to check for updates")
 	}
 	if u.IsNewerVersion(metadata) {

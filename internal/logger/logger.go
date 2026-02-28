@@ -1,41 +1,27 @@
 package logger
 
 import (
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
+	"github.com/sirupsen/logrus"
 )
 
 var (
-	// Logger is the global logger instance
-	Logger *zap.Logger
+	Logger *logrus.Logger
 )
 
-// initializes the global logger with the specified configuration
-// production: if true, uses production config; if false, uses development config
 func Init(production bool) error {
-	var config zap.Config
+	Logger = logrus.New()
+
 	if production {
-		config = zap.NewProductionConfig()
+		Logger.SetFormatter(&logrus.JSONFormatter{})
+		Logger.SetLevel(logrus.InfoLevel)
 	} else {
-		config = zap.NewDevelopmentConfig()
-		config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
-	}
-	config.EncoderConfig.TimeKey = "time"
-	config.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
-
-	var err error
-	Logger, err = config.Build()
-	if err != nil {
-		return err
+		Logger.SetFormatter(&logrus.TextFormatter{
+			FullTimestamp:   true,
+			TimestampFormat: "2006-01-02T15:04:05.000Z07:00",
+			ForceColors:     true,
+		})
+		Logger.SetLevel(logrus.DebugLevel)
 	}
 
-	return nil
-}
-
-// Sync flushes any buffered log entries
-func Sync() error {
-	if Logger != nil {
-		return Logger.Sync()
-	}
 	return nil
 }

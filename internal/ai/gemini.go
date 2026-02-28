@@ -2,6 +2,7 @@ package ai
 
 import (
 	"bytes"
+	"datacia/internal/logger"
 	"datacia/internal/security"
 	"datacia/internal/settings"
 	"encoding/json"
@@ -40,7 +41,8 @@ func (s *Service) sendGemini(engine, context, message, modelID string) (string, 
 	}
 	apiKey, err := security.DecryptString(gemini.Key)
 	if err != nil {
-		return "", fmt.Errorf("failed to use Gemini API key: %w", err)
+		logger.Error("ai.sendGemini", err, "Failed to decrypt Gemini API key")
+		return "", fmt.Errorf("failed to load API key — re-enter it in Settings → AI")
 	}
 	return callGemini(apiKey, modelID, buildSystemPrompt(engine, context), message)
 }
@@ -64,7 +66,8 @@ func callGemini(apiKey, modelID, systemPrompt, userMessage string) (string, erro
 	client := &http.Client{Timeout: 30 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("gemini request failed: %w", err)
+		logger.Error("ai.callGemini", err, "Gemini API request failed")
+		return "", fmt.Errorf("failed to reach Gemini API")
 	}
 	defer resp.Body.Close()
 

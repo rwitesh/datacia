@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"github.com/wailsapp/wails/v3/pkg/application"
-	"go.uber.org/zap"
 )
 
 type LicenseService struct {
@@ -56,6 +56,7 @@ func (s *LicenseService) Activate(licenseKey string) Response {
 	}
 
 	if err := saveLicense(l); err != nil {
+		logger.Error("license.Activate", err, "Failed to save license")
 		return Response{Success: false, Error: "Failed to save license"}
 	}
 
@@ -87,7 +88,9 @@ func (s *LicenseService) Deactivate() Response {
 		return Response{Success: false, Error: err.Error()}
 	}
 
-	_ = removeLicense()
+	if err := removeLicense(); err != nil {
+		logger.Warn("license.Deactivate", err, "Failed to remove license file")
+	}
 
 	s.mu.Lock()
 	s.license = nil
@@ -100,7 +103,7 @@ func (s *LicenseService) Deactivate() Response {
 }
 
 func (s *LicenseService) ValidateOnline() Response {
-	logger.Logger.Info("License ValidateOnline called")
+	logger.Info("license.ValidateOnline", "License ValidateOnline called")
 	s.mu.RLock()
 	license := s.license
 	s.mu.RUnlock()
@@ -120,7 +123,7 @@ func (s *LicenseService) ValidateOnline() Response {
 
 	for i := 0; i < maxRetries; i++ {
 		l, validateErr = licenseValidate(license.Token, hashedMachineID)
-		logger.Logger.Debug("License ValidateOnline attempt", zap.Int("attempt", i+1), zap.Error(validateErr))
+		logger.DebugWithFields("license.ValidateOnline", "License validate attempt", logrus.Fields{"attempt": i + 1, "error": validateErr})
 		if validateErr == nil {
 			// Validation successful, update local license
 			if err := saveLicense(l); err != nil {
@@ -164,20 +167,20 @@ func (s *LicenseService) ValidateOnline() Response {
 }
 
 func (s *LicenseService) ValidateOnStart() Response {
-	logger.Logger.Info("License ValidateOnStart called")
+	logger.Info("license.ValidateOnStart", "License ValidateOnStart called")
 	s.mu.RLock()
 	license := s.license
 	s.mu.RUnlock()
 
 	if license == nil {
-		logger.Logger.Debug("License ValidateOnStart: no license")
+		logger.Debug("license.ValidateOnStart", "No license found")
 		return s.setResult(Response{Success: false, Message: "No license found"})
 	}
 
 	verifier := newVerifier()
 	if err := verifier.ValidateOffline(license); err != nil {
 		// Local check failed (e.g. expired). Try network first before showing expired.
-		logger.Logger.Info("License ValidateOnStart: offline check failed, calling ValidateOnline", zap.Error(err))
+		logger.Info("license.ValidateOnStart", "Offline check failed, calling ValidateOnline")
 		return s.ValidateOnline()
 	}
 
