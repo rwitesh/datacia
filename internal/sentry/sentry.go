@@ -14,21 +14,9 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// dsn is set at build time via ldflags:
-//
-//	-ldflags "-X datacia/internal/sentry.dsn=<your-dsn>"
-//
-// Can be overridden at runtime with SENTRY_DSN env var.
-var dsn string
+const dsn = "https://d0d8b92c5e3d1601f6ede2c3b0f6c832@o4510567778287616.ingest.us.sentry.io/4510567794671616"
 
 func Init(release string) error {
-	if v := os.Getenv("SENTRY_DSN"); v != "" {
-		dsn = v
-	}
-	if dsn == "" {
-		dsn = "https://d0d8b92c5e3d1601f6ede2c3b0f6c832@o4510567778287616.ingest.us.sentry.io/4510567794671616"
-	}
-
 	releaseTag := "datacia@" + release
 	if release == "" {
 		releaseTag = "datacia@unknown"

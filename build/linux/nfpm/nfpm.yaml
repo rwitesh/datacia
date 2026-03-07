@@ -6,7 +6,7 @@
 name: "DataCia"
 arch: ${GOARCH}
 platform: "linux"
-version: "0.10.68"
+version: "0.10.69"
 section: "default"
 priority: "extra"
 maintainer: ${GIT_COMMITTER_NAME} <${GIT_COMMITTER_EMAIL}>

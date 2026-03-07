@@ -10,7 +10,7 @@ info:
   productIdentifier: "app.datacia" # The unique product identifier
   description: "Your database reimaginzed for speed and clarity" # The application description
   copyright: "(c) 2026, DataCia" # Copyright text
-  version: "0.10.68" # The version of the application
+  version: "0.10.69" # The version of the application
 
 # Dev mode configuration
 dev_mode:
