@@ -323,7 +323,7 @@ func (e *Engine) RunQuery(queryId, queryType, sql string) (common.QueryResult, e
 	go func(engine, sql string, duration int64, status string, errorMessage string) {
 		saveErr := e.store.SaveQueryHistory(engine, sql, duration, status, errorMessage)
 		if saveErr != nil {
-			logger.Error("remote.RunQuery", saveErr, "Failed to save query history")
+			logger.Error("Failed to save query history", "error", saveErr.Error())
 		}
 	}(engine, sql, duration, status, errorMessage)
 

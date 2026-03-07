@@ -1,35 +1,45 @@
 package logger
 
-import "github.com/sirupsen/logrus"
-
-func Error(op string, err error, msg string) {
-	Logger.WithField("op", op).WithError(err).Error(msg)
+func Error(msg string, attrs ...string) {
+	if Logger == nil {
+		return
+	}
+	e := Logger.Error()
+	for i := 0; i+1 < len(attrs); i += 2 {
+		e = e.String(attrs[i], attrs[i+1])
+	}
+	e.Emit(msg)
 }
 
-func Warn(op string, err error, msg string) {
-	Logger.WithField("op", op).WithError(err).Warn(msg)
+func Warn(msg string, attrs ...string) {
+	if Logger == nil {
+		return
+	}
+	e := Logger.Warn()
+	for i := 0; i+1 < len(attrs); i += 2 {
+		e = e.String(attrs[i], attrs[i+1])
+	}
+	e.Emit(msg)
 }
 
-func Info(op string, msg string) {
-	Logger.WithField("op", op).Info(msg)
+func Info(msg string, attrs ...string) {
+	if Logger == nil {
+		return
+	}
+	e := Logger.Info()
+	for i := 0; i+1 < len(attrs); i += 2 {
+		e = e.String(attrs[i], attrs[i+1])
+	}
+	e.Emit(msg)
 }
 
-func Debug(op string, msg string) {
-	Logger.WithField("op", op).Debug(msg)
-}
-
-func ErrorWithFields(op string, err error, msg string, fields logrus.Fields) {
-	Logger.WithField("op", op).WithFields(fields).WithError(err).Error(msg)
-}
-
-func WarnWithFields(op string, err error, msg string, fields logrus.Fields) {
-	Logger.WithField("op", op).WithFields(fields).WithError(err).Warn(msg)
-}
-
-func InfoWithFields(op string, msg string, fields logrus.Fields) {
-	Logger.WithField("op", op).WithFields(fields).Info(msg)
-}
-
-func DebugWithFields(op string, msg string, fields logrus.Fields) {
-	Logger.WithField("op", op).WithFields(fields).Debug(msg)
+func Debug(msg string, attrs ...string) {
+	if Logger == nil {
+		return
+	}
+	e := Logger.Debug()
+	for i := 0; i+1 < len(attrs); i += 2 {
+		e = e.String(attrs[i], attrs[i+1])
+	}
+	e.Emit(msg)
 }

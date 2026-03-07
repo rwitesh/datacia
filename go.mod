@@ -7,13 +7,11 @@ require (
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/adrg/xdg v0.5.3
 	github.com/getsentry/sentry-go v0.43.0
-	github.com/getsentry/sentry-go/logrus v0.43.0
 	github.com/go-sql-driver/mysql v1.9.3
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.7.6
 	github.com/microsoft/go-deviceid v1.0.0
-	github.com/sirupsen/logrus v1.9.3
 	github.com/wailsapp/wails/v3 v3.0.0-alpha.64
 	golang.design/x/clipboard v0.7.1
 	golang.org/x/crypto v0.47.0

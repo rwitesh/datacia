@@ -15,14 +15,14 @@ func loadSettings() {
 	}
 	settingsPath, err := paths.GetSettingsPath()
 	if err != nil {
-		logger.Warn("settings.loadSettings", err, "Failed to resolve settings path")
+		logger.Warn("Failed to resolve settings path", "error", err.Error())
 		return
 	}
 	data, err := os.ReadFile(settingsPath)
 	if err != nil {
-		logger.Warn("settings.loadSettings", err, "Failed to read settings file, using defaults")
+		logger.Warn("Failed to read settings file, using defaults", "error", err.Error())
 		if err := os.MkdirAll(filepath.Dir(settingsPath), 0755); err != nil {
-			logger.Warn("settings.loadSettings", err, "Failed to create settings directory")
+			logger.Warn("Failed to create settings directory", "error", err.Error())
 			return
 		}
 		def := defaultSettings()
@@ -30,20 +30,20 @@ func loadSettings() {
 		globalInfo.Settings = def
 		globalInfo.mu.Unlock()
 		if err := saveSettings(); err != nil {
-			logger.Warn("settings.loadSettings", err, "Failed to save default settings")
+			logger.Warn("Failed to save default settings", "error", err.Error())
 		}
 		return
 	}
 	var s Settings
 	if err := json.Unmarshal(data, &s); err != nil {
-		logger.Warn("settings.loadSettings", err, "Failed to parse settings file, resetting to defaults")
+		logger.Warn("Failed to parse settings file, resetting to defaults", "error", err.Error())
 		def := defaultSettings()
 		globalInfo.mu.Lock()
 		globalInfo.Settings = def
 		globalInfo.mu.Unlock()
 		_ = os.MkdirAll(filepath.Dir(settingsPath), 0755)
 		if err := saveSettings(); err != nil {
-			logger.Warn("settings.loadSettings", err, "Failed to save reset settings")
+			logger.Warn("Failed to save reset settings", "error", err.Error())
 		}
 		return
 	}
@@ -54,7 +54,7 @@ func loadSettings() {
 	globalInfo.Settings = s
 	globalInfo.mu.Unlock()
 	if err := saveSettings(); err != nil {
-		logger.Warn("settings.loadSettings", err, "Failed to persist settings")
+		logger.Warn("Failed to persist settings", "error", err.Error())
 	}
 }
 

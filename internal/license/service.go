@@ -6,7 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -56,7 +55,7 @@ func (s *LicenseService) Activate(licenseKey string) Response {
 	}
 
 	if err := saveLicense(l); err != nil {
-		logger.Error("license.Activate", err, "Failed to save license")
+		logger.Error("Failed to save license", "error", err.Error())
 		return Response{Success: false, Error: "Failed to save license"}
 	}
 
@@ -89,7 +88,7 @@ func (s *LicenseService) Deactivate() Response {
 	}
 
 	if err := removeLicense(); err != nil {
-		logger.Warn("license.Deactivate", err, "Failed to remove license file")
+		logger.Warn("Failed to remove license file", "error", err.Error())
 	}
 
 	s.mu.Lock()
@@ -103,7 +102,6 @@ func (s *LicenseService) Deactivate() Response {
 }
 
 func (s *LicenseService) ValidateOnline() Response {
-	logger.Info("license.ValidateOnline", "License ValidateOnline called")
 	s.mu.RLock()
 	license := s.license
 	s.mu.RUnlock()
@@ -123,7 +121,6 @@ func (s *LicenseService) ValidateOnline() Response {
 
 	for i := 0; i < maxRetries; i++ {
 		l, validateErr = licenseValidate(license.Token, hashedMachineID)
-		logger.DebugWithFields("license.ValidateOnline", "License validate attempt", logrus.Fields{"attempt": i + 1, "error": validateErr})
 		if validateErr == nil {
 			// Validation successful, update local license
 			if err := saveLicense(l); err != nil {
@@ -167,20 +164,17 @@ func (s *LicenseService) ValidateOnline() Response {
 }
 
 func (s *LicenseService) ValidateOnStart() Response {
-	logger.Info("license.ValidateOnStart", "License ValidateOnStart called")
 	s.mu.RLock()
 	license := s.license
 	s.mu.RUnlock()
 
 	if license == nil {
-		logger.Debug("license.ValidateOnStart", "No license found")
 		return s.setResult(Response{Success: false, Message: "No license found"})
 	}
 
 	verifier := newVerifier()
 	if err := verifier.ValidateOffline(license); err != nil {
 		// Local check failed (e.g. expired). Try network first before showing expired.
-		logger.Info("license.ValidateOnStart", "Offline check failed, calling ValidateOnline")
 		return s.ValidateOnline()
 	}
 

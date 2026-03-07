@@ -10,7 +10,7 @@ import (
 	"datacia/internal/security"
 
 	"github.com/getsentry/sentry-go"
-	"github.com/sirupsen/logrus"
+
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -118,13 +118,13 @@ func (s *Service) GetAppInfo() *Info {
 
 	info := Get()
 
-	logger.InfoWithFields("service.get_app_info", "app_launch", logrus.Fields{
-		"os":          info.OS,
-		"arch":        info.OSArch,
-		"os_version":  info.OSVersion,
-		"app_version": info.AppVersion,
-		"hardware":    info.MachineId,
-	})
+	logger.Info("app_launch",
+		"os", info.OS,
+		"arch", info.OSArch,
+		"os_version", info.OSVersion,
+		"app_version", info.AppVersion,
+		"hardware", info.MachineId,
+	)
 
 	return info
 }
@@ -142,7 +142,7 @@ func (s *Service) UpdateSettings(settings Settings) *Info {
 		if err == nil {
 			next.AI.Gemini.Key = enc
 		} else {
-			logger.Warn("settings.UpdateSettings", err, "Failed to encrypt AI API key, keeping previous")
+			logger.Warn("Failed to encrypt AI API key, keeping previous", "error", err.Error())
 			next.AI.Gemini.Key = current.AI.Gemini.Key
 		}
 	} else {

@@ -26,43 +26,42 @@ type buildConfig struct {
 func main() {
 	defer recoverAndReport()
 
-	// Initialize logger (false = development mode, true = production mode)
-	if err := logger.Init(false); err != nil {
-		panic(err)
-	}
-
 	// Parse version for Sentry release
 	var cfg buildConfig
 	_ = yaml.Unmarshal(config, &cfg)
 	version := cfg.Info.Version
 
 	if err := sentry.Init(version); err != nil {
-		logger.Logger.WithError(err).Error("Sentry init failed")
+		logger.Error("Sentry init failed", "error", err.Error())
 	}
 	defer sentry.Flush()
 
-	logger.Logger.Info("Application starting")
+	// Initialize logger (false = development mode, true = production mode)
+	logger.Init(true)
 
 	appManager, err := app.NewApp(assets, config)
 	if err != nil {
-		logger.Logger.WithError(err).Fatal("Failed to create app")
+		logger.Error("Failed to create app", "error", err.Error())
+		panic(err)
 	}
 
 	err = appManager.Initialize()
 	if err != nil {
-		logger.Logger.WithError(err).Fatal("Failed to initialize app")
+		logger.Error("Failed to initialize app", "error", err.Error())
+		panic(err)
 	}
 
 	err = appManager.Run()
 	if err != nil {
-		logger.Logger.WithError(err).Fatal("Failed to run app")
+		logger.Error("Failed to run app", "error", err.Error())
+		panic(err)
 	}
 }
 
-// recoverAndReport logs the panic (Sentry hook captures it), flushes, then re-panics.
+// recoverAndReport logs the panic, flushes Sentry, then re-panics.
 func recoverAndReport() {
 	if r := recover(); r != nil {
-		logger.Logger.WithField("panic", true).Error("panic: " + fmtString(r))
+		logger.Error("panic: " + fmtString(r))
 		sentry.Flush()
 		panic(r)
 	}

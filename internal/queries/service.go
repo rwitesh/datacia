@@ -10,7 +10,6 @@ import (
 	"datacia/internal/logger"
 	"datacia/internal/paths"
 
-	"github.com/sirupsen/logrus"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -37,11 +36,11 @@ func NewQueriesService(app *application.App) *QueriesService {
 	// Use centralized queries path
 	rootDir, err := paths.GetQueriesDir()
 	if err != nil {
-		logger.Error("queries.NewQueriesService", err, "Failed to resolve queries root dir")
+		logger.Error("Failed to resolve queries root dir", "error", err.Error())
 	}
 
 	if err := os.MkdirAll(rootDir, 0755); err != nil {
-		logger.ErrorWithFields("queries.NewQueriesService", err, "Failed to create queries root dir", logrus.Fields{"rootDir": rootDir})
+		logger.Error("Failed to create queries root dir", "error", err.Error(), "rootDir", rootDir)
 	}
 
 	return &QueriesService{

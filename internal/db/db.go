@@ -113,7 +113,7 @@ func (s *Store) initSchema() error {
 
 	cutoff := time.Now().UTC().Add(-365 * 24 * time.Hour).Format(time.RFC3339)
 	if _, err := s.db.Exec(`DELETE FROM query_history WHERE timestamp < ?`, cutoff); err != nil {
-		logger.Error("db.initSchema", err, "Failed to prune query history")
+		logger.Error("Failed to prune query history", "error", err.Error())
 	}
 
 	return nil
@@ -181,7 +181,7 @@ func (s *Store) SaveConnection(name string, config map[string]string) error {
 		useSSHKey, config["sshKeyPath"],
 	)
 	if err != nil {
-		logger.Error("db.SaveConnection", err, "Failed to save connection")
+		logger.Error("Failed to save connection", "error", err.Error())
 	}
 	return err
 }
@@ -224,7 +224,7 @@ func (s *Store) UpdateConnection(id, name string, config map[string]string) erro
 		id,
 	)
 	if err != nil {
-		logger.Error("db.UpdateConnection", err, "Failed to update connection")
+		logger.Error("Failed to update connection", "error", err.Error())
 	}
 	return err
 }
@@ -258,11 +258,11 @@ func (s *Store) LoadConnection(id string) (map[string]string, error) {
 
 	password, err := s.decryptField(encPassword)
 	if err != nil {
-		logger.Warn("db.LoadConnection", err, "Failed to decrypt password")
+		logger.Warn("Failed to decrypt password", "error", err.Error())
 	}
 	sshPassword, err := s.decryptField(encSSHPassword)
 	if err != nil {
-		logger.Warn("db.LoadConnection", err, "Failed to decrypt SSH password")
+		logger.Warn("Failed to decrypt SSH password", "error", err.Error())
 	}
 
 	config := map[string]string{
@@ -299,7 +299,7 @@ func (s *Store) LoadConnection(id string) (map[string]string, error) {
 func (s *Store) ListConnections() (map[string]common.ConnectionInfo, error) {
 	rows, err := s.db.Query(`SELECT id, name, engine FROM connections ORDER BY updated_at DESC`)
 	if err != nil {
-		logger.Error("db.ListConnections", err, "Failed to list connections")
+		logger.Error("Failed to list connections", "error", err.Error())
 		return map[string]common.ConnectionInfo{}, err
 	}
 	defer rows.Close()
@@ -322,7 +322,7 @@ func (s *Store) ListConnections() (map[string]common.ConnectionInfo, error) {
 func (s *Store) DeleteConnection(id string) (bool, error) {
 	result, err := s.db.Exec(`DELETE FROM connections WHERE id = ?`, id)
 	if err != nil {
-		logger.Error("db.DeleteConnection", err, "Failed to delete connection")
+		logger.Error("Failed to delete connection", "error", err.Error())
 		return false, err
 	}
 
