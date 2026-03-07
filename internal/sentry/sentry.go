@@ -26,7 +26,7 @@ func Init(release string) error {
 		dsn = v
 	}
 	if dsn == "" {
-		return nil
+		dsn = "https://d0d8b92c5e3d1601f6ede2c3b0f6c832@o4510567778287616.ingest.us.sentry.io/4510567794671616"
 	}
 
 	releaseTag := "datacia@" + release

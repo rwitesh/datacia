@@ -73,7 +73,7 @@ func (u *Updater) IsUpdateAvailable() (*ReleaseMetadata, error) {
 	metadata, err := u.fetchReleaseMetadata()
 	if err != nil {
 		logger.Error("update.IsUpdateAvailable", err, "Failed to check for updates")
-		return nil, errors.New("Failed to check for updates")
+		return nil, errors.New("Failed to check for updates" + err.Error())
 	}
 	if u.IsNewerVersion(metadata) {
 		return metadata, nil
