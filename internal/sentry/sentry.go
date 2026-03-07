@@ -35,7 +35,7 @@ func Init(release string) error {
 	client := sentry.CurrentHub().Client()
 	if client != nil && logger.Logger != nil {
 		eventHook := sentrylogrus.NewEventHookFromClient(
-			[]logrus.Level{logrus.ErrorLevel, logrus.FatalLevel, logrus.PanicLevel},
+			[]logrus.Level{logrus.InfoLevel, logrus.ErrorLevel, logrus.FatalLevel, logrus.PanicLevel},
 			client,
 		)
 		logger.Logger.AddHook(eventHook)
