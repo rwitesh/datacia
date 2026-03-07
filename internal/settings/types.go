@@ -60,6 +60,7 @@ type Info struct {
 	OSVersion               string      `json:"os_version"`
 	OSArch                  string      `json:"os_arch"`
 	AppVersion              string      `json:"app_version"`
+	MachineId               string      `json:"machineId"`
 	Settings                Settings    `json:"settings"`
 	Appearance              string      `json:"appearance"`
 	ActiveTokenColors       TokenColors `json:"activeTokenColors"`

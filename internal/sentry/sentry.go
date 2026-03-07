@@ -27,7 +27,7 @@ func Init(release string) error {
 		Release:          releaseTag,
 		Environment:      envOrDefault("SENTRY_ENVIRONMENT", "production"),
 		AttachStacktrace: true,
-		Debug:            os.Getenv("SENTRY_DEBUG") == "true",
+		Debug:            true,
 	}); err != nil {
 		return err
 	}

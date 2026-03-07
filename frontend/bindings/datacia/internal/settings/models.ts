@@ -140,6 +140,7 @@ export class Info {
     "os_version": string;
     "os_arch": string;
     "app_version": string;
+    "machineId": string;
     "settings": Settings;
     "appearance": string;
     "activeTokenColors": TokenColors;
@@ -159,6 +160,9 @@ export class Info {
         }
         if (!("app_version" in $$source)) {
             this["app_version"] = "";
+        }
+        if (!("machineId" in $$source)) {
+            this["machineId"] = "";
         }
         if (!("settings" in $$source)) {
             this["settings"] = (new Settings());
@@ -183,22 +187,22 @@ export class Info {
      * Creates a new Info instance from a string or object.
      */
     static createFrom($$source: any = {}): Info {
-        const $$createField4_0 = $$createType3;
-        const $$createField6_0 = $$createType2;
+        const $$createField5_0 = $$createType3;
         const $$createField7_0 = $$createType2;
         const $$createField8_0 = $$createType2;
+        const $$createField9_0 = $$createType2;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("settings" in $$parsedSource) {
-            $$parsedSource["settings"] = $$createField4_0($$parsedSource["settings"]);
+            $$parsedSource["settings"] = $$createField5_0($$parsedSource["settings"]);
         }
         if ("activeTokenColors" in $$parsedSource) {
-            $$parsedSource["activeTokenColors"] = $$createField6_0($$parsedSource["activeTokenColors"]);
+            $$parsedSource["activeTokenColors"] = $$createField7_0($$parsedSource["activeTokenColors"]);
         }
         if ("defaultTokenColorsLight" in $$parsedSource) {
-            $$parsedSource["defaultTokenColorsLight"] = $$createField7_0($$parsedSource["defaultTokenColorsLight"]);
+            $$parsedSource["defaultTokenColorsLight"] = $$createField8_0($$parsedSource["defaultTokenColorsLight"]);
         }
         if ("defaultTokenColorsDark" in $$parsedSource) {
-            $$parsedSource["defaultTokenColorsDark"] = $$createField8_0($$parsedSource["defaultTokenColorsDark"]);
+            $$parsedSource["defaultTokenColorsDark"] = $$createField9_0($$parsedSource["defaultTokenColorsDark"]);
         }
         return new Info($$parsedSource as Partial<Info>);
     }

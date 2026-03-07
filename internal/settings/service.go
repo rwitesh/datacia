@@ -1,13 +1,17 @@
 package settings
 
 import (
+	"context"
 	"runtime"
 	"sync"
+	"time"
 
 	"datacia/internal/logger"
 	"datacia/internal/paths"
 	"datacia/internal/security"
 
+	"github.com/getsentry/sentry-go"
+	"github.com/getsentry/sentry-go/attribute"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -23,11 +27,13 @@ func Init(app *application.App) {
 	if cd, err := paths.GetConfigDir(); err == nil {
 		configDir = cd
 	}
+	machineId, _ := security.GetMachineID()
 	globalInfoOnce.Do(func() {
 		globalInfo = &Info{
 			OS:         app.Env.Info().OS,
 			OSArch:     app.Env.Info().Arch,
 			OSVersion:  app.Env.Info().OSInfo.Version,
+			MachineId:  machineId,
 			AppVersion: "unknown",
 			Settings:   defaultSettings(),
 		}
@@ -45,12 +51,14 @@ func SetAppVersion(version string) {
 }
 
 func Get() *Info {
+	machineId, _ := security.GetMachineID()
 	if globalInfo == nil {
 		return &Info{
 			OS:         runtime.GOOS,
 			OSArch:     runtime.GOARCH,
 			AppVersion: "",
 			Settings:   Settings{Theme: ThemeSystem},
+			MachineId:  machineId,
 		}
 	}
 	globalInfo.mu.RLock()
@@ -78,6 +86,7 @@ func getSanitized() *Info {
 		OSVersion:               globalInfo.OSVersion,
 		OSArch:                  globalInfo.OSArch,
 		AppVersion:              globalInfo.AppVersion,
+		MachineId:               globalInfo.MachineId,
 		Appearance:              globalInfo.Appearance,
 		ActiveTokenColors:       globalInfo.ActiveTokenColors,
 		DefaultTokenColorsLight: defaultTokenColorsLight(),
@@ -106,7 +115,12 @@ func NewService(app *application.App) *Service {
 }
 
 func (s *Service) GetAppInfo() *Info {
-	return Get()
+	defer sentry.Flush(2 * time.Second)
+	info := Get()
+	meter := sentry.NewMeter(context.Background())
+	meter.Count("app_launch", 1, sentry.WithAttributes(attribute.String("os", info.OS), attribute.String("arch", info.OSArch), attribute.String("os_version", info.OSVersion),
+		attribute.String("app_version", info.AppVersion), attribute.String("hardware", info.MachineId)))
+	return info
 }
 
 func (s *Service) UpdateSettings(settings Settings) *Info {
