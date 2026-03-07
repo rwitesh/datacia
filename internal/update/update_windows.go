@@ -75,8 +75,12 @@ func (u *Updater) Restart() error {
 	return nil
 }
 
+func (u *Updater) installDir() string {
+	return filepath.Join(os.Getenv("LOCALAPPDATA"), "DataCia", "DataCia")
+}
+
 func (u *Updater) installEXE(exePath string) error {
-	cmd := exec.Command(exePath, "/S")
+	cmd := exec.Command(exePath, "/S", "/D="+u.installDir())
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("installer failed: %v (%s)", err, out)
@@ -85,7 +89,8 @@ func (u *Updater) installEXE(exePath string) error {
 }
 
 func (u *Updater) installMSI(msiPath string) error {
-	cmd := exec.Command("msiexec", "/i", msiPath, "/passive", "/norestart")
+	cmd := exec.Command("msiexec", "/i", msiPath, "/passive", "/norestart",
+		"ALLUSERS=0", "INSTALLDIR="+u.installDir())
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("msiexec failed: %v (%s)", err, out)

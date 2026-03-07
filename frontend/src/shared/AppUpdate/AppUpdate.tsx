@@ -29,7 +29,7 @@ export const AppUpdate = () => {
             {!checkLoading && error && (
                 <>
                     <AlertCircle className="h-3 w-3 text-destructive" />
-                    <span className="text-destructive">{error.message}</span>
+                    <span className="text-destructive">Failed to check for updates.</span>
                 </>
             )}
 
