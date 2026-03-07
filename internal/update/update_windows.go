@@ -13,6 +13,8 @@ import (
 	"syscall"
 )
 
+var pendingInstaller string
+
 func NewUpdater(version string) (*Updater, error) {
 	exe, err := os.Executable()
 	if err != nil {
@@ -46,31 +48,36 @@ func (u *Updater) Update() error {
 		return fmt.Errorf("failed to download newer version: %w", err)
 	}
 
-	installDir := filepath.Join(os.Getenv("LOCALAPPDATA"), "DataCia", "DataCia")
+	pendingInstaller = installerPath
+	return nil
+}
 
-	switch strings.ToLower(filepath.Ext(installerPath)) {
+func (u *Updater) Restart() error {
+	if pendingInstaller == "" {
+		return errors.New("no pending update to install")
+	}
+
+	installDir := filepath.Join(os.Getenv("LOCALAPPDATA"), "DataCia")
+
+	switch strings.ToLower(filepath.Ext(pendingInstaller)) {
 	case ".exe":
-		cmd := exec.Command(installerPath, "/S", "/D="+installDir)
+		cmd := exec.Command(pendingInstaller, "/S", "/D="+installDir)
 		cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x00000008} // DETACHED_PROCESS
 		if err := cmd.Start(); err != nil {
 			return fmt.Errorf("failed to start installer: %w", err)
 		}
 	case ".msi":
-		cmd := exec.Command("msiexec", "/i", installerPath, "/passive", "/norestart",
+		cmd := exec.Command("msiexec", "/i", pendingInstaller, "/passive", "/norestart",
 			"ALLUSERS=0", "INSTALLDIR="+installDir)
 		cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x00000008}
 		if err := cmd.Start(); err != nil {
 			return fmt.Errorf("failed to start msi installer: %w", err)
 		}
 	default:
-		os.Remove(installerPath)
-		return fmt.Errorf("unsupported installer format: %s", filepath.Ext(installerPath))
+		os.Remove(pendingInstaller)
+		return fmt.Errorf("unsupported installer format: %s", filepath.Ext(pendingInstaller))
 	}
 
 	os.Exit(0)
-	return nil
-}
-
-func (u *Updater) Restart() error {
 	return nil
 }

@@ -22,7 +22,7 @@ export const WelcomePanel = () => {
         </p>
 
         {settings?.app_version && (
-          <div className="absolute bottom-6 flex flex-col items-center gap-2 text-xs text-muted-foreground/60">
+          <div className="absolute bottom-2 flex flex-col items-center gap-2 text-xs text-muted-foreground/60 h-10">
             <p>Version {settings.app_version}</p>
             <AppUpdate />
           </div>
