@@ -1,26 +1,38 @@
 enum QueryType {
   Read = "read",
   Command = "command",
-  Unknown = "unknown",
 }
 
-const readRegex = /^(select|show|describe|explain|with|watch)\b/i;
-const commandRegex =
-  /^(insert|create|alter|drop|truncate|optimize|grant|revoke|set|attach|detach|rename|use|system|kill)\b/i;
+const READ_KEYWORDS = [
+  "select",
+  "show",
+  "describe",
+  "explain",
+  "with",
+  "watch",
+  "pragma",
+  "values",
+  "table",
+];
+
+const readRegex = new RegExp(`^(${READ_KEYWORDS.join("|")})\\b`, "i");
+
+function stripComments(query: string): string {
+  // Strip single-line comments (--)
+  let q = query.replace(/--[^\n]*/g, "");
+  // Strip multi-line comments (/* */)
+  q = q.replace(/\/\*[\s\S]*?\*\//g, "");
+  return q.trim();
+}
 
 export function detectQueryType(query: string): QueryType {
-  let q = query.trim();
+  const q = stripComments(query).trim();
 
-  const idx = q.indexOf("--");
-  if (idx !== -1) {
-    q = q.substring(0, idx).trim();
-  }
+  if (!q) return QueryType.Command;
 
   if (readRegex.test(q)) {
     return QueryType.Read;
   }
-  if (commandRegex.test(q)) {
-    return QueryType.Command;
-  }
-  return QueryType.Unknown;
+
+  return QueryType.Command;
 }

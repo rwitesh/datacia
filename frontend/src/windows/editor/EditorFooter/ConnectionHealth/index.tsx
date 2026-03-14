@@ -26,6 +26,10 @@ export const ConnectionHealthIndicator = () => {
     }
   }
 
+  if (status === "unknown") {
+    return null;
+  }
+
   const statusColor = STATUS_COLORS[status];
   const statusName = STATUS_NAMES[status];
 

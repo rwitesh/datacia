@@ -27,7 +27,7 @@ export const Editor = () => {
     resultCollapsed: false,
     dataViewOpen: false,
   });
-  const [dataViewTab, setDataViewTab] = useState<"data" | "ai">("ai");
+  const [dataViewTab, setDataViewTab] = useState<"data" | "ai">("data");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isScriptMode, setIsScriptMode] = useState(false);
