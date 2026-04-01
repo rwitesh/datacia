@@ -3,14 +3,12 @@ package settings
 import (
 	"runtime"
 	"sync"
-	"time"
 
 	"datacia/internal/logger"
 	"datacia/internal/paths"
 	"datacia/internal/security"
 
-	"github.com/getsentry/sentry-go"
-
+	"github.com/getsentry/sentry-go/attribute"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -37,6 +35,7 @@ func Init(app *application.App) {
 			Settings:   defaultSettings(),
 		}
 		loadSettings()
+		applyLoggerContext(globalInfo)
 	})
 }
 
@@ -45,8 +44,29 @@ func SetAppVersion(version string) {
 		return
 	}
 	globalInfo.mu.Lock()
-	defer globalInfo.mu.Unlock()
 	globalInfo.AppVersion = version
+	info := &Info{
+		OS:         globalInfo.OS,
+		OSArch:     globalInfo.OSArch,
+		OSVersion:  globalInfo.OSVersion,
+		AppVersion: globalInfo.AppVersion,
+		MachineId:  globalInfo.MachineId,
+	}
+	globalInfo.mu.Unlock()
+	applyLoggerContext(info)
+}
+
+func applyLoggerContext(info *Info) {
+	if info == nil {
+		return
+	}
+	logger.SetGlobalAttrs(
+		attribute.String("os", info.OS),
+		attribute.String("arch", info.OSArch),
+		attribute.String("os_version", info.OSVersion),
+		attribute.String("app_version", info.AppVersion),
+		attribute.String("hardware", info.MachineId),
+	)
 }
 
 func Get() *Info {
@@ -114,19 +134,9 @@ func NewService(app *application.App) *Service {
 }
 
 func (s *Service) GetAppInfo() *Info {
-	defer sentry.Flush(2 * time.Second)
+	logger.Info("app_launch")
 
-	info := Get()
-
-	logger.Info("app_launch",
-		"os", info.OS,
-		"arch", info.OSArch,
-		"os_version", info.OSVersion,
-		"app_version", info.AppVersion,
-		"hardware", info.MachineId,
-	)
-
-	return info
+	return Get()
 }
 
 func (s *Service) UpdateSettings(settings Settings) *Info {

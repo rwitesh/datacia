@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/getsentry/sentry-go/attribute"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -34,6 +35,7 @@ func NewLicenseService(app *application.App) *LicenseService {
 		s.license = loaded
 	}
 
+	s.syncLoggerContext()
 	instance = s
 	return s
 }
@@ -65,6 +67,7 @@ func (s *LicenseService) Activate(licenseKey string) Response {
 	result := *s.validation
 	s.mu.Unlock()
 
+	s.syncLoggerContext()
 	s.emitChanged()
 	return result
 }
@@ -97,6 +100,7 @@ func (s *LicenseService) Deactivate() Response {
 	result := *s.validation
 	s.mu.Unlock()
 
+	s.syncLoggerContext()
 	s.emitChanged()
 	return result
 }
@@ -212,8 +216,29 @@ func (s *LicenseService) setResult(r Response) Response {
 	s.mu.Lock()
 	s.validation = &r
 	s.mu.Unlock()
+	s.syncLoggerContext()
 	s.emitChanged()
 	return r
+}
+
+func (s *LicenseService) syncLoggerContext() {
+	status := "inactive"
+	if s.isActive() {
+		status = "active"
+	}
+	logger.SetGlobalAttrs(attribute.String("license", status))
+}
+
+func (s *LicenseService) isActive() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if s.license == nil {
+		return false
+	}
+	if s.validation == nil {
+		return true
+	}
+	return s.validation.Success
 }
 
 func (s *LicenseService) emitChanged() {

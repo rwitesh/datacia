@@ -91,6 +91,12 @@ func (e *Engine) CreateNewConnection(engine, host, port, username, password, dat
 }
 
 func (e *Engine) CreateNewConnectionWithSSH(engine, host, port, username, password, database string, useSSH, sshHost, sshPort, sshUsername, sshPassword, sshKeyPath string, test bool) error {
+	logger.Info("db_connection_attempt",
+		"engine", engine,
+		"database", database,
+		"ssh", fmt.Sprint(useSSH == "true"),
+	)
+
 	// Close existing SSH tunnel if any
 	if e.sshTunnel != nil {
 		e.sshTunnel.Close()
@@ -138,6 +144,7 @@ func (e *Engine) CreateNewConnectionWithSSH(engine, host, port, username, passwo
 			e.sshTunnel.Close()
 			e.sshTunnel = nil
 		}
+		logger.Warn("db_connection_client_create_failed", "engine", engine, "error", err.Error())
 		return err
 	}
 
@@ -146,10 +153,12 @@ func (e *Engine) CreateNewConnectionWithSSH(engine, host, port, username, passwo
 			e.sshTunnel.Close()
 			e.sshTunnel = nil
 		}
+		logger.Warn("db_connection_failed", "engine", engine, "database", database, "error", err.Error())
 		return err
 	}
 
 	e.activeClient = dbClient
+	logger.Info("db_connection_success", "engine", engine, "database", database, "test_mode", fmt.Sprint(test))
 
 	if !test && e.uiController != nil {
 		e.uiController.OpenEditor()

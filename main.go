@@ -34,9 +34,12 @@ func main() {
 	if err := sentry.Init(version); err != nil {
 		logger.Error("Sentry init failed", "error", err.Error())
 	}
-	defer sentry.Flush()
+	sentry.StartPeriodicFlush()
+	defer func() {
+		sentry.StopPeriodicFlush()
+		sentry.Flush()
+	}()
 
-	// Initialize logger (false = development mode, true = production mode)
 	logger.Init(true)
 
 	appManager, err := app.NewApp(assets, config)

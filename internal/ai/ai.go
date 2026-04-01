@@ -3,6 +3,7 @@ package ai
 import (
 	"fmt"
 
+	"datacia/internal/logger"
 	"datacia/internal/settings"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -49,16 +50,26 @@ func (s *Service) SendMessage(engine, context, message, model string) (string, e
 	}
 
 	if model == ModelInbuilt {
-		return s.sendInbuilt(engine, context, message)
+		logger.Info("ai_tool_usage", "provider", "inbuilt", "model", ModelInbuilt, "engine", engine)
+		out, err := s.sendInbuilt(engine, context, message)
+		if err != nil {
+			logger.Warn("ai_tool_usage_failed", "provider", "inbuilt", "model", ModelInbuilt, "engine", engine, "error", err.Error())
+		}
+		return out, err
 	}
 
 	provider, modelID, err := resolveProvider(model)
 	if err != nil {
 		return "", err
 	}
+	logger.Info("ai_tool_usage", "provider", provider, "model", modelID, "engine", engine)
 	switch provider {
 	case "gemini":
-		return s.sendGemini(engine, context, message, modelID)
+		out, sendErr := s.sendGemini(engine, context, message, modelID)
+		if sendErr != nil {
+			logger.Warn("ai_tool_usage_failed", "provider", provider, "model", modelID, "engine", engine, "error", sendErr.Error())
+		}
+		return out, sendErr
 	default:
 		return "", fmt.Errorf("unsupported model: %s", model)
 	}
