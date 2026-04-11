@@ -14,7 +14,7 @@
     !define INFO_PRODUCTNAME "DataCia"
 !endif
 !ifndef INFO_PRODUCTVERSION
-    !define INFO_PRODUCTVERSION "1.10.78"
+    !define INFO_PRODUCTVERSION "1.10.80"
 !endif
 !ifndef INFO_COPYRIGHT
     !define INFO_COPYRIGHT "(c) 2026, DataCia"

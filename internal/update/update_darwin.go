@@ -48,7 +48,7 @@ func (u *Updater) Update() error {
 	}
 
 	if metadata == nil {
-		return errors.New("no update available")
+		return ErrNoUpdate
 	}
 
 	dmgPath, err := u.downloadFile(metadata.URL)

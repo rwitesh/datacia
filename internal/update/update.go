@@ -16,6 +16,8 @@ import (
 	"github.com/Masterminds/semver/v3"
 )
 
+var ErrNoUpdate = errors.New("no update available")
+
 type ReleaseMetadata struct {
 	Version string `json:"version"`
 	URL     string `json:"url"`

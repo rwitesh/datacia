@@ -40,7 +40,7 @@ func (u *Updater) Update() error {
 	}
 
 	if metadata == nil {
-		return errors.New("no update available")
+		return ErrNoUpdate
 	}
 
 	installerPath, err := u.downloadFile(metadata.URL)

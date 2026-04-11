@@ -432,6 +432,8 @@ func (a *App) Run() error {
 		}
 	}()
 
+	a.engine.StartBackgroundUpdate()
+
 	err := a.instance.Run()
 	if err != nil {
 		logger.Error("Application run failed", "error", err.Error())

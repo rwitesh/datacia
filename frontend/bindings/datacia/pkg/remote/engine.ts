@@ -163,6 +163,10 @@ export function SetApplication(app: application$0.App | null): $CancellablePromi
     return $Call.ByID(4084572048, app);
 }
 
+export function StartBackgroundUpdate(): $CancellablePromise<void> {
+    return $Call.ByID(2413143043);
+}
+
 export function Update(): $CancellablePromise<void> {
     return $Call.ByID(254746859);
 }
