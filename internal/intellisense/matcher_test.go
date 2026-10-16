@@ -101,6 +101,14 @@ func TestFindHistoryMatch(t *testing.T) {
 			history: []string{
 				"SELECT * FROM users WHERE id = 1 AND name = 'test'",
 			},
+			expected: " WHERE id = 1 AND name = 'test'",
+		},
+		{
+			name:  "leading keyword kept, break at next clause",
+			input: "SELECT * FROM users",
+			history: []string{
+				"SELECT * FROM users WHERE id = 1 ORDER BY name",
+			},
 			expected: " WHERE id = 1",
 		},
 		{
@@ -119,7 +127,7 @@ func TestFindHistoryMatch(t *testing.T) {
 				"SELECT * FROM orders",
 				"SELECT * FROM orders",
 			},
-			expected: "ECT *",
+			expected: "ECT * FROM orders",
 		},
 	}
 
@@ -140,8 +148,8 @@ func TestBreakAtNextKeyword(t *testing.T) {
 		expected string
 	}{
 		{
-			name:     "break at FROM with enough prefix",
-			input:    "abc FROM users",
+			name:     "break at ORDER BY",
+			input:    "abc ORDER BY id",
 			expected: "abc",
 		},
 		{
@@ -161,13 +169,18 @@ func TestBreakAtNextKeyword(t *testing.T) {
 		},
 		{
 			name:     "keyword at start - no break",
-			input:    "FROM users",
-			expected: "FROM users",
+			input:    "WHERE id = 1",
+			expected: "WHERE id = 1",
 		},
 		{
-			name:     "break at JOIN",
+			name:     "keyword after leading space - no break",
+			input:    " WHERE id = 1 LIMIT 10",
+			expected: " WHERE id = 1",
+		},
+		{
+			name:     "no break at JOIN",
 			input:    " users JOIN orders ON users.id = orders.user_id",
-			expected: " users",
+			expected: " users JOIN orders ON users.id = orders.user_id",
 		},
 		{
 			name:     "keyword too close to start - no break",

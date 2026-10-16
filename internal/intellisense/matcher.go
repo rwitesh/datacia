@@ -52,13 +52,18 @@ func isKeywordBoundary(text string, startIdx int, keywordLength int) bool {
 }
 
 // finds the position of the first keyword boundary after startFrom.
+// A keyword that leads the text (only whitespace before it) is not a break,
+// so a continuation like " WHERE id = 1" is suggested rather than dropped.
 // Returns -1 if no keyword is found.
 func findNextKeywordPosition(text string, startFrom int) int {
 	upper := strings.ToUpper(text)
 	earliest := -1
 
+	// Skip leading whitespace plus one character so a leading keyword can't match.
+	contentStart := len(text) - len(strings.TrimLeftFunc(text[startFrom:], unicode.IsSpace))
+
 	for _, keyword := range sqlBreakKeywords {
-		searchPos := startFrom
+		searchPos := contentStart + 1
 
 		for searchPos < len(text) {
 			idx := strings.Index(upper[searchPos:], keyword)
@@ -69,10 +74,7 @@ func findNextKeywordPosition(text string, startFrom int) int {
 			absolutePos := searchPos + idx
 			if isKeywordBoundary(text, absolutePos, len(keyword)) {
 				// Found a valid keyword boundary
-				breakPos := absolutePos
-				if absolutePos > startFrom {
-					breakPos = absolutePos - 1 // Include space before keyword
-				}
+				breakPos := absolutePos - 1 // Exclude the space before keyword
 
 				if earliest == -1 || breakPos < earliest {
 					earliest = breakPos
@@ -97,10 +99,6 @@ func breakAtNextKeyword(suggestion string) string {
 	if pos < 0 {
 		// No keyword found, return entire suggestion
 		return suggestion
-	}
-	if pos == 0 {
-		// Keyword at start, return empty
-		return ""
 	}
 
 	return strings.TrimRight(suggestion[:pos], " \t\n\r")
