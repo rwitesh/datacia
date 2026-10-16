@@ -83,9 +83,19 @@ The Windows build is pure Go (SQLite via `modernc.org/sqlite`), so it can be cro
 from macOS or Linux without Docker. Windows installs per user into `%LOCALAPPDATA%\DataCia`,
 which the auto-updater relies on.
 
-After changing `info` in `build/config.yml` (name, version, copyright, …), run
-`make update-build-assets` to regenerate `Info.plist`, the NSIS metadata and other
-platform assets.
+### Versioning
+
+The version comes from the git tag; it is not written anywhere in the code. Every build
+resolves `VERSION` in this order:
+
+1. `VERSION=x.y.z` passed to the build (`make dmg VERSION=2.0.0`); the release workflow passes the tag,
+2. a `vX.Y.Z` tag on the checked-out commit,
+3. otherwise `dev`.
+
+It is injected into the Go binary (`-ldflags -X main.version=…`), and `Info.plist`, the Windows
+version info and the NSIS metadata are generated from it and from `info` in `build/config.yml`
+at build time (`common:generate:assets`; these files are not committed). `dev` builds never
+auto-update.
 
 ## Releasing (uploading a new version)
 
@@ -94,18 +104,15 @@ Installed apps poll `https://api.github.com/repos/rwitesh/datacia/releases/lates
 asset ending in `.dmg` (macOS) or `-installer.exe` (Windows), and install it once the user restarts.
 The repository must be public for that endpoint to work.
 
-1. Bump `info.version` in `build/config.yml` (semver, higher than the latest release) and run
-   `make update-build-assets`.
-2. Run `make test`, then commit and push to `main`.
-3. Tag the commit with the same version and push the tag:
+1. Run `make test`, then merge to `main`.
+2. Tag the commit with the new version (higher than the latest release) and push the tag:
 
    ```bash
-   git tag v1.11.0
-   git push origin v1.11.0
+   git tag v2.0.0
+   git push origin v2.0.0
    ```
 
-4. The [Release workflow](.github/workflows/release.yml) checks that the tag matches
-   `build/config.yml` (and the regenerated `Info.plist` / NSIS metadata), builds
+3. The [Release workflow](.github/workflows/release.yml) reads the version from the tag, builds
    `DataCia-<version>-darwin-universal.dmg` on macOS and
    `DataCia-<version>-windows-universal-installer.exe` on Linux, writes a `SHA256SUMS` file,
    and publishes all three to a new GitHub Release with generated notes. Follow it under the
@@ -118,12 +125,12 @@ To upload a build by hand instead (for example, if the workflow is unavailable),
 asset names and include the checksums:
 
 ```bash
-make dmg package-windows
+make dmg package-windows VERSION=2.0.0
 mkdir -p release
-mv bin/DataCia.dmg release/DataCia-1.11.0-darwin-universal.dmg
-mv bin/DataCia-amd64_arm64-installer.exe release/DataCia-1.11.0-windows-universal-installer.exe
+mv bin/DataCia.dmg release/DataCia-2.0.0-darwin-universal.dmg
+mv bin/DataCia-amd64_arm64-installer.exe release/DataCia-2.0.0-windows-universal-installer.exe
 (cd release && shasum -a 256 -- * > SHA256SUMS)
-gh release create v1.11.0 release/* --title "DataCia v1.11.0" --generate-notes
+gh release create v2.0.0 release/* --title "DataCia v2.0.0" --generate-notes
 ```
 
 macOS builds are ad-hoc signed only, so Gatekeeper blocks the first launch; allow it under

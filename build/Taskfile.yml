@@ -115,11 +115,12 @@ tasks:
     cmds:
       - npm run dev -- --port {{.VITE_PORT}} --strictPort
 
-  update:build-assets:
-    summary: Updates the build assets
+  generate:assets:
+    summary: Generates the version-stamped platform metadata (Info.plist, Windows version info, NSIS defines) from build/config.yml
+    run: once
     dir: build
     cmds:
-      - wails3 update build-assets -name "{{.APP_NAME}}" -binaryname "{{.APP_NAME}}" -config config.yml -dir .
+      - wails3 update build-assets -name "{{.APP_NAME}}" -binaryname "{{.APP_NAME}}" -config config.yml -dir . -productversion "{{.ASSET_VERSION}}" -silent
 
   check:frontend:
     summary: Type-checks and lints the frontend

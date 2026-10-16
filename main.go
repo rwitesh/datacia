@@ -6,30 +6,18 @@ import (
 	"datacia/internal/sentry"
 	"embed"
 	"fmt"
-
-	"gopkg.in/yaml.v3"
 )
 
 //go:embed all:frontend/dist
 var assets embed.FS
 
-//go:embed build/config.yml
-var config []byte
-
-// buildConfig is used only to read version for Sentry release.
-type buildConfig struct {
-	Info struct {
-		Version string `yaml:"version"`
-	} `yaml:"info"`
-}
+// version is the release version, injected at build time from the git tag
+// (-ldflags "-X main.version=<version>"). Builds without it report "dev" and
+// never auto-update.
+var version = "dev"
 
 func main() {
 	defer recoverAndReport()
-
-	// Parse version for Sentry release
-	var cfg buildConfig
-	_ = yaml.Unmarshal(config, &cfg)
-	version := cfg.Info.Version
 
 	if err := sentry.Init(version); err != nil {
 		logger.Error("Sentry init failed", "error", err.Error())
@@ -42,7 +30,7 @@ func main() {
 
 	logger.Init(true)
 
-	appManager, err := app.NewApp(assets, config)
+	appManager, err := app.NewApp(assets, version)
 	if err != nil {
 		logger.Error("Failed to create app", "error", err.Error())
 		panic(err)

@@ -21,7 +21,6 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
 	clip "golang.design/x/clipboard"
-	"gopkg.in/yaml.v3"
 )
 
 type AppManager interface {
@@ -37,24 +36,12 @@ type App struct {
 	editorWindow       *application.WebviewWindow
 	settingsWindow     *application.WebviewWindow
 	engine             *remote.Engine
-	config             *Config
+	version            string
 	windowMutex        sync.Mutex
 	closingIntentional bool
 }
 
-type Config struct {
-	Info struct {
-		Version string `yaml:"version"`
-	} `yaml:"info"`
-}
-
-func NewApp(assets embed.FS, config []byte) (*App, error) {
-	var cfg *Config
-	if err := yaml.Unmarshal(config, &cfg); err != nil {
-		logger.Error("Failed to parse config.yml", "error", err.Error())
-		return nil, err
-	}
-
+func NewApp(assets embed.FS, version string) (*App, error) {
 	app := application.New(application.Options{
 		Name:        constants.APP_NAME,
 		Description: "",
@@ -67,13 +54,13 @@ func NewApp(assets embed.FS, config []byte) (*App, error) {
 		},
 	})
 
-	return &App{instance: app, config: cfg}, nil
+	return &App{instance: app, version: version}, nil
 }
 
 func (a *App) Initialize() error {
-	version := a.config.Info.Version
+	version := a.version
 	if version == "" {
-		logger.Error("Version cannot be empty in config")
+		logger.Error("Version cannot be empty")
 		return errors.New("version cannot be empty")
 	}
 

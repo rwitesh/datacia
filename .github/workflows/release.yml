@@ -1,7 +1,8 @@
 name: Release
 
-# Push a tag matching build/config.yml's info.version (e.g. v1.11.0) to build
-# the macOS DMG and Windows installer and publish them as a GitHub Release.
+# Push a version tag (e.g. v2.0.0) to build the macOS DMG and Windows installer
+# and publish them as a GitHub Release. The tag is the only source of the app
+# version: it is passed to the build as VERSION.
 # The in-app updater reads https://api.github.com/repos/rwitesh/datacia/releases/latest,
 # picks the asset ending in `.dmg` (macOS) or `-installer.exe` (Windows) and verifies it
 # against the release's SHA256SUMS file.
@@ -21,18 +22,14 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
-      - uses: actions/checkout@v5
       - id: version
-        name: Check tag matches build/config.yml
+        name: Read version from tag
         run: |
-          version=$(sed -n 's/^  version: "\([^"]*\)".*/\1/p' build/config.yml)
-          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
-            echo "::error::Tag $GITHUB_REF_NAME does not match build/config.yml version $version"
+          version="${GITHUB_REF_NAME#v}"
+          if ! echo "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+            echo "::error::Tag $GITHUB_REF_NAME is not a version tag like v2.0.0"
             exit 1
           fi
-          # Generated platform assets must carry the same version (make update-build-assets).
-          grep -q "INFO_PRODUCTVERSION \"$version\"" build/windows/nsis/wails_tools.nsh
-          grep -q "<string>$version</string>" build/darwin/Info.plist
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
   macos:
@@ -50,7 +47,7 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: go install github.com/wailsapp/wails/v3/cmd/wails3@${WAILS_VERSION}
       - name: Build universal DMG
-        run: wails3 task darwin:package:dmg
+        run: wails3 task darwin:package:dmg VERSION=${{ needs.verify.outputs.version }}
       - run: mv bin/DataCia.dmg "bin/DataCia-${{ needs.verify.outputs.version }}-darwin-universal.dmg"
       - uses: actions/upload-artifact@v5
         with:
@@ -73,7 +70,7 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y nsis
       - run: go install github.com/wailsapp/wails/v3/cmd/wails3@${WAILS_VERSION}
       - name: Build universal NSIS installer (cross-compiled, pure Go)
-        run: wails3 task windows:package ARCH=universal
+        run: wails3 task windows:package ARCH=universal VERSION=${{ needs.verify.outputs.version }}
       - run: mv bin/DataCia-amd64_arm64-installer.exe "bin/DataCia-${{ needs.verify.outputs.version }}-windows-universal-installer.exe"
       - uses: actions/upload-artifact@v5
         with:

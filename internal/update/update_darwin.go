@@ -29,7 +29,9 @@ func NewUpdater(version string) (*Updater, error) {
 	}
 
 	if filepath.Ext(appRoot) != ".app" {
-		return nil, fmt.Errorf("invalid bundle: expected .app root at %s", appRoot)
+		// Not running from an app bundle (e.g. a bare `go build` binary):
+		// self-update replaces the whole .app, so leave it disabled.
+		return &Updater{CurrentVersion: strings.TrimSpace(version)}, nil
 	}
 
 	return &Updater{

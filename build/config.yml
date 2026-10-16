@@ -1,6 +1,7 @@
 # This file contains the configuration for this project.
-# When you update `info` or `fileAssociations`, run `wails3 task common:update:build-assets` to update the assets.
-# Note that this will overwrite any changes you have made to the assets.
+# The platform metadata (Info.plist, Windows version info, NSIS defines) is generated
+# from `info` at build time by `common:generate:assets`. The version is not set here:
+# it comes from the git tag (see VERSION in Taskfile.yml).
 version: '3'
 
 # This information is used to generate the build assets.
@@ -10,7 +11,6 @@ info:
   productIdentifier: "app.datacia" # The unique product identifier
   description: "Your database reimagined for speed and clarity" # The application description
   copyright: "(c) 2026, DataCia" # Copyright text
-  version: "1.10.80" # The version of the application
 
 # Dev mode configuration
 dev_mode:

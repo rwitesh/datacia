@@ -3,8 +3,15 @@ bin/
 frontend/dist
 *.syso
 
-# Generated during Windows packaging (wails3 generate webview2bootstrapper)
+# Generated at build time (common:generate:assets, wails3 generate webview2bootstrapper)
+build/darwin/Info.plist
+build/darwin/Info.dev.plist
+build/windows/info.json
+build/windows/wails.exe.manifest
+build/windows/nsis/wails_tools.nsh
 build/windows/nsis/MicrosoftEdgeWebview2Setup.exe
+build/ios/
+build/linux/
 
 # Dependencies and tool caches
 node_modules/

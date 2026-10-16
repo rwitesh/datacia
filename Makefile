@@ -1,10 +1,10 @@
 # Thin wrappers around the Wails Taskfiles (see Taskfile.yml and build/).
-APP_NAME = DataCia
-VERSION := $(shell sed -n 's/^  version: "\([^"]*\)".*/\1/p' build/config.yml)
+# Release builds take the version from the git tag on HEAD, or from VERSION=x.y.z
+# (e.g. `make dmg VERSION=2.0.0`); anything else builds as "dev".
+export VERSION
 
 .PHONY: dev build test package-darwin package-darwin-universal dmg \
-	package-windows package-windows-amd64 package-windows-arm64 \
-	update-build-assets version clean
+	package-windows package-windows-amd64 package-windows-arm64 clean
 
 dev:
 	wails3 dev
@@ -36,13 +36,6 @@ package-windows-amd64:
 
 package-windows-arm64:
 	wails3 task windows:package ARCH=arm64
-
-# Regenerate Info.plist, NSIS metadata, etc. after editing build/config.yml
-update-build-assets:
-	wails3 task common:update:build-assets
-
-version:
-	@echo "$(VERSION)"
 
 clean:
 	rm -rf bin frontend/dist
