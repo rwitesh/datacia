@@ -16,7 +16,7 @@ import { useState, useEffect, useRef } from "react";
 import { FileUp } from "lucide-react";
 import { useWriteFile } from "@/services/queries";
 import { toast } from "sonner";
-import type { ImperativePanelHandle } from "react-resizable-panels";
+import type { PanelImperativeHandle } from "react-resizable-panels";
 import { ScriptMode } from "./ScriptMode/ScriptMode";
 
 type ViewPanels = { resultCollapsed: boolean; dataViewOpen: boolean };
@@ -31,7 +31,7 @@ export const Editor = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isScriptMode, setIsScriptMode] = useState(false);
-  const sidebarRef = useRef<ImperativePanelHandle>(null);
+  const sidebarRef = useRef<PanelImperativeHandle>(null);
   const writeFile = useWriteFile();
 
   const { resultCollapsed, dataViewOpen } = viewPanels;
@@ -134,13 +134,12 @@ export const Editor = () => {
           {/* Left Sidebar - Resizable */}
           <ResizablePanel
             id="sidebar"
-            ref={sidebarRef}
+            panelRef={sidebarRef}
             defaultSize={25}
             minSize={25}
             collapsible
             className="overflow-hidden"
-            onCollapse={() => setSidebarCollapsed(true)}
-            onExpand={() => setSidebarCollapsed(false)}
+            onResize={(size) => setSidebarCollapsed(size.inPixels === 0)}
           >
             <EditorSidebar />
           </ResizablePanel>

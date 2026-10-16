@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, type CSSProperties } from "react";
+import { useState, useMemo, type CSSProperties } from "react";
 import { useSearchParams } from "react-router";
 import { Button } from "@/components/ui/button";
 import { Settings as SettingsIcon } from "lucide-react";
@@ -19,12 +19,10 @@ export function Settings() {
 
   const { data: settings } = useSettings();
   const { mutate: updateSettings, isPending } = useUpdateSettings();
-  const [formSettings, setFormSettings] = useState<AppSettings | null>(null);
+  // Unsaved edits; until the user changes something the form shows the stored settings.
+  const [draft, setDraft] = useState<AppSettings | null>(null);
+  const formSettings = draft ?? settings?.settings ?? null;
   const [showSaved, setShowSaved] = useState(false);
-
-  useEffect(() => {
-    if (settings?.settings) setFormSettings({ ...settings.settings });
-  }, [settings]);
 
   const handleCancel = () => {
     Window.Close();
@@ -35,6 +33,8 @@ export function Settings() {
     setShowSaved(false);
     updateSettings(formSettings, {
       onSuccess: () => {
+        // The mutation has stored the saved settings in the query cache.
+        setDraft(null);
         setShowSaved(true);
       },
     });
@@ -67,9 +67,6 @@ export function Settings() {
                 <TabsTrigger value="ai" className="text-xs h-7 px-3">
                   AI
                 </TabsTrigger>
-                {/* <TabsTrigger value="license" className="text-xs h-7 px-3">
-                  License
-                </TabsTrigger> */}
               </TabsList>
             </div>
           </div>
@@ -82,7 +79,7 @@ export function Settings() {
                     settings={formSettings}
                     onChange={(next) => {
                       setShowSaved(false);
-                      setFormSettings(next);
+                      setDraft(next);
                     }}
                   />
                 </div>
@@ -99,7 +96,7 @@ export function Settings() {
                     settings={formSettings}
                     onChange={(next) => {
                       setShowSaved(false);
-                      setFormSettings(next);
+                      setDraft(next);
                     }}
                   />
                 </div>
@@ -109,9 +106,6 @@ export function Settings() {
                 </div>
               )}
             </TabsContent>
-            {/* <TabsContent value="license" className="mt-0">
-              <LicenseSection />
-            </TabsContent> */}
           </div>
         </Tabs>
       </div>

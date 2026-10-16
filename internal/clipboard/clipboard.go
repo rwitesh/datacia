@@ -1,6 +1,7 @@
 package clipboard
 
 import (
+	"context"
 	"encoding/base64"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -27,10 +28,10 @@ func (s *ClipboardService) SetContent(content string, contentType string) error 
 		if err != nil {
 			return err
 		}
-		clip.Write(clip.FmtImage, decoded)
-	} else {
-		// For text, convert string directly to bytes
-		clip.Write(clip.FmtText, []byte(content))
+		_, err = clip.Write(context.Background(), clip.FmtImage, decoded)
+		return err
 	}
-	return nil
+	// For text, convert string directly to bytes
+	_, err := clip.Write(context.Background(), clip.FmtText, []byte(content))
+	return err
 }

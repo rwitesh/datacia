@@ -56,7 +56,7 @@ export class QueryLogs {
 export class QueryResult {
     "type": QueryType;
     "columns": string[];
-    "data": { [_: string]: any }[];
+    "data": { [_ in string]?: any }[];
     "timeElapsed": number;
     "logs": QueryLogs;
 

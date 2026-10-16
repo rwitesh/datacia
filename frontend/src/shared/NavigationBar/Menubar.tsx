@@ -13,13 +13,14 @@ import {
   MenubarItem,
 } from "@/components/ui/menubar";
 import { useTheme, type Theme } from "@/components/theme";
-import { Bolt, Key, Settings } from "lucide-react";
-import { OpenLicenseWindow, OpenSettingsWindow } from "@/services/bindings";
+import { Bolt, Settings } from "lucide-react";
+import { OpenSettingsWindow } from "@/services/bindings";
 import { useAppContext } from "@/context/app/Index";
 
 export function MenuBar() {
   const { theme, setTheme } = useTheme();
-  const { appVersion } = useAppContext();
+  const { settings } = useAppContext();
+  const appVersion = settings?.app_version;
 
   return (
     <Menubar className="border-none bg-transparent">
@@ -65,17 +66,6 @@ export function MenuBar() {
           </MenubarSub>
 
           <MenubarSeparator />
-
-          <MenubarItem
-            className="cursor-pointer text-xs flex items-center gap-2"
-            onSelect={(e) => {
-              e.preventDefault();
-              OpenLicenseWindow();
-            }}
-          >
-            <Key className="h-3.5 w-3.5" />
-            License
-          </MenubarItem>
 
           <MenubarItem
             className="cursor-pointer text-xs flex items-center gap-2"

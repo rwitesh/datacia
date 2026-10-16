@@ -3,7 +3,6 @@
 package update
 
 import (
-	"datacia/internal/constants"
 	"errors"
 	"fmt"
 	"os"
@@ -25,9 +24,9 @@ func NewUpdater(version string) (*Updater, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot resolve executable path: %w", err)
 	}
-	releaseURL := strings.TrimSuffix(constants.SERVER_URL, "/") + "/download"
 	return &Updater{
-		ReleaseURL:     releaseURL,
+		ReleaseURL:     latestReleaseURL(),
+		AssetSuffix:    "-installer.exe",
 		CurrentVersion: strings.TrimSpace(version),
 		AppPath:        filepath.Dir(exe),
 	}, nil
@@ -43,7 +42,7 @@ func (u *Updater) Update() error {
 		return ErrNoUpdate
 	}
 
-	installerPath, err := u.downloadFile(metadata.URL)
+	installerPath, err := u.download(metadata)
 	if err != nil {
 		return fmt.Errorf("failed to download newer version: %w", err)
 	}
@@ -57,7 +56,8 @@ func (u *Updater) Restart() error {
 		return errors.New("no pending update to install")
 	}
 
-	installDir := filepath.Join(os.Getenv("LOCALAPPDATA"), "DataCia")
+	// Reinstall into the folder the running app was installed to.
+	installDir := u.AppPath
 
 	switch strings.ToLower(filepath.Ext(pendingInstaller)) {
 	case ".exe":

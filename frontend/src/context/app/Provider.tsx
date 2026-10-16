@@ -4,13 +4,11 @@ import { Events } from "@wailsio/runtime";
 import { AppContext } from "./Context";
 import { chooseDialect } from "@/windows/editor/QueryInput/utils/dialect";
 import { useCurrentConnection } from "@/services/connections";
-import { useLicenseStatus } from "@/services/license";
 import { useSettings } from "@/services/settings";
 
 export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const queryClient = useQueryClient();
   const { data: currentConnection } = useCurrentConnection();
-  const { data: licenseStatus } = useLicenseStatus();
   const { data: settings } = useSettings();
 
   const invalidateConnectionQueries = useCallback(() => {
@@ -20,7 +18,6 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     queryClient.invalidateQueries({ queryKey: ["query-history"] });
     queryClient.invalidateQueries({ queryKey: ["connection-health"] });
     queryClient.invalidateQueries({ queryKey: ["current-connection"] });
-    queryClient.invalidateQueries({ queryKey: ["license-status"] });
   }, [queryClient]);
 
   const reload = () => {
@@ -35,29 +32,16 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     return () => unsubscribe();
   }, [invalidateConnectionQueries]);
 
-  useEffect(() => {
-    const unsubscribe = Events.On("license-changed", () => {
-      queryClient.refetchQueries({ queryKey: ["license-status"] });
-    });
-    return () => unsubscribe();
-  }, [queryClient]);
-
   const dialect = useMemo(
     () => chooseDialect(currentConnection?.engine || null),
     [currentConnection?.engine]
   );
-
-  const isLicenseActive = useMemo(() => {
-    return licenseStatus?.valid === true;
-  }, [licenseStatus]);
 
   const value = {
     reload,
     invalidateConnectionQueries,
     dialect,
     engine: currentConnection?.engine || "",
-    licenseStatus,
-    isLicenseActive,
     settings,
   };
 

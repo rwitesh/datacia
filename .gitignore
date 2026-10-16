@@ -1,6 +1,26 @@
+# Build output
 bin/
-node_modules/
 frontend/dist
-.DS_Store
+*.syso
+
+# Generated at build time (common:generate:assets, wails3 generate webview2bootstrapper)
+build/darwin/Info.plist
+build/darwin/Info.dev.plist
+build/windows/info.json
+build/windows/wails.exe.manifest
+build/windows/nsis/wails_tools.nsh
+build/windows/nsis/MicrosoftEdgeWebview2Setup.exe
+build/ios/
+build/linux/
+
+# Dependencies and tool caches
+node_modules/
 .task
+*.tsbuildinfo
+
+# Claude Code worktrees
+.claude/worktrees/
+
+# Local environment / OS files
 .env
+.DS_Store

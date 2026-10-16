@@ -49,10 +49,9 @@ function HighlightedLine({ line }: { line: string }) {
 
 export interface DataTabContentProps {
   lines: string[];
-  disabled?: boolean;
 }
 
-export function DataTabContent({ lines, disabled }: DataTabContentProps) {
+export function DataTabContent({ lines }: DataTabContentProps) {
   if (lines.length === 0) {
     return (
       <div className="p-4 flex items-center justify-center min-h-[4rem]">
@@ -62,7 +61,7 @@ export function DataTabContent({ lines, disabled }: DataTabContentProps) {
   }
   return (
     <div
-      className={`p-4 ${disabled ? "blur-sm select-none pointer-events-none" : ""}`}
+      className="p-4"
     >
       <code className="block text-xs font-mono leading-relaxed">
         {lines.map((line, index) => (

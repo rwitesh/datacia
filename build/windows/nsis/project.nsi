@@ -23,12 +23,13 @@ Unicode true
 ## !define INFO_COMPANYNAME    "My Company" # Default "My Company"
 ## !define INFO_PRODUCTNAME    "My Product Name" # Default "My Product"
 ## !define INFO_PRODUCTVERSION "1.0.0"     # Default "0.1.0"
-## !define INFO_COPYRIGHT      "(c) Now, My Company" # Default "© 2026, My Company"
+## !define INFO_COPYRIGHT      "(c) Now, My Company" # Default "(c) 2026, My Company"
 ###
 ## !define PRODUCT_EXECUTABLE  "Application.exe"      # Default "${INFO_PROJECTNAME}.exe"
 ## !define UNINST_KEY_NAME     "UninstKeyInRegistry"  # Default "${INFO_COMPANYNAME}${INFO_PRODUCTNAME}"
 ####
-## Per-user install — no admin/UAC required for install or auto-update
+## Per-user install: no admin/UAC required for install or auto-update
+!define WAILS_INSTALL_SCOPE "user"
 !define REQUEST_EXECUTION_LEVEL "user"
 ####
 ## Include the wails tools
@@ -93,7 +94,25 @@ Section
     !insertmacro wails.webview2runtime
 
     SetOutPath $INSTDIR
-    
+
+    # When the app launches this installer to apply an update it exits right
+    # away, but Windows can keep the old executable locked for a moment. Wait up
+    # to ~15s for the lock to clear so the silent install can replace the file.
+    StrCpy $R0 0
+    wait_for_exe:
+        IfFileExists "$INSTDIR\${PRODUCT_EXECUTABLE}" 0 exe_unlocked
+        ClearErrors
+        FileOpen $R1 "$INSTDIR\${PRODUCT_EXECUTABLE}" a
+        IfErrors exe_locked
+        FileClose $R1
+        Goto exe_unlocked
+    exe_locked:
+        IntOp $R0 $R0 + 1
+        IntCmp $R0 30 exe_unlocked 0 exe_unlocked
+        Sleep 500
+        Goto wait_for_exe
+    exe_unlocked:
+
     !insertmacro wails.files
 
     CreateShortcut "$SMPROGRAMS\${INFO_PRODUCTNAME}.lnk" "$INSTDIR\${PRODUCT_EXECUTABLE}"
@@ -110,7 +129,10 @@ Section "uninstall"
 
     RMDir /r "$AppData\${PRODUCT_EXECUTABLE}" # Remove the WebView2 DataPath
 
-    RMDir /r $INSTDIR
+    # $INSTDIR is %LOCALAPPDATA%\DataCia, which is also where the app keeps its
+    # database, settings and saved queries. Remove only what the installer
+    # added; RMDir without /r leaves the folder if user data is still in it.
+    Delete "$INSTDIR\${PRODUCT_EXECUTABLE}"
 
     Delete "$SMPROGRAMS\${INFO_PRODUCTNAME}.lnk"
     Delete "$DESKTOP\${INFO_PRODUCTNAME}.lnk"
@@ -119,4 +141,6 @@ Section "uninstall"
     !insertmacro wails.unassociateCustomProtocols
 
     !insertmacro wails.deleteUninstaller
+
+    RMDir $INSTDIR
 SectionEnd

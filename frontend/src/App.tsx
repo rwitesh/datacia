@@ -5,7 +5,6 @@ import { Home } from "@/windows/connection/Home";
 import { DatabaseConnection } from "@/windows/connection/Connection";
 import { WelcomePanel } from "@/windows/connection/WelcomePanel";
 import { Editor } from "@/windows/editor/Editor";
-import { License } from "@/windows/license/License";
 import { Settings } from "@/windows/settings/Settings";
 import { AppProvider } from "@/context/app/Provider";
 import { Toaster } from "sonner";
@@ -35,7 +34,6 @@ function App() {
                     </EditorProvider>
                   }
                 />
-                <Route path="/license" element={<License />} />
                 <Route path="/settings" element={<Settings />} />
               </Routes>
             </div>

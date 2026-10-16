@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useSyncExternalStore } from "react"
 import { useSettings, useUpdateSettings } from "@/services/settings"
 import { ThemeConfig } from "@/services/settings"
 import { useQueryClient } from "@tanstack/react-query"
@@ -8,10 +8,12 @@ import { Events } from "@wailsio/runtime"
 export function ThemeProvider({ children, ...props }: { children: React.ReactNode }) {
   const { data: settings } = useSettings()
   const { mutate: updateSettings } = useUpdateSettings()
-  const [resolvedTheme, setResolvedTheme] = useState<"dark" | "light">("dark")
   const queryClient = useQueryClient()
+  const systemDark = useSyncExternalStore(subscribeToSystemTheme, getSystemDark)
 
   const theme = (settings?.settings?.theme as Theme) ?? "system"
+  const resolvedTheme: "dark" | "light" =
+    theme === "system" ? (systemDark ? "dark" : "light") : theme
   const { font, editor } = settings?.settings ?? {}
   const tokenColors =
     (resolvedTheme === "dark" ? editor?.dark : editor?.light) ??
@@ -23,29 +25,12 @@ export function ThemeProvider({ children, ...props }: { children: React.ReactNod
   const uiFontFamily = font?.uiFontFamily ?? initialState.uiFontFamily
   const uiFontSize = font?.uiFontSize ?? initialState.uiFontSize
 
-  // Handle theme class + system media query listener
+  // Apply the resolved theme class to <html>
   useEffect(() => {
     const root = window.document.documentElement
     root.classList.remove("light", "dark")
-
-    if (theme === "system") {
-      const media = window.matchMedia("(prefers-color-scheme: dark)")
-      const applySystemTheme = (dark: boolean) => {
-        const next = dark ? "dark" : "light"
-        root.classList.remove("light", "dark")
-        root.classList.add(next)
-        setResolvedTheme(next)
-      }
-
-      applySystemTheme(media.matches)
-      const listener = (e: MediaQueryListEvent) => applySystemTheme(e.matches)
-      media.addEventListener("change", listener)
-      return () => media.removeEventListener("change", listener)
-    }
-
-    root.classList.add(theme)
-    setResolvedTheme(theme)
-  }, [theme])
+    root.classList.add(resolvedTheme)
+  }, [resolvedTheme])
 
   // Sync settings when changed from another window
   useEffect(() => {
@@ -84,4 +69,16 @@ export function ThemeProvider({ children, ...props }: { children: React.ReactNod
       {children}
     </ThemeProviderContext.Provider>
   )
+}
+
+const darkSchemeQuery = "(prefers-color-scheme: dark)"
+
+function subscribeToSystemTheme(onChange: () => void) {
+  const media = window.matchMedia(darkSchemeQuery)
+  media.addEventListener("change", onChange)
+  return () => media.removeEventListener("change", onChange)
+}
+
+function getSystemDark() {
+  return window.matchMedia(darkSchemeQuery).matches
 }

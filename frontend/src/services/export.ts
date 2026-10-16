@@ -16,7 +16,7 @@ export function useExportData() {
             suggestedFilename: string;
             imageData?: string;
         }) => {
-            let dataToSend = "";
+            let dataToSend: string;
             if (format === "png") {
                 if (!imageData) throw new Error("Image data required for PNG export");
                 dataToSend = imageData;

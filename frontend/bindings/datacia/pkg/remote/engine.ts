@@ -58,7 +58,7 @@ export function EstablishConnection(id: string): $CancellablePromise<void> {
     return $Call.ByID(3001152197, id);
 }
 
-export function GetCurrentConnectionInfo(): $CancellablePromise<{ [_: string]: string }> {
+export function GetCurrentConnectionInfo(): $CancellablePromise<{ [_ in string]?: string }> {
     return $Call.ByID(2978731099).then(($result: any) => {
         return $$createType0($result);
     });
@@ -92,7 +92,7 @@ export function GetTableSchema(table: string): $CancellablePromise<common$0.Quer
     });
 }
 
-export function ListConnections(): $CancellablePromise<{ [_: string]: common$0.ConnectionInfo }> {
+export function ListConnections(): $CancellablePromise<{ [_ in string]?: common$0.ConnectionInfo }> {
     return $Call.ByID(3165584091).then(($result: any) => {
         return $$createType7($result);
     });
@@ -108,7 +108,7 @@ export function ListTables(): $CancellablePromise<string[]> {
     });
 }
 
-export function LoadConnection(id: string): $CancellablePromise<{ [_: string]: string }> {
+export function LoadConnection(id: string): $CancellablePromise<{ [_ in string]?: string }> {
     return $Call.ByID(1470478446, id).then(($result: any) => {
         return $$createType0($result);
     });
@@ -116,10 +116,6 @@ export function LoadConnection(id: string): $CancellablePromise<{ [_: string]: s
 
 export function OpenConnectionWindow(): $CancellablePromise<void> {
     return $Call.ByID(4198244770);
-}
-
-export function OpenLicenseWindow(): $CancellablePromise<void> {
-    return $Call.ByID(609410173);
 }
 
 export function OpenSettingsWindow(tab: string): $CancellablePromise<void> {
@@ -136,7 +132,7 @@ export function RunQuery(queryId: string, queryType: string, sql: string): $Canc
     });
 }
 
-export function SaveConnection(name: string, config: { [_: string]: string }): $CancellablePromise<void> {
+export function SaveConnection(name: string, config: { [_ in string]?: string }): $CancellablePromise<void> {
     return $Call.ByID(3657704791, name, config);
 }
 
@@ -171,7 +167,7 @@ export function Update(): $CancellablePromise<void> {
     return $Call.ByID(254746859);
 }
 
-export function UpdateConnection(id: string, name: string, config: { [_: string]: string }): $CancellablePromise<void> {
+export function UpdateConnection(id: string, name: string, config: { [_ in string]?: string }): $CancellablePromise<void> {
     return $Call.ByID(2109296315, id, name, config);
 }
 

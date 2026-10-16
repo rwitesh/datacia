@@ -7,7 +7,7 @@ import type { FormValues, Status } from "../utils/types";
 
 type ConnectByIdArgs = { id: string; name: string; engine: string };
 type ConnectByValuesArgs = { values: FormValues };
-type ConnectArgs = ConnectByIdArgs | ConnectByValuesArgs;
+export type ConnectArgs = ConnectByIdArgs | ConnectByValuesArgs;
 
 export const useConnectDatabase = (opts?: {
   setStatus?: (s: Status) => void;
