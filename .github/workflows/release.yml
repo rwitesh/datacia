@@ -67,7 +67,9 @@ jobs:
           node-version: 24
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-      - run: sudo apt-get update && sudo apt-get install -y nsis
+      # nsis builds the installer; the GTK4/WebKitGTK headers are needed to compile
+      # the wails3 CLI on Linux.
+      - run: sudo apt-get update && sudo apt-get install -y nsis libgtk-4-dev libwebkitgtk-6.0-dev
       - run: go install github.com/wailsapp/wails/v3/cmd/wails3@${WAILS_VERSION}
       - name: Build universal NSIS installer (cross-compiled, pure Go)
         run: wails3 task windows:package ARCH=universal VERSION=${{ needs.verify.outputs.version }}
