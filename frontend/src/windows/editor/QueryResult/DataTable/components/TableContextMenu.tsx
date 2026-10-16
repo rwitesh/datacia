@@ -5,7 +5,6 @@ import {
   FileType,
   Braces,
   PanelRight,
-  Crown,
   Image as ImageIcon,
 } from "lucide-react";
 import {
@@ -14,7 +13,6 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import { useAppContext } from "@/context/app/Index";
 import { useExportActions } from "@/services/useExportActions";
 import type { DataRow } from "../types";
 import {
@@ -39,7 +37,6 @@ export function TableContextMenu({
   data,
   onOpenDataView,
 }: TableContextMenuProps) {
-  const { isLicenseActive } = useAppContext();
   const exportRef = useRef<HTMLDivElement>(null);
 
   const dataToUse = useMemo(() => {
@@ -78,47 +75,39 @@ export function TableContextMenu({
           </ContextMenuItem>
           <ContextMenuItem
             onSelect={copyPNG}
-            disabled={!isLicenseActive}
-            className="gap-2 text-xs py-1 justify-between"
+            className="gap-2 text-xs py-1"
           >
             <div className="flex items-center gap-2">
               <ImageIcon className="h-3 w-3" />
               Copy as PNG
             </div>
-            {!isLicenseActive && <Crown className="h-3 w-3 text-amber-500" />}
           </ContextMenuItem>
           <ContextMenuItem
             onSelect={exportJSON}
-            disabled={!isLicenseActive}
-            className="gap-2 text-xs py-1 justify-between"
+            className="gap-2 text-xs py-1"
           >
             <div className="flex items-center gap-2">
               <FileJson className="h-3 w-3" />
               Export as JSON
             </div>
-            {!isLicenseActive && <Crown className="h-3 w-3 text-amber-500" />}
           </ContextMenuItem>
           <ContextMenuItem
             onSelect={exportCSV}
-            disabled={!isLicenseActive}
-            className="gap-2 text-xs py-1 justify-between"
+            className="gap-2 text-xs py-1"
           >
             <div className="flex items-center gap-2">
               <FileType className="h-3 w-3" />
               Export as CSV
             </div>
-            {!isLicenseActive && <Crown className="h-3 w-3 text-amber-500" />}
           </ContextMenuItem>
           <ContextMenuItem
             onSelect={exportPNG}
-            disabled={!isLicenseActive}
-            className="gap-2 text-xs py-1 justify-between"
+            className="gap-2 text-xs py-1"
           >
             <div className="flex items-center gap-2">
               <ImageIcon className="h-3 w-3" />
               Export as PNG
             </div>
-            {!isLicenseActive && <Crown className="h-3 w-3 text-amber-500" />}
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>

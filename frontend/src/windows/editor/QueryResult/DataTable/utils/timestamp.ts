@@ -28,7 +28,7 @@ export function parseTimestamp(value: unknown): Date | null {
 
   if (typeof value === "number") {
     if (!Number.isFinite(value)) return null;
-    let ms = value;
+    let ms: number;
     if (value >= UNIX_SEC_MIN && value <= UNIX_SEC_MAX) {
       ms = value * 1000;
     } else if (value >= UNIX_MS_MIN && value <= UNIX_MS_MAX) {

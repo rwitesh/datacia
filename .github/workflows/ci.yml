@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  WAILS_VERSION: v3.0.0-beta.30
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run build
+
+  go:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - name: Stub embedded frontend
+        run: mkdir -p frontend/dist && touch frontend/dist/.keep
+      - run: go vet ./...
+      - run: go test ./...
+      - name: Cross-compile for Windows
+        run: GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build ./...
+
+  bindings:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - run: go install github.com/wailsapp/wails/v3/cmd/wails3@${WAILS_VERSION}
+      - name: Check generated bindings are up to date
+        run: |
+          wails3 generate bindings -ts -clean=true
+          if [ -n "$(git status --porcelain -- frontend/bindings)" ]; then
+            git status -- frontend/bindings
+            git diff -- frontend/bindings
+            echo "::error::frontend/bindings is out of date; run 'wails3 generate bindings -ts -clean=true' and commit"
+            exit 1
+          fi

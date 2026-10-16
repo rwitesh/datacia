@@ -7,7 +7,6 @@ import (
 	"datacia/internal/db"
 	"datacia/internal/files"
 	"datacia/internal/intellisense"
-	"datacia/internal/license"
 	"datacia/internal/logger"
 	"datacia/internal/queries"
 	"datacia/internal/security"
@@ -36,7 +35,6 @@ type App struct {
 	instance           *application.App
 	connectionWindow   *application.WebviewWindow
 	editorWindow       *application.WebviewWindow
-	licenseWindow      *application.WebviewWindow
 	settingsWindow     *application.WebviewWindow
 	engine             *remote.Engine
 	config             *Config
@@ -105,16 +103,6 @@ func (a *App) Initialize() error {
 	// Services that should be exposed to UI
 	engine.SetApplication(a.instance)
 	a.instance.RegisterService(application.NewService(engine))
-
-	// License management
-	licenseService := license.NewLicenseService(a.instance)
-	a.instance.RegisterService(application.NewService(licenseService))
-
-	// Validate license on startup (non-blocking)
-	resp := licenseService.ValidateOnStart()
-	if !resp.Success && resp.Error != "" {
-		logger.Warn("License validation on start", "success", fmt.Sprint(resp.Success), "error", resp.Error)
-	}
 
 	// Saving files // exporting data
 	fileService := files.NewFileService(a.instance)
@@ -316,53 +304,6 @@ func (a *App) OpenConnectionWindow() {
 	// Create new window
 	if err := a.createConnectionWindow(); err != nil {
 		logger.Error("Failed to open connection window", "error", err.Error())
-		return
-	}
-}
-
-func (a *App) createLicenseWindow() error {
-	a.licenseWindow = a.instance.Window.NewWithOptions(application.WebviewWindowOptions{
-		Name:  constants.LICENSE_WINDOW_NAME,
-		Title: "License Management",
-		URL:   "/#/license",
-		Mac: application.MacWindow{
-			InvisibleTitleBarHeight: 50,
-			Backdrop:                application.MacBackdropTranslucent,
-			TitleBar:                application.MacTitleBarHidden,
-		},
-		Windows: application.WindowsWindow{
-			DisableFramelessWindowDecorations: true,
-		},
-		BackgroundColour: application.NewRGB(27, 38, 54),
-		Width:            constants.LICENSE_WINDOW_WIDTH,
-		Height:           constants.LICENSE_WINDOW_HEIGHT,
-	})
-
-	if a.licenseWindow == nil {
-		logger.Error("Failed to create license window")
-		return fmt.Errorf("failed to create license window")
-	}
-
-	a.licenseWindow.Center()
-	a.licenseWindow.RegisterHook(events.Common.WindowClosing, func(e *application.WindowEvent) {
-		a.licenseWindow = nil
-	})
-
-	return nil
-}
-
-func (a *App) OpenLicenseWindow() {
-	a.windowMutex.Lock()
-	defer a.windowMutex.Unlock()
-
-	if a.licenseWindow != nil {
-		a.licenseWindow.Show()
-		a.licenseWindow.Focus()
-		return
-	}
-
-	if err := a.createLicenseWindow(); err != nil {
-		logger.Error("Failed to open license window", "error", err.Error())
 		return
 	}
 }

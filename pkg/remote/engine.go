@@ -23,7 +23,6 @@ type UIController interface {
 	OpenEditor()
 	CloseEditor()
 	OpenConnectionWindow()
-	OpenLicenseWindow()
 	OpenSettingsWindow(tab string)
 }
 
@@ -172,12 +171,6 @@ func (e *Engine) CreateNewConnectionWithSSH(engine, host, port, username, passwo
 func (e *Engine) OpenConnectionWindow() {
 	if e.uiController != nil {
 		e.uiController.OpenConnectionWindow()
-	}
-}
-
-func (e *Engine) OpenLicenseWindow() {
-	if e.uiController != nil {
-		e.uiController.OpenLicenseWindow()
 	}
 }
 

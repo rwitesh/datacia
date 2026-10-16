@@ -1,14 +1,12 @@
 import { Settings } from "lucide-react";
 import { OpenSettingsWindow } from "@/services/bindings";
-import { AppLicense } from "@/shared/AppLicense/AppLicense";
 import { AppUpdate } from "@/shared/AppUpdate/AppUpdate";
 
 
 
 export const StatusBar = ({ showUpdate = true }: {showUpdate?: boolean}) => {
   return (
-    <div className="flex items-center justify-between gap-3 px-3 py-2 border-b border-muted/50">
-      <AppLicense />
+    <div className="flex items-center justify-end gap-3 px-3 py-2 border-b border-muted/50">
       <div className="flex items-center gap-3">
         {showUpdate && <AppUpdate />}
         <button

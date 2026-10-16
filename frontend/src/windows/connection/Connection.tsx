@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React from "react";
 import { type FieldError } from "react-hook-form";
 import { useFetchConnectionById } from "@/services/connections";
 import { useConnectionParams } from "./hooks/useConnectionParams";
@@ -21,12 +21,10 @@ export const DatabaseConnection: React.FC = () => {
   } = useFetchConnectionById(connectionId);
 
   // Determine the actual engine to use: prioritize backend, fallback to URL param
-  const resolvedEngine = useMemo(() => {
-    if (connectionId && fetchedData?.engine) {
-      return isValidEngine(fetchedData.engine) ? fetchedData.engine : engineParam;
-    }
-    return engineParam;
-  }, [connectionId, fetchedData?.engine, engineParam]);
+  const resolvedEngine =
+    connectionId && fetchedData?.engine && isValidEngine(fetchedData.engine)
+      ? fetchedData.engine
+      : engineParam;
 
   const {
     form,

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 
@@ -18,10 +18,6 @@ import {
   validateForTestConnect,
   validationSchema,
 } from "../utils/validation";
-import { FREE_PLAN_MAX_CONNECTIONS } from "../utils/constants";
-import { useFetchConnections } from "@/services/connections";
-import { useLicenseStatus } from "@/services/license";
-import { toast } from "sonner";
 import { useConnectDatabase } from "./useConnectDatabase";
 interface FetchedConnectionData {
   name?: string;
@@ -52,14 +48,20 @@ export const useConnectionForm = ({
   fetchedData
 }: UseConnectionFormProps) => {
   const queryClient = useQueryClient();
-  const { data: savedConnections = {} } = useFetchConnections();
-  const { data: licenseStatus } = useLicenseStatus();
-  const isFreePlan = licenseStatus?.valid !== true;
-  const connectionCount = Object.keys(savedConnections).length;
-  const atFreePlanLimit = isFreePlan && connectionCount >= FREE_PLAN_MAX_CONNECTIONS;
-
 
   const [status, setStatus] = useState<Status>(null);
+
+  // Clear the status message whenever a different connection or engine is loaded
+  // (React's "adjust state when props change" pattern instead of an effect).
+  const [statusSource, setStatusSource] = useState({ fetchedData, connectionId, resolvedEngine });
+  if (
+    statusSource.fetchedData !== fetchedData ||
+    statusSource.connectionId !== connectionId ||
+    statusSource.resolvedEngine !== resolvedEngine
+  ) {
+    setStatusSource({ fetchedData, connectionId, resolvedEngine });
+    setStatus(null);
+  }
 
   const form = useForm<FormValues>({
     resolver: yupResolver(validationSchema),
@@ -83,9 +85,10 @@ export const useConnectionForm = ({
   });
 
   const { register, getValues, reset, setError, clearErrors, setValue, watch } = form;
-  const currentEngine = watch("engine");
-  const currentPort = watch("port");
-  const currentConnectionName = watch("connectionName");
+  const control = form.control;
+  const currentEngine = useWatch({ control, name: "engine" });
+  const currentPort = useWatch({ control, name: "port" });
+  const currentConnectionName = useWatch({ control, name: "connectionName" });
 
   // Auto-update port when engine changes
   useEffect(() => {
@@ -134,16 +137,16 @@ export const useConnectionForm = ({
         sshKeyPath: "",
       });
     }
-    setStatus(null);
   }, [fetchedData, reset, connectionId, resolvedEngine]);
 
   // Clear status when form changes
   useEffect(() => {
-    const subscription = watch(() => {
-      if (status) setStatus(null);
+    if (!status) return;
+    return form.subscribe({
+      formState: { values: true },
+      callback: () => setStatus(null),
     });
-    return () => subscription.unsubscribe();
-  }, [watch, status]);
+  }, [form, status]);
 
   const applyValidationErrors = (
     validationErrors: Partial<Record<keyof FormValues, string>>
@@ -250,15 +253,6 @@ export const useConnectionForm = ({
     const validationErrors = validateForSave(values);
     applyValidationErrors(validationErrors);
     if (Object.keys(validationErrors).length > 0) return;
-
-    // Free plan: allow up to 2 saved connections; only applies when creating a new connection
-    if (!connectionId && atFreePlanLimit) {
-      toast.error(
-        `Free plan allows up to ${FREE_PLAN_MAX_CONNECTIONS} connections. Upgrade to save more.`,
-        { id: "connection-limit" }
-      );
-      return;
-    }
 
     saveMutation.mutate();
   };

@@ -26,10 +26,6 @@ func GetQueriesDir() (string, error) {
 	return filepath.Join(xdg.DataHome, constants.APP_NAME, "queries"), nil
 }
 
-func GetLicensePath() (string, error) {
-	return xdg.DataFile(filepath.Join(constants.APP_NAME, ".dci_license"))
-}
-
 func GetConfigDir() (string, error) {
 	path, err := xdg.ConfigFile(constants.APP_NAME)
 	if err != nil {

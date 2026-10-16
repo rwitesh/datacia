@@ -7,13 +7,10 @@ const (
 	CONNECTION_WINDOW_HEIGHT = 600
 	EDITOR_WINDOW_WIDTH      = 1280
 	EDITOR_WINDOW_HEIGHT     = 768
-	LICENSE_WINDOW_WIDTH     = 450
-	LICENSE_WINDOW_HEIGHT    = 500
 	SETTINGS_WINDOW_WIDTH    = 400
 	SETTINGS_WINDOW_HEIGHT   = 640
 	CONNECTION_WINDOW_NAME   = "datacia-connection"
 	EDITOR_WINDOW_NAME       = "datacia-editor"
-	LICENSE_WINDOW_NAME      = "datacia-license"
 	SETTINGS_WINDOW_NAME     = "datacia-settings"
 )
 
@@ -21,7 +18,8 @@ const (
 	AppSalt = "5f0I4G3KftuiSNKUL9Mvtwhz4kMgyLoAwebUoqRdJJ8="
 )
 
+// GitHub repository that publishes releases (used by the auto-updater).
 const (
-	SERVER_URL = "https://api.datacia.app"
-	// SERVER_URL = "http://localhost:3000"
+	GITHUB_OWNER = "rwitesh"
+	GITHUB_REPO  = "datacia"
 )

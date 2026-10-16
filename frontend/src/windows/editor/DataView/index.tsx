@@ -1,10 +1,7 @@
 import { useMemo, useState } from "react";
-import { Copy, Check, Lock } from "lucide-react";
-import { useAppContext } from "@/context/app/Index";
+import { Copy, Check } from "lucide-react";
 import { useEditorContext } from "@/context/editor/Index";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { OpenLicenseWindow } from "@/services/bindings";
 import { extractSelectedData } from "../QueryResult/DataTable/utils/cellSelection";
 import { AIChat } from "./ai";
 import { DataTabContent } from "./data";
@@ -18,7 +15,6 @@ export interface DataViewProps {
 
 export function DataView({ activeTab: controlledTab, onTabChange }: DataViewProps) {
   const [copied, setCopied] = useState(false);
-  const { isLicenseActive } = useAppContext();
   const { activeTab } = useEditorContext();
 
   const selection = activeTab?.selection ?? null;
@@ -54,7 +50,6 @@ export function DataView({ activeTab: controlledTab, onTabChange }: DataViewProp
   const handleTabChange = (v: string) => onTabChange?.(v as DataViewTab);
 
   const activeTabValue = controlledTab ?? "data";
-  const showDataActivationOverride = !isLicenseActive && activeTabValue === "data";
 
   return (
     <div className="h-full w-full flex flex-col relative">
@@ -98,7 +93,7 @@ export function DataView({ activeTab: controlledTab, onTabChange }: DataViewProp
         </div>
 
         <TabsContent value="data" className="flex-1 overflow-auto mt-0">
-          <DataTabContent lines={lines} disabled={!isLicenseActive} />
+          <DataTabContent lines={lines} />
         </TabsContent>
 
         <TabsContent value="ai" className="flex-1 overflow-hidden mt-0">
@@ -106,27 +101,6 @@ export function DataView({ activeTab: controlledTab, onTabChange }: DataViewProp
         </TabsContent>
       </Tabs>
 
-      {showDataActivationOverride && (
-        <div className="absolute top-8 left-0 right-0 bottom-0 flex flex-col items-center justify-center bg-background/80 z-[5]">
-          <div className="flex flex-col items-center gap-4 p-6 text-center max-w-sm">
-            <div className="rounded-full bg-primary/10 p-4">
-              <Lock className="w-8 h-8 text-primary" />
-            </div>
-            <div className="space-y-2">
-              <h3 className="text-lg font-semibold">Upgrade Required</h3>
-              <p className="text-sm text-muted-foreground">
-                Activate with license to access the Data tab.
-              </p>
-            </div>
-            <Button
-              onClick={() => OpenLicenseWindow()}
-              className="mt-2"
-            >
-              Activate License
-            </Button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

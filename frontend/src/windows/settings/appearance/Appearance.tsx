@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { Monitor, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -6,7 +5,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { useTheme } from "@/components/theme";
+import { useTheme, type Theme } from "@/components/theme";
 import { useSettings } from "@/services/settings";
 import type { Settings as AppSettings, EditorConfig, TokenColors } from "@/services/settings";
 
@@ -56,19 +55,10 @@ export function AppearanceSection({ settings, onChange }: AppearanceSectionProps
   const defaultTokenColorsLight = settingsData?.defaultTokenColorsLight;
   const defaultTokenColorsDark = settingsData?.defaultTokenColorsDark;
 
-  const [uiFont, setUiFont] = useState(font?.uiFontFamily ?? "JetBrains Mono");
-  const [uiFontSize, setUiFontSize] = useState(font?.uiFontSize ?? 14);
-  const [editorFont, setEditorFont] = useState(font?.editorFontFamily ?? "JetBrains Mono");
-  const [editorFontSize, setEditorFontSize] = useState(font?.editorFontSize ?? 14);
-
-  useEffect(() => {
-    if (font) {
-      setUiFont(font.uiFontFamily ?? "JetBrains Mono");
-      setUiFontSize(font.uiFontSize ?? 14);
-      setEditorFont(font.editorFontFamily ?? "JetBrains Mono");
-      setEditorFontSize(font.editorFontSize ?? 14);
-    }
-  }, [font]);
+  const uiFont = font?.uiFontFamily ?? "JetBrains Mono";
+  const uiFontSize = font?.uiFontSize ?? 14;
+  const editorFont = font?.editorFontFamily ?? "JetBrains Mono";
+  const editorFontSize = font?.editorFontSize ?? 14;
 
   const emitFontChange = (nextFont: AppSettings["font"]) => {
     onChange({
@@ -84,10 +74,6 @@ export function AppearanceSection({ settings, onChange }: AppearanceSectionProps
       editorFontFamily: "JetBrains Mono",
       editorFontSize: 14,
     };
-    setUiFont(nextFont.uiFontFamily);
-    setUiFontSize(nextFont.uiFontSize);
-    setEditorFont(nextFont.editorFontFamily);
-    setEditorFontSize(nextFont.editorFontSize);
     emitFontChange(nextFont);
   };
 
@@ -172,7 +158,7 @@ export function AppearanceSection({ settings, onChange }: AppearanceSectionProps
           <ToggleGroup
             type="single"
             value={theme}
-            onValueChange={(val) => val && setTheme(val as any)}
+            onValueChange={(val) => val && setTheme(val as Theme)}
             size="sm"
           >
             <ToggleGroupItem value="light" aria-label="Light" className="h-7 w-7 p-0 data-[state=on]:bg-muted">
@@ -209,7 +195,6 @@ export function AppearanceSection({ settings, onChange }: AppearanceSectionProps
                 <Select
                   value={uiFont}
                   onValueChange={(value) => {
-                    setUiFont(value);
                     emitFontChange({
                       uiFontFamily: value,
                       uiFontSize,
@@ -236,7 +221,6 @@ export function AppearanceSection({ settings, onChange }: AppearanceSectionProps
                   value={String(uiFontSize)}
                   onValueChange={(v) => {
                     const size = Number(v);
-                    setUiFontSize(size);
                     emitFontChange({
                       uiFontFamily: uiFont,
                       uiFontSize: size,
@@ -278,7 +262,6 @@ export function AppearanceSection({ settings, onChange }: AppearanceSectionProps
                 <Select
                   value={editorFont}
                   onValueChange={(value) => {
-                    setEditorFont(value);
                     emitFontChange({
                       uiFontFamily: uiFont,
                       uiFontSize,
@@ -305,7 +288,6 @@ export function AppearanceSection({ settings, onChange }: AppearanceSectionProps
                   value={String(editorFontSize)}
                   onValueChange={(v) => {
                     const size = Number(v);
-                    setEditorFontSize(size);
                     emitFontChange({
                       uiFontFamily: uiFont,
                       uiFontSize,

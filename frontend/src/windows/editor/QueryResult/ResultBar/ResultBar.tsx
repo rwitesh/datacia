@@ -14,10 +14,8 @@ import {
   FileJson,
   FileType,
   Image as ImageIcon,
-  Crown,
 } from "lucide-react";
 import { useEditorContext } from "@/context/editor/Index";
-import { useAppContext } from "@/context/app/Index";
 import { useGetTableData } from "@/services/database";
 import { useExportActions } from "@/services/useExportActions";
 import type { QueryResult } from "@/services/bindings/database";
@@ -40,7 +38,6 @@ export type ViewMode = "data" | "ddl";
 
 export function ResultBar() {
   const { activeTab, updateTab, tableRef } = useEditorContext();
-  const { isLicenseActive } = useAppContext();
   const getTableDataMutation = useGetTableData();
 
   const data = activeTab?.results?.data ?? [];
@@ -301,36 +298,24 @@ export function ResultBar() {
               <DropdownMenuContent align="end" className="w-44">
                 <DropdownMenuItem
                   onSelect={exportJSON}
-                  disabled={!isLicenseActive}
                   className="gap-2 text-xs"
                 >
                   <FileJson className="h-3.5 w-3.5" />
                   <span>Export JSON</span>
-                  {!isLicenseActive && (
-                    <Crown className="h-3 w-3 text-amber-500 ml-auto" />
-                  )}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onSelect={exportCSV}
-                  disabled={!isLicenseActive}
                   className="gap-2 text-xs"
                 >
                   <FileType className="h-3.5 w-3.5" />
                   <span>Export CSV</span>
-                  {!isLicenseActive && (
-                    <Crown className="h-3 w-3 text-amber-500 ml-auto" />
-                  )}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onSelect={exportPNG}
-                  disabled={!isLicenseActive}
                   className="gap-2 text-xs"
                 >
                   <ImageIcon className="h-3.5 w-3.5" />
                   <span>Export PNG</span>
-                  {!isLicenseActive && (
-                    <Crown className="h-3 w-3 text-amber-500 ml-auto" />
-                  )}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

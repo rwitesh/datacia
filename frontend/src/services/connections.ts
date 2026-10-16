@@ -22,7 +22,8 @@ export function useCurrentConnection() {
 export function useFetchConnections() {
   return useQuery<Record<string, ConnectionInfo>, Error>({
     queryKey: ["connections"],
-    queryFn: () => ListConnections(),
+    // Go maps never contain undefined values, despite the generated `T | undefined` type.
+    queryFn: async () => (await ListConnections()) as Record<string, ConnectionInfo>,
     retry: 3,
   });
 }

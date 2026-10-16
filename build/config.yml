@@ -8,7 +8,7 @@ info:
   companyName: "DataCia" # The name of the company
   productName: "DataCia" # The name of the application
   productIdentifier: "app.datacia" # The unique product identifier
-  description: "Your database reimaginzed for speed and clarity" # The application description
+  description: "Your database reimagined for speed and clarity" # The application description
   copyright: "(c) 2026, DataCia" # Copyright text
   version: "1.10.80" # The version of the application
 
@@ -27,20 +27,27 @@ dev_mode:
       - .DS_Store
       - .gitignore
       - .gitkeep
+      - "*_test.go"
     watched_extension:
       - "*.go"
+      - "*.js" # Watch for changes to JS/TS files included using the //wails:include directive.
+      - "*.ts" # The frontend directory will be excluded entirely by the setting above.
     git_ignore: true
   executes:
-    - cmd: wails3 task common:install:frontend:deps
-      type: once
+    - cmd: wails3 build DEV=true
+      type: blocking
     - cmd: wails3 task common:dev:frontend
       type: background
-    - cmd: go mod tidy
-      type: blocking
-    - cmd: wails3 task build
-      type: blocking
+      # The standard frontend task waits up to 60s for HTTP 200 from
+      # FRONTEND_DEVSERVER_URL before starting the app. Override if needed;
+      # custom background commands can opt in with the same readiness block.
+      # readiness:
+      #   http: "http://localhost:5173/"
+      #   timeout: "60s"
+      #   interval: "200ms"
     - cmd: wails3 task run
       type: primary
+      exit_policy: shutdown
 
 # File Associations
 # More information at: https://v3.wails.io/noit/done/yet

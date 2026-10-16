@@ -1,14 +1,11 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Play, Plus, StopCircle, Crown } from "lucide-react";
+import { Play, Plus, StopCircle } from "lucide-react";
 import { ScriptBlock, type ScriptBlockData } from "./ScriptBlock";
 import { nanoid } from "nanoid";
 import { RunQuery } from "@/services/bindings/database";
-import { OpenLicenseWindow } from "@/services/bindings";
-import { useAppContext } from "@/context/app/Index";
 
 export function ScriptMode() {
-    const { isLicenseActive } = useAppContext();
     const [blocks, setBlocks] = useState<ScriptBlockData[]>([
         { id: nanoid(), sql: "", status: "idle" },
     ]);
@@ -57,8 +54,8 @@ export function ScriptMode() {
 
             updateBlockStatus(id, "success", undefined, Date.now() - startTime);
 
-        } catch (e: any) {
-            updateBlockStatus(id, "error", e.message || "Unknown error");
+        } catch (e) {
+            updateBlockStatus(id, "error", (e instanceof Error && e.message) || "Unknown error");
             throw e;
         }
     };
@@ -76,7 +73,7 @@ export function ScriptMode() {
 
             try {
                 await executeBlock(block.id);
-            } catch (e) {
+            } catch {
                 // Error occurred, stop sequence
                 break;
             }
@@ -102,25 +99,13 @@ export function ScriptMode() {
                 </div>
                 <div className="flex items-center gap-2">
                     {!isRunning ? (
-                        isLicenseActive ? (
-                            <Button
-                                onClick={executeAll}
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 cursor-pointer"
-                            >
-                                <Play className="w-4 h-4" />
-                                Execute All
-                            </Button>
-                        ) : (
-                            <Button
-                                onClick={() => OpenLicenseWindow()}
-                                variant="outline"
-                                className="gap-2 text-amber-600 dark:text-amber-400 border-amber-500/40 hover:bg-amber-500/10 cursor-pointer"
-                                title="Activate license to execute all  "
-                            >
-                                <Crown className="w-4 h-4" />
-                                Execute All
-                            </Button>
-                        )
+                        <Button
+                            onClick={executeAll}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 cursor-pointer"
+                        >
+                            <Play className="w-4 h-4" />
+                            Execute All
+                        </Button>
                     ) : (
                         <Button
                             onClick={handleStop}

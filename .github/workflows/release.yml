@@ -1,0 +1,98 @@
+name: Release
+
+# Push a tag matching build/config.yml's info.version (e.g. v1.11.0) to build
+# the macOS DMG and Windows installer and publish them as a GitHub Release.
+# The in-app updater reads https://api.github.com/repos/rwitesh/datacia/releases/latest,
+# picks the asset ending in `.dmg` (macOS) or `-installer.exe` (Windows) and verifies it
+# against the release's SHA256SUMS file.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+env:
+  WAILS_VERSION: v3.0.0-beta.30
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v5
+      - id: version
+        name: Check tag matches build/config.yml
+        run: |
+          version=$(sed -n 's/^  version: "\([^"]*\)".*/\1/p' build/config.yml)
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match build/config.yml version $version"
+            exit 1
+          fi
+          # Generated platform assets must carry the same version (make update-build-assets).
+          grep -q "INFO_PRODUCTVERSION \"$version\"" build/windows/nsis/wails_tools.nsh
+          grep -q "<string>$version</string>" build/darwin/Info.plist
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  macos:
+    needs: verify
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: go install github.com/wailsapp/wails/v3/cmd/wails3@${WAILS_VERSION}
+      - name: Build universal DMG
+        run: wails3 task darwin:package:dmg
+      - run: mv bin/DataCia.dmg "bin/DataCia-${{ needs.verify.outputs.version }}-darwin-universal.dmg"
+      - uses: actions/upload-artifact@v5
+        with:
+          name: macos
+          path: bin/*.dmg
+
+  windows:
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: sudo apt-get update && sudo apt-get install -y nsis
+      - run: go install github.com/wailsapp/wails/v3/cmd/wails3@${WAILS_VERSION}
+      - name: Build universal NSIS installer (cross-compiled, pure Go)
+        run: wails3 task windows:package ARCH=universal
+      - run: mv bin/DataCia-amd64_arm64-installer.exe "bin/DataCia-${{ needs.verify.outputs.version }}-windows-universal-installer.exe"
+      - uses: actions/upload-artifact@v5
+        with:
+          name: windows
+          path: bin/*-installer.exe
+
+  publish:
+    needs: [verify, macos, windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v6
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Write checksums
+        # The in-app updater refuses downloads that don't match this file.
+        working-directory: dist
+        run: sha256sum -- * > SHA256SUMS && cat SHA256SUMS
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --title "DataCia $GITHUB_REF_NAME" --generate-notes

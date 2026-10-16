@@ -9,22 +9,8 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
-const ModelInbuilt = "inbuilt"
-
 type Service struct {
 	app *application.App
-}
-
-type request struct {
-	Engine    string `json:"engine"`
-	Context   string `json:"context"`
-	Message   string `json:"message"`
-	LicenseID string `json:"license_id"`
-}
-
-type response struct {
-	Message string `json:"message"`
-	Error   string `json:"error"`
 }
 
 func NewService(app *application.App) *Service {
@@ -45,17 +31,8 @@ func (s *Service) SendMessage(engine, context, message, model string) (string, e
 	if message == "" {
 		return "", fmt.Errorf("message is required")
 	}
-	if model == "" || model == "auto" {
-		model = ModelInbuilt
-	}
-
-	if model == ModelInbuilt {
-		logger.Info("ai_tool_usage", "provider", "inbuilt", "model", ModelInbuilt, "engine", engine)
-		out, err := s.sendInbuilt(engine, context, message)
-		if err != nil {
-			logger.Warn("ai_tool_usage_failed", "provider", "inbuilt", "model", ModelInbuilt, "engine", engine, "error", err.Error())
-		}
-		return out, err
+	if model == "" {
+		return "", fmt.Errorf("model is required")
 	}
 
 	provider, modelID, err := resolveProvider(model)

@@ -3,7 +3,6 @@
 package update
 
 import (
-	"datacia/internal/constants"
 	"errors"
 	"fmt"
 	"os"
@@ -33,9 +32,9 @@ func NewUpdater(version string) (*Updater, error) {
 		return nil, fmt.Errorf("invalid bundle: expected .app root at %s", appRoot)
 	}
 
-	releaseURL := strings.TrimSuffix(constants.SERVER_URL, "/") + "/download"
 	return &Updater{
-		ReleaseURL:     releaseURL,
+		ReleaseURL:     latestReleaseURL(),
+		AssetSuffix:    ".dmg",
 		CurrentVersion: strings.TrimSpace(version),
 		AppPath:        appRoot,
 	}, nil
@@ -51,7 +50,7 @@ func (u *Updater) Update() error {
 		return ErrNoUpdate
 	}
 
-	dmgPath, err := u.downloadFile(metadata.URL)
+	dmgPath, err := u.download(metadata)
 	if err != nil {
 		return fmt.Errorf("failed to download newer version: %w", err)
 	}

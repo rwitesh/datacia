@@ -16,16 +16,13 @@ interface Message {
   error?: string;
 }
 
-const MODEL_INBUILT = "auto";
 const KEY_MASK = "***";
 const DEFAULT_GEMINI_MODEL = "gemini-3-flash-preview";
-/** Set to false in code to hide Auto from the model list. */
-const SHOW_AUTO = false;
 
 export function AIChat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [selectedModel, setSelectedModel] = useState(MODEL_INBUILT);
+  const [chosenModel, setSelectedModel] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { engine } = useAppContext();
@@ -35,7 +32,6 @@ export function AIChat() {
 
   const availableModels = useMemo(() => {
     const list: { value: string; label: string }[] = [];
-    if (SHOW_AUTO) list.push({ value: MODEL_INBUILT, label: "Auto" });
     const g = settings?.settings?.ai?.gemini;
     const geminiKeyConfigured = g?.key === KEY_MASK || (g?.key && g.key !== "");
     if (g?.enabled && geminiKeyConfigured) {
@@ -45,19 +41,18 @@ export function AIChat() {
     return list;
   }, [settings?.settings?.ai]);
 
+  // Fall back to the first configured model when the chosen one is unavailable.
+  const selectedModel = availableModels.some((m) => m.value === chosenModel)
+    ? chosenModel
+    : (availableModels[0]?.value ?? "");
+
   const isSelectedModelConfigured = useMemo(() => {
-    if (selectedModel === MODEL_INBUILT) return true;
     const g = settings?.settings?.ai?.gemini;
     const keyOk = g?.key === KEY_MASK || (g?.key && g.key !== "");
     const effectiveModels = g?.models?.length ? g.models : [DEFAULT_GEMINI_MODEL];
     return !!(g?.enabled && keyOk && effectiveModels.includes(selectedModel));
   }, [selectedModel, settings?.settings?.ai]);
 
-  useEffect(() => {
-    if (availableModels.length > 0 && !availableModels.some((m) => m.value === selectedModel)) {
-      setSelectedModel(availableModels[0].value);
-    }
-  }, [availableModels, selectedModel]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -184,7 +179,7 @@ export function AIChat() {
         </div>
       </div>
       <div className="flex-shrink-0 border-t border-border/40 px-3 py-1.5">
-        {!isSelectedModelConfigured && selectedModel !== MODEL_INBUILT && (
+        {!isSelectedModelConfigured && (
           <p className="text-[10px] text-amber-600 dark:text-amber-500 mb-1">
             Enable and set an API key in Settings → AI to use this model.
           </p>

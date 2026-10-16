@@ -1,6 +1,19 @@
+# Build output
 bin/
-node_modules/
 frontend/dist
-.DS_Store
+*.syso
+
+# Generated during Windows packaging (wails3 generate webview2bootstrapper)
+build/windows/nsis/MicrosoftEdgeWebview2Setup.exe
+
+# Dependencies and tool caches
+node_modules/
 .task
+*.tsbuildinfo
+
+# Claude Code worktrees
+.claude/worktrees/
+
+# Local environment / OS files
 .env
+.DS_Store

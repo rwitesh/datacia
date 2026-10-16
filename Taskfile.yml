@@ -1,37 +1,42 @@
 version: '3'
 
+vars:
+  APP_NAME: "DataCia"
+  BIN_DIR: "bin"
+  PACKAGE_MANAGER: "npm"
+  VITE_PORT: '{{.WAILS_VITE_PORT | default 9245}}'
+  # Target OS for build/package/run. Defaults to the host OS; override with
+  # `wails3 build GOOS=...` (or the GOOS env var) to cross-compile.
+  GOOS: '{{.GOOS | default OS}}'
+
 includes:
   common: ./build/Taskfile.yml
   windows: ./build/windows/Taskfile.yml
   darwin: ./build/darwin/Taskfile.yml
 
-vars:
-  APP_NAME: "DataCia"
-  BIN_DIR: "bin"
-  VITE_PORT: '{{.WAILS_VITE_PORT | default 9245}}'
-
 tasks:
   build:
     summary: Builds the application
     cmds:
-      - task: "{{OS}}:build"
+      - task: "{{.GOOS}}:build"
 
   package:
     summary: Packages a production build of the application
     cmds:
-      - task: "{{OS}}:package"
+      - task: "{{.GOOS}}:package"
 
   run:
     summary: Runs the application
     cmds:
-      - task: "{{OS}}:run"
+      - task: "{{.GOOS}}:run"
 
   dev:
     summary: Runs the application in development mode
     cmds:
       - wails3 dev -config ./build/config.yml -port {{.VITE_PORT}}
 
-  setup:docker:
-    summary: Builds Docker image for cross-compilation (~800MB download)
+  test:
+    summary: Runs Go tests and frontend lint/type checks
     cmds:
-      - task: common:setup:docker
+      - go test ./internal/... ./pkg/...
+      - task: common:check:frontend

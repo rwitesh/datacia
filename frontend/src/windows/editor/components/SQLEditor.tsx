@@ -23,7 +23,7 @@ export function SQLCodeEditor({ value, onChange, className }: SQLCodeEditorProps
     const editorEl = useRef<HTMLDivElement | null>(null);
     const viewRef = useRef<EditorView | null>(null);
 
-    const { dialect, engine, isLicenseActive } = useAppContext();
+    const { dialect, engine } = useAppContext();
     const { resolvedTheme, tokenColors, editorFontFamily, editorFontSize } =
         useTheme();
 
@@ -51,8 +51,6 @@ export function SQLCodeEditor({ value, onChange, className }: SQLCodeEditorProps
     const sqlConfig = useMemo(() => new Compartment(), []);
     // Theme configuration compartment
     const themeConfig = useMemo(() => new Compartment(), []);
-    // Ghost/inline text — only when pro (license) is active
-    const ghostTextConfig = useMemo(() => new Compartment(), []);
 
     // create editor ONCE
     useEffect(() => {
@@ -77,7 +75,13 @@ export function SQLCodeEditor({ value, onChange, className }: SQLCodeEditorProps
                     }),
                 ),
 
-                ghostTextConfig.of([]),
+                // Ghost/inline text suggestions from query history
+                ghostText({
+                    delay: 400,
+                    minInputLength: 2,
+                    getSuggestion: (input) =>
+                        GetSuggestion(input, latestEngine.current ?? ""),
+                }),
 
                 autocompletion(),
                 closeBrackets(),
@@ -160,25 +164,6 @@ export function SQLCodeEditor({ value, onChange, className }: SQLCodeEditorProps
         editorFontFamily,
         editorFontSize,
     ]);
-
-    // Ghost/inline text only when pro (license) is active
-    useEffect(() => {
-        const view = viewRef.current;
-        if (!view) return;
-
-        view.dispatch({
-            effects: ghostTextConfig.reconfigure(
-                isLicenseActive
-                    ? ghostText({
-                        delay: 400,
-                        minInputLength: 2,
-                        getSuggestion: (input) =>
-                            GetSuggestion(input, latestEngine.current ?? ""),
-                    })
-                    : [],
-            ),
-        });
-    }, [isLicenseActive, ghostTextConfig]);
 
     return (
         <div className={`relative h-full w-full ${className}`}>
