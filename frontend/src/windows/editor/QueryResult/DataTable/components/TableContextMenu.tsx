@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { Braces, Copy, FileJson, FileType, Image as ImageIcon, PanelRight } from "lucide-react";
 import {
   ContextMenu,
@@ -13,7 +14,7 @@ import type { DataRow } from "../types";
 interface TableContextMenuProps {
   children: React.ReactNode;
   // The selected rows, holding only the selected columns. A right-click
-  // selects the cell it lands on first, so this is what was clicked.
+  // selects the cell, row or column it lands on first, so this is what was clicked.
   rows: DataRow[];
   columns: string[];
   onOpenDataView?: () => void;
@@ -21,33 +22,38 @@ interface TableContextMenuProps {
 
 export function TableContextMenu({ children, rows, columns, onOpenDataView }: TableContextMenuProps) {
   const exportRef = useRef<HTMLDivElement>(null);
-  // A PNG action waiting for the off-screen table it captures to render.
-  // That table only exists during a capture, since a selection can be large.
-  const [pendingCapture, setPendingCapture] = useState<(() => Promise<void>) | null>(null);
+  // The off-screen table a PNG is drawn from only exists during a capture,
+  // since a selection can be large.
+  const [isCapturing, setIsCapturing] = useState(false);
   const { exportJSON, exportCSV, exportPNG, copyText, copyJSON, copyPNG } = useExportActions({
     tableRef: exportRef,
     data: rows,
     columns,
   });
 
-  useEffect(() => {
-    if (!pendingCapture) return;
-    pendingCapture().finally(() => setPendingCapture(null));
-  }, [pendingCapture]);
+  const capturePNG = async (action: () => Promise<void>) => {
+    // Render the table before the action reads it through exportRef.
+    flushSync(() => setIsCapturing(true));
+    try {
+      await action();
+    } finally {
+      setIsCapturing(false);
+    }
+  };
 
   const handleContextMenu = (event: React.MouseEvent) => {
-    const onCell = (event.target as HTMLElement).closest("[data-row]");
-    if (!onCell || rows.length === 0) event.preventDefault();
+    const onGridCell = (event.target as HTMLElement).closest("[data-col]");
+    if (!onGridCell || rows.length === 0) event.preventDefault();
   };
 
   const items = [
     { label: "Open DataView", icon: PanelRight, onSelect: onOpenDataView },
     { label: "Copy", icon: Copy, onSelect: copyText },
     { label: "Copy as JSON", icon: Braces, onSelect: copyJSON },
-    { label: "Copy as PNG", icon: ImageIcon, onSelect: () => setPendingCapture(() => copyPNG) },
+    { label: "Copy as PNG", icon: ImageIcon, onSelect: () => capturePNG(copyPNG) },
     { label: "Export as JSON", icon: FileJson, onSelect: exportJSON },
     { label: "Export as CSV", icon: FileType, onSelect: exportCSV },
-    { label: "Export as PNG", icon: ImageIcon, onSelect: () => setPendingCapture(() => exportPNG) },
+    { label: "Export as PNG", icon: ImageIcon, onSelect: () => capturePNG(exportPNG) },
   ];
 
   return (
@@ -64,7 +70,7 @@ export function TableContextMenu({ children, rows, columns, onOpenDataView }: Ta
         ))}
       </ContextMenuContent>
 
-      {pendingCapture && (
+      {isCapturing && (
         <div className="absolute -left-[10000px] -top-[10000px]">
           <div ref={exportRef} className="min-w-[800px] p-2 text-foreground">
             <table className="w-full border-collapse font-mono text-xs">

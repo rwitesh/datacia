@@ -43,7 +43,11 @@ export function TableHeader({ headers }: TableHeaderProps) {
             {column.getCanSort() && (
               <button
                 type="button"
-                onMouseDown={(event) => event.stopPropagation()}
+                onMouseDown={(event) => {
+                  // Keep focus (and keyboard navigation) on the grid.
+                  event.preventDefault();
+                  event.stopPropagation();
+                }}
                 onClick={column.getToggleSortingHandler()}
                 className={cn(
                   "flex items-center justify-center rounded p-0.5 hover:bg-blue-500 hover:text-white",

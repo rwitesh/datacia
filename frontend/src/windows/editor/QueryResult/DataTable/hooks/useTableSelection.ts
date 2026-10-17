@@ -65,9 +65,15 @@ export function useTableSelection({
       const pointer = pointerRef.current;
       if (scroller && pointer) {
         const view = scroller.getBoundingClientRect();
+        // A row drag only moves vertically and a column drag horizontally,
+        // and they start over the row numbers or headers, inside the edge.
         scroller.scrollBy(
-          edgeOverflow(pointer.x, view.left + columnEdges[1], view.left + scroller.clientWidth),
-          edgeOverflow(pointer.y, view.top + HEADER_HEIGHT, view.top + scroller.clientHeight)
+          drag.mode === "row"
+            ? 0
+            : edgeOverflow(pointer.x, view.left + columnEdges[1], view.left + scroller.clientWidth),
+          drag.mode === "column"
+            ? 0
+            : edgeOverflow(pointer.y, view.top + HEADER_HEIGHT, view.top + scroller.clientHeight)
         );
         const gridX = pointer.x - view.left + scroller.scrollLeft;
         const bodyY = pointer.y - view.top + scroller.scrollTop - HEADER_HEIGHT;
@@ -82,6 +88,11 @@ export function useTableSelection({
     };
 
     const handleMouseMove = (event: globalThis.MouseEvent) => {
+      // A release outside the window sends no mouseup.
+      if ((event.buttons & 1) === 0) {
+        setDrag(null);
+        return;
+      }
       pointerRef.current = { x: event.clientX, y: event.clientY };
     };
     const handleMouseUp = () => setDrag(null);

@@ -126,10 +126,9 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
         queryID: queryId,
         results: null,
         error: undefined,
-        // The previous result's selection and scroll don't apply to the new one.
+        // The previous result's selection doesn't apply to the new one.
         selection: null,
         selectedRows: undefined,
-        scroll: undefined,
       });
 
       // Only the run that is still the tab's current query may write to it,
@@ -138,7 +137,9 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
         setTabs((prev) =>
           prev.map((tab) =>
             tab.id === targetTabId && tab.queryID === queryId
-              ? { ...tab, ...updates, isExecuting: false }
+              ? // The old grid saves its scroll as it unmounts, after the run
+                // starts, so the new result's scroll is reset only here.
+                { ...tab, ...updates, scroll: undefined, isExecuting: false }
               : tab
           )
         );

@@ -218,13 +218,13 @@ export function DataTable({
         {columns.length === 0 ? (
           <div className="p-3 text-muted-foreground">No columns to display.</div>
         ) : (
-          <>
-            <TableHeader headers={headers} />
-            <TableContextMenu
-              rows={selected?.rows ?? []}
-              columns={selected?.columns ?? []}
-              onOpenDataView={onOpenDataView}
-            >
+          <TableContextMenu
+            rows={selected?.rows ?? []}
+            columns={selected?.columns ?? []}
+            onOpenDataView={onOpenDataView}
+          >
+            <div>
+              <TableHeader headers={headers} />
               <div className="relative" style={{ width: totalWidth, height: bodyHeight }}>
                 {/* Drawn under the rows, whose cells are transparent; the
                     opaque row-number column covers it when scrolled. */}
@@ -271,8 +271,8 @@ export function DataTable({
                   </div>
                 )}
               </div>
-            </TableContextMenu>
-          </>
+            </div>
+          </TableContextMenu>
         )}
       </div>
       {isLoading && (
