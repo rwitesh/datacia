@@ -1,6 +1,5 @@
-// Package sentry sets up error and log reporting to Sentry. The DSN is not
-// part of the source: release builds receive it at build time, and builds
-// without one (development, forks) report nothing.
+// Package sentry sets up error and log reporting to Sentry for release builds.
+// Development builds report nothing.
 package sentry
 
 import (
@@ -10,6 +9,13 @@ import (
 
 	"github.com/getsentry/sentry-go"
 )
+
+// dsn identifies the DataCia Sentry project. It only allows sending events;
+// abuse is handled with rate limits in Sentry.
+const dsn = "https://0aad2d7d7d7ba5d339d215573ce6ddbc@o4510567778287616.ingest.us.sentry.io/4512270085914624"
+
+// devVersion is the version of builds made without a release tag.
+const devVersion = "dev"
 
 // enabled is the user's "Send anonymous error reports" setting; events and
 // logs are dropped while it is off.
@@ -26,16 +32,13 @@ func SetEnabled(on bool) {
 	enabled.Store(on)
 }
 
-// Init configures the SDK. It returns false without initialising anything when
-// dsn is empty.
-func Init(dsn, release string) (bool, error) {
-	if dsn == "" {
+// Init configures the SDK for release builds. It returns false without
+// initialising anything for development builds.
+func Init(release string) (bool, error) {
+	if release == devVersion {
 		return false, nil
 	}
 	releaseTag := "datacia@" + release
-	if release == "" {
-		releaseTag = "datacia@unknown"
-	}
 
 	err := sentry.Init(sentry.ClientOptions{
 		Dsn:              dsn,

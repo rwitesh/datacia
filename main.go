@@ -15,14 +15,9 @@ import (
 var assets embed.FS
 
 // version is the release version, injected at build time from the git tag
-// (-ldflags "-X main.version=<version>"). Builds without it report "dev" and
-// never auto-update.
+// (-ldflags "-X main.version=<version>"). Builds without it report "dev": they
+// never auto-update or send error reports.
 var version = "dev"
-
-// sentryDSN is injected at build time from the SENTRY_DSN secret
-// (-ldflags "-X main.sentryDSN=<dsn>"). Without it nothing is reported and
-// logs go to stderr.
-var sentryDSN string
 
 func main() {
 	// When relaunched as the updater's helper (to swap in a downloaded update),
@@ -33,7 +28,7 @@ func main() {
 	defer recoverAndReport()
 
 	sentry.SetEnabled(settings.ErrorReportsEnabled())
-	reporting, err := sentry.Init(sentryDSN, version)
+	reporting, err := sentry.Init(version)
 	logger.Init(reporting)
 	if err != nil {
 		logger.Error("Sentry init failed", "error", err.Error())

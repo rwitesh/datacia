@@ -13,9 +13,6 @@ vars:
   # auto-update.
   VERSION:
     sh: 'v="${VERSION:-$(git describe --tags --exact-match --match "v[0-9]*" 2>/dev/null || true)}"; v="${v#v}"; echo "${v:-dev}"'
-  # Sentry DSN for error reports, from the SENTRY_DSN environment variable (a
-  # GitHub Actions secret for releases). Empty means the build reports nothing.
-  SENTRY_DSN: '{{.SENTRY_DSN | default ""}}'
   # Numeric x.y.z for platform metadata (Windows version info and NSIS need digits).
   ASSET_VERSION:
     sh: 'echo "{{.VERSION}}" | sed -E -n "s/^([0-9]+\.[0-9]+\.[0-9]+).*/\1/p" | grep . || echo "0.0.0"'
