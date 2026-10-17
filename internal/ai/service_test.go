@@ -166,7 +166,7 @@ func TestStreamReplyErrors(t *testing.T) {
 		want   string
 	}{
 		{http.StatusUnauthorized, "rejected the API key"},
-		{http.StatusNotFound, "doesn't know this model"},
+		{http.StatusNotFound, "doesn't recognize this model"},
 		{http.StatusTooManyRequests, "rate limit"},
 	}
 	for _, tc := range cases {
@@ -180,7 +180,7 @@ func TestStreamReplyErrors(t *testing.T) {
 		if err == nil {
 			t.Fatalf("HTTP %d: no error", tc.status)
 		}
-		if got := userError(p, err).Error(); !strings.Contains(got, tc.want) || !strings.Contains(got, "nope") {
+		if got := userError(p, err).Error(); !strings.Contains(got, tc.want) {
 			t.Fatalf("HTTP %d: %q", tc.status, got)
 		}
 	}
@@ -210,7 +210,7 @@ func TestStreamReplyCancel(t *testing.T) {
 func TestUserErrorNetwork(t *testing.T) {
 	p := mustProvider(t, "local")
 	_, err := streamReply(context.Background(), p.chat("m", "", "http://127.0.0.1:1"), "sys", history, func(string) {}, goai.WithMaxRetries(0))
-	if got := userError(p, err).Error(); !strings.Contains(got, "couldn't reach") {
+	if got := userError(p, err).Error(); !strings.Contains(got, "Couldn't reach") {
 		t.Fatalf("got %q", got)
 	}
 	if !strings.Contains(userError(p, &goai.ContextOverflowError{}).Error(), "too long") {

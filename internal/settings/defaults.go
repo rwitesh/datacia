@@ -1,5 +1,7 @@
 package settings
 
+import "maps"
+
 func defaultTokenColorsLight() TokenColors {
 	return TokenColors{
 		Keyword:  "#d73a49",
@@ -47,11 +49,11 @@ func fillAIDefaults(s *Settings) {
 	if s.AI.Providers == nil {
 		s.AI.Providers = map[string]AIProviderConfig{}
 	}
+	maps.DeleteFunc(s.AI.Providers, func(_ string, p AIProviderConfig) bool {
+		return len(p.Models) == 0 && p.BaseURL == ""
+	})
 	for id, p := range s.AI.Providers {
-		switch {
-		case len(p.Models) == 0 && p.BaseURL == "":
-			delete(s.AI.Providers, id)
-		case p.Models == nil:
+		if p.Models == nil {
 			p.Models = []string{}
 			s.AI.Providers[id] = p
 		}

@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Browser, CancelError, type CancellablePromise } from "@wailsio/runtime";
 import { ExternalLink, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -37,7 +37,7 @@ export function KeyField({ status, change, onChange }: Props) {
       </div>
       {removing ? (
         <p className="flex h-7 items-center gap-2 text-xs text-muted-foreground">
-          The saved key will be removed.
+          Key will be removed.
           <button type="button" onClick={() => onChange(undefined)} className={linkClass}>
             Undo
           </button>
@@ -49,7 +49,7 @@ export function KeyField({ status, change, onChange }: Props) {
             type="password"
             value={change ?? ""}
             onChange={(e) => onChange(e.target.value.trim() === "" ? undefined : e.target.value)}
-            placeholder={status.hasKey ? "Saved · paste a new key to replace it" : "Paste your API key"}
+            placeholder={status.hasKey ? "Saved" : "Paste your API key"}
             autoComplete="off"
             spellCheck={false}
             className="h-7 pr-16 text-xs font-mono"
@@ -70,7 +70,7 @@ export function KeyField({ status, change, onChange }: Props) {
           {signIn.pending ? (
             <>
               <Loader2 className="size-3 animate-spin" />
-              Waiting for {provider.name} in your browser…
+              Waiting for browser…
               <button type="button" onClick={signIn.cancel} className={linkClass}>
                 Cancel
               </button>
@@ -95,27 +95,20 @@ export function KeyField({ status, change, onChange }: Props) {
 function useSignIn(providerId: string) {
   const queryClient = useQueryClient();
   const call = useRef<CancellablePromise<void> | null>(null);
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState("");
   const cancel = () => {
     call.current?.cancel();
   };
   useEffect(() => cancel, []);
 
-  const start = () => {
-    setPending(true);
-    setError("");
-    call.current = SignIn(providerId);
-    call.current
-      .then(() => queryClient.invalidateQueries({ queryKey: ["ai-providers"] }))
-      .catch((err) => {
-        if (!(err instanceof CancelError)) setError(errorMessage(err));
-      })
-      .finally(() => {
-        call.current = null;
-        setPending(false);
-      });
-  };
+  const { mutate, isPending, error } = useMutation({
+    mutationFn: () => (call.current = SignIn(providerId)),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ai-providers"] }),
+  });
 
-  return { pending, error, start, cancel };
+  return {
+    pending: isPending,
+    error: error && !(error instanceof CancelError) ? errorMessage(error) : "",
+    start: () => mutate(),
+    cancel,
+  };
 }

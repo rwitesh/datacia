@@ -17,7 +17,7 @@ import (
 
 const callbackPage = `<!doctype html><meta charset="utf-8"><title>DataCia</title>` +
 	`<body style="font:15px system-ui;padding:3rem;text-align:center">` +
-	`<h2>Almost done</h2><p>Return to DataCia to finish signing in to OpenRouter. You can close this tab.</p>`
+	`<h2>Return to DataCia</h2><p>You can close this tab.</p>`
 
 // openRouterSignIn runs OpenRouter's OAuth PKCE flow and returns a user-owned API key.
 // https://openrouter.ai/docs/use-cases/oauth-pkce
@@ -28,7 +28,7 @@ func openRouterSignIn(ctx context.Context, baseURL string, open func(url string)
 
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
-		return "", fmt.Errorf("couldn't start sign-in: %w", err)
+		return "", fmt.Errorf("Couldn't start sign-in: %w", err)
 	}
 	port := ln.Addr().(*net.TCPAddr).Port
 	// A secret callback path stops other local processes from injecting a code.
@@ -63,7 +63,7 @@ func openRouterSignIn(ctx context.Context, baseURL string, open func(url string)
 		"code_challenge_method": {"S256"},
 	}
 	if err := open("https://openrouter.ai/auth?" + q.Encode()); err != nil {
-		return "", fmt.Errorf("couldn't open the browser: %w", err)
+		return "", fmt.Errorf("Couldn't open the browser: %w", err)
 	}
 
 	var code string
@@ -81,14 +81,14 @@ func openRouterSignIn(ctx context.Context, baseURL string, open func(url string)
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		return "", errors.New("couldn't reach OpenRouter. Check your connection")
+		return "", errors.New("Couldn't reach OpenRouter.")
 	}
 	defer resp.Body.Close()
 	var out struct {
 		Key string `json:"key"`
 	}
 	if resp.StatusCode != http.StatusOK || json.NewDecoder(resp.Body).Decode(&out) != nil || out.Key == "" {
-		return "", fmt.Errorf("OpenRouter sign-in failed (HTTP %d). Try again", resp.StatusCode)
+		return "", fmt.Errorf("OpenRouter sign-in failed (HTTP %d).", resp.StatusCode)
 	}
 	return out.Key, nil
 }

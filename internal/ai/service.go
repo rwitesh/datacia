@@ -97,7 +97,7 @@ func (s *Service) SignIn(ctx context.Context, providerID string) error {
 	defer cancel()
 	key, err := p.signIn(ctx, p.DefaultBaseURL, s.app.Browser.OpenURL)
 	if errors.Is(err, context.DeadlineExceeded) {
-		return errors.New("sign-in timed out. Try again")
+		return errors.New("Sign-in timed out.")
 	}
 	if err != nil {
 		return err
@@ -133,7 +133,7 @@ func (s *Service) ListModels(ctx context.Context, providerID, url, key string) (
 func (s *Service) Chat(ctx context.Context, req ChatRequest) (string, error) {
 	history := normalizeHistory(req.Messages)
 	if len(history) == 0 || history[len(history)-1].Role != "user" {
-		return "", errors.New("nothing to send")
+		return "", errors.New("Nothing to send.")
 	}
 	p, err := findProvider(req.Provider)
 	if err != nil {
@@ -151,10 +151,10 @@ func (s *Service) Chat(ctx context.Context, req ChatRequest) (string, error) {
 		s.app.Event.Emit(DeltaEvent, ChatDelta{ID: req.ID, Text: text})
 	}, p.options...)
 	if err != nil {
-		return reply, logChatError(p, req.Model, err)
+		return reply, reportChatError(p, req.Model, err)
 	}
 	if strings.TrimSpace(reply) == "" {
-		return "", fmt.Errorf("%s returned an empty reply. Try again or pick another model", p.Name)
+		return "", fmt.Errorf("%s returned an empty reply.", p.Name)
 	}
 	return reply, nil
 }
@@ -196,7 +196,7 @@ func (s *Service) SaveChat(chat Chat) error {
 func chatModel(p Provider, model string) (provider.LanguageModel, error) {
 	model = strings.TrimSpace(model)
 	if model == "" {
-		return nil, errors.New("choose a model")
+		return nil, errors.New("Choose a model.")
 	}
 	key, err := apiKey(p)
 	if err != nil {
@@ -210,7 +210,7 @@ func chatModel(p Provider, model string) (provider.LanguageModel, error) {
 func apiKey(p Provider) (string, error) {
 	key, err := savedKey(p)
 	if err == nil && key == "" && !p.KeyOptional {
-		err = fmt.Errorf("add your %s API key in Settings → AI", p.Name)
+		err = fmt.Errorf("Add a %s API key in Settings.", p.Name)
 	}
 	return key, err
 }
@@ -218,7 +218,7 @@ func apiKey(p Provider) (string, error) {
 func savedKey(p Provider) (string, error) {
 	key, err := settings.AIKey(p.ID)
 	if err != nil {
-		return "", fmt.Errorf("the saved %s key can't be read on this computer. Enter it again", p.Name)
+		return "", fmt.Errorf("The saved %s key can't be read. Enter it again.", p.Name)
 	}
 	return key, nil
 }

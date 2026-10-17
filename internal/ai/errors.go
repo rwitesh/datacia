@@ -20,32 +20,32 @@ func userError(p Provider, err error) error {
 		return err
 	}
 	if errors.Is(err, context.DeadlineExceeded) {
-		return fmt.Errorf("%s took too long to answer. Try again", p.Name)
+		return fmt.Errorf("%s took too long to respond.", p.Name)
 	}
 	var overflow *goai.ContextOverflowError
 	if errors.As(err, &overflow) {
-		return errors.New("the conversation is too long for this model. Start a new chat")
+		return errors.New("This chat is too long for the model. Start a new chat.")
 	}
 	var apiErr *goai.APIError
 	if errors.As(err, &apiErr) {
 		msg := clip(apiErr.Message)
 		switch code := apiErr.StatusCode; {
 		case code == 401 || code == 403:
-			return fmt.Errorf("%s rejected the API key. Check it in Settings → AI (%s)", p.Name, msg)
+			return fmt.Errorf("%s rejected the API key.", p.Name)
 		case code == 402:
-			return fmt.Errorf("your %s account is out of credits (%s)", p.Name, msg)
+			return fmt.Errorf("Your %s account is out of credits.", p.Name)
 		case code == 404:
-			return fmt.Errorf("%s doesn't know this model. Check the model ID in Settings → AI (%s)", p.Name, msg)
+			return fmt.Errorf("%s doesn't recognize this model.", p.Name)
 		case code == 429:
-			return fmt.Errorf("%s rate limit or quota reached. Try again shortly (%s)", p.Name, msg)
+			return fmt.Errorf("%s rate limit reached. Try again shortly.", p.Name)
 		case code >= 500:
-			return fmt.Errorf("%s is having problems (HTTP %d). Try again shortly", p.Name, code)
+			return fmt.Errorf("%s is unavailable (HTTP %d). Try again shortly.", p.Name, code)
 		default:
 			return fmt.Errorf("%s: %s", p.Name, msg)
 		}
 	}
 	if isNetwork(err) {
-		return fmt.Errorf("couldn't reach %s. Check your connection and the base URL", p.Name)
+		return fmt.Errorf("Couldn't reach %s.", p.Name)
 	}
 	return fmt.Errorf("%s: %s", p.Name, clip(err.Error()))
 }
@@ -89,8 +89,8 @@ func truncate(s string, n int) string {
 	return strings.ToValidUTF8(s[:n], "") + "…"
 }
 
-// logChatError logs err without its text and returns the message for the user.
-func logChatError(p Provider, model string, err error) error {
+// reportChatError logs err without its text and returns the message for the user.
+func reportChatError(p Provider, model string, err error) error {
 	if !errors.Is(err, context.Canceled) {
 		logger.Warn("ai_chat_failed", "provider", p.ID, "model", model, "kind", errorKind(err))
 	}

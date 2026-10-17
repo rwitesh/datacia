@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { omit } from "lodash";
 import { Check, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,21 +23,19 @@ export function AISection({ settings, onChange, keys, onKeysChange }: Props) {
   // Empty configs are dropped so undoing every edit leaves nothing to save.
   const update = (id: string, patch: Partial<AIProviderConfig>) => {
     const next = { models: [], baseUrl: "", ...configs[id], ...patch };
-    const providers = next.models.length > 0 || next.baseUrl ? { ...configs, [id]: next } : without(configs, id);
+    const providers = next.models.length > 0 || next.baseUrl ? { ...configs, [id]: next } : omit(configs, id);
     onChange({ ...settings, ai: { ...settings.ai, providers } });
   };
 
   const setKey = (id: string, key: string | undefined) => {
-    onKeysChange(key === undefined ? without(keys, id) : { ...keys, [id]: key });
+    onKeysChange(key === undefined ? omit(keys, id) : { ...keys, [id]: key });
   };
 
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="text-sm font-semibold">AI providers</h3>
-        <p className="text-xs text-muted-foreground">
-          Connect one or more providers to use the AI chat. Keys are encrypted and stored on this computer only.
-        </p>
+        <h3 className="text-sm font-semibold">Providers</h3>
+        <p className="text-xs text-muted-foreground">Keys are encrypted and stay on this computer.</p>
       </div>
       {error && <p className="text-xs text-destructive">{errorMessage(error)}</p>}
       <div className="space-y-2">
@@ -53,12 +52,6 @@ export function AISection({ settings, onChange, keys, onKeysChange }: Props) {
       </div>
     </div>
   );
-}
-
-function without<T>(record: Record<string, T>, key: string) {
-  const next = { ...record };
-  delete next[key];
-  return next;
 }
 
 function useDebounced<T>(value: T, ms = 500) {
@@ -115,7 +108,6 @@ function ProviderCard({
       </button>
       {/* Hidden rather than unmounted, so collapsing doesn't cancel a sign-in. */}
       <div className={cn("space-y-3 px-3 pb-3 pl-8", !open && "hidden")}>
-        {provider.note && <p className="text-[11px] text-muted-foreground">{provider.note}</p>}
         <KeyField status={status} change={keyChange} onChange={onKeyChange} />
         {provider.customUrl && (
           <div className="space-y-1">

@@ -215,7 +215,6 @@ export class Provider {
     "keyUrl": string;
     "keyOptional": boolean;
     "signIn": boolean;
-    "note": string;
 
     /** Creates a new Provider instance. */
     constructor($$source: Partial<Provider> = {}) {
@@ -239,9 +238,6 @@ export class Provider {
         }
         if (!("signIn" in $$source)) {
             this["signIn"] = false;
-        }
-        if (!("note" in $$source)) {
-            this["note"] = "";
         }
 
         Object.assign(this, $$source);

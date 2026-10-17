@@ -103,7 +103,7 @@ func TestListModelsErrors(t *testing.T) {
 	})
 	p := mustProvider(t, "local")
 	_, err := p.list(context.Background(), "k", srv.URL)
-	if got := userError(p, err).Error(); !strings.Contains(got, "rejected the API key") || !strings.Contains(got, "bad key") {
+	if got := userError(p, err).Error(); !strings.Contains(got, "rejected the API key") {
 		t.Fatalf("got %q", got)
 	}
 }

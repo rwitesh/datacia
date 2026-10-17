@@ -21,14 +21,14 @@ type Model struct {
 
 type listedModel struct {
 	Model
-	created int64
+	rank int64 // higher is newer
 }
 
 type modelLister func(ctx context.Context, key, baseURL string) ([]listedModel, error)
 
 var httpClient = &http.Client{Timeout: 20 * time.Second}
 
-// getJSON fetches url into out. Non-2xx responses become *goai.APIError so
+// getJSON fetches url into out. Error responses become GoAI errors, so
 // userError maps them like chat errors.
 func getJSON(ctx context.Context, url string, headers map[string]string, out any) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
@@ -48,23 +48,12 @@ func getJSON(ctx context.Context, url string, headers map[string]string, out any
 		return err
 	}
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return &goai.APIError{StatusCode: resp.StatusCode, Message: errorMessage(body, resp.Status)}
+		return goai.ParseHTTPError("", resp.StatusCode, body)
 	}
 	if err := json.Unmarshal(body, out); err != nil {
 		return fmt.Errorf("unexpected model list: %w", err)
 	}
 	return nil
-}
-
-func errorMessage(body []byte, fallback string) string {
-	var v struct {
-		Error struct {
-			Message string `json:"message"`
-		} `json:"error"`
-		Message string `json:"message"`
-	}
-	_ = json.Unmarshal(body, &v)
-	return cmp.Or(v.Error.Message, v.Message, fallback)
 }
 
 func bearer(key string) map[string]string {
@@ -195,7 +184,7 @@ func listOpenRouter(ctx context.Context, key, baseURL string) ([]listedModel, er
 // sortModels puts the newest models first, then sorts by ID.
 func sortModels(in []listedModel) []Model {
 	slices.SortStableFunc(in, func(a, b listedModel) int {
-		return cmp.Or(cmp.Compare(b.created, a.created), strings.Compare(a.ID, b.ID))
+		return cmp.Or(cmp.Compare(b.rank, a.rank), strings.Compare(a.ID, b.ID))
 	})
 	out := make([]Model, len(in))
 	for i, m := range in {

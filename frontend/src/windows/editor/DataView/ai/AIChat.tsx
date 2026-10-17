@@ -48,13 +48,13 @@ export function AIChat() {
   if (usable.length === 0) {
     return (
       <Intro
-        title="Connect an AI provider"
-        text="Add an API key for Anthropic, OpenAI, Gemini, OpenRouter, OpenCode, or point to a local model."
+        title="Set up AI"
+        text="Add a provider in Settings."
         className="px-6"
       >
         <Button size="xs" variant="outline" onClick={() => OpenSettingsWindow("ai")} className="cursor-pointer">
           <Settings2 />
-          Open AI settings
+          Open Settings
         </Button>
       </Intro>
     );
@@ -138,7 +138,7 @@ function MessageList({
       role="log"
       aria-live="polite"
       aria-busy={streaming}
-      className="flex-1 min-h-0 scroll-stable overflow-x-hidden px-3 py-3 space-y-4 text-xs leading-relaxed select-text"
+      className="flex-1 min-h-0 overflow-y-scroll overflow-x-hidden px-3 py-3 space-y-4 text-xs leading-relaxed select-text"
     >
       {messages.length === 0 ? (
         <EmptyState context={context} />
@@ -153,14 +153,14 @@ function MessageList({
 
 function EmptyState({ context }: { context: ChatContext }) {
   const suggestions = [
-    context.error && "Why did my query fail, and how do I fix it?",
-    context.sql.trim() && "Explain the query in my editor",
-    context.sql.trim() && "Can this query be made faster?",
-    context.tables.length > 0 && "Which tables are in this database and how do they relate?",
+    context.error && "Fix my query error",
+    context.sql.trim() && "Explain my query",
+    context.sql.trim() && "Make my query faster",
+    context.tables.length > 0 && "How do these tables relate?",
   ].filter((s): s is string => Boolean(s));
 
   return (
-    <Intro title="Ask about your data" text="Write queries, explain them, or fix errors." className="py-8">
+    <Intro title="Ask about your data" text="Write, explain or fix queries." className="py-8">
       {suggestions.length > 0 && (
         <div className="flex flex-col items-stretch gap-1.5 w-full max-w-64">
           {suggestions.map((s) => (
@@ -296,9 +296,9 @@ function Composer({
 
   const contextSummary = [
     context.engine,
-    context.sql.trim() && "editor SQL",
-    context.error && "last error",
-    context.tables.length > 0 && `${context.tables.length} table names`,
+    context.sql.trim() && "query",
+    context.error && "error",
+    context.tables.length > 0 && `${context.tables.length} tables`,
   ]
     .filter(Boolean)
     .join(", ");

@@ -22,7 +22,6 @@ type Provider struct {
 	KeyURL         string `json:"keyUrl"`
 	KeyOptional    bool   `json:"keyOptional"`
 	SignIn         bool   `json:"signIn"`
-	Note           string `json:"note"`
 
 	chat    chatFunc
 	list    modelLister
@@ -65,7 +64,6 @@ var providers = []Provider{
 		Name:           "OpenAI",
 		DefaultBaseURL: "https://api.openai.com/v1",
 		KeyURL:         "https://platform.openai.com/api-keys",
-		Note:           "Uses OpenAI's Responses API. For other OpenAI-compatible servers, use Local.",
 		chat: func(model, key, baseURL string) provider.LanguageModel {
 			return openai.Chat(model, openai.WithAPIKey(key), openai.WithBaseURL(baseURL))
 		},
@@ -75,7 +73,7 @@ var providers = []Provider{
 	},
 	{
 		ID:             "gemini",
-		Name:           "Google Gemini",
+		Name:           "Gemini",
 		DefaultBaseURL: "https://generativelanguage.googleapis.com",
 		KeyURL:         "https://aistudio.google.com/apikey",
 		chat: func(model, key, baseURL string) provider.LanguageModel {
@@ -100,17 +98,15 @@ var providers = []Provider{
 		Name:           "OpenCode",
 		DefaultBaseURL: "https://opencode.ai/inference/openai/v1",
 		KeyURL:         "https://opencode.ai/console",
-		Note:           "Works with OpenCode's open models (Qwen, DeepSeek, GLM, Kimi, MiniMax…), not its Claude, GPT or Gemini models.",
 		chat:           compatChat("opencode"),
 		list:           listCompat("https://opencode.ai/inference/v1/models", isOpenCodeChat),
 	},
 	{
 		ID:             "local",
-		Name:           "Local (OpenAI-compatible)",
+		Name:           "Local",
 		DefaultBaseURL: "http://localhost:11434/v1",
 		CustomURL:      true,
 		KeyOptional:    true,
-		Note:           "Any server with an OpenAI-compatible Chat Completions API, e.g. Ollama or LM Studio (http://localhost:1234/v1).",
 		chat:           compatChat("local"),
 		list:           listCompat("", nil),
 	},

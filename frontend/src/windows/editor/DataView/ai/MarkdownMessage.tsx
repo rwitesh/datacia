@@ -1,32 +1,13 @@
-import { memo, useEffect, useState, type ReactNode } from "react";
+import { isValidElement, memo, useEffect, useState, type ReactNode } from "react";
 import Markdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Browser } from "@wailsio/runtime";
 import { Check, Copy, CornerDownLeft, SquarePlus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useEditorContext } from "@/context/editor/Index";
 
 // Model output is untrusted: raw HTML stays escaped and images aren't loaded.
 const DISALLOWED = ["img"];
-
-type HastNode = {
-  type: string;
-  value?: string;
-  properties?: { className?: unknown };
-  children?: HastNode[];
-};
-
-function hastText(node: HastNode | undefined): string {
-  if (!node) return "";
-  if (node.type === "text") return node.value ?? "";
-  return (node.children ?? []).map(hastText).join("");
-}
-
-function codeLanguage(node: HastNode | undefined): string {
-  const cls = node?.properties?.className;
-  const list = Array.isArray(cls) ? cls : [];
-  const lang = list.find((c) => typeof c === "string" && c.startsWith("language-"));
-  return typeof lang === "string" ? lang.slice("language-".length) : "";
-}
 
 function openLink(href = "") {
   let url: URL;
@@ -100,15 +81,9 @@ function CodeAction({
   children: ReactNode;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      title={label}
-      aria-label={label}
-      className="inline-flex items-center justify-center size-5 rounded hover:bg-muted hover:text-foreground transition-colors cursor-pointer [&_svg]:size-3"
-    >
+    <Button size="icon-xs" variant="ghost" onClick={onClick} title={label} aria-label={label} className="size-5 cursor-pointer [&_svg]:size-3">
       {children}
-    </button>
+    </Button>
   );
 }
 
@@ -124,9 +99,12 @@ const components: Components = {
   code: ({ children }) => (
     <code className="bg-muted rounded px-1 py-0.5 text-[11px] font-mono">{children}</code>
   ),
-  pre: ({ node }) => {
-    const codeNode = (node as HastNode | undefined)?.children?.find((c) => c.type === "element");
-    return <CodeBlock code={hastText(codeNode).replace(/\n$/, "")} language={codeLanguage(codeNode)} />;
+  // `children` is the fenced block's <code> element.
+  pre: ({ children }) => {
+    const { className = "", children: text = "" } = isValidElement<{ className?: string; children?: ReactNode }>(children)
+      ? children.props
+      : {};
+    return <CodeBlock code={String(text).replace(/\n$/, "")} language={className.replace(/^language-/, "")} />;
   },
   a: ({ href, children }) => (
     <a

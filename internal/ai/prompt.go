@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"cmp"
 	"fmt"
 	"strings"
 )
@@ -21,10 +22,7 @@ type ChatContext struct {
 }
 
 func systemPrompt(c ChatContext) string {
-	engine := c.Engine
-	if engine == "" {
-		engine = "SQL"
-	}
+	engine := cmp.Or(c.Engine, "SQL")
 	var b strings.Builder
 	fmt.Fprintf(&b, "You are a %s expert helping a user of DataCia, a desktop SQL client. ", engine)
 	fmt.Fprintf(&b, "Write SQL that is valid for %s. ", engine)

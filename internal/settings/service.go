@@ -165,12 +165,12 @@ func withKeys(keys, changes map[string]string) (map[string]string, error) {
 			continue
 		}
 		if key = strings.TrimSpace(key); key == "" {
-			return nil, errors.New("an API key can't be blank")
+			return nil, errors.New("An API key can't be blank.")
 		}
 		enc, err := security.EncryptString(key)
 		if err != nil {
 			logger.Error("Failed to encrypt API key", "provider", provider, "error", err.Error())
-			return nil, errors.New("couldn't store the API key securely")
+			return nil, errors.New("Couldn't store the API key securely.")
 		}
 		out[provider] = enc
 	}

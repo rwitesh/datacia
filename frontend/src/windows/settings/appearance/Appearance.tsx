@@ -144,14 +144,11 @@ export function AppearanceSection({ settings, onChange }: AppearanceSectionProps
       {/* Theme */}
       <div className="space-y-3">
         <div>
-          <h3 className="text-sm font-semibold">Appearance</h3>
-          <p className="text-xs text-muted-foreground">
-            App theme
-          </p>
+          <h3 className="text-sm font-semibold">Theme</h3>
         </div>
         <div className="flex items-center justify-between rounded-md border p-3">
           <div className="space-y-0.5">
-            <div className="text-sm font-medium">Theme Mode</div>
+            <div className="text-sm font-medium">Mode</div>
           </div>
           <ToggleGroup
             type="single"
@@ -176,20 +173,17 @@ export function AppearanceSection({ settings, onChange }: AppearanceSectionProps
       <div className="space-y-3">
         <div>
           <h3 className="text-sm font-semibold">Fonts</h3>
-          <p className="text-xs text-muted-foreground">
-            Customize application and editor fonts
-          </p>
         </div>
 
         <div className="rounded-md border p-3 space-y-4">
           {/* UI Font Section */}
           <div className="space-y-3">
             <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Application Font
+              App
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label className="text-xs">Font Family</Label>
+                <Label className="text-xs">Font</Label>
                 <Select
                   value={uiFont}
                   onValueChange={(value) => {
@@ -214,7 +208,7 @@ export function AppearanceSection({ settings, onChange }: AppearanceSectionProps
                 </Select>
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">Font Size</Label>
+                <Label className="text-xs">Size</Label>
                 <Select
                   value={String(uiFontSize)}
                   onValueChange={(v) => {
@@ -252,11 +246,11 @@ export function AppearanceSection({ settings, onChange }: AppearanceSectionProps
           {/* Editor Font Section */}
           <div className="space-y-3 pt-3 border-t">
             <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Editor Font
+              Editor
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label className="text-xs">Font Family</Label>
+                <Label className="text-xs">Font</Label>
                 <Select
                   value={editorFont}
                   onValueChange={(value) => {
@@ -281,7 +275,7 @@ export function AppearanceSection({ settings, onChange }: AppearanceSectionProps
                 </Select>
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">Font Size</Label>
+                <Label className="text-xs">Size</Label>
                 <Select
                   value={String(editorFontSize)}
                   onValueChange={(v) => {
@@ -335,18 +329,15 @@ export function AppearanceSection({ settings, onChange }: AppearanceSectionProps
       {/* Editor colors */}
       <div className="space-y-3">
         <div>
-          <h3 className="text-sm font-semibold">Editor</h3>
-          <p className="text-xs text-muted-foreground">
-            Syntax highlighting
-          </p>
+          <h3 className="text-sm font-semibold">Syntax colors</h3>
         </div>
 
         <div className="rounded-md border p-3 space-y-3">
           <Tabs defaultValue="dark" className="w-full">
             <div className="flex items-center justify-between">
               <TabsList className="h-8">
-                <TabsTrigger value="light" className="text-xs h-6 px-3">Light Mode</TabsTrigger>
-                <TabsTrigger value="dark" className="text-xs h-6 px-3">Dark Mode</TabsTrigger>
+                <TabsTrigger value="light" className="text-xs h-6 px-3">Light</TabsTrigger>
+                <TabsTrigger value="dark" className="text-xs h-6 px-3">Dark</TabsTrigger>
               </TabsList>
               <div className="flex items-center gap-3">
                 <Button
