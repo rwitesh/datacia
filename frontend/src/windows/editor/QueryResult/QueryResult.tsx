@@ -3,7 +3,7 @@ import { useGetDDL } from "@/services/database";
 import { DataTable } from "./DataTable/DataTable";
 import { ErrorView } from "./ErrorView/ErrorView";
 import { DDLView } from "./DDLView/DDLView";
-import type { SelectionGeometry } from "./DataTable/utils/cellSelection";
+import type { CellSelection } from "./DataTable/utils/cellSelection";
 import type { DataRow } from "./DataTable/types";
 import { useCallback } from "react";
 
@@ -34,7 +34,7 @@ export function QueryResult({ onOpenDataView }: QueryResultProps) {
   );
 
   const handleSelectionChange = useCallback(
-    (selection: SelectionGeometry | null, selectedRows: DataRow[]) => {
+    (selection: CellSelection | null, selectedRows: DataRow[]) => {
       if (tabId) {
         updateTab(tabId, { selection, selectedRows });
       }
@@ -95,7 +95,6 @@ export function QueryResult({ onOpenDataView }: QueryResultProps) {
             columns={results?.columns ?? NO_COLUMNS}
             data={results?.data ?? NO_ROWS}
             onSelectionChange={handleSelectionChange}
-            isTableViewMode={isTableViewMode}
             currentOrderBy={orderBy}
             currentOrderDir={orderDir}
             onServerSort={isTableViewMode ? handleServerSort : undefined}

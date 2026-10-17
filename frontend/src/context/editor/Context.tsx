@@ -1,6 +1,6 @@
 import { createContext, type RefObject } from "react";
 import type { QueryResult } from "@/services/bindings/database";
-import type { SelectionGeometry } from "@/windows/editor/QueryResult/DataTable/utils/cellSelection";
+import type { CellSelection } from "@/windows/editor/QueryResult/DataTable/utils/cellSelection";
 
 export interface Tab {
   id: string;
@@ -20,7 +20,7 @@ export interface Tab {
   orderDir?: "asc" | "desc";
   savedPath?: string;
   scroll?: { left: number; top: number };
-  selection?: SelectionGeometry | null;
+  selection?: CellSelection | null;
   // The rows selection covers, in the order the grid shows them.
   selectedRows?: Record<string, unknown>[];
 }

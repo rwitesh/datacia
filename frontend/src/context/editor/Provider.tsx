@@ -126,6 +126,10 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
         queryID: queryId,
         results: null,
         error: undefined,
+        // The previous result's selection and scroll don't apply to the new one.
+        selection: null,
+        selectedRows: undefined,
+        scroll: undefined,
       });
 
       // Only the run that is still the tab's current query may write to it,

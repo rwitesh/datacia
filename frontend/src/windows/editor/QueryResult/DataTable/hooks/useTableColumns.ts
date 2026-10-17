@@ -1,40 +1,35 @@
 import { useMemo } from "react";
-import { type ColumnDef, type CellContext } from "@tanstack/react-table";
+import type { ColumnDef } from "@tanstack/react-table";
+import { formatCellValue } from "@/lib/utils";
 import type { DataRow } from "../types";
+import { MIN_COLUMN_WIDTH } from "../utils/layout";
 
-// Special column ID for serial number
-export const SERIAL_COLUMN_ID = "#";
+export const ROW_NUMBER_COLUMN_ID = "#";
 
-export function useTableColumns(columns: string[], offset: number = 0) {
-    const columnDefs = useMemo<ColumnDef<DataRow>[]>(() => {
-        // Serial number column
-        const serialColumn: ColumnDef<DataRow> = {
-            id: SERIAL_COLUMN_ID,
-            accessorFn: (_row: DataRow, index: number) => offset + index + 1,
-            header: "#",
-            cell: (info: CellContext<DataRow, unknown>) => {
-                return info.getValue();
-            },
-            enableResizing: true,
-            enableSorting: false,
-        };
-
-        // Data columns
-        const dataColumns = columns.map((colKey, index) => ({
-            id: colKey,
-            accessorFn: (row: DataRow) => row[colKey],
-            header: colKey,
-            cell: (info: CellContext<DataRow, unknown>) => {
-                const value = info.getValue();
-                if (value === null || value === undefined) return "NULL";
-                if (typeof value === "object") return JSON.stringify(value);
-                return String(value);
-            },
-            enableResizing: index < columns.length - 1, // Disable resize for last column
-        }));
-
-        return [serialColumn, ...dataColumns];
-    }, [columns, offset]);
-
-    return columnDefs;
+// useTableColumns builds the row-number column plus one column per result
+// column. widths are the initial sizes (row-number column first); user
+// resizes live in the table's columnSizing state on top of them.
+export function useTableColumns(columns: string[], widths: number[]) {
+  return useMemo<ColumnDef<DataRow>[]>(
+    () => [
+      {
+        id: ROW_NUMBER_COLUMN_ID,
+        header: "#",
+        size: widths[0],
+        minSize: MIN_COLUMN_WIDTH,
+        enableSorting: false,
+      },
+      ...columns.map(
+        (column, index): ColumnDef<DataRow> => ({
+          id: column,
+          header: column,
+          accessorFn: (row) => row[column],
+          cell: (info) => formatCellValue(info.getValue()),
+          size: widths[index + 1],
+          minSize: MIN_COLUMN_WIDTH,
+        })
+      ),
+    ],
+    [columns, widths]
+  );
 }

@@ -1,140 +1,75 @@
-import { useRef } from "react";
-import { flexRender, type Header, type HeaderContext } from "@tanstack/react-table";
-import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { flexRender, type Header } from "@tanstack/react-table";
+import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { DataRow } from "../types";
-import type { CellType } from "../hooks/useTableSelection";
+import { HEADER_HEIGHT } from "../utils/layout";
 
 interface TableHeaderProps {
-    header: Header<DataRow, unknown>;
-    colIndex: number;
-    colWidth: number;
-    isSerialColumn?: boolean;
-    onMouseDown?: (cellType: CellType, row: number, col: number, event: React.MouseEvent) => void;
-    onMouseEnter?: (cellType: CellType, row: number, col: number) => void;
-    isTableViewMode?: boolean;
-    serverSortColumn?: string;
-    serverSortDir?: "asc" | "desc";
-    onServerSort?: (column: string, direction: "asc" | "desc") => void;
-    onResizeStart?: (startX: number) => void;
+  headers: Header<DataRow, unknown>[];
 }
 
-export function TableHeader({
-    header,
-    colIndex,
-    colWidth,
-    isSerialColumn = false,
-    onMouseDown,
-    onMouseEnter,
-    isTableViewMode = false,
-    serverSortColumn,
-    serverSortDir,
-    onServerSort,
-    onResizeStart,
-}: TableHeaderProps) {
-    const resizeHandleRef = useRef<HTMLDivElement>(null);
-    const columnName = header.column.id;
-    const isServerSorted = isTableViewMode && serverSortColumn === columnName;
-    const clientSortDir = header.column.getIsSorted();
-
-    const handleSortClick = (e: React.MouseEvent) => {
-        e.stopPropagation();
-
-        if (isTableViewMode && onServerSort) {
-            if (isServerSorted) {
-                if (serverSortDir === "desc") {
-                    onServerSort(columnName, "asc");
-                } else {
-                    onServerSort("", "asc");
-                }
-            } else {
-                onServerSort(columnName, "desc");
-            }
-        } else {
-            if (clientSortDir === "desc") {
-                header.column.toggleSorting(false);
-            } else if (clientSortDir === "asc") {
-                header.column.clearSorting();
-            } else {
-                header.column.toggleSorting(true);
-            }
-        }
-    };
-
-    const sortDir = isTableViewMode ? (isServerSorted ? serverSortDir : null) : clientSortDir;
-    const isSorted = !!sortDir;
-
-    const handleResizeStart = (e: React.MouseEvent | React.TouchEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-        onResizeStart?.(clientX);
-    };
-
-    const handleMouseDownLocal = (e: React.MouseEvent) => {
-        // Skip serial column and resize handle
-        if (isSerialColumn) return;
-
-        const target = e.target as HTMLElement;
-        if (resizeHandleRef.current?.contains(target)) return;
-
-        e.preventDefault();
-
-        // Pass data column index (visual - 1 since serial is at 0)
-        onMouseDown?.('header', -1, colIndex - 1, e);
-    };
-
-    const handleMouseEnterLocal = () => {
-        if (isSerialColumn) return;
-        onMouseEnter?.('header', -1, colIndex - 1);
-    };
-
-    return (
-        <th
+// TableHeader is the sticky header row. The row-number corner (data-col -1)
+// selects everything; other headers select their column.
+export function TableHeader({ headers }: TableHeaderProps) {
+  return (
+    <div
+      role="row"
+      className="sticky top-0 z-20 grid font-medium"
+      style={{
+        height: HEADER_HEIGHT,
+        width: "var(--grid-width)",
+        gridTemplateColumns: "var(--grid-columns)",
+      }}
+    >
+      {headers.map((header, index) => {
+        const { column } = header;
+        const sortDirection = column.getIsSorted();
+        const SortIcon = sortDirection === "asc" ? ArrowUp : sortDirection === "desc" ? ArrowDown : ArrowUpDown;
+        const startResize = header.getResizeHandler();
+        return (
+          <div
             key={header.id}
-            colSpan={header.colSpan}
-            style={{ width: colWidth }}
-            className="relative border-[0.5px] border-border/60 bg-card px-2 py-1 font-medium"
-            onMouseDown={handleMouseDownLocal}
-            onMouseEnter={handleMouseEnterLocal}
-        >
-            <div className="flex items-center justify-center h-full gap-1">
-                <span className="overflow-hidden text-ellipsis whitespace-nowrap">
-                    {flexRender(
-                        header.column.columnDef.header,
-                        header.getContext() as HeaderContext<DataRow, unknown>
-                    )}
-                </span>
-                {!isSerialColumn && (
-                    <button
-                        type="button"
-                        onClick={handleSortClick}
-                        className={`
-                            flex items-center justify-center p-0.5 rounded
-                            transition-all duration-150
-                            hover:bg-blue-500 hover:text-white
-                            ${isSorted ? "text-blue-500" : "text-muted-foreground"}
-                        `}
-                        title={isSorted ? "Click to change sort order" : "Click to sort"}
-                    >
-                        {sortDir === "asc" ? (
-                            <ArrowUp className="h-3 w-3" />
-                        ) : sortDir === "desc" ? (
-                            <ArrowDown className="h-3 w-3" />
-                        ) : (
-                            <ArrowUpDown className="h-3 w-3" />
-                        )}
-                    </button>
-                )}
-            </div>
-            {header.column.getCanResize() && (
-                <div
-                    ref={resizeHandleRef}
-                    onMouseDown={handleResizeStart}
-                    onTouchStart={handleResizeStart}
-                    className="absolute right-0 top-0 h-full w-2 cursor-col-resize bg-transparent hover:bg-blue-500/30"
-                />
+            role="columnheader"
+            data-col={index - 1}
+            title={index === 0 ? "Select all" : column.id}
+            className={cn(
+              "relative flex items-center justify-center gap-1 border-[0.5px] border-border/60 bg-card px-2",
+              index === 0 && "sticky left-0 z-10"
             )}
-        </th>
-    );
+          >
+            <span className="truncate">
+              {flexRender(column.columnDef.header, header.getContext())}
+            </span>
+            {column.getCanSort() && (
+              <button
+                type="button"
+                onMouseDown={(event) => event.stopPropagation()}
+                onClick={column.getToggleSortingHandler()}
+                className={cn(
+                  "flex items-center justify-center rounded p-0.5 hover:bg-blue-500 hover:text-white",
+                  sortDirection ? "text-blue-500" : "text-muted-foreground"
+                )}
+                title="Sort"
+              >
+                <SortIcon className="h-3 w-3" />
+              </button>
+            )}
+            <div
+              onMouseDown={(event) => {
+                event.stopPropagation();
+                startResize(event);
+              }}
+              onTouchStart={startResize}
+              onDoubleClick={() => column.resetSize()}
+              title="Drag to resize, double-click to fit"
+              className={cn(
+                "absolute -right-1 top-0 z-10 h-full w-2 cursor-col-resize",
+                column.getIsResizing() ? "bg-blue-500" : "hover:bg-blue-500/50"
+              )}
+            />
+          </div>
+        );
+      })}
+    </div>
+  );
 }

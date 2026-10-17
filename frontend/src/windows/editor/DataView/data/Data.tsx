@@ -1,3 +1,6 @@
+import { useRef } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
+
 function getColorClass(value: string): string {
   if (value === "null") {
     return "text-red-500 dark:text-red-400";
@@ -59,14 +62,34 @@ export function DataTabContent({ lines }: DataTabContentProps) {
       </div>
     );
   }
+  return <HighlightedLines lines={lines} />;
+}
+
+// Virtualized: selecting a whole result can produce many thousands of lines.
+function HighlightedLines({ lines }: DataTabContentProps) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const virtualizer = useVirtualizer({
+    count: lines.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => 20,
+    overscan: 20,
+  });
+
   return (
-    <div
-      className="p-4"
-    >
-      <code className="block text-xs font-mono leading-relaxed">
-        {lines.map((line, index) => (
-          <div key={index} className="whitespace-pre-wrap break-words">
-            <HighlightedLine line={line} />
+    <div ref={scrollRef} className="h-full overflow-auto p-4">
+      <code
+        className="relative block font-mono text-xs leading-relaxed"
+        style={{ height: virtualizer.getTotalSize() }}
+      >
+        {virtualizer.getVirtualItems().map((item) => (
+          <div
+            key={item.index}
+            data-index={item.index}
+            ref={virtualizer.measureElement}
+            className="absolute left-0 w-full whitespace-pre-wrap break-words"
+            style={{ transform: `translateY(${item.start}px)` }}
+          >
+            <HighlightedLine line={lines[item.index]} />
           </div>
         ))}
       </code>

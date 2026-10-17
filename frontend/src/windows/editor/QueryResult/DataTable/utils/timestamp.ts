@@ -14,6 +14,7 @@ const UNIX_MS_MIN = 1_000_000_000_000;
 const UNIX_MS_MAX = 2_000_000_000_000;
 
 const TOOLTIP_FORMAT = "MMM d, yyyy, h:mm:ss a";
+const ISO_DATE_PREFIX = /^\s*\d{4}-\d{2}-\d{2}/;
 
 /**
  * Parses a cell value into a Date if it looks like a timestamp.
@@ -40,10 +41,10 @@ export function parseTimestamp(value: unknown): Date | null {
     return isValid(d) ? d : null;
   }
 
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    if (!trimmed) return null;
-    const d = new Date(trimmed);
+  // Only date-shaped strings: Date() also accepts text like "1" or "Item 3".
+  // WebKit rejects a space between date and time, so it becomes "T".
+  if (typeof value === "string" && ISO_DATE_PREFIX.test(value)) {
+    const d = new Date(value.trim().replace(" ", "T"));
     return isValid(d) ? d : null;
   }
 
