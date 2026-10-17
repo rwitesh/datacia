@@ -34,7 +34,7 @@ type chatStore struct {
 }
 
 func chatPath() (string, error) {
-	return xdg.DataFile(filepath.Join(constants.APP_NAME, "ai-chat.json"))
+	return xdg.DataFile(filepath.Join(constants.APP_NAME, "chat.json"))
 }
 
 func (s *chatStore) load() (Chat, error) {
