@@ -48,7 +48,7 @@ tasks:
       # (WebKit's drawsBackground key). Without it the webview paints an opaque
       # background and the translucent window backdrop (MacBackdropTranslucent),
       # which the sidebars rely on, renders as a solid white/black panel.
-      BUILD_FLAGS: '{{if eq .DEV "true"}}-tags private_mac_apis{{if eq .OBFUSCATED "true"}},wails_obfuscated{{end}}{{if .EXTRA_TAGS}},{{.EXTRA_TAGS}}{{end}} -buildvcs=false -gcflags=all="-l" -ldflags="-X main.version={{.VERSION}} -X main.sentryDSN={{.SENTRY_DSN}}"{{else}}-tags production,private_mac_apis{{if eq .OBFUSCATED "true"}},wails_obfuscated{{end}}{{if .EXTRA_TAGS}},{{.EXTRA_TAGS}}{{end}} -trimpath -buildvcs=false -ldflags="-w -s -X main.version={{.VERSION}} -X main.sentryDSN={{.SENTRY_DSN}}"{{end}}'
+      BUILD_FLAGS: '{{if eq .DEV "true"}}-tags private_mac_apis{{if eq .OBFUSCATED "true"}},wails_obfuscated{{end}}{{if .EXTRA_TAGS}},{{.EXTRA_TAGS}}{{end}} -buildvcs=false -gcflags=all="-l" -ldflags="-X main.version={{.VERSION}}"{{else}}-tags production,private_mac_apis{{if eq .OBFUSCATED "true"}},wails_obfuscated{{end}}{{if .EXTRA_TAGS}},{{.EXTRA_TAGS}}{{end}} -trimpath -buildvcs=false -ldflags="-w -s -X main.version={{.VERSION}}"{{end}}'
       DEFAULT_OUTPUT: '{{.BIN_DIR}}/{{.APP_NAME}}'
       OUTPUT: '{{ .OUTPUT | default .DEFAULT_OUTPUT }}'
     env:

@@ -100,11 +100,10 @@ auto-update.
 
 ### Error reporting (Sentry)
 
-Builds report errors to Sentry only when they are given a DSN at build time; it is never stored in
-the repository. Release builds get it from the `SENTRY_DSN` repository secret (Settings → Secrets
-and variables → Actions). Local builds report nothing unless you set it yourself, e.g.
-`SENTRY_DSN=https://…@….ingest.sentry.io/… make dmg VERSION=2.0.1`. Without a DSN, logs are
-written to stderr instead. Users can turn reports off in **Settings → Privacy**.
+Release builds report crashes, errors and logs to the DataCia Sentry project (the DSN is in
+`internal/sentry/sentry.go`; it can only send events, and abuse is limited with Sentry rate
+limits). `dev` builds report nothing and write logs to stderr. Users can turn reports off in
+**Settings → Privacy**.
 
 ## Releasing (uploading a new version)
 
