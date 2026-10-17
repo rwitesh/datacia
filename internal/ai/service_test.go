@@ -246,19 +246,3 @@ func TestNormalizeHistory(t *testing.T) {
 		t.Fatalf("len %d, first %v", len(got), got[0])
 	}
 }
-
-func TestSystemPrompt(t *testing.T) {
-	tables := make([]string, maxContextTables+5)
-	for i := range tables {
-		tables[i] = fmt.Sprintf("t%d", i)
-	}
-	got := systemPrompt(ChatContext{Engine: "postgres", SQL: "select * from users", Error: "relation missing", Tables: tables})
-	for _, want := range []string{"postgres", "select * from users", "relation missing", "t0", "(and 5 more)"} {
-		if !strings.Contains(got, want) {
-			t.Errorf("prompt is missing %q", want)
-		}
-	}
-	if strings.Contains(systemPrompt(ChatContext{}), "editor") {
-		t.Error("empty context should not mention the editor")
-	}
-}

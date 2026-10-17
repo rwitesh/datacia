@@ -30,8 +30,6 @@ export function useUpdateSettings() {
         onSuccess: (info) => {
             queryClient.setQueryData(["settings"], info);
             queryClient.invalidateQueries({ queryKey: ["settings"] });
-            queryClient.invalidateQueries({ queryKey: ["ai-providers"] });
-            queryClient.invalidateQueries({ queryKey: ["ai-models"] });
         },
     });
 }

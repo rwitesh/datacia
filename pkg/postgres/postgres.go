@@ -178,20 +178,57 @@ func (p *Postgres) execute(ctx context.Context, conn *pgx.Conn, sql string) (com
 	return common.QueryResult{Type: common.QueryTypeCommand}, nil
 }
 
+// ReadOnlyQuery runs sql in a read-only transaction.
+func (p *Postgres) ReadOnlyQuery(ctx context.Context, sql string, maxRows int) (common.QueryResult, error) {
+	p.Mu.RLock()
+	pool := p.pool
+	p.Mu.RUnlock()
+
+	if pool == nil {
+		return common.QueryResult{}, errors.New("no active connection pool found")
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, common.QUERY_TIMEOUT)
+	defer cancel()
+
+	tx, err := pool.BeginTx(ctx, pgx.TxOptions{AccessMode: pgx.ReadOnly})
+	if err != nil {
+		return common.QueryResult{Type: common.QueryTypeRead}, err
+	}
+	defer tx.Rollback(context.Background())
+	// Cancelling only closes the socket, so let the server stop the query too.
+	if _, err := tx.Exec(ctx, fmt.Sprintf("SET LOCAL statement_timeout = %d", common.QUERY_TIMEOUT.Milliseconds())); err != nil {
+		return common.QueryResult{Type: common.QueryTypeRead}, err
+	}
+
+	rows, err := tx.Query(ctx, sql)
+	if err != nil {
+		return common.QueryResult{Type: common.QueryTypeRead}, err
+	}
+	defer rows.Close()
+	// Cancel before rows.Close so unread rows aren't drained.
+	defer cancel()
+	return scanRows(ctx, rows, maxRows)
+}
+
 func (p *Postgres) query(ctx context.Context, conn *pgx.Conn, sql string) (common.QueryResult, error) {
 	rows, err := conn.Query(ctx, sql)
 	if err != nil {
 		return common.QueryResult{Type: common.QueryTypeRead}, err
 	}
 	defer rows.Close()
+	return scanRows(ctx, rows, 0)
+}
 
+// scanRows reads up to maxRows rows, or all of them when maxRows is 0.
+func scanRows(ctx context.Context, rows pgx.Rows, maxRows int) (common.QueryResult, error) {
 	columns := make([]string, len(rows.FieldDescriptions()))
 	for i, fd := range rows.FieldDescriptions() {
 		columns[i] = fd.Name
 	}
 
 	var data []map[string]interface{}
-	for rows.Next() {
+	for (maxRows == 0 || len(data) < maxRows) && rows.Next() {
 		select {
 		case <-ctx.Done():
 			return common.QueryResult{Type: common.QueryTypeRead}, ctx.Err()
@@ -415,43 +452,7 @@ func (p *Postgres) GetTableSchema(table string) (common.QueryResult, error) {
 		return common.QueryResult{Type: common.QueryTypeRead}, err
 	}
 	defer rows.Close()
-
-	columns := make([]string, len(rows.FieldDescriptions()))
-	for i, fd := range rows.FieldDescriptions() {
-		columns[i] = fd.Name
-	}
-
-	var data []map[string]interface{}
-	for rows.Next() {
-		select {
-		case <-ctx.Done():
-			return common.QueryResult{Type: common.QueryTypeRead}, ctx.Err()
-		default:
-		}
-
-		values, err := rows.Values()
-		if err != nil {
-			return common.QueryResult{Type: common.QueryTypeRead}, err
-		}
-
-		row := make(map[string]interface{})
-		for i, col := range columns {
-			if i < len(values) {
-				row[col] = values[i]
-			}
-		}
-		data = append(data, row)
-	}
-
-	if err := rows.Err(); err != nil {
-		return common.QueryResult{Type: common.QueryTypeRead}, err
-	}
-
-	return common.QueryResult{
-		Type:    common.QueryTypeRead,
-		Columns: columns,
-		Data:    data,
-	}, nil
+	return scanRows(ctx, rows, 0)
 }
 
 func (p *Postgres) GetDDL(table string) (string, error) {

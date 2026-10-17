@@ -159,13 +159,52 @@ func (m *MySQL) execute(ctx context.Context, db *sql.DB, sqlStr string) (common.
 	return common.QueryResult{Type: common.QueryTypeCommand}, nil
 }
 
+// ReadOnlyQuery runs sqlStr in a read-only transaction.
+func (m *MySQL) ReadOnlyQuery(ctx context.Context, sqlStr string, maxRows int) (common.QueryResult, error) {
+	m.Mu.RLock()
+	db := m.db
+	m.Mu.RUnlock()
+
+	if db == nil {
+		return common.QueryResult{}, errors.New("no active connection found")
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, common.QUERY_TIMEOUT)
+	defer cancel()
+
+	tx, err := db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return common.QueryResult{Type: common.QueryTypeRead}, err
+	}
+	defer tx.Rollback()
+	// Cancelling only closes the socket, so let the server stop the query too.
+	// It matches the client-side limit on every query, so it can outlive this
+	// transaction on the pooled connection.
+	if _, err := tx.ExecContext(ctx, fmt.Sprintf("SET SESSION max_execution_time = %d", common.QUERY_TIMEOUT.Milliseconds())); err != nil {
+		return common.QueryResult{Type: common.QueryTypeRead}, err
+	}
+
+	rows, err := tx.QueryContext(ctx, sqlStr)
+	if err != nil {
+		return common.QueryResult{Type: common.QueryTypeRead}, err
+	}
+	defer rows.Close()
+	// Cancel before rows.Close so unread rows aren't drained.
+	defer cancel()
+	return scanRows(ctx, rows, maxRows)
+}
+
 func (m *MySQL) query(ctx context.Context, db *sql.DB, sqlStr string) (common.QueryResult, error) {
 	rows, err := db.QueryContext(ctx, sqlStr)
 	if err != nil {
 		return common.QueryResult{Type: common.QueryTypeRead}, err
 	}
 	defer rows.Close()
+	return scanRows(ctx, rows, 0)
+}
 
+// scanRows reads up to maxRows rows, or all of them when maxRows is 0.
+func scanRows(ctx context.Context, rows *sql.Rows, maxRows int) (common.QueryResult, error) {
 	columns, err := rows.Columns()
 	if err != nil {
 		return common.QueryResult{Type: common.QueryTypeRead}, err
@@ -180,7 +219,7 @@ func (m *MySQL) query(ctx context.Context, db *sql.DB, sqlStr string) (common.Qu
 		valuePtrs[i] = &values[i]
 	}
 
-	for rows.Next() {
+	for (maxRows == 0 || len(data) < maxRows) && rows.Next() {
 		select {
 		case <-ctx.Done():
 			return common.QueryResult{Type: common.QueryTypeRead}, ctx.Err()

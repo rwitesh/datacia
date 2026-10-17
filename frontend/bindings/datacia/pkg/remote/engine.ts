@@ -127,6 +127,16 @@ export function PendingUpdateVersion(): $CancellablePromise<string> {
 }
 
 /**
+ * ReadOnlyQuery runs a single read statement with writes blocked by the
+ * database. Unlike RunQuery it isn't saved to the history.
+ */
+export function ReadOnlyQuery(sql: string, maxRows: number): $CancellablePromise<common$0.QueryResult> {
+    return $Call.ByID(4102310872, sql, maxRows).then(($result: any) => {
+        return $$createType5($result);
+    });
+}
+
+/**
  * RestartApp quits into the update staged by the background updater and
  * relaunches the new version.
  */

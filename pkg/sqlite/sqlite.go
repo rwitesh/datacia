@@ -6,6 +6,8 @@ import (
 	"datacia/pkg/common"
 	"errors"
 	"fmt"
+	"net/url"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -27,7 +29,8 @@ type SQLiteClient interface {
 var _ SQLiteClient = (*SQLite)(nil)
 
 type SQLite struct {
-	db *sql.DB
+	db   *sql.DB
+	roDB *sql.DB // the same file opened read-only, for ReadOnlyQuery
 	*common.ConnectionState
 }
 
@@ -54,17 +57,25 @@ func (s *SQLite) Connect(host, port, username, password, database string, test b
 		return err
 	}
 
-	if !test {
-		s.Mu.Lock()
-		if s.db != nil {
-			s.db.Close()
-		}
-		s.db = db
-		s.Host = database
-		s.Mu.Unlock()
-	} else {
-		db.Close()
+	if test {
+		return db.Close()
 	}
+
+	roDB, err := sql.Open("sqlite", readOnlyDSN(database))
+	if err != nil {
+		db.Close()
+		return err
+	}
+
+	s.Mu.Lock()
+	if s.db != nil {
+		s.db.Close()
+		s.roDB.Close()
+	}
+	s.db = db
+	s.roDB = roDB
+	s.Host = database
+	s.Mu.Unlock()
 
 	return nil
 }
@@ -73,8 +84,8 @@ func (s *SQLite) Close() error {
 	s.ActiveQueries = sync.Map{} // reset
 
 	s.Mu.Lock()
-	db := s.db
-	s.db = nil
+	db, roDB := s.db, s.roDB
+	s.db, s.roDB = nil, nil
 	s.ClearAllStateUnsafe() // Calling unsafe method since it is already in lock
 	s.Mu.Unlock()
 
@@ -82,6 +93,7 @@ func (s *SQLite) Close() error {
 		return nil
 	}
 
+	roDB.Close()
 	return db.Close()
 }
 
@@ -139,20 +151,55 @@ func (s *SQLite) execute(ctx context.Context, db *sql.DB, sql string) (common.Qu
 	return common.QueryResult{Type: common.QueryTypeCommand}, nil
 }
 
+// ReadOnlyQuery runs querySql on the read-only handle.
+func (s *SQLite) ReadOnlyQuery(ctx context.Context, querySql string, maxRows int) (common.QueryResult, error) {
+	s.Mu.RLock()
+	roDB := s.roDB
+	s.Mu.RUnlock()
+
+	if roDB == nil {
+		return common.QueryResult{}, errors.New("no active connection found")
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, common.QUERY_TIMEOUT)
+	defer cancel()
+
+	rows, err := roDB.QueryContext(ctx, querySql)
+	if err != nil {
+		return common.QueryResult{Type: common.QueryTypeRead}, err
+	}
+	defer rows.Close()
+	return scanRows(ctx, rows, maxRows)
+}
+
+// readOnlyDSN opens path with mode=ro, which, unlike PRAGMA query_only, no
+// statement can turn off.
+func readOnlyDSN(path string) string {
+	p := filepath.ToSlash(path)
+	if filepath.VolumeName(path) != "" {
+		p = "/" + p // file:/C:/... on Windows
+	}
+	return "file:" + (&url.URL{Path: p}).EscapedPath() + "?mode=ro&_busy_timeout=5000"
+}
+
 func (s *SQLite) query(ctx context.Context, db *sql.DB, sql string) (common.QueryResult, error) {
 	rows, err := db.QueryContext(ctx, sql)
 	if err != nil {
 		return common.QueryResult{Type: common.QueryTypeRead}, err
 	}
 	defer rows.Close()
+	return scanRows(ctx, rows, 0)
+}
 
+// scanRows reads up to maxRows rows, or all of them when maxRows is 0.
+func scanRows(ctx context.Context, rows *sql.Rows, maxRows int) (common.QueryResult, error) {
 	columns, err := rows.Columns()
 	if err != nil {
 		return common.QueryResult{Type: common.QueryTypeRead}, err
 	}
 
 	var data []map[string]interface{}
-	for rows.Next() {
+	for (maxRows == 0 || len(data) < maxRows) && rows.Next() {
 		select {
 		case <-ctx.Done():
 			return common.QueryResult{Type: common.QueryTypeRead}, ctx.Err()

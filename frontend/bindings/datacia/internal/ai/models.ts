@@ -9,18 +9,10 @@ import { Create as $Create } from "@wailsio/runtime";
  * Chat is the AI panel's conversation, kept between launches.
  */
 export class Chat {
-    "provider": string;
-    "model": string;
     "messages": StoredMessage[];
 
     /** Creates a new Chat instance. */
     constructor($$source: Partial<Chat> = {}) {
-        if (!("provider" in $$source)) {
-            this["provider"] = "";
-        }
-        if (!("model" in $$source)) {
-            this["model"] = "";
-        }
         if (!("messages" in $$source)) {
             this["messages"] = [];
         }
@@ -32,23 +24,27 @@ export class Chat {
      * Creates a new Chat instance from a string or object.
      */
     static createFrom($$source: any = {}): Chat {
-        const $$createField2_0 = $$createType1;
+        const $$createField0_0 = $$createType1;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("messages" in $$parsedSource) {
-            $$parsedSource["messages"] = $$createField2_0($$parsedSource["messages"]);
+            $$parsedSource["messages"] = $$createField0_0($$parsedSource["messages"]);
         }
         return new Chat($$parsedSource as Partial<Chat>);
     }
 }
 
 /**
- * ChatContext is the editor state sent along with the conversation.
+ * ChatContext is the editor as it was when the message was sent. The model
+ * reads it through the get_editor tool, not the prompt.
  */
 export class ChatContext {
     "engine": string;
     "sql": string;
+
+    /**
+     * from the query's last run
+     */
     "error": string;
-    "tables": string[];
 
     /** Creates a new ChatContext instance. */
     constructor($$source: Partial<ChatContext> = {}) {
@@ -61,9 +57,6 @@ export class ChatContext {
         if (!("error" in $$source)) {
             this["error"] = "";
         }
-        if (!("tables" in $$source)) {
-            this["tables"] = [];
-        }
 
         Object.assign(this, $$source);
     }
@@ -72,11 +65,7 @@ export class ChatContext {
      * Creates a new ChatContext instance from a string or object.
      */
     static createFrom($$source: any = {}): ChatContext {
-        const $$createField3_0 = $$createType2;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        if ("tables" in $$parsedSource) {
-            $$parsedSource["tables"] = $$createField3_0($$parsedSource["tables"]);
-        }
         return new ChatContext($$parsedSource as Partial<ChatContext>);
     }
 }
@@ -109,10 +98,11 @@ export class ChatDelta {
     }
 }
 
+/**
+ * ChatRequest is sent to the default model.
+ */
 export class ChatRequest {
     "id": string;
-    "provider": string;
-    "model": string;
     "messages": Message[];
     "context": ChatContext;
 
@@ -120,12 +110,6 @@ export class ChatRequest {
     constructor($$source: Partial<ChatRequest> = {}) {
         if (!("id" in $$source)) {
             this["id"] = "";
-        }
-        if (!("provider" in $$source)) {
-            this["provider"] = "";
-        }
-        if (!("model" in $$source)) {
-            this["model"] = "";
         }
         if (!("messages" in $$source)) {
             this["messages"] = [];
@@ -141,16 +125,48 @@ export class ChatRequest {
      * Creates a new ChatRequest instance from a string or object.
      */
     static createFrom($$source: any = {}): ChatRequest {
-        const $$createField3_0 = $$createType4;
-        const $$createField4_0 = $$createType5;
+        const $$createField1_0 = $$createType3;
+        const $$createField2_0 = $$createType4;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("messages" in $$parsedSource) {
-            $$parsedSource["messages"] = $$createField3_0($$parsedSource["messages"]);
+            $$parsedSource["messages"] = $$createField1_0($$parsedSource["messages"]);
         }
         if ("context" in $$parsedSource) {
-            $$parsedSource["context"] = $$createField4_0($$parsedSource["context"]);
+            $$parsedSource["context"] = $$createField2_0($$parsedSource["context"]);
         }
         return new ChatRequest($$parsedSource as Partial<ChatRequest>);
+    }
+}
+
+/**
+ * ChatTool reports a tool call made while answering the ChatRequest ID.
+ */
+export class ChatTool {
+    "id": string;
+    "tool": ToolUse;
+
+    /** Creates a new ChatTool instance. */
+    constructor($$source: Partial<ChatTool> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = "";
+        }
+        if (!("tool" in $$source)) {
+            this["tool"] = (new ToolUse());
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ChatTool instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ChatTool {
+        const $$createField1_0 = $$createType5;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("tool" in $$parsedSource) {
+            $$parsedSource["tool"] = $$createField1_0($$parsedSource["tool"]);
+        }
+        return new ChatTool($$parsedSource as Partial<ChatTool>);
     }
 }
 
@@ -207,6 +223,34 @@ export class Model {
     }
 }
 
+/**
+ * ModelRef names a provider's model.
+ */
+export class ModelRef {
+    "provider": string;
+    "model": string;
+
+    /** Creates a new ModelRef instance. */
+    constructor($$source: Partial<ModelRef> = {}) {
+        if (!("provider" in $$source)) {
+            this["provider"] = "";
+        }
+        if (!("model" in $$source)) {
+            this["model"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ModelRef instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ModelRef {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new ModelRef($$parsedSource as Partial<ModelRef>);
+    }
+}
+
 export class Provider {
     "id": string;
     "name": string;
@@ -254,22 +298,18 @@ export class Provider {
 
 export class ProviderStatus {
     "provider": Provider;
-    "baseUrl": string;
-    "models": string[];
     "hasKey": boolean;
     "keyError": string;
+
+    /**
+     * its models can be listed and used
+     */
     "ready": boolean;
 
     /** Creates a new ProviderStatus instance. */
     constructor($$source: Partial<ProviderStatus> = {}) {
         if (!("provider" in $$source)) {
             this["provider"] = (new Provider());
-        }
-        if (!("baseUrl" in $$source)) {
-            this["baseUrl"] = "";
-        }
-        if (!("models" in $$source)) {
-            this["models"] = [];
         }
         if (!("hasKey" in $$source)) {
             this["hasKey"] = false;
@@ -289,13 +329,9 @@ export class ProviderStatus {
      */
     static createFrom($$source: any = {}): ProviderStatus {
         const $$createField0_0 = $$createType6;
-        const $$createField2_0 = $$createType2;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("provider" in $$parsedSource) {
             $$parsedSource["provider"] = $$createField0_0($$parsedSource["provider"]);
-        }
-        if ("models" in $$parsedSource) {
-            $$parsedSource["models"] = $$createField2_0($$parsedSource["models"]);
         }
         return new ProviderStatus($$parsedSource as Partial<ProviderStatus>);
     }
@@ -306,6 +342,7 @@ export class StoredMessage {
     "role": string;
     "content": string;
     "error"?: string;
+    "tools"?: ToolUse[];
 
     /** Creates a new StoredMessage instance. */
     constructor($$source: Partial<StoredMessage> = {}) {
@@ -326,16 +363,50 @@ export class StoredMessage {
      * Creates a new StoredMessage instance from a string or object.
      */
     static createFrom($$source: any = {}): StoredMessage {
+        const $$createField4_0 = $$createType7;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("tools" in $$parsedSource) {
+            $$parsedSource["tools"] = $$createField4_0($$parsedSource["tools"]);
+        }
         return new StoredMessage($$parsedSource as Partial<StoredMessage>);
+    }
+}
+
+/**
+ * ToolUse tells the chat what a tool read, so the user sees what was shared.
+ */
+export class ToolUse {
+    "label": string;
+
+    /**
+     * the query run_query ran
+     */
+    "sql"?: string;
+
+    /** Creates a new ToolUse instance. */
+    constructor($$source: Partial<ToolUse> = {}) {
+        if (!("label" in $$source)) {
+            this["label"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ToolUse instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ToolUse {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new ToolUse($$parsedSource as Partial<ToolUse>);
     }
 }
 
 // Private type creation functions
 const $$createType0 = StoredMessage.createFrom;
 const $$createType1 = $Create.Array($$createType0);
-const $$createType2 = $Create.Array($Create.Any);
-const $$createType3 = Message.createFrom;
-const $$createType4 = $Create.Array($$createType3);
-const $$createType5 = ChatContext.createFrom;
+const $$createType2 = Message.createFrom;
+const $$createType3 = $Create.Array($$createType2);
+const $$createType4 = ChatContext.createFrom;
+const $$createType5 = ToolUse.createFrom;
 const $$createType6 = Provider.createFrom;
+const $$createType7 = $Create.Array($$createType5);

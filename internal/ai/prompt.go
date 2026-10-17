@@ -6,46 +6,27 @@ import (
 	"strings"
 )
 
-const (
-	maxHistory       = 20
-	maxContextSQL    = 8000
-	maxContextError  = 2000
-	maxContextTables = 200
-)
+const maxHistory = 20
 
-// ChatContext is the editor state sent along with the conversation.
+// ChatContext is the editor as it was when the message was sent. The model
+// reads it through the get_editor tool, not the prompt.
 type ChatContext struct {
-	Engine string   `json:"engine"`
-	SQL    string   `json:"sql"`
-	Error  string   `json:"error"`
-	Tables []string `json:"tables"`
+	Engine string `json:"engine"`
+	SQL    string `json:"sql"`
+	Error  string `json:"error"` // from the query's last run
 }
 
-func systemPrompt(c ChatContext) string {
-	engine := cmp.Or(c.Engine, "SQL")
-	var b strings.Builder
-	fmt.Fprintf(&b, "You are a %s expert helping a user of DataCia, a desktop SQL client. ", engine)
-	fmt.Fprintf(&b, "Write SQL that is valid for %s. ", engine)
-	b.WriteString("Put every query in a ```sql fenced code block. ")
-	b.WriteString("Be concise: answer directly, skip introductions and generic advice. ")
-	b.WriteString("Use the table names below when relevant; if you need columns you don't know, ask for that table's schema. ")
-	b.WriteString("When useful, add one short tip about performance or indexing.")
+func systemPrompt(engine string) string {
+	engine = cmp.Or(engine, "SQL")
+	return fmt.Sprintf(`You are a %[1]s expert in DataCia, a desktop SQL client, working with the user's connected %[1]s database.
 
-	if len(c.Tables) > 0 {
-		tables, more := c.Tables, ""
-		if len(tables) > maxContextTables {
-			more = fmt.Sprintf(" (and %d more)", len(tables)-maxContextTables)
-			tables = tables[:maxContextTables]
-		}
-		fmt.Fprintf(&b, "\n\nTables in the current database: %s%s.", strings.Join(tables, ", "), more)
-	}
-	if sql := strings.TrimSpace(c.SQL); sql != "" {
-		fmt.Fprintf(&b, "\n\nThe query in the user's editor:\n```sql\n%s\n```", truncate(sql, maxContextSQL))
-	}
-	if e := strings.TrimSpace(c.Error); e != "" {
-		fmt.Fprintf(&b, "\n\nRunning it failed with:\n%s", truncate(e, maxContextError))
-	}
-	return b.String()
+Use the tools instead of guessing:
+- get_editor when the user refers to their query or an error.
+- list_tables and describe_table before writing SQL against tables you haven't seen.
+- run_query to look at real data, check assumptions and answer questions about the data. Keep results small: pick the columns you need, aggregate and use LIMIT.
+
+You can only read. When the user wants to change data or schema, write the statement for them to run.
+Answer from what you found, briefly. Put SQL meant for the user in sql fenced code blocks, valid for %[1]s.`, engine)
 }
 
 // normalizeHistory drops empty turns, merges consecutive turns from the same

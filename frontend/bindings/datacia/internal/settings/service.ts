@@ -17,7 +17,8 @@ export function GetAppInfo(): $CancellablePromise<$models.Info | null> {
 
 /**
  * UpdateSettings replaces the settings and applies API key changes in one
- * save. keys maps a provider ID to its new key, or "" to remove it.
+ * save. keys maps a provider ID to its new key, or "" to remove it. The
+ * default model is kept.
  */
 export function UpdateSettings(settings: $models.Settings, keys: { [_ in string]?: string }): $CancellablePromise<$models.Info | null> {
     return $Call.ByID(2695642745, settings, keys).then(($result: any) => {

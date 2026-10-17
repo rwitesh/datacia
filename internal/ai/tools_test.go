@@ -1,0 +1,96 @@
+package ai
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"strings"
+	"testing"
+
+	"datacia/pkg/common"
+)
+
+type fakeDB struct {
+	tables  []string
+	result  common.QueryResult
+	maxRows int
+}
+
+func (f *fakeDB) ListTables() ([]string, error) { return f.tables, nil }
+
+func (f *fakeDB) GetDDL(table string) (string, error) {
+	if table != "users" {
+		return "", errors.New("no such table")
+	}
+	return "CREATE TABLE users (id int)", nil
+}
+
+func (f *fakeDB) ReadOnlyQuery(_ context.Context, _ string, maxRows int) (common.QueryResult, error) {
+	f.maxRows = maxRows
+	res := f.result
+	res.Data = res.Data[:min(len(res.Data), maxRows)]
+	return res, nil
+}
+
+func TestRunQuery(t *testing.T) {
+	long := strings.Repeat("x", maxCellChars+50)
+	db := &fakeDB{result: common.QueryResult{
+		Columns: []string{"name", "id"},
+		Data: []map[string]any{
+			{"id": 1, "name": long},
+			{"id": 2, "name": "b"},
+			{"id": 3, "name": "c"},
+		},
+	}}
+	out, err := runQuery(context.Background(), db, "select id, name from users", 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if db.maxRows != 3 {
+		t.Errorf("asked for %d rows, want limit+1", db.maxRows)
+	}
+	var got struct {
+		Columns  []string `json:"columns"`
+		Rows     [][]any  `json:"rows"`
+		MoreRows bool     `json:"more_rows"`
+	}
+	if err := json.Unmarshal([]byte(out), &got); err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Rows) != 2 || !got.MoreRows {
+		t.Fatalf("got %d rows, more %v", len(got.Rows), got.MoreRows)
+	}
+	if got.Rows[0][1] != float64(1) {
+		t.Errorf("rows not in column order: %v", got.Rows[0])
+	}
+	if s := got.Rows[0][0].(string); len(s) > maxCellChars+len("…") {
+		t.Errorf("long value not cut: %d chars", len(s))
+	}
+}
+
+func TestListTablesFilter(t *testing.T) {
+	out, err := listTables(&fakeDB{tables: []string{"orders", "users", "user_roles"}}, "USER")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out != `{"tables":["user_roles","users"]}` {
+		t.Fatalf("got %s", out)
+	}
+}
+
+func TestReadEditor(t *testing.T) {
+	if got := readEditor(ChatContext{}); got != "The editor is empty." {
+		t.Errorf("got %q", got)
+	}
+	got := readEditor(ChatContext{SQL: "select * from users", Error: "relation missing"})
+	if !strings.Contains(got, "select * from users") || !strings.Contains(got, "relation missing") {
+		t.Errorf("got %q", got)
+	}
+}
+
+func TestSystemPromptIsStatic(t *testing.T) {
+	got := systemPrompt("postgres")
+	if !strings.Contains(got, "postgres") || !strings.Contains(got, "run_query") {
+		t.Errorf("prompt: %s", got)
+	}
+}

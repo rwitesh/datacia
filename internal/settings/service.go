@@ -152,6 +152,17 @@ func SetAIKey(provider, key string) error {
 	return err
 }
 
+// SetAIModel stores the chat's default model.
+func SetAIModel(provider, model string) error {
+	if globalInfo == nil {
+		return errors.New("settings are not loaded")
+	}
+	commitMu.Lock()
+	defer commitMu.Unlock()
+	_, err := commit(func(s *Settings) { s.AI.DefaultProvider, s.AI.DefaultModel = provider, model })
+	return err
+}
+
 // withKeys returns a copy of keys with changes applied: each value is a new
 // plaintext key, or "" to remove the provider's key.
 func withKeys(keys, changes map[string]string) (map[string]string, error) {
@@ -213,7 +224,8 @@ func (s *Service) GetAppInfo() *Info {
 }
 
 // UpdateSettings replaces the settings and applies API key changes in one
-// save. keys maps a provider ID to its new key, or "" to remove it.
+// save. keys maps a provider ID to its new key, or "" to remove it. The
+// default model is kept.
 func (s *Service) UpdateSettings(settings Settings, keys map[string]string) (*Info, error) {
 	if globalInfo == nil {
 		return nil, errors.New("settings are not loaded")
@@ -225,11 +237,13 @@ func (s *Service) UpdateSettings(settings Settings, keys map[string]string) (*In
 
 	commitMu.Lock()
 	defer commitMu.Unlock()
-	nextKeys, err := withKeys(GetSettingsRaw().AI.Keys, keys)
+	cur := GetSettingsRaw().AI
+	nextKeys, err := withKeys(cur.Keys, keys)
 	if err != nil {
 		return nil, err
 	}
 	next.AI.Keys = nextKeys
+	next.AI.DefaultProvider, next.AI.DefaultModel = cur.DefaultProvider, cur.DefaultModel
 	return commit(func(cur *Settings) { *cur = next })
 }
 

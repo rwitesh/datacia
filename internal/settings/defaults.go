@@ -50,14 +50,8 @@ func fillAIDefaults(s *Settings) {
 		s.AI.Providers = map[string]AIProviderConfig{}
 	}
 	maps.DeleteFunc(s.AI.Providers, func(_ string, p AIProviderConfig) bool {
-		return len(p.Models) == 0 && p.BaseURL == ""
+		return p.BaseURL == ""
 	})
-	for id, p := range s.AI.Providers {
-		if p.Models == nil {
-			p.Models = []string{}
-			s.AI.Providers[id] = p
-		}
-	}
 }
 
 // fillTokenColorsDefaults replaces empty string fields in dst with values from def.

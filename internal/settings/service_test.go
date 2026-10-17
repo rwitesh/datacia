@@ -10,8 +10,8 @@ func TestUpdateSettingsSavesKeys(t *testing.T) {
 	next := defaultSettings()
 	next.AI.Keys = map[string]string{"openai": "ignored-from-frontend"}
 	next.AI.Providers = map[string]AIProviderConfig{
-		"openai": {Models: []string{"m"}},
-		"empty":  {},
+		"local": {BaseURL: "http://box/v1"},
+		"empty": {},
 	}
 	info, err := svc.UpdateSettings(next, map[string]string{"openai": " sk-1 ", "anthropic": "sk-2"})
 	if err != nil {
@@ -30,12 +30,22 @@ func TestUpdateSettingsSavesKeys(t *testing.T) {
 		t.Fatal("empty provider config kept")
 	}
 
+	if err := SetAIModel("openai", "gpt-x"); err != nil {
+		t.Fatal(err)
+	}
+	if ai := Get().Settings.AI; ai.DefaultProvider != "" || ai.DefaultModel != "" {
+		t.Fatal("settings sent to the frontend include the default model")
+	}
+
 	// Saving without key changes keeps the stored keys.
 	if _, err := svc.UpdateSettings(next, nil); err != nil {
 		t.Fatal(err)
 	}
 	if key, _ := AIKey("anthropic"); key != "sk-2" {
 		t.Fatal("UpdateSettings dropped a key")
+	}
+	if ai := GetSettingsRaw().AI; ai.DefaultProvider != "openai" || ai.DefaultModel != "gpt-x" {
+		t.Fatal("UpdateSettings changed the default model")
 	}
 
 	if _, err := svc.UpdateSettings(next, map[string]string{"anthropic": ""}); err != nil {

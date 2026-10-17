@@ -35,12 +35,15 @@ type FontConfig struct {
 }
 
 type AIProviderConfig struct {
-	Models  []string `json:"models"`
-	BaseURL string   `json:"baseUrl"` // empty: the provider's default
+	BaseURL string `json:"baseUrl"` // empty: the provider's default
 }
 
 type AIConfig struct {
 	Providers map[string]AIProviderConfig `json:"providers"` // keyed by provider ID
+	// The chat's model: chosen in the chat, never sent with the settings or
+	// changed by saving them.
+	DefaultProvider string `json:"defaultProvider,omitempty"`
+	DefaultModel    string `json:"defaultModel,omitempty"`
 	// Keys are encrypted and never sent to the frontend.
 	Keys map[string]string `json:"keys,omitempty"`
 }

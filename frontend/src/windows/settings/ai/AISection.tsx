@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { omit } from "lodash";
 import { Check, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,6 @@ import { cn, errorMessage } from "@/lib/utils";
 import { useAIProviders, type ProviderStatus } from "@/services/ai";
 import type { AIProviderConfig, KeyChanges, Settings as AppSettings } from "@/services/settings";
 import { KeyField } from "./KeyField";
-import { ModelSelect } from "./ModelSelect";
 
 type Props = {
   settings: AppSettings;
@@ -22,8 +21,8 @@ export function AISection({ settings, onChange, keys, onKeysChange }: Props) {
 
   // Empty configs are dropped so undoing every edit leaves nothing to save.
   const update = (id: string, patch: Partial<AIProviderConfig>) => {
-    const next = { models: [], baseUrl: "", ...configs[id], ...patch };
-    const providers = next.models.length > 0 || next.baseUrl ? { ...configs, [id]: next } : omit(configs, id);
+    const next = { baseUrl: "", ...configs[id], ...patch };
+    const providers = next.baseUrl ? { ...configs, [id]: next } : omit(configs, id);
     onChange({ ...settings, ai: { ...settings.ai, providers } });
   };
 
@@ -54,15 +53,6 @@ export function AISection({ settings, onChange, keys, onKeysChange }: Props) {
   );
 }
 
-function useDebounced<T>(value: T, ms = 500) {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const t = setTimeout(() => setDebounced(value), ms);
-    return () => clearTimeout(t);
-  }, [value, ms]);
-  return debounced;
-}
-
 function ProviderCard({
   status,
   config,
@@ -77,13 +67,8 @@ function ProviderCard({
   onKeyChange: (key: string | undefined) => void;
 }) {
   const { provider } = status;
-  const models = config?.models ?? [];
   const baseUrl = config?.baseUrl ?? "";
-  const [open, setOpen] = useState(status.hasKey);
-  const listUrl = useDebounced(baseUrl);
-  const listKey = useDebounced(keyChange ?? "");
-  const hasKey = keyChange === undefined ? status.hasKey : keyChange.trim() !== "";
-  const connected = status.hasKey || (provider.keyOptional && models.length > 0);
+  const [open, setOpen] = useState(false);
 
   return (
     <div className="rounded-md border">
@@ -97,7 +82,7 @@ function ProviderCard({
         <span className="text-sm font-medium flex-1">{provider.name}</span>
         {status.keyError ? (
           <span className="text-[11px] text-destructive">Key unreadable</span>
-        ) : connected ? (
+        ) : status.ready ? (
           <span className="inline-flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-500">
             <Check className="size-3" />
             Connected
@@ -117,21 +102,13 @@ function ProviderCard({
             <Input
               id={`${provider.id}-url`}
               value={baseUrl}
-              placeholder={provider.defaultBaseUrl}
+              placeholder={`e.g. ${provider.defaultBaseUrl}`}
               onChange={(e) => onChange({ baseUrl: e.target.value })}
               className="h-7 text-xs font-mono"
               spellCheck={false}
             />
           </div>
         )}
-        <ModelSelect
-          provider={provider.id}
-          url={listUrl}
-          apiKey={listKey}
-          enabled={hasKey || provider.keyOptional}
-          models={models}
-          onChange={(next) => onChange({ models: next })}
-        />
       </div>
     </div>
   );

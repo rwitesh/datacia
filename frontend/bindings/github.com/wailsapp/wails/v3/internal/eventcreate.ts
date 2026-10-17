@@ -13,10 +13,12 @@ import * as ai$0 from "../../../../../datacia/internal/ai/models.js";
 function configure() {
     Object.freeze(Object.assign($Create.Events, {
         "ai:delta": $$createType0,
+        "ai:tool": $$createType1,
     }));
 }
 
 // Private type creation functions
 const $$createType0 = ai$0.ChatDelta.createFrom;
+const $$createType1 = ai$0.ChatTool.createFrom;
 
 configure();

@@ -114,7 +114,7 @@ func (a *App) Initialize() error {
 	a.instance.RegisterService(application.NewService(intellisenseService))
 
 	// AI chat service
-	aiService := ai.NewService(a.instance)
+	aiService := ai.NewService(a.instance, engine)
 	a.instance.RegisterService(application.NewService(aiService))
 
 	return nil

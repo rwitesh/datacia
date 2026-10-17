@@ -116,6 +116,9 @@ type DatabaseClient interface {
 	GetTableSchema(table string) (QueryResult, error)
 	GetDDL(table string) (string, error) // Returns CREATE TABLE statement
 	GetPassword() string                 // Returns password for reconnection purposes (internal use)
+	// ReadOnlyQuery runs sql, which must pass CheckReadOnly, with writes
+	// blocked by the database, returning at most maxRows rows.
+	ReadOnlyQuery(ctx context.Context, sql string, maxRows int) (QueryResult, error)
 }
 
 const (
