@@ -68,7 +68,7 @@ function ProviderCard({
 }) {
   const { provider } = status;
   const baseUrl = config?.baseUrl ?? "";
-  const [open, setOpen] = useState(status.ready);
+  const [open, setOpen] = useState(false);
 
   return (
     <div className="rounded-md border">
