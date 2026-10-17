@@ -40,3 +40,9 @@ needed. If SmartScreen appears, choose **More info → Run anyway**.
 ## Building from source
 
 See [DEVELOPMENT.md](DEVELOPMENT.md).
+
+## License
+
+DataCia is free software, licensed under the [GNU General Public License v3.0](LICENSE).
+You can use, study, change and share it. If you distribute a modified version, you must
+release its source code under the same license.
