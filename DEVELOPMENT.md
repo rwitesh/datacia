@@ -98,6 +98,14 @@ version info and the NSIS metadata are generated from it and from `info` in `bui
 at build time (`common:generate:assets`; these files are not committed). `dev` builds never
 auto-update.
 
+### Error reporting (Sentry)
+
+Builds report errors to Sentry only when they are given a DSN at build time; it is never stored in
+the repository. Release builds get it from the `SENTRY_DSN` repository secret (Settings → Secrets
+and variables → Actions). Local builds report nothing unless you set it yourself, e.g.
+`SENTRY_DSN=https://…@….ingest.sentry.io/… make dmg VERSION=2.0.1`. Without a DSN, logs are
+written to stderr instead. Users can turn reports off in **Settings → Privacy**.
+
 ## Releasing (uploading a new version)
 
 Releases are GitHub Releases on [rwitesh/datacia](https://github.com/rwitesh/datacia/releases).

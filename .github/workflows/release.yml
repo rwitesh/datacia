@@ -53,6 +53,9 @@ jobs:
       - run: go install github.com/wailsapp/wails/v3/cmd/wails3@${WAILS_VERSION}
       - name: Build universal DMG and update zip
         run: wails3 task darwin:package:release VERSION=${{ needs.verify.outputs.version }}
+        env:
+          # Error reporting; when the secret is unset the build reports nothing.
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
       - run: |
           mv bin/DataCia.dmg "bin/DataCia-${{ needs.verify.outputs.version }}-darwin-universal.dmg"
           mv bin/DataCia.zip "bin/DataCia-${{ needs.verify.outputs.version }}-darwin-universal.zip"
@@ -82,6 +85,9 @@ jobs:
       - run: go install github.com/wailsapp/wails/v3/cmd/wails3@${WAILS_VERSION}
       - name: Build universal NSIS installer (cross-compiled, pure Go)
         run: wails3 task windows:package ARCH=universal VERSION=${{ needs.verify.outputs.version }}
+        env:
+          # Error reporting; when the secret is unset the build reports nothing.
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
       # The universal build also leaves the per-architecture binaries, which the
       # in-app updater swaps in place of the running DataCia.exe.
       - run: |

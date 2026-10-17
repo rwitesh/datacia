@@ -47,11 +47,18 @@ type AIConfig struct {
 	Gemini AIProviderConfig `json:"gemini"`
 }
 
+// PrivacyConfig is stored as an opt-out so settings saved before it existed
+// keep error reports on.
+type PrivacyConfig struct {
+	DisableErrorReports bool `json:"disableErrorReports"`
+}
+
 type Settings struct {
-	Theme  ThemeConfig  `json:"theme"`
-	Editor EditorConfig `json:"editor"`
-	Font   FontConfig   `json:"font"`
-	AI     AIConfig     `json:"ai"`
+	Theme   ThemeConfig   `json:"theme"`
+	Editor  EditorConfig  `json:"editor"`
+	Font    FontConfig    `json:"font"`
+	AI      AIConfig      `json:"ai"`
+	Privacy PrivacyConfig `json:"privacy"`
 }
 
 // Info is the app/settings info returned to the frontend (OS, version, settings, defaults).

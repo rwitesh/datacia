@@ -7,6 +7,7 @@ import (
 	"datacia/internal/logger"
 	"datacia/internal/paths"
 	"datacia/internal/security"
+	"datacia/internal/sentry"
 
 	"github.com/getsentry/sentry-go/attribute"
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -121,6 +122,7 @@ func getSanitized() *Info {
 					Models:  s.AI.Gemini.Models,
 				},
 			},
+			Privacy: s.Privacy,
 		},
 	}
 }
@@ -163,10 +165,16 @@ func (s *Service) UpdateSettings(settings Settings) *Info {
 	fillAIDefaults(&next)
 	globalInfo.Settings = next
 	globalInfo.mu.Unlock()
+	applyPrivacy(next)
 	saveSettings()
 	globalInfo.mu.Lock()
 	if appInstance != nil {
 		appInstance.Event.Emit("app:settings-changed", next)
 	}
 	return getSanitized()
+}
+
+// applyPrivacy applies the error-report setting to the reporter.
+func applyPrivacy(s Settings) {
+	sentry.SetEnabled(!s.Privacy.DisableErrorReports)
 }

@@ -37,6 +37,12 @@ may say it can't verify the developer; open **System Settings → Privacy & Secu
 **Windows** – run the installer. It installs for the current user, so no administrator rights are
 needed. If SmartScreen appears, choose **More info → Run anyway**.
 
+## Privacy
+
+DataCia sends anonymous error reports (crashes, error messages, app version, OS and an anonymous
+device ID) to help fix bugs. Queries, results and passwords are never sent. Turn this off in
+**Settings → Privacy**.
+
 ## Building from source
 
 See [DEVELOPMENT.md](DEVELOPMENT.md).

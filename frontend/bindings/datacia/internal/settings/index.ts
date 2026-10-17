@@ -12,6 +12,7 @@ export {
     EditorConfig,
     FontConfig,
     Info,
+    PrivacyConfig,
     Settings,
     ThemeConfig,
     TokenColors

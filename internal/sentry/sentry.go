@@ -1,33 +1,67 @@
-// Package sentry initializes the Sentry SDK with structured logging support.
+// Package sentry sets up error and log reporting to Sentry. The DSN is not
+// part of the source: release builds receive it at build time, and builds
+// without one (development, forks) report nothing.
 package sentry
 
 import (
 	"os"
+	"sync/atomic"
 	"time"
 
 	"github.com/getsentry/sentry-go"
 )
 
-const dsn = "https://d0d8b92c5e3d1601f6ede2c3b0f6c832@o4510567778287616.ingest.us.sentry.io/4510567794671616"
+// enabled is the user's "Send anonymous error reports" setting; events and
+// logs are dropped while it is off.
+var enabled atomic.Bool
 
 var stopFlush chan struct{}
 
-func Init(release string) error {
+func init() {
+	enabled.Store(true)
+}
+
+// SetEnabled turns reporting on or off at runtime.
+func SetEnabled(on bool) {
+	enabled.Store(on)
+}
+
+// Init configures the SDK. It returns false without initialising anything when
+// dsn is empty.
+func Init(dsn, release string) (bool, error) {
+	if dsn == "" {
+		return false, nil
+	}
 	releaseTag := "datacia@" + release
 	if release == "" {
 		releaseTag = "datacia@unknown"
 	}
 
-	if err := sentry.Init(sentry.ClientOptions{
+	err := sentry.Init(sentry.ClientOptions{
 		Dsn:              dsn,
 		Release:          releaseTag,
 		Environment:      envOrDefault("SENTRY_ENVIRONMENT", "production"),
 		AttachStacktrace: true,
 		Debug:            os.Getenv("SENTRY_DEBUG") == "true",
-	}); err != nil {
-		return err
+		// Report a fixed name instead of the machine's hostname.
+		ServerName: "datacia",
+		BeforeSend: func(event *sentry.Event, _ *sentry.EventHint) *sentry.Event {
+			if !enabled.Load() {
+				return nil
+			}
+			return event
+		},
+		BeforeSendLog: func(log *sentry.Log) *sentry.Log {
+			if !enabled.Load() {
+				return nil
+			}
+			return log
+		},
+	})
+	if err != nil {
+		return false, err
 	}
-	return nil
+	return true, nil
 }
 
 func Flush() {

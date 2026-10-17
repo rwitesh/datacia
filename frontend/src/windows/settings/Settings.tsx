@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSettings, useUpdateSettings, type Settings as AppSettings } from "@/services/settings";
 import { AppearanceSection } from "./appearance";
 import { AISection } from "./ai";
+import { PrivacySection } from "./privacy";
 
 export function Settings() {
   const [searchParams] = useSearchParams();
@@ -67,6 +68,9 @@ export function Settings() {
                 <TabsTrigger value="ai" className="text-xs h-7 px-3">
                   AI
                 </TabsTrigger>
+                <TabsTrigger value="privacy" className="text-xs h-7 px-3">
+                  Privacy
+                </TabsTrigger>
               </TabsList>
             </div>
           </div>
@@ -100,6 +104,21 @@ export function Settings() {
                     }}
                   />
                 </div>
+              ) : (
+                <div className="text-xs text-muted-foreground px-1">
+                  Loading settings...
+                </div>
+              )}
+            </TabsContent>
+            <TabsContent value="privacy" className="mt-0">
+              {formSettings ? (
+                <PrivacySection
+                  settings={formSettings}
+                  onChange={(next) => {
+                    setShowSaved(false);
+                    setDraft(next);
+                  }}
+                />
               ) : (
                 <div className="text-xs text-muted-foreground px-1">
                   Loading settings...
