@@ -1,50 +1,45 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { AlertTriangle, ArrowUp, Loader2, RotateCcw, Settings2, Sparkles, Square, SquarePen } from "lucide-react";
+import { useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { AlertTriangle, ArrowUp, Database, Loader2, RotateCcw, Settings2, Sparkles, Square, SquarePen } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectSeparator,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useAppContext } from "@/context/app/Index";
 import { useEditorContext } from "@/context/editor/Index";
 import { cn } from "@/lib/utils";
 import { OpenSettingsWindow } from "@/services/bindings";
-import { chat, useAIProviders, useChat, type ChatContext, type ChatMessage, type ProviderStatus } from "@/services/ai";
+import {
+  chat,
+  useAIProviders,
+  useChat,
+  useDefaultModel,
+  type ChatContext,
+  type ChatMessage,
+  type ModelRef,
+  type ProviderStatus,
+  type ToolUse,
+} from "@/services/ai";
 import { MarkdownMessage } from "./MarkdownMessage";
-
-const SEP = "::";
-const MANAGE = "__manage__";
+import { ModelPicker } from "./ModelPicker";
 
 function useChatContext(): ChatContext {
   const { engine } = useAppContext();
-  const { activeTab, tables } = useEditorContext();
+  const { activeTab } = useEditorContext();
   return {
     engine,
     sql: activeTab?.type === "query" ? activeTab.sql : "",
     error: activeTab?.error ?? "",
-    tables: tables.data,
   };
 }
 
 export function AIChat() {
-  const { data: providers, isLoading } = useAIProviders();
+  const providers = useAIProviders();
+  const defaultModel = useDefaultModel();
   const state = useChat();
   const context = useChatContext();
-  const usable = useMemo(() => (providers ?? []).filter((p) => p.ready), [providers]);
+  const usable = useMemo(() => (providers.data ?? []).filter((p) => p.ready), [providers.data]);
 
-  const selected = usable.some((p) => p.provider.id === state.provider && p.models.includes(state.model));
-  useEffect(() => {
-    if (!state.loaded || selected || usable.length === 0) return;
-    chat.selectModel(usable[0].provider.id, usable[0].models[0]);
-  }, [state.loaded, selected, usable]);
+  const saved = defaultModel.data;
+  const model = saved?.model && usable.some((p) => p.provider.id === saved.provider) ? saved : undefined;
 
-  if (isLoading || !state.loaded) return null;
+  if (providers.isLoading || defaultModel.isLoading || !state.loaded) return null;
   if (usable.length === 0) {
     return (
       <Intro
@@ -63,12 +58,12 @@ export function AIChat() {
   const streaming = state.messages.some((m) => m.streaming);
   return (
     <div className="flex flex-col h-full min-h-0">
-      <MessageList messages={state.messages} context={context} streaming={streaming} />
+      <MessageList messages={state.messages} context={context} streaming={streaming} hasModel={model !== undefined} />
       <Composer
         context={context}
         streaming={streaming}
         providers={usable}
-        model={selected ? `${state.provider}${SEP}${state.model}` : ""}
+        model={model}
         canClear={state.messages.length > 0}
       />
     </div>
@@ -104,10 +99,12 @@ function MessageList({
   messages,
   context,
   streaming,
+  hasModel,
 }: {
   messages: ChatMessage[];
   context: ChatContext;
   streaming: boolean;
+  hasModel: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const stick = useRef(true);
@@ -141,7 +138,7 @@ function MessageList({
       className="flex-1 min-h-0 overflow-y-scroll overflow-x-hidden px-3 py-3 space-y-4 text-xs leading-relaxed select-text"
     >
       {messages.length === 0 ? (
-        <EmptyState context={context} />
+        <EmptyState context={context} hasModel={hasModel} />
       ) : (
         messages.map((m, i) => (
           <Message key={m.id} message={m} last={i === messages.length - 1} context={context} />
@@ -151,30 +148,29 @@ function MessageList({
   );
 }
 
-function EmptyState({ context }: { context: ChatContext }) {
+function EmptyState({ context, hasModel }: { context: ChatContext; hasModel: boolean }) {
+  if (!hasModel) return <Intro title="Choose a model" text="Pick one below to start." className="py-8" />;
   const suggestions = [
     context.error && "Fix my query error",
     context.sql.trim() && "Explain my query",
     context.sql.trim() && "Make my query faster",
-    context.tables.length > 0 && "How do these tables relate?",
+    "What's in this database?",
   ].filter((s): s is string => Boolean(s));
 
   return (
-    <Intro title="Ask about your data" text="Write, explain or fix queries." className="py-8">
-      {suggestions.length > 0 && (
-        <div className="flex flex-col items-stretch gap-1.5 w-full max-w-64">
-          {suggestions.map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => chat.send(s, context)}
-              className="rounded-md border border-border/60 px-2.5 py-1.5 text-[11px] text-left text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer"
-            >
-              {s}
-            </button>
-          ))}
-        </div>
-      )}
+    <Intro title="Ask about your data" text="Explore your data, or write and fix queries." className="py-8">
+      <div className="flex flex-col items-stretch gap-1.5 w-full max-w-64">
+        {suggestions.map((s) => (
+          <button
+            key={s}
+            type="button"
+            onClick={() => chat.send(s, context)}
+            className="rounded-md border border-border/60 px-2.5 py-1.5 text-[11px] text-left text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer"
+          >
+            {s}
+          </button>
+        ))}
+      </div>
     </Intro>
   );
 }
@@ -191,6 +187,7 @@ function Message({ message, last, context }: { message: ChatMessage; last: boole
   }
   return (
     <div className="min-w-0">
+      {message.tools && message.tools.length > 0 && <ToolCalls tools={message.tools} />}
       {message.content && <MarkdownMessage content={message.content} />}
       {message.streaming && (
         <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mt-1">
@@ -218,49 +215,34 @@ function Message({ message, last, context }: { message: ChatMessage; last: boole
   );
 }
 
-function ModelPicker({
-  value,
-  providers,
-  disabled,
-}: {
-  value: string;
-  providers: ProviderStatus[];
-  disabled: boolean;
-}) {
-  const onChange = (v: string) => {
-    if (v === MANAGE) {
-      OpenSettingsWindow("ai");
-      return;
-    }
-    const i = v.indexOf(SEP);
-    chat.selectModel(v.slice(0, i), v.slice(i + SEP.length));
-  };
+/** What the model read to answer; queries expand to show their SQL. */
+function ToolCalls({ tools }: { tools: ToolUse[] }) {
+  const row = "flex items-center gap-1.5";
   return (
-    <Select value={value} onValueChange={onChange} disabled={disabled}>
-      <SelectTrigger
-        size="sm"
-        aria-label="Model"
-        className="h-6 max-w-44 min-w-0 gap-1 border-0 bg-transparent dark:bg-transparent px-1.5 text-[11px] text-muted-foreground shadow-none hover:text-foreground focus-visible:ring-0 [&_svg]:size-3"
-      >
-        <SelectValue placeholder="Choose a model" />
-      </SelectTrigger>
-      <SelectContent>
-        {providers.map((p) => (
-          <SelectGroup key={p.provider.id}>
-            <SelectLabel className="text-[10px]">{p.provider.name}</SelectLabel>
-            {p.models.map((m) => (
-              <SelectItem key={m} value={`${p.provider.id}${SEP}${m}`} className="text-xs py-1">
-                {m}
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        ))}
-        <SelectSeparator />
-        <SelectItem value={MANAGE} className="text-xs py-1">
-          Manage models…
-        </SelectItem>
-      </SelectContent>
-    </Select>
+    <ul className="mb-1.5 space-y-0.5 text-[11px] text-muted-foreground">
+      {tools.map((t, i) => {
+        const label = (
+          <>
+            <Database className="size-3 shrink-0" />
+            {t.label}
+          </>
+        );
+        return (
+          <li key={i}>
+            {t.sql ? (
+              <details>
+                <summary className={cn(row, "list-none cursor-pointer hover:text-foreground")}>{label}</summary>
+                <pre className="mt-1 rounded bg-muted/60 px-2 py-1 font-mono text-[10px] whitespace-pre-wrap break-words select-text">
+                  {t.sql}
+                </pre>
+              </details>
+            ) : (
+              <div className={row}>{label}</div>
+            )}
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
@@ -274,12 +256,12 @@ function Composer({
   context: ChatContext;
   streaming: boolean;
   providers: ProviderStatus[];
-  model: string;
+  model?: ModelRef;
   canClear: boolean;
 }) {
   const [input, setInput] = useState("");
   const ref = useRef<HTMLTextAreaElement>(null);
-  const canSend = input.trim() !== "" && !streaming && model !== "";
+  const canSend = input.trim() !== "" && !streaming && model !== undefined;
 
   useLayoutEffect(() => {
     const el = ref.current;
@@ -293,15 +275,6 @@ function Composer({
     chat.send(input, context);
     setInput("");
   };
-
-  const contextSummary = [
-    context.engine,
-    context.sql.trim() && "query",
-    context.error && "error",
-    context.tables.length > 0 && `${context.tables.length} tables`,
-  ]
-    .filter(Boolean)
-    .join(", ");
 
   return (
     <div className="shrink-0 border-t border-border/50 p-2">
@@ -324,12 +297,7 @@ function Composer({
         />
         <div className="flex items-center gap-1 px-1 pb-1">
           <ModelPicker value={model} providers={providers} disabled={streaming} />
-          <span
-            className="flex-1 min-w-0 truncate text-[10px] text-muted-foreground/80"
-            title={`Sent with each message: ${contextSummary}`}
-          >
-            {contextSummary}
-          </span>
+          <span className="flex-1" />
           {canClear && (
             <Button
               size="icon-xs"

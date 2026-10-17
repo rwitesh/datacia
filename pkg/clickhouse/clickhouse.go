@@ -198,7 +198,7 @@ func (ch *ClickHouse) query(ctx context.Context, conn driver.Conn, sql string, q
 	}
 	defer rows.Close()
 
-	columns, data, err := ScanDynamicColumns(queryCtx, rows)
+	columns, data, err := ScanDynamicColumns(queryCtx, rows, 0)
 	if err != nil {
 		return common.QueryResult{Type: common.QueryTypeRead}, err
 	}
@@ -222,6 +222,37 @@ func (ch *ClickHouse) query(ctx context.Context, conn driver.Conn, sql string, q
 		Data:    data,
 		Logs:    logs,
 	}, nil
+}
+
+// ReadOnlyQuery runs sql with readonly=2, which blocks writes but still
+// allows the connection's own settings (max_execution_time), and
+// allow_ddl=0, which also disables table functions such as url() and s3().
+func (ch *ClickHouse) ReadOnlyQuery(ctx context.Context, sql string, maxRows int) (common.QueryResult, error) {
+	ch.Mu.RLock()
+	conn := ch.conn
+	ch.Mu.RUnlock()
+
+	if conn == nil {
+		return common.QueryResult{}, errors.New("no active connection found")
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, common.QUERY_TIMEOUT)
+	defer cancel()
+
+	queryCtx := clickhouse.Context(ctx, clickhouse.WithSettings(clickhouse.Settings{"readonly": 2, "allow_ddl": 0}))
+	rows, err := conn.Query(queryCtx, sql)
+	if err != nil {
+		return common.QueryResult{Type: common.QueryTypeRead}, err
+	}
+	defer rows.Close()
+	// Cancel before rows.Close so unread rows aren't drained.
+	defer cancel()
+
+	columns, data, err := ScanDynamicColumns(queryCtx, rows, maxRows)
+	if err != nil {
+		return common.QueryResult{Type: common.QueryTypeRead}, err
+	}
+	return common.QueryResult{Type: common.QueryTypeRead, Columns: columns, Data: data}, nil
 }
 
 func (ch *ClickHouse) CancelQuery(queryID string) error {
@@ -432,7 +463,7 @@ func (ch *ClickHouse) GetTableSchema(table string) (common.QueryResult, error) {
 	}
 	defer rows.Close()
 
-	columns, data, err := ScanDynamicColumns(ctx, rows)
+	columns, data, err := ScanDynamicColumns(ctx, rows, 0)
 	if err != nil {
 		return common.QueryResult{Type: common.QueryTypeRead}, err
 	}

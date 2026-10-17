@@ -13,6 +13,7 @@ declare module "@wailsio/runtime" {
     namespace Events {
         interface CustomEvents {
             "ai:delta": ai$0.ChatDelta;
+            "ai:tool": ai$0.ChatTool;
         }
     }
 }

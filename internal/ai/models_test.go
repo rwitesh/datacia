@@ -124,3 +124,21 @@ func TestBaseURLOnlyForCustomProviders(t *testing.T) {
 		t.Errorf("local used %q", got)
 	}
 }
+
+func TestModelCache(t *testing.T) {
+	calls := 0
+	srv := fakeServer(t, func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		fmt.Fprint(w, `{"data":[{"id":"llama"}]}`)
+	})
+	var c modelCache
+	p := mustProvider(t, "local")
+	for _, key := range []string{"a", "a", "b"} {
+		if _, err := c.list(context.Background(), p, srv.URL+"/v1", key); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if calls != 2 {
+		t.Fatalf("listed %d times, want 2: once, then again for the new key", calls)
+	}
+}

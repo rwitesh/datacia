@@ -16,16 +16,15 @@ import (
 const maxStoredMessages = 200
 
 type StoredMessage struct {
-	ID      string `json:"id"`
-	Role    string `json:"role"`
-	Content string `json:"content"`
-	Error   string `json:"error,omitempty"`
+	ID      string    `json:"id"`
+	Role    string    `json:"role"`
+	Content string    `json:"content"`
+	Error   string    `json:"error,omitempty"`
+	Tools   []ToolUse `json:"tools,omitempty"`
 }
 
 // Chat is the AI panel's conversation, kept between launches.
 type Chat struct {
-	Provider string          `json:"provider"`
-	Model    string          `json:"model"`
 	Messages []StoredMessage `json:"messages"`
 }
 

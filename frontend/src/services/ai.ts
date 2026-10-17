@@ -1,12 +1,12 @@
 import { useEffect, useSyncExternalStore } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CancelError, Events, type CancellablePromise } from "@wailsio/runtime";
 import { nanoid } from "nanoid";
 import * as AI from "../../bindings/datacia/internal/ai/service";
 import { errorMessage } from "@/lib/utils";
-import { ChatContext, type ProviderStatus } from "../../bindings/datacia/internal/ai/models";
+import { ChatContext, type ModelRef, type ProviderStatus, type ToolUse } from "../../bindings/datacia/internal/ai/models";
 
-export type { ProviderStatus };
+export type { ModelRef, ProviderStatus, ToolUse };
 export { ChatContext };
 export { SignIn } from "../../bindings/datacia/internal/ai/service";
 
@@ -15,42 +15,60 @@ export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   error?: string;
+  /** What the model read to answer, in call order. */
+  tools?: ToolUse[];
   streaming?: boolean;
 }
 
 interface ChatState {
   loaded: boolean;
-  provider: string;
-  model: string;
   messages: ChatMessage[];
 }
+
+/** Every AI query starts with this key, so a settings change refreshes them all. */
+export const AI_QUERY_KEY = "ai";
+const defaultModelKey = [AI_QUERY_KEY, "default-model"];
 
 export function useAIProviders() {
   const queryClient = useQueryClient();
   useEffect(
     () =>
       Events.On("app:settings-changed", () => {
-        queryClient.invalidateQueries({ queryKey: ["ai-providers"] });
+        queryClient.invalidateQueries({ queryKey: [AI_QUERY_KEY] });
       }),
     [queryClient],
   );
-  return useQuery({ queryKey: ["ai-providers"], queryFn: () => AI.Providers() });
+  return useQuery({ queryKey: [AI_QUERY_KEY, "providers"], queryFn: () => AI.Providers() });
 }
 
-/** Lists models with the given url and key, or the saved ones when empty. */
-export function useProviderModels(providerId: string, url: string, key: string, enabled: boolean) {
-  return useQuery({
-    queryKey: ["ai-models", providerId, url, key],
-    queryFn: () => AI.ListModels(providerId, url, key),
-    enabled,
-    // Don't keep typed, unsaved keys around in the cache.
-    gcTime: key ? 0 : undefined,
-    staleTime: 10 * 60_000,
-    retry: false,
+/** Model lists for the given providers. The backend caches them too. */
+export function useModelLists(providerIds: string[], enabled: (id: string) => boolean) {
+  return useQueries({
+    queries: providerIds.map((id) => ({
+      queryKey: [AI_QUERY_KEY, "models", id],
+      queryFn: () => AI.ListModels(id),
+      enabled: enabled(id),
+      staleTime: 10 * 60_000,
+      retry: false,
+    })),
   });
 }
 
-let state: ChatState = { loaded: false, provider: "", model: "", messages: [] };
+export function useDefaultModel() {
+  return useQuery({ queryKey: defaultModelKey, queryFn: () => AI.DefaultModel() });
+}
+
+export function useSetDefaultModel() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (model: ModelRef) => AI.SetDefaultModel(model),
+    onMutate: (model) => queryClient.setQueryData(defaultModelKey, model),
+    // On success the settings-changed event refreshes it.
+    onError: () => queryClient.invalidateQueries({ queryKey: defaultModelKey }),
+  });
+}
+
+let state: ChatState = { loaded: false, messages: [] };
 const listeners = new Set<() => void>();
 let pending: { id: string; call: CancellablePromise<string> } | null = null;
 
@@ -68,9 +86,8 @@ let saving = Promise.resolve();
 function persist() {
   const messages = state.messages
     .filter((m) => !m.streaming)
-    .map(({ id, role, content, error }) => ({ id, role, content, error: error ?? "" }));
-  const chat = { provider: state.provider, model: state.model, messages };
-  saving = saving.then(() => AI.SaveChat(chat)).catch(() => {});
+    .map(({ id, role, content, error, tools }) => ({ id, role, content, error: error ?? "", tools }));
+  saving = saving.then(() => AI.SaveChat({ messages })).catch(() => {});
 }
 
 function subscribe(listener: () => void) {
@@ -85,13 +102,12 @@ function load() {
     .then((chat) =>
       set({
         loaded: true,
-        provider: chat.provider,
-        model: chat.model,
         messages: chat.messages.map((m) => ({
           id: m.id,
           role: m.role === "user" ? "user" : "assistant",
           content: m.content,
           error: m.error || undefined,
+          tools: m.tools,
         })),
       }),
     )
@@ -117,6 +133,11 @@ Events.On("ai:delta", (ev) => {
   });
 });
 
+Events.On("ai:tool", (ev) => {
+  const msg = pending && state.messages.find((m) => m.id === pending!.id);
+  if (msg && ev.data.id === msg.id) patchMessage(msg.id, { tools: [...(msg.tools ?? []), ev.data.tool] });
+});
+
 /** History for the model: completed turns only, skipping exchanges that failed. */
 function history(messages: ChatMessage[]) {
   const out: { role: string; content: string }[] = [];
@@ -137,7 +158,7 @@ async function run(context: ChatContext) {
   const messages = history(state.messages);
   set({ messages: [...state.messages, reply] });
 
-  const call = AI.Chat({ id: reply.id, provider: state.provider, model: state.model, messages, context });
+  const call = AI.Chat({ id: reply.id, messages, context });
   pending = { id: reply.id, call };
   try {
     const text = await call;
@@ -161,7 +182,7 @@ async function run(context: ChatContext) {
 export const chat = {
   send(text: string, context: ChatContext) {
     const content = text.trim();
-    if (!content || pending || !state.model) return;
+    if (!content || pending) return;
     set({ messages: [...state.messages, { id: nanoid(), role: "user", content }] });
     void run(context);
   },
@@ -177,10 +198,6 @@ export const chat = {
   clear() {
     pending?.call.cancel();
     set({ messages: [] });
-    persist();
-  },
-  selectModel(provider: string, model: string) {
-    set({ provider, model });
     persist();
   },
 };

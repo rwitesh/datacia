@@ -17,6 +17,7 @@ import (
 
 const (
 	DeltaEvent    = "ai:delta"
+	ToolEvent     = "ai:tool"
 	chatTimeout   = 5 * time.Minute
 	signInTimeout = 5 * time.Minute
 )
@@ -27,8 +28,15 @@ type ChatDelta struct {
 	Text string `json:"text"`
 }
 
+// ChatTool reports a tool call made while answering the ChatRequest ID.
+type ChatTool struct {
+	ID   string  `json:"id"`
+	Tool ToolUse `json:"tool"`
+}
+
 func init() {
 	application.RegisterEvent[ChatDelta](DeltaEvent)
+	application.RegisterEvent[ChatTool](ToolEvent)
 }
 
 type Message struct {
@@ -36,49 +44,49 @@ type Message struct {
 	Content string `json:"content"`
 }
 
+// ChatRequest is sent to the default model.
 type ChatRequest struct {
 	ID       string      `json:"id"`
-	Provider string      `json:"provider"`
-	Model    string      `json:"model"`
 	Messages []Message   `json:"messages"`
 	Context  ChatContext `json:"context"`
 }
 
+// ModelRef names a provider's model.
+type ModelRef struct {
+	Provider string `json:"provider"`
+	Model    string `json:"model"`
+}
+
 type ProviderStatus struct {
 	Provider Provider `json:"provider"`
-	BaseURL  string   `json:"baseUrl"`
-	Models   []string `json:"models"`
 	HasKey   bool     `json:"hasKey"`
 	KeyError string   `json:"keyError"`
-	Ready    bool     `json:"ready"`
+	Ready    bool     `json:"ready"` // its models can be listed and used
 }
 
 type Service struct {
-	app   *application.App
-	store chatStore
+	app    *application.App
+	db     Database
+	store  chatStore
+	models modelCache
 }
 
-func NewService(app *application.App) *Service {
+func NewService(app *application.App, db Database) *Service {
 	clearProviderEnv()
-	return &Service{app: app}
+	return &Service{app: app, db: db}
 }
 
 // Providers returns every provider with the user's configuration.
 func (s *Service) Providers() []ProviderStatus {
-	cfgs := settings.GetSettingsRaw().AI.Providers
 	out := make([]ProviderStatus, 0, len(providers))
 	for _, p := range providers {
-		cfg := cfgs[p.ID]
-		st := ProviderStatus{Provider: p, BaseURL: baseURL(p, cfg.BaseURL), Models: cfg.Models}
-		if st.Models == nil {
-			st.Models = []string{}
-		}
+		st := ProviderStatus{Provider: p}
 		key, err := savedKey(p)
 		if err != nil {
 			st.KeyError = err.Error()
 		}
 		st.HasKey = key != ""
-		st.Ready = len(st.Models) > 0 && (st.HasKey || p.KeyOptional)
+		st.Ready = isReady(p, st.HasKey)
 		out = append(out, st)
 	}
 	return out
@@ -105,27 +113,35 @@ func (s *Service) SignIn(ctx context.Context, providerID string) error {
 	return settings.SetAIKey(p.ID, key)
 }
 
-// ListModels returns the provider's chat models, newest first, which also
-// checks the key. Empty url and key mean the saved ones, so models can be
-// listed before the settings are saved.
-func (s *Service) ListModels(ctx context.Context, providerID, url, key string) ([]Model, error) {
+// ListModels returns the provider's chat models, newest first. Lists are
+// cached for an hour, or until the key or server URL changes.
+func (s *Service) ListModels(ctx context.Context, providerID string) ([]Model, error) {
 	p, err := findProvider(providerID)
 	if err != nil {
 		return nil, err
 	}
-	if key = strings.TrimSpace(key); key == "" {
-		if key, err = apiKey(p); err != nil {
-			return nil, err
-		}
-	}
-	if url == "" {
-		url = settings.GetSettingsRaw().AI.Providers[p.ID].BaseURL
-	}
-	models, err := p.list(ctx, key, baseURL(p, url))
+	key, err := apiKey(p)
 	if err != nil {
-		return nil, userError(p, err)
+		return nil, err
 	}
-	return sortModels(models), nil
+	return s.models.list(ctx, p, savedBaseURL(p), key)
+}
+
+// DefaultModel returns the model chats are sent to; empty if none is chosen.
+func (s *Service) DefaultModel() ModelRef {
+	ai := settings.GetSettingsRaw().AI
+	return ModelRef{Provider: ai.DefaultProvider, Model: ai.DefaultModel}
+}
+
+func (s *Service) SetDefaultModel(m ModelRef) error {
+	if _, err := findProvider(m.Provider); err != nil {
+		return err
+	}
+	model := strings.TrimSpace(m.Model)
+	if model == "" {
+		return errors.New("Choose a model.")
+	}
+	return settings.SetAIModel(m.Provider, model)
 }
 
 // Chat streams the reply as DeltaEvent events and returns the full text.
@@ -135,23 +151,36 @@ func (s *Service) Chat(ctx context.Context, req ChatRequest) (string, error) {
 	if len(history) == 0 || history[len(history)-1].Role != "user" {
 		return "", errors.New("Nothing to send.")
 	}
-	p, err := findProvider(req.Provider)
+	ref := s.DefaultModel()
+	if ref.Model == "" {
+		return "", errors.New("Choose a model.")
+	}
+	p, err := findProvider(ref.Provider)
 	if err != nil {
 		return "", err
 	}
-	m, err := chatModel(p, req.Model)
+	key, err := apiKey(p)
 	if err != nil {
 		return "", err
 	}
-	logger.Info("ai_chat", "provider", p.ID, "model", req.Model, "engine", req.Context.Engine)
+	if !isReady(p, key != "") {
+		return "", fmt.Errorf("Set up %s in Settings.", p.Name)
+	}
+	m := p.chat(ref.Model, key, savedBaseURL(p))
+	logger.Info("ai_chat", "provider", p.ID, "model", ref.Model, "engine", req.Context.Engine)
+
+	tools := chatTools(s.db, req.Context, func(t ToolUse) {
+		s.app.Event.Emit(ToolEvent, ChatTool{ID: req.ID, Tool: t})
+	})
+	opts := append([]goai.Option{goai.WithTools(tools...), goai.WithMaxSteps(maxToolSteps)}, p.options...)
 
 	ctx, cancel := context.WithTimeout(ctx, chatTimeout)
 	defer cancel()
-	reply, err := streamReply(ctx, m, systemPrompt(req.Context), history, func(text string) {
+	reply, err := streamReply(ctx, m, systemPrompt(req.Context.Engine), history, func(text string) {
 		s.app.Event.Emit(DeltaEvent, ChatDelta{ID: req.ID, Text: text})
-	}, p.options...)
+	}, opts...)
 	if err != nil {
-		return reply, reportChatError(p, req.Model, err)
+		return reply, reportChatError(p, ref.Model, err)
 	}
 	if strings.TrimSpace(reply) == "" {
 		return "", fmt.Errorf("%s returned an empty reply.", p.Name)
@@ -174,9 +203,20 @@ func streamReply(ctx context.Context, m provider.LanguageModel, system string, h
 		return "", err
 	}
 	var reply strings.Builder
-	for text := range stream.TextStream() {
-		reply.WriteString(text)
-		onText(text)
+	newStep := false
+	for chunk := range stream.Stream() {
+		switch {
+		case chunk.Type == provider.ChunkStepFinish:
+			newStep = reply.Len() > 0
+		case chunk.Type == provider.ChunkText && chunk.Text != "":
+			text := chunk.Text
+			if newStep {
+				// Text after a tool call starts a new paragraph.
+				text, newStep = "\n\n"+text, false
+			}
+			reply.WriteString(text)
+			onText(text)
+		}
 	}
 	if err := stream.Err(); err != nil {
 		return reply.String(), err
@@ -191,19 +231,6 @@ func (s *Service) LoadChat() (Chat, error) {
 
 func (s *Service) SaveChat(chat Chat) error {
 	return s.store.save(chat)
-}
-
-func chatModel(p Provider, model string) (provider.LanguageModel, error) {
-	model = strings.TrimSpace(model)
-	if model == "" {
-		return nil, errors.New("Choose a model.")
-	}
-	key, err := apiKey(p)
-	if err != nil {
-		return nil, err
-	}
-	url := settings.GetSettingsRaw().AI.Providers[p.ID].BaseURL
-	return p.chat(model, key, baseURL(p, url)), nil
 }
 
 // apiKey returns the provider's key, or an error if it's required and missing.
@@ -221,6 +248,16 @@ func savedKey(p Provider) (string, error) {
 		return "", fmt.Errorf("The saved %s key can't be read. Enter it again.", p.Name)
 	}
 	return key, nil
+}
+
+// isReady reports whether p's models can be listed and used. A keyless
+// provider is set up once its server URL is saved.
+func isReady(p Provider, hasKey bool) bool {
+	return hasKey || (p.KeyOptional && settings.GetSettingsRaw().AI.Providers[p.ID].BaseURL != "")
+}
+
+func savedBaseURL(p Provider) string {
+	return baseURL(p, settings.GetSettingsRaw().AI.Providers[p.ID].BaseURL)
 }
 
 func baseURL(p Provider, url string) string {

@@ -10,12 +10,13 @@ import (
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 )
 
-func ScanDynamicColumns(ctx context.Context, rows driver.Rows) ([]string, []map[string]interface{}, error) {
+// ScanDynamicColumns reads up to maxRows rows, or all of them when maxRows is 0.
+func ScanDynamicColumns(ctx context.Context, rows driver.Rows, maxRows int) ([]string, []map[string]interface{}, error) {
 	var response []map[string]interface{}
 	columns := rows.Columns()
 	colTypes := rows.ColumnTypes()
 
-	for rows.Next() {
+	for (maxRows == 0 || len(response) < maxRows) && rows.Next() {
 		select {
 		case <-ctx.Done():
 			return nil, nil, ctx.Err()

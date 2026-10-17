@@ -1,6 +1,7 @@
 package remote
 
 import (
+	"context"
 	"datacia/internal/db"
 	"datacia/internal/logger"
 	"datacia/internal/security"
@@ -339,6 +340,21 @@ func (e *Engine) RunQuery(queryId, queryType, sql string) (common.QueryResult, e
 		}
 	}(engine, sql, duration, status, errorMessage)
 
+	return result, err
+}
+
+// ReadOnlyQuery runs a single read statement with writes blocked by the
+// database. Unlike RunQuery it isn't saved to the history.
+func (e *Engine) ReadOnlyQuery(ctx context.Context, sql string, maxRows int) (common.QueryResult, error) {
+	if e.activeClient == nil {
+		return common.QueryResult{}, errors.New("no active database connection found")
+	}
+	if err := common.CheckReadOnly(sql); err != nil {
+		return common.QueryResult{}, err
+	}
+	start := time.Now()
+	result, err := e.activeClient.ReadOnlyQuery(ctx, sql, maxRows)
+	result.TimeElapsed = time.Since(start).Milliseconds()
 	return result, err
 }
 
