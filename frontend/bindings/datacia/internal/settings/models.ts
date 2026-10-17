@@ -208,11 +208,37 @@ export class Info {
     }
 }
 
+/**
+ * PrivacyConfig is stored as an opt-out so settings saved before it existed
+ * keep error reports on.
+ */
+export class PrivacyConfig {
+    "disableErrorReports": boolean;
+
+    /** Creates a new PrivacyConfig instance. */
+    constructor($$source: Partial<PrivacyConfig> = {}) {
+        if (!("disableErrorReports" in $$source)) {
+            this["disableErrorReports"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new PrivacyConfig instance from a string or object.
+     */
+    static createFrom($$source: any = {}): PrivacyConfig {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new PrivacyConfig($$parsedSource as Partial<PrivacyConfig>);
+    }
+}
+
 export class Settings {
     "theme": ThemeConfig;
     "editor": EditorConfig;
     "font": FontConfig;
     "ai": AIConfig;
+    "privacy": PrivacyConfig;
 
     /** Creates a new Settings instance. */
     constructor($$source: Partial<Settings> = {}) {
@@ -228,6 +254,9 @@ export class Settings {
         if (!("ai" in $$source)) {
             this["ai"] = (new AIConfig());
         }
+        if (!("privacy" in $$source)) {
+            this["privacy"] = (new PrivacyConfig());
+        }
 
         Object.assign(this, $$source);
     }
@@ -239,6 +268,7 @@ export class Settings {
         const $$createField1_0 = $$createType4;
         const $$createField2_0 = $$createType5;
         const $$createField3_0 = $$createType6;
+        const $$createField4_0 = $$createType7;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("editor" in $$parsedSource) {
             $$parsedSource["editor"] = $$createField1_0($$parsedSource["editor"]);
@@ -248,6 +278,9 @@ export class Settings {
         }
         if ("ai" in $$parsedSource) {
             $$parsedSource["ai"] = $$createField3_0($$parsedSource["ai"]);
+        }
+        if ("privacy" in $$parsedSource) {
+            $$parsedSource["privacy"] = $$createField4_0($$parsedSource["privacy"]);
         }
         return new Settings($$parsedSource as Partial<Settings>);
     }
@@ -321,3 +354,4 @@ const $$createType3 = Settings.createFrom;
 const $$createType4 = EditorConfig.createFrom;
 const $$createType5 = FontConfig.createFrom;
 const $$createType6 = AIConfig.createFrom;
+const $$createType7 = PrivacyConfig.createFrom;

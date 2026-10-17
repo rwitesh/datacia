@@ -50,6 +50,7 @@ func loadSettings() {
 	s.Editor.Light = fillTokenColorsDefaults(s.Editor.Light, defaultTokenColorsLight())
 	s.Editor.Dark = fillTokenColorsDefaults(s.Editor.Dark, defaultTokenColorsDark())
 	fillAIDefaults(&s)
+	applyPrivacy(s)
 	globalInfo.mu.Lock()
 	globalInfo.Settings = s
 	globalInfo.mu.Unlock()
@@ -74,4 +75,25 @@ func saveSettings() error {
 		return err
 	}
 	return os.WriteFile(settingsPath, data, 0644)
+}
+
+// ErrorReportsEnabled reads only the privacy setting from disk, for use before
+// the settings service starts. Reports stay on if the file is missing or
+// unreadable.
+func ErrorReportsEnabled() bool {
+	settingsPath, err := paths.GetSettingsPath()
+	if err != nil {
+		return true
+	}
+	data, err := os.ReadFile(settingsPath)
+	if err != nil {
+		return true
+	}
+	var s struct {
+		Privacy PrivacyConfig `json:"privacy"`
+	}
+	if err := json.Unmarshal(data, &s); err != nil {
+		return true
+	}
+	return !s.Privacy.DisableErrorReports
 }

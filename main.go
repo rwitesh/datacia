@@ -4,6 +4,7 @@ import (
 	"datacia/internal/app"
 	"datacia/internal/logger"
 	"datacia/internal/sentry"
+	"datacia/internal/settings"
 	"embed"
 	"fmt"
 
@@ -18,6 +19,11 @@ var assets embed.FS
 // never auto-update.
 var version = "dev"
 
+// sentryDSN is injected at build time from the SENTRY_DSN secret
+// (-ldflags "-X main.sentryDSN=<dsn>"). Without it nothing is reported and
+// logs go to stderr.
+var sentryDSN string
+
 func main() {
 	// When relaunched as the updater's helper (to swap in a downloaded update),
 	// do the swap and exit before any app initialisation. application.New also
@@ -26,16 +32,19 @@ func main() {
 
 	defer recoverAndReport()
 
-	if err := sentry.Init(version); err != nil {
+	sentry.SetEnabled(settings.ErrorReportsEnabled())
+	reporting, err := sentry.Init(sentryDSN, version)
+	logger.Init(reporting)
+	if err != nil {
 		logger.Error("Sentry init failed", "error", err.Error())
 	}
-	sentry.StartPeriodicFlush()
-	defer func() {
-		sentry.StopPeriodicFlush()
-		sentry.Flush()
-	}()
-
-	logger.Init(true)
+	if reporting {
+		sentry.StartPeriodicFlush()
+		defer func() {
+			sentry.StopPeriodicFlush()
+			sentry.Flush()
+		}()
+	}
 
 	appManager, err := app.NewApp(assets, version)
 	if err != nil {

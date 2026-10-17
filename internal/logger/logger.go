@@ -7,10 +7,12 @@ import (
 	"github.com/getsentry/sentry-go/attribute"
 )
 
+// Logger sends structured logs to Sentry. It is nil when reporting is not
+// configured, in which case logs are written to stderr instead.
 var Logger sentry.Logger
 
-func Init(production bool) {
-	if production {
+func Init(reporting bool) {
+	if reporting {
 		Logger = sentry.NewLogger(context.Background())
 	}
 }
