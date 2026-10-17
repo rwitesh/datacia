@@ -211,6 +211,7 @@ func scanRows(ctx context.Context, rows pgx.Rows, maxRows int) (common.QueryResu
 	for i, fd := range rows.FieldDescriptions() {
 		columns[i] = fd.Name
 	}
+	columns = common.UniqueColumnNames(columns)
 
 	var data []map[string]interface{}
 	for (maxRows == 0 || len(data) < maxRows) && rows.Next() {

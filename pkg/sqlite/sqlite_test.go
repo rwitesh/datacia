@@ -3,6 +3,7 @@ package sqlite
 import (
 	"context"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"datacia/pkg/common"
@@ -45,5 +46,24 @@ func TestReadOnlyQuery(t *testing.T) {
 	}
 	if err := run("INSERT INTO t VALUES (4)"); err != nil {
 		t.Fatalf("write after read-only query: %v", err)
+	}
+}
+
+func TestDuplicateColumnNames(t *testing.T) {
+	s := New()
+	if err := s.Connect("", "", "", "", filepath.Join(t.TempDir(), "t.db"), false); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { s.Close() })
+
+	res, err := s.RunQuery("", string(common.QueryTypeRead), "SELECT 1 AS id, 2 AS id")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{"id", "id_2"}; !slices.Equal(res.Columns, want) {
+		t.Fatalf("columns = %q, want %q", res.Columns, want)
+	}
+	if row := res.Data[0]; row["id"] != int64(1) || row["id_2"] != int64(2) {
+		t.Fatalf("row = %v, want id=1 id_2=2", row)
 	}
 }

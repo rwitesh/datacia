@@ -192,6 +192,7 @@ func scanRows(ctx context.Context, rows *sql.Rows, maxRows int) (common.QueryRes
 	if err != nil {
 		return common.QueryResult{Type: common.QueryTypeRead}, err
 	}
+	columns = common.UniqueColumnNames(columns)
 
 	var data []map[string]interface{}
 

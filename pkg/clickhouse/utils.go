@@ -2,6 +2,7 @@ package clickhouse
 
 import (
 	"context"
+	"datacia/pkg/common"
 	"encoding"
 	"fmt"
 	"math"
@@ -14,7 +15,7 @@ import (
 // ScanDynamicColumns reads up to maxRows rows, or all of them when maxRows is 0.
 func ScanDynamicColumns(ctx context.Context, rows driver.Rows, maxRows int) ([]string, []map[string]interface{}, error) {
 	var response []map[string]interface{}
-	columns := rows.Columns()
+	columns := common.UniqueColumnNames(rows.Columns())
 	colTypes := rows.ColumnTypes()
 
 	for (maxRows == 0 || len(response) < maxRows) && rows.Next() {
