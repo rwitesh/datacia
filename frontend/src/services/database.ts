@@ -32,10 +32,13 @@ export function useRunQuery() {
       }
       return RunQuery(sql, queryId);
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["query-history"] });
-      // Refresh tables list to reflect any DDL changes (CREATE, DROP, ALTER, etc.)
-      queryClient.invalidateQueries({ queryKey: ["tables"] });
+      // Only a command can change the schema (CREATE, DROP, ALTER, etc.).
+      if (result.type !== "read") {
+        queryClient.invalidateQueries({ queryKey: ["tables"] });
+        queryClient.invalidateQueries({ queryKey: ["ddl"] });
+      }
     },
   });
 }

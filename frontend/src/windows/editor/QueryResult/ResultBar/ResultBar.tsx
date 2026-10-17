@@ -16,9 +16,7 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 import { useEditorContext } from "@/context/editor/Index";
-import { useGetTableData } from "@/services/database";
 import { useExportActions } from "@/services/useExportActions";
-import type { QueryResult } from "@/services/bindings/database";
 
 function formatExecutionTime(ms: number): string {
   if (ms < 1000) {
@@ -37,8 +35,7 @@ function formatBytes(bytes: number): string {
 export type ViewMode = "data" | "ddl";
 
 export function ResultBar() {
-  const { activeTab, updateTab, tableRef } = useEditorContext();
-  const getTableDataMutation = useGetTableData();
+  const { activeTab, updateTab, tableRef, loadTableData } = useEditorContext();
 
   const data = activeTab?.results?.data ?? [];
   const tableName = activeTab?.table;
@@ -46,6 +43,7 @@ export function ResultBar() {
   const { exportJSON, exportCSV, exportPNG, isExporting } = useExportActions({
     tableRef,
     data,
+    columns: activeTab?.results?.columns ?? [],
     tableName,
   });
 
@@ -78,44 +76,13 @@ export function ResultBar() {
   // Pagination Logic
   const fetchData = (newLimit: number, newOffset: number) => {
     if (!table || newLimit === undefined) return;
-
-    updateTab(id, {
-      isExecuting: true,
-      error: undefined,
+    loadTableData(id, {
+      table,
       limit: newLimit,
       offset: newOffset,
+      orderBy,
+      orderDir,
     });
-
-    getTableDataMutation.mutate(
-      {
-        table,
-        limit: newLimit,
-        offset: newOffset,
-        orderBy,
-        orderDir,
-      },
-      {
-        onSuccess: (response: QueryResult) => {
-          updateTab(id, {
-            results: response,
-            isExecuting: false,
-            pagination: true,
-          });
-        },
-        onError: (err: unknown) => {
-          const message =
-            err instanceof Error
-              ? err.message
-              : String(err) || "Error fetching table data";
-          updateTab(id, {
-            error: message,
-            results: null,
-            isExecuting: false,
-            pagination: false,
-          });
-        },
-      }
-    );
   };
 
   const handlePrev = () => {

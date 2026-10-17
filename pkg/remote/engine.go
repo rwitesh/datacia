@@ -15,6 +15,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -30,10 +31,14 @@ type UIController interface {
 
 type Engine struct {
 	store        *db.Store
-	activeClient DatabaseClient
 	uiController UIController
-	sshTunnel    *ssh.Tunnel
 	wailsApp     *application.App
+
+	// mu guards activeClient and sshTunnel: Wails runs bound methods
+	// concurrently (queries, health checks, AI tools, connect and close).
+	mu           sync.Mutex
+	activeClient DatabaseClient
+	sshTunnel    *ssh.Tunnel
 }
 
 func New(uiController UIController) (*Engine, error) {
@@ -100,6 +105,10 @@ func (e *Engine) CreateNewConnection(engine, host, port, username, password, dat
 	return e.CreateNewConnectionWithSSH(engine, host, port, username, password, database, "", "", "", "", "", "", test)
 }
 
+// CreateNewConnectionWithSSH connects to a database, optionally through an
+// SSH tunnel. A test connection is closed straight away and never touches the
+// active connection, since the connection window can test while an editor is
+// open.
 func (e *Engine) CreateNewConnectionWithSSH(engine, host, port, username, password, database string, useSSH, sshHost, sshPort, sshUsername, sshPassword, sshKeyPath string, test bool) error {
 	logger.Info("db_connection_attempt",
 		"engine", engine,
@@ -107,16 +116,7 @@ func (e *Engine) CreateNewConnectionWithSSH(engine, host, port, username, passwo
 		"ssh", fmt.Sprint(useSSH == "true"),
 	)
 
-	// Close existing SSH tunnel if any
-	if e.sshTunnel != nil {
-		e.sshTunnel.Close()
-		e.sshTunnel = nil
-	}
-
-	actualHost := host
-	actualPort := port
-
-	// Set up SSH tunnel if requested
+	var tunnel *ssh.Tunnel
 	if useSSH == "true" && sshHost != "" {
 		sshConfig := ssh.Config{
 			Host:     sshHost,
@@ -125,58 +125,83 @@ func (e *Engine) CreateNewConnectionWithSSH(engine, host, port, username, passwo
 			Password: sshPassword,
 			KeyPath:  sshKeyPath,
 		}
-
-		// Default SSH port if not provided
 		if sshConfig.Port == "" {
 			sshConfig.Port = "22"
 		}
 
-		tunnel, err := ssh.NewTunnel(sshConfig, host, port)
+		var err error
+		tunnel, err = ssh.NewTunnel(sshConfig, host, port)
 		if err != nil {
 			return fmt.Errorf("failed to establish SSH tunnel: %w", err)
 		}
-
-		e.sshTunnel = tunnel
-		// Connect through the tunnel using local address
-		actualHost = "127.0.0.1"
-		localAddr := tunnel.LocalAddr()
-		// Extract port from address (format: "127.0.0.1:port")
-		if _, portStr, err := net.SplitHostPort(localAddr); err == nil {
-			actualPort = portStr
-		} else {
+		host = "127.0.0.1"
+		if _, port, err = net.SplitHostPort(tunnel.LocalAddr()); err != nil {
+			tunnel.Close()
 			return fmt.Errorf("failed to parse local tunnel address: %w", err)
 		}
 	}
 
+	dbClient, err := connectClient(engine, host, port, username, password, database, test)
+	if test || err != nil {
+		if tunnel != nil {
+			tunnel.Close()
+		}
+		return err
+	}
+
+	e.replaceConnection(dbClient, tunnel)
+	e.openEditor()
+	return nil
+}
+
+func connectClient(engine, host, port, username, password, database string, test bool) (DatabaseClient, error) {
 	dbClient, err := getDBClient(engine)
 	if err != nil {
-		if e.sshTunnel != nil {
-			e.sshTunnel.Close()
-			e.sshTunnel = nil
-		}
 		logger.Warn("db_connection_client_create_failed", "engine", engine, "error", err.Error())
-		return err
+		return nil, err
 	}
-
-	if err := dbClient.Connect(actualHost, actualPort, username, password, database, test); err != nil {
-		if e.sshTunnel != nil {
-			e.sshTunnel.Close()
-			e.sshTunnel = nil
-		}
+	if err := dbClient.Connect(host, port, username, password, database, test); err != nil {
 		logger.Warn("db_connection_failed", "engine", engine, "database", database, "error", err.Error())
-		return err
+		return nil, err
 	}
-
-	e.activeClient = dbClient
 	logger.Info("db_connection_success", "engine", engine, "database", database, "test_mode", fmt.Sprint(test))
+	return dbClient, nil
+}
 
-	if !test && e.uiController != nil {
-		e.uiController.OpenEditor()
-		// Emit connection changed event to update UI
-		e.wailsApp.Event.Emit("connection-changed", nil)
+// replaceConnection makes client (and its tunnel) active, then closes the
+// previous ones. The new connection is set up first so a failed connect
+// leaves the current one working.
+func (e *Engine) replaceConnection(client DatabaseClient, tunnel *ssh.Tunnel) {
+	e.mu.Lock()
+	oldClient, oldTunnel := e.activeClient, e.sshTunnel
+	e.activeClient, e.sshTunnel = client, tunnel
+	e.mu.Unlock()
+
+	if oldClient != nil {
+		_ = oldClient.Close()
 	}
+	if oldTunnel != nil {
+		oldTunnel.Close()
+	}
+}
 
-	return nil
+// client returns the active connection. Callers use the returned value rather
+// than reading e.activeClient again, which another call may swap or clear.
+func (e *Engine) client() (DatabaseClient, error) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if e.activeClient == nil {
+		return nil, errors.New("no active database connection found")
+	}
+	return e.activeClient, nil
+}
+
+func (e *Engine) openEditor() {
+	if e.uiController == nil {
+		return
+	}
+	e.uiController.OpenEditor()
+	e.wailsApp.Event.Emit("connection-changed", nil)
 }
 
 func (e *Engine) OpenConnectionWindow() {
@@ -200,83 +225,78 @@ func (e *Engine) EstablishConnection(id string) error {
 	if err != nil {
 		return err
 	}
-
-	// Extract SSH parameters if present
-	useSSH := config["useSSH"]
-	sshHost := config["sshHost"]
-	sshPort := config["sshPort"]
-	sshUsername := config["sshUsername"]
-	sshPassword := config["sshPassword"]
-	sshKeyPath := config["sshKeyPath"]
-
-	err = e.CreateNewConnectionWithSSH(
+	return e.CreateNewConnectionWithSSH(
 		config["engine"],
 		config["host"],
 		config["port"],
 		config["username"],
 		config["password"],
 		config["database"],
-		useSSH,
-		sshHost,
-		sshPort,
-		sshUsername,
-		sshPassword,
-		sshKeyPath,
+		config["useSSH"],
+		config["sshHost"],
+		config["sshPort"],
+		config["sshUsername"],
+		config["sshPassword"],
+		config["sshKeyPath"],
 		false,
 	)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (e *Engine) ChangeDatabase(engine, host, port, username, password, database string) error {
-	return e.CreateNewConnection(engine, host, port, username, password, database, false)
 }
 
 func (e *Engine) GetCurrentConnectionInfo() (map[string]string, error) {
-	if e.activeClient == nil {
-		return nil, errors.New("no active connection found")
+	client, err := e.client()
+	if err != nil {
+		return nil, err
 	}
-	return e.activeClient.GetConnectionInfo()
+	return client.GetConnectionInfo()
 }
 
+// ChangeDatabaseByName reconnects to another database on the same server. It
+// reuses the active SSH tunnel: the client's host and port point at the
+// tunnel's local end, and the tunnel's own credentials aren't kept.
 func (e *Engine) ChangeDatabaseByName(database string) error {
-	if e.activeClient == nil {
-		return errors.New("no active connection found")
-	}
-
-	connInfo, err := e.GetCurrentConnectionInfo()
+	current, err := e.client()
 	if err != nil {
 		return err
 	}
 
-	// Get password directly from the client instead of from GetConnectionInfo
-	// which no longer exposes passwords for security
-	password := e.activeClient.GetPassword()
+	connInfo, err := current.GetConnectionInfo()
+	if err != nil {
+		return err
+	}
+	// GetConnectionInfo doesn't expose the password, so take it from the client.
+	dbClient, err := connectClient(connInfo["engine"], connInfo["host"], connInfo["port"], connInfo["username"], current.GetPassword(), database, false)
+	if err != nil {
+		return err
+	}
 
-	return e.ChangeDatabase(
-		connInfo["engine"],
-		connInfo["host"],
-		connInfo["port"],
-		connInfo["username"],
-		password,
-		database,
-	)
+	// Install it only if nothing closed or replaced the connection meanwhile,
+	// which would also have closed the tunnel it goes through.
+	e.mu.Lock()
+	if e.activeClient != current {
+		e.mu.Unlock()
+		_ = dbClient.Close()
+		return errors.New("the connection changed while switching database")
+	}
+	e.activeClient = dbClient
+	e.mu.Unlock()
+
+	_ = current.Close()
+	e.openEditor()
+	return nil
 }
 
 func (e *Engine) CloseCurrentConnection(closeEditor bool) error {
-	if e.activeClient == nil {
+	e.mu.Lock()
+	client, tunnel := e.activeClient, e.sshTunnel
+	e.activeClient, e.sshTunnel = nil, nil
+	e.mu.Unlock()
+
+	if client == nil {
 		return errors.New("no active database connection found")
 	}
-
-	err := e.activeClient.Close()
-	e.activeClient = nil
-
-	// Close SSH tunnel if exists
-	if e.sshTunnel != nil {
-		e.sshTunnel.Close()
-		e.sshTunnel = nil
+	err := client.Close()
+	if tunnel != nil {
+		tunnel.Close()
 	}
 
 	if closeEditor && e.uiController != nil {
@@ -302,21 +322,22 @@ func (e *Engine) DeleteConnection(id string) (bool, error) {
 	return e.store.DeleteConnection(id)
 }
 
-func (e *Engine) ListDatabases() (interface{}, error) {
-	if e.activeClient == nil {
-		return nil, errors.New("no active database connection found")
+func (e *Engine) ListDatabases() (common.DatabaseInfo, error) {
+	client, err := e.client()
+	if err != nil {
+		return common.DatabaseInfo{}, err
 	}
-	result, err := e.activeClient.ListDatabases()
-	return result, err
+	return client.ListDatabases()
 }
 
 func (e *Engine) RunQuery(queryId, queryType, sql string) (common.QueryResult, error) {
-	if e.activeClient == nil {
-		return common.QueryResult{}, errors.New("no active database connection found")
+	client, err := e.client()
+	if err != nil {
+		return common.QueryResult{}, err
 	}
 
 	start := time.Now()
-	result, err := e.activeClient.RunQuery(queryId, queryType, sql)
+	result, err := client.RunQuery(queryId, queryType, sql)
 	duration := time.Since(start).Milliseconds()
 	result.TimeElapsed = duration
 
@@ -328,7 +349,7 @@ func (e *Engine) RunQuery(queryId, queryType, sql string) (common.QueryResult, e
 	}
 
 	engine := ""
-	if connInfo, connErr := e.activeClient.GetConnectionInfo(); connErr == nil {
+	if connInfo, connErr := client.GetConnectionInfo(); connErr == nil {
 		engine = connInfo["engine"]
 	}
 
@@ -346,14 +367,15 @@ func (e *Engine) RunQuery(queryId, queryType, sql string) (common.QueryResult, e
 // ReadOnlyQuery runs a single read statement with writes blocked by the
 // database. Unlike RunQuery it isn't saved to the history.
 func (e *Engine) ReadOnlyQuery(ctx context.Context, sql string, maxRows int) (common.QueryResult, error) {
-	if e.activeClient == nil {
-		return common.QueryResult{}, errors.New("no active database connection found")
+	client, err := e.client()
+	if err != nil {
+		return common.QueryResult{}, err
 	}
 	if err := common.CheckReadOnly(sql); err != nil {
 		return common.QueryResult{}, err
 	}
 	start := time.Now()
-	result, err := e.activeClient.ReadOnlyQuery(ctx, sql, maxRows)
+	result, err := client.ReadOnlyQuery(ctx, sql, maxRows)
 	result.TimeElapsed = time.Since(start).Milliseconds()
 	return result, err
 }
@@ -363,48 +385,54 @@ func (e *Engine) GetQueryHistory(limit int, search string, dateFrom string, date
 }
 
 func (e *Engine) CancelQuery(queryId string) error {
-	if e.activeClient == nil {
-		return errors.New("no active database connection found")
+	client, err := e.client()
+	if err != nil {
+		return err
 	}
-	return e.activeClient.CancelQuery(queryId)
+	return client.CancelQuery(queryId)
 }
 
 func (e *Engine) ListTables() ([]string, error) {
-	if e.activeClient == nil {
-		return nil, errors.New("no active database connection found")
+	client, err := e.client()
+	if err != nil {
+		return nil, err
 	}
-	return e.activeClient.ListTables()
+	return client.ListTables()
 }
 
 func (e *Engine) GetTableData(table string, limit, offset int, orderBy, orderDir string) (common.QueryResult, error) {
-	if e.activeClient == nil {
-		return common.QueryResult{}, errors.New("no active database connection found")
+	client, err := e.client()
+	if err != nil {
+		return common.QueryResult{}, err
 	}
-	return e.activeClient.GetTableData(table, limit, offset, orderBy, orderDir)
+	return client.GetTableData(table, limit, offset, orderBy, orderDir)
 }
 
 func (e *Engine) GetTableSchema(table string) (common.QueryResult, error) {
-	if e.activeClient == nil {
-		return common.QueryResult{}, errors.New("no active database connection found")
+	client, err := e.client()
+	if err != nil {
+		return common.QueryResult{}, err
 	}
-	return e.activeClient.GetTableSchema(table)
+	return client.GetTableSchema(table)
 }
 
 func (e *Engine) GetDDL(table string) (string, error) {
-	if e.activeClient == nil {
-		return "", errors.New("no active database connection found")
+	client, err := e.client()
+	if err != nil {
+		return "", err
 	}
-	return e.activeClient.GetDDL(table)
+	return client.GetDDL(table)
 }
 
 // checks the health of the current database connection by pinging the database and measuring latency
 func (e *Engine) CheckConnectionHealth() (*float64, error) {
-	if e.activeClient == nil {
-		return nil, errors.New("no active database connection found")
+	client, err := e.client()
+	if err != nil {
+		return nil, err
 	}
 
 	start := time.Now()
-	err := e.activeClient.Ping()
+	err = client.Ping()
 	duration := time.Since(start)
 
 	if err != nil {

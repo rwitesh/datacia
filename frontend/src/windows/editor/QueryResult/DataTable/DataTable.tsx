@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useEffect, forwardRef, useImperativeHandle } from "react";
+import { useState, useRef, useMemo, useEffect, useCallback, forwardRef, useImperativeHandle } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -9,7 +9,7 @@ import {
 import { useVirtualizer } from "@tanstack/react-virtual";
 
 import type { DataRow } from "./types";
-import type { SelectionGeometry } from "./utils/cellSelection";
+import { extractSelectedData, type SelectionGeometry } from "./utils/cellSelection";
 import { useTableDimensions } from "./hooks/useTableDimensions";
 import { useTableColumns } from "./hooks/useTableColumns";
 import { useTableSelection } from "./hooks/useTableSelection";
@@ -23,8 +23,8 @@ import { useTheme } from "@/components/theme";
 interface DataTableProps {
   columns: string[];
   data: DataRow[];
-  onSelectionChange: (selection: SelectionGeometry | null) => void;
-  extraBlankRows?: number;
+  // selectedRows are the rows the selection covers, in the order shown.
+  onSelectionChange: (selection: SelectionGeometry | null, selectedRows: DataRow[]) => void;
   isTableViewMode?: boolean;
   currentOrderBy?: string;
   currentOrderDir?: "asc" | "desc";
@@ -41,7 +41,6 @@ export const DataTable = forwardRef<HTMLDivElement, DataTableProps>(function Dat
   columns,
   data,
   onSelectionChange,
-  extraBlankRows = 0,
   isTableViewMode = false,
   currentOrderBy,
   currentOrderDir,
@@ -121,6 +120,15 @@ export const DataTable = forwardRef<HTMLDivElement, DataTableProps>(function Dat
   });
 
   const rows = table.getRowModel().rows;
+  // Selection indices are positions in the (possibly sorted) view, so
+  // selected data must be read from these rather than from data.
+  const viewRows = useMemo(() => rows.map((row) => row.original), [rows]);
+  // A new identity when the sort changes, so the selection is reported again.
+  const reportSelection = useCallback(
+    (geometry: SelectionGeometry | null) =>
+      onSelectionChange(geometry, extractSelectedData(geometry, columns, viewRows)),
+    [onSelectionChange, columns, viewRows]
+  );
   const headers = table.getFlatHeaders();
   const rowHeight = 24;
 
@@ -161,8 +169,8 @@ export const DataTable = forwardRef<HTMLDivElement, DataTableProps>(function Dat
     handleMouseEnter,
   } = useTableSelection({
     columns,
-    data,
-    onSelectionChange,
+    data: viewRows,
+    onSelectionChange: reportSelection,
     scrollRef,
     rowHeight,
     colWidths: finalColWidths.slice(1),
@@ -175,7 +183,7 @@ export const DataTable = forwardRef<HTMLDivElement, DataTableProps>(function Dat
   );
 
   // Virtualization setup
-  const totalRows = rows.length + extraBlankRows;
+  const totalRows = rows.length;
   const rowVirtualizer = useVirtualizer({
     count: totalRows,
     getScrollElement: () => scrollRef.current,
@@ -287,7 +295,7 @@ export const DataTable = forwardRef<HTMLDivElement, DataTableProps>(function Dat
                 onMouseDown={handleMouseDown}
                 onMouseEnter={handleMouseEnter}
                 columns={columns}
-                data={data}
+                data={viewRows}
                 onOpenDataView={onOpenDataView}
               />
             );

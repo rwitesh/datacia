@@ -27,7 +27,7 @@ export const useCreateFolder = () => {
             queryClient.invalidateQueries({ queryKey: ["queries-tree"] });
         },
         onError: (err: Error) => {
-            console.error(err.message || "Failed to create folder");
+            toast.error(err.message || "Failed to create folder");
         }
     });
 };
@@ -40,7 +40,7 @@ export const useCreateQueryFile = () => {
             queryClient.invalidateQueries({ queryKey: ["queries-tree"] });
         },
         onError: (err: Error) => {
-            console.error(err.message || "Failed to create file");
+            toast.error(err.message || "Failed to create file");
         }
     });
 };
@@ -53,7 +53,7 @@ export const useRenameNode = () => {
             queryClient.invalidateQueries({ queryKey: ["queries-tree"] });
         },
         onError: (err: Error) => {
-            console.error(err.message || "Failed to rename");
+            toast.error(err.message || "Failed to rename");
         }
     });
 };
@@ -66,7 +66,7 @@ export const useMoveNode = () => {
             queryClient.invalidateQueries({ queryKey: ["queries-tree"] });
         },
         onError: (err: Error) => {
-            console.error(err.message || "Failed to move");
+            toast.error(err.message || "Failed to move");
         }
     });
 };
@@ -79,7 +79,7 @@ export const useDeleteNode = () => {
             queryClient.invalidateQueries({ queryKey: ["queries-tree"] });
         },
         onError: (err: Error) => {
-            console.error(err.message || "Failed to delete");
+            toast.error(err.message || "Failed to delete");
         }
     });
 };
@@ -88,7 +88,7 @@ export const useReadFile = () => {
     return useMutation<string, Error, string>({
         mutationFn: ReadFile,
         onError: (err: Error) => {
-            console.error(err.message || "Failed to read file");
+            toast.error(err.message || "Failed to read file");
         }
     });
 };

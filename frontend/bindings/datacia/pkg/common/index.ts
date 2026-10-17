@@ -3,6 +3,7 @@
 
 export {
     ConnectionInfo,
+    DatabaseInfo,
     QueryLogs,
     QueryResult,
     QueryType

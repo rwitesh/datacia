@@ -218,8 +218,6 @@ func NewService(app *application.App) *Service {
 }
 
 func (s *Service) GetAppInfo() *Info {
-	logger.Info("app_launch")
-
 	return Get()
 }
 

@@ -1,6 +1,19 @@
 package settings
 
-import "testing"
+import (
+	"os"
+	"testing"
+
+	"datacia/internal/security"
+)
+
+func TestMain(m *testing.M) {
+	// Keys are encrypted with the machine-bound key, as in the app.
+	if err := security.InitSecurityContext(); err != nil {
+		panic(err)
+	}
+	os.Exit(m.Run())
+}
 
 func TestUpdateSettingsSavesKeys(t *testing.T) {
 	globalInfo = &Info{Settings: defaultSettings()}

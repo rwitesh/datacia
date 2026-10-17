@@ -1,42 +1,5 @@
-import * as yup from "yup";
-import { ENGINE_IDS, SQLITE } from "@/shared/utils/engines";
+import { SQLITE } from "@/shared/utils/engines";
 import type { FormValues } from "./types";
-
-export const validationSchema = yup
-  .object({
-    connectionName: yup.string().default(""),
-    engine: yup.string().oneOf(ENGINE_IDS).default("postgres"),
-    host: yup.string().default(""),
-    port: yup.string().default(""),
-    username: yup.string().default(""),
-    password: yup.string().default(""),
-    database: yup.string().default(""),
-    useSSH: yup.boolean().default(false),
-    sshHost: yup.string().default(""),
-    sshPort: yup.string().default(""),
-    sshUsername: yup.string().default(""),
-    sshPassword: yup.string().default(""),
-    useSSHKey: yup.boolean().default(false),
-    sshKeyPath: yup.string().default(""),
-  })
-  .required();
-
-export const validateForSave = (values: FormValues) => {
-  const errs: Partial<Record<keyof FormValues, string>> = {};
-  if (!values.connectionName?.trim())
-    errs.connectionName = "Connection name is required";
-  if (!values.engine) errs.engine = "Database engine is required";
-
-  if (values.engine === SQLITE) {
-    if (!values.database?.trim()) errs.database = "Database file is required";
-  } else {
-    if (!values.host?.trim()) errs.host = "Host is required";
-    if (!values.port?.trim()) errs.port = "Port is required";
-    if (!values.username?.trim()) errs.username = "Username is required";
-    if (!values.database?.trim()) errs.database = "Database is required";
-  }
-  return errs;
-};
 
 export const validateForTestConnect = (values: FormValues) => {
   const errs: Partial<Record<keyof FormValues, string>> = {};
@@ -62,5 +25,12 @@ export const validateForTestConnect = (values: FormValues) => {
     }
   }
 
+  return errs;
+};
+
+export const validateForSave = (values: FormValues) => {
+  const errs = validateForTestConnect(values);
+  if (!values.connectionName?.trim())
+    errs.connectionName = "Connection name is required";
   return errs;
 };

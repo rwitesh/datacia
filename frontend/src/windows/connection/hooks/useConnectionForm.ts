@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
-import { yupResolver } from "@hookform/resolvers/yup";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 
 import {
@@ -16,7 +15,6 @@ import type { FormValues, Status } from "../utils/types";
 import {
   validateForSave,
   validateForTestConnect,
-  validationSchema,
 } from "../utils/validation";
 import { useConnectDatabase } from "./useConnectDatabase";
 interface FetchedConnectionData {
@@ -64,7 +62,6 @@ export const useConnectionForm = ({
   }
 
   const form = useForm<FormValues>({
-    resolver: yupResolver(validationSchema),
     mode: "onChange",
     defaultValues: {
       connectionName: "",

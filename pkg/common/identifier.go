@@ -30,11 +30,6 @@ func ValidateIdentifier(name string) error {
 	return nil
 }
 
-// returns true if the identifier is safe
-func IsValidIdentifier(name string) bool {
-	return ValidateIdentifier(name) == nil
-}
-
 // QuoteIdentifier safely quotes a SQL identifier (table/column name)
 // It validates the identifier and escapes the quote character by doubling it.
 // Use QuoteBacktick for MySQL/ClickHouse, QuoteDoubleQuote for PostgreSQL/SQLite.
@@ -57,9 +52,4 @@ func ValidateUUID(id string) error {
 		return fmt.Errorf("invalid UUID format: %q", id)
 	}
 	return nil
-}
-
-// returns true if the string is a valid UUID
-func IsValidUUID(id string) bool {
-	return ValidateUUID(id) == nil
 }

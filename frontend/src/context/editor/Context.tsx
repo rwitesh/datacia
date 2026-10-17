@@ -21,7 +21,17 @@ export interface Tab {
   savedPath?: string;
   scroll?: { left: number; top: number };
   selection?: SelectionGeometry | null;
+  // The rows selection covers, in the order the grid shows them.
+  selectedRows?: Record<string, unknown>[];
 }
+
+export type TableDataParams = {
+  table: string;
+  limit: number;
+  offset: number;
+  orderBy?: string;
+  orderDir?: "asc" | "desc";
+};
 
 export type EditorContextType = {
   // List of tables
@@ -48,6 +58,8 @@ export type EditorContextType = {
     pagination?: boolean
   ) => Promise<void>;
   stopQuery: (tabId?: string) => Promise<void>;
+  // Loads a page of a table tab's data, honouring its sort order.
+  loadTableData: (tabId: string, params: TableDataParams) => Promise<void>;
 
   // Result table ref for PNG export
   tableRef: RefObject<HTMLDivElement | null>;

@@ -1,7 +1,9 @@
 package queries
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
@@ -37,10 +39,8 @@ func NewQueriesService(app *application.App) *QueriesService {
 	rootDir, err := paths.GetQueriesDir()
 	if err != nil {
 		logger.Error("Failed to resolve queries root dir", "error", err.Error())
-	}
-
-	if err := os.MkdirAll(rootDir, 0755); err != nil {
-		logger.Error("Failed to create queries root dir", "error", err.Error(), "rootDir", rootDir)
+	} else if err := os.MkdirAll(rootDir, 0755); err != nil {
+		logger.Error("Failed to create queries root dir", "error", err.Error())
 	}
 
 	return &QueriesService{
@@ -49,31 +49,48 @@ func NewQueriesService(app *application.App) *QueriesService {
 	}
 }
 
-// resolvePath resolves a relative path to an absolute path within the rootDir.
-// It ensures the resulting path is contained within rootDir.
+// resolvePath resolves a path relative to rootDir and rejects any that
+// would land outside it. An empty path resolves to rootDir itself.
 func (s *QueriesService) resolvePath(relPath string) (string, error) {
-	// Clean the relative path to remove . and ..
-	relPath = filepath.Clean(relPath)
-
-	// Prevent navigation above root with leading ".." or "/" if accidentally passed
-	if strings.HasPrefix(relPath, "..") || strings.HasPrefix(relPath, "/") {
-		// Just trim leading separators/dots to be safe or error out?
-		// Better to error if it looks malicious, but we can just treat it as relative to root.
-		// For stricter security:
-		if strings.HasPrefix(relPath, "..") {
-			return "", fmt.Errorf("invalid path: attempts to traverse up")
-		}
+	if s.rootDir == "" {
+		return "", errors.New("queries directory is unavailable")
 	}
-
-	// Join with root
 	fullPath := filepath.Join(s.rootDir, relPath)
-
-	// Final check to make sure it is still under rootDir (handles tricky cases)
-	if !strings.HasPrefix(fullPath, s.rootDir) {
+	rel, err := filepath.Rel(s.rootDir, fullPath)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 		return "", fmt.Errorf("invalid path: escapes root directory")
 	}
-
 	return fullPath, nil
+}
+
+// resolveEntry is resolvePath for operations on a single file or folder,
+// which must never act on the queries directory itself.
+func (s *QueriesService) resolveEntry(relPath string) (string, error) {
+	fullPath, err := s.resolvePath(relPath)
+	if err != nil {
+		return "", err
+	}
+	if fullPath == filepath.Clean(s.rootDir) {
+		return "", errors.New("invalid path: no file or folder given")
+	}
+	return fullPath, nil
+}
+
+// renameNoReplace renames like os.Rename but fails instead of replacing an
+// existing destination, which os.Rename does silently on macOS and Linux.
+// A destination that is the source itself is allowed, so a case-only rename
+// works on case-insensitive file systems.
+func renameNoReplace(from, to string) error {
+	toInfo, err := os.Lstat(to)
+	if err == nil {
+		fromInfo, fromErr := os.Lstat(from)
+		if fromErr != nil || !os.SameFile(fromInfo, toInfo) {
+			return fmt.Errorf("%q already exists", filepath.Base(to))
+		}
+	} else if !errors.Is(err, fs.ErrNotExist) {
+		return err
+	}
+	return os.Rename(from, to)
 }
 
 func (s *QueriesService) ListTree() ([]FileNode, error) {
@@ -130,7 +147,7 @@ func (s *QueriesService) readDirRecursive(relPath string) ([]FileNode, error) {
 }
 
 func (s *QueriesService) CreateFolder(relPath string) error {
-	absPath, err := s.resolvePath(relPath)
+	absPath, err := s.resolveEntry(relPath)
 	if err != nil {
 		return err
 	}
@@ -141,62 +158,46 @@ func (s *QueriesService) CreateQueryFile(relPath string) error {
 	if !strings.HasSuffix(relPath, ".sql") {
 		relPath += ".sql"
 	}
-	absPath, err := s.resolvePath(relPath)
+	absPath, err := s.resolveEntry(relPath)
 	if err != nil {
 		return err
 	}
 
-	// Create parent dirs if they don't exist? The user might expect this.
-	// But usually "Create File" implies the parent folder exists or is selected.
-	// We'll enforce parent existence or auto-create?
-	// Standard behavior: create file. returns error if dir doesn't exist.
-
-	f, err := os.Create(absPath)
+	f, err := os.OpenFile(absPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0644)
+	if errors.Is(err, fs.ErrExist) {
+		return fmt.Errorf("%q already exists", filepath.Base(absPath))
+	}
 	if err != nil {
 		return err
 	}
-	defer f.Close()
-	return nil
+	return f.Close()
 }
 
 func (s *QueriesService) Rename(relPath string, newName string) error {
-	absPath, err := s.resolvePath(relPath)
+	absPath, err := s.resolveEntry(relPath)
 	if err != nil {
 		return err
 	}
-
-	dir := filepath.Dir(absPath)
-	newAbsPath := filepath.Join(dir, newName)
-
-	// Verify new path is also valid
-	if !strings.HasPrefix(newAbsPath, s.rootDir) {
-		return fmt.Errorf("invalid new name: escapes root directory")
+	if newName == "" || newName == "." || newName == ".." || strings.ContainsAny(newName, `/\`) {
+		return fmt.Errorf("invalid name %q", newName)
 	}
-
-	return os.Rename(absPath, newAbsPath)
+	return renameNoReplace(absPath, filepath.Join(filepath.Dir(absPath), newName))
 }
 
 func (s *QueriesService) Move(relSourcePath string, relDestPath string) error {
-	absSourcePath, err := s.resolvePath(relSourcePath)
+	absSourcePath, err := s.resolveEntry(relSourcePath)
 	if err != nil {
 		return err
 	}
-
-	absDestPath, err := s.resolvePath(relDestPath)
+	absDestPath, err := s.resolveEntry(relDestPath)
 	if err != nil {
 		return err
 	}
-
-	// Create parent dir for destination if it doesn't exist?
-	// os.Rename fails if parent dir doesn't exist.
-	// Frontend should ensure valid path, but good to ensure dir exists.
-	// But usually Move implies the folder structure exists.
-
-	return os.Rename(absSourcePath, absDestPath)
+	return renameNoReplace(absSourcePath, absDestPath)
 }
 
 func (s *QueriesService) Delete(relPath string) error {
-	absPath, err := s.resolvePath(relPath)
+	absPath, err := s.resolveEntry(relPath)
 	if err != nil {
 		return err
 	}
@@ -217,7 +218,7 @@ func (s *QueriesService) ReadFile(relPath string) (string, error) {
 }
 
 func (s *QueriesService) WriteFile(relPath string, content string) error {
-	absPath, err := s.resolvePath(relPath)
+	absPath, err := s.resolveEntry(relPath)
 	if err != nil {
 		return err
 	}

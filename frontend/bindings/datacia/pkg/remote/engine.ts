@@ -19,10 +19,11 @@ export function CancelQuery(queryId: string): $CancellablePromise<void> {
     return $Call.ByID(1861391844, queryId);
 }
 
-export function ChangeDatabase(engine: string, host: string, port: string, username: string, password: string, database: string): $CancellablePromise<void> {
-    return $Call.ByID(1751090827, engine, host, port, username, password, database);
-}
-
+/**
+ * ChangeDatabaseByName reconnects to another database on the same server. It
+ * reuses the active SSH tunnel: the client's host and port point at the
+ * tunnel's local end, and the tunnel's own credentials aren't kept.
+ */
 export function ChangeDatabaseByName(database: string): $CancellablePromise<void> {
     return $Call.ByID(2613459925, database);
 }
@@ -42,6 +43,12 @@ export function CreateNewConnection(engine: string, host: string, port: string, 
     return $Call.ByID(3984386824, engine, host, port, username, password, database, test);
 }
 
+/**
+ * CreateNewConnectionWithSSH connects to a database, optionally through an
+ * SSH tunnel. A test connection is closed straight away and never touches the
+ * active connection, since the connection window can test while an editor is
+ * open.
+ */
 export function CreateNewConnectionWithSSH(engine: string, host: string, port: string, username: string, password: string, database: string, useSSH: string, sshHost: string, sshPort: string, sshUsername: string, sshPassword: string, sshKeyPath: string, test: boolean): $CancellablePromise<void> {
     return $Call.ByID(3942865490, engine, host, port, username, password, database, useSSH, sshHost, sshPort, sshUsername, sshPassword, sshKeyPath, test);
 }
@@ -94,13 +101,15 @@ export function ListConnections(): $CancellablePromise<{ [_ in string]?: common$
     });
 }
 
-export function ListDatabases(): $CancellablePromise<any> {
-    return $Call.ByID(3297870880);
+export function ListDatabases(): $CancellablePromise<common$0.DatabaseInfo> {
+    return $Call.ByID(3297870880).then(($result: any) => {
+        return $$createType8($result);
+    });
 }
 
 export function ListTables(): $CancellablePromise<string[]> {
     return $Call.ByID(3417806403).then(($result: any) => {
-        return $$createType8($result);
+        return $$createType9($result);
     });
 }
 
@@ -190,4 +199,5 @@ const $$createType4 = $Create.Nullable($$createType3);
 const $$createType5 = common$0.QueryResult.createFrom;
 const $$createType6 = common$0.ConnectionInfo.createFrom;
 const $$createType7 = $Create.Map($Create.Any, $$createType6);
-const $$createType8 = $Create.Array($Create.Any);
+const $$createType8 = common$0.DatabaseInfo.createFrom;
+const $$createType9 = $Create.Array($Create.Any);

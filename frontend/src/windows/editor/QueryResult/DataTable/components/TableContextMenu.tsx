@@ -41,16 +41,19 @@ export function TableContextMenu({
 
   const dataToUse = useMemo(() => {
     const selectedData = extractSelectedData(selection, columns, data);
-    return selectedData.length > 0 ? selectedData : [row];
+    if (selectedData.length > 0) return selectedData;
+    // Rows from Go have their keys sorted; list them in column order.
+    return [Object.fromEntries(columns.map((column) => [column, row[column]]))];
   }, [selection, columns, data, row]);
+
+  const displayColumns = dataToUse.length > 0 ? Object.keys(dataToUse[0]) : [];
 
   const { exportJSON, exportCSV, exportPNG, copyText, copyJSON, copyPNG } =
     useExportActions({
       tableRef: exportRef,
       data: dataToUse,
+      columns: displayColumns,
     });
-
-  const displayColumns = dataToUse.length > 0 ? Object.keys(dataToUse[0]) : [];
 
   return (
     <>

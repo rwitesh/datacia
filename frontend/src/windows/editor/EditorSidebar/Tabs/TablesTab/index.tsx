@@ -6,7 +6,8 @@ import {
     ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { useEditorContext } from "@/context/editor/Index";
-import { useGetTableData, useGetTableSchema } from "@/services/database";
+import { useGetTableSchema } from "@/services/database";
+import { errorMessage } from "@/lib/utils";
 
 export function TablesTab() {
 
@@ -16,10 +17,10 @@ export function TablesTab() {
         updateTab,
         tabs,
         setActiveTab,
+        loadTableData,
     } = useEditorContext();
 
-    const getTableDataMutation = useGetTableData();
-    const getTableSchemaMutation = useGetTableSchema();
+    const { mutateAsync: getTableSchema } = useGetTableSchema();
 
     const handleTableClick = async (table: string) => {
         const existingTab = tabs.find((t) => t.type === "table" && t.table === table);
@@ -33,40 +34,11 @@ export function TablesTab() {
             return;
         }
 
-        updateTab(tab.id, {
-            isExecuting: true,
-            results: null,
-            error: undefined,
+        await loadTableData(tab.id, {
+            table: tab.table,
+            limit: tab.limit,
+            offset: tab.offset,
         });
-
-        getTableDataMutation.mutate(
-            {
-                table: tab.table,
-                limit: tab.limit,
-                offset: tab.offset,
-            },
-            {
-                onSuccess: (response) => {
-                    updateTab(tab.id, {
-                        results: response,
-                        isExecuting: false,
-                        pagination: true,
-                    });
-                },
-                onError: (err: unknown) => {
-                    const message =
-                        err instanceof Error
-                            ? err.message
-                            : String(err) || "Error fetching table data";
-                    updateTab(tab.id, {
-                        error: message,
-                        results: null,
-                        isExecuting: false,
-                        pagination: false,
-                    });
-                },
-            }
-        );
     };
 
     const handleOpenTableSchema = async (table: string) => {
@@ -87,27 +59,17 @@ export function TablesTab() {
             error: undefined,
         });
 
-        getTableSchemaMutation.mutate(tab.table, {
-            onSuccess: (response) => {
-                updateTab(tab.id, {
-                    results: response,
-                    isExecuting: false,
-                    pagination: false,
-                });
-            },
-            onError: (err: unknown) => {
-                const message =
-                    err instanceof Error
-                        ? err.message
-                        : String(err) || "Error fetching table schema";
-                updateTab(tab.id, {
-                    error: message,
-                    results: null,
-                    isExecuting: false,
-                    pagination: false,
-                });
-            },
-        });
+        try {
+            const response = await getTableSchema(tab.table);
+            updateTab(tab.id, { results: response, isExecuting: false, pagination: false });
+        } catch (err) {
+            updateTab(tab.id, {
+                error: errorMessage(err),
+                results: null,
+                isExecuting: false,
+                pagination: false,
+            });
+        }
     };
 
     // Only show loading spinner on initial load, not during background refetch

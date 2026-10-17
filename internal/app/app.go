@@ -5,7 +5,6 @@ import (
 	"datacia/internal/ai"
 	"datacia/internal/clipboard"
 	"datacia/internal/constants"
-	"datacia/internal/db"
 	"datacia/internal/files"
 	"datacia/internal/intellisense"
 	"datacia/internal/logger"
@@ -25,21 +24,21 @@ import (
 	clip "golang.design/x/clipboard"
 )
 
-type AppManager interface {
-	Initialize() error
-	GetApplication() *application.App
-	GetStore() *db.Store
-	Run() error
-}
-
 type App struct {
-	instance           *application.App
-	connectionWindow   *application.WebviewWindow
-	editorWindow       *application.WebviewWindow
-	settingsWindow     *application.WebviewWindow
-	engine             *remote.Engine
-	version            string
-	windowMutex        sync.Mutex
+	instance *application.App
+	engine   *remote.Engine
+	version  string
+
+	// windowMutex guards the window fields and closingIntentional. Close()
+	// only queues WindowClosing, so the hooks run later on another goroutine:
+	// a window the app closes itself is cleared from its field first, and
+	// the hooks ignore any window that is no longer current.
+	windowMutex      sync.Mutex
+	connectionWindow *application.WebviewWindow
+	editorWindow     *application.WebviewWindow
+	settingsWindow   *application.WebviewWindow
+	// closingIntentional is set while quitting into an update so the hooks
+	// don't treat that shutdown as the user closing a window.
 	closingIntentional bool
 }
 
@@ -121,7 +120,7 @@ func (a *App) Initialize() error {
 }
 
 func (a *App) createConnectionWindow() error {
-	a.connectionWindow = a.instance.Window.NewWithOptions(application.WebviewWindowOptions{
+	window := a.instance.Window.NewWithOptions(application.WebviewWindowOptions{
 		Name:  constants.CONNECTION_WINDOW_NAME,
 		Title: constants.APP_TITLE,
 		URL:   "/",
@@ -138,30 +137,33 @@ func (a *App) createConnectionWindow() error {
 		Height:           constants.CONNECTION_WINDOW_HEIGHT,
 	})
 
-	if a.connectionWindow == nil {
+	if window == nil {
 		logger.Error("Failed to create connection window")
 		return fmt.Errorf("failed to create connection window")
 	}
 
-	a.connectionWindow.Center()
-	a.connectionWindow.RegisterHook(events.Common.WindowClosing, func(e *application.WindowEvent) {
-		if a.closingIntentional {
-			return
+	a.connectionWindow = window
+	window.Center()
+	window.RegisterHook(events.Common.WindowClosing, func(e *application.WindowEvent) {
+		a.windowMutex.Lock()
+		closedByUser := a.connectionWindow == window && !a.closingIntentional
+		if closedByUser {
+			a.connectionWindow = nil
 		}
+		quit := closedByUser && a.editorWindow == nil
+		a.windowMutex.Unlock()
 
-		// If editor window is open, just close this window (default behavior) and return
-		// Do not quit the application
-		if a.editorWindow != nil {
-			return
+		// Closing the last window quits; with the editor open it just closes.
+		if quit {
+			a.instance.Quit()
 		}
-		a.instance.Quit()
 	})
 
 	return nil
 }
 
 func (a *App) createEditorWindow() error {
-	a.editorWindow = a.instance.Window.NewWithOptions(application.WebviewWindowOptions{
+	window := a.instance.Window.NewWithOptions(application.WebviewWindowOptions{
 		Name:  constants.EDITOR_WINDOW_NAME,
 		Title: constants.APP_TITLE,
 		URL:   "/#/editor",
@@ -180,38 +182,41 @@ func (a *App) createEditorWindow() error {
 		MinHeight:        600,
 	})
 
-	if a.editorWindow == nil {
+	if window == nil {
 		logger.Error("Failed to create editor window")
 		return fmt.Errorf("failed to create editor window")
 	}
 
-	a.editorWindow.Center()
-	a.editorWindow.RegisterHook(events.Common.WindowClosing, func(e *application.WindowEvent) {
-		if a.closingIntentional {
+	a.editorWindow = window
+	window.Center()
+	window.RegisterHook(events.Common.WindowClosing, func(e *application.WindowEvent) {
+		a.windowMutex.Lock()
+		if a.editorWindow != window || a.closingIntentional {
+			a.windowMutex.Unlock()
 			return
 		}
+		// The user closed the editor: disconnect and go back to the
+		// connection window.
+		a.editorWindow = nil
+		var err error
+		if a.connectionWindow != nil {
+			a.connectionWindow.Show()
+			a.connectionWindow.Focus()
+		} else {
+			err = a.createConnectionWindow()
+		}
+		a.windowMutex.Unlock()
+
 		if a.engine != nil {
 			_ = a.engine.CloseCurrentConnection(false)
 		}
-		a.editorWindow = nil
-		if err := a.createConnectionWindow(); err != nil {
+		if err != nil {
 			logger.Error("Failed to create connection window after editor close", "error", err.Error())
 			a.instance.Quit()
 		}
 	})
 
 	return nil
-}
-
-func (a *App) GetApplication() *application.App {
-	return a.instance
-}
-
-func (a *App) GetWindow() *application.WebviewWindow {
-	if a.editorWindow != nil {
-		return a.editorWindow
-	}
-	return a.connectionWindow
 }
 
 func (a *App) OpenEditor() {
@@ -223,10 +228,8 @@ func (a *App) OpenEditor() {
 		a.editorWindow.Focus()
 		// Even if editor exists, ensure connection window is closed
 		if a.connectionWindow != nil {
-			a.closingIntentional = true
 			a.connectionWindow.Close()
 			a.connectionWindow = nil
-			a.closingIntentional = false
 		}
 		return
 	}
@@ -240,10 +243,8 @@ func (a *App) OpenEditor() {
 
 	// If successful, close the old window
 	if a.connectionWindow != nil {
-		a.closingIntentional = true
 		a.connectionWindow.Close()
 		a.connectionWindow = nil
-		a.closingIntentional = false
 	}
 }
 
@@ -256,10 +257,8 @@ func (a *App) CloseEditor() {
 		a.connectionWindow.Focus()
 		// Ensure editor window is closed if it exists (though usually it shouldn't if we are in this state, but for safety)
 		if a.editorWindow != nil {
-			a.closingIntentional = true
 			a.editorWindow.Close()
 			a.editorWindow = nil
-			a.closingIntentional = false
 		}
 		return
 	}
@@ -273,10 +272,8 @@ func (a *App) CloseEditor() {
 
 	// If successful, close the old window
 	if a.editorWindow != nil {
-		a.closingIntentional = true
 		a.editorWindow.Close()
 		a.editorWindow = nil
-		a.closingIntentional = false
 	}
 }
 
@@ -299,14 +296,17 @@ func (a *App) OpenConnectionWindow() {
 
 // RestartForUpdate hands over to the staged update: the updater spawns its
 // helper and quits the app. closingIntentional stops the WindowClosing hooks
-// from treating that shutdown as the user closing a window.
+// from treating that shutdown as the user closing a window. The lock isn't
+// held across Restart, since the hooks it triggers take it.
 func (a *App) RestartForUpdate() error {
 	a.windowMutex.Lock()
-	defer a.windowMutex.Unlock()
-
 	a.closingIntentional = true
+	a.windowMutex.Unlock()
+
 	if err := a.instance.Updater.Restart(context.Background()); err != nil {
+		a.windowMutex.Lock()
 		a.closingIntentional = false
+		a.windowMutex.Unlock()
 		return err
 	}
 	return nil
@@ -317,7 +317,7 @@ func (a *App) createSettingsWindow(tab string) error {
 	if tab == "ai" {
 		url = "/#/settings?tab=ai"
 	}
-	a.settingsWindow = a.instance.Window.NewWithOptions(application.WebviewWindowOptions{
+	window := a.instance.Window.NewWithOptions(application.WebviewWindowOptions{
 		Name:  constants.SETTINGS_WINDOW_NAME,
 		Title: "Settings",
 		URL:   url,
@@ -334,14 +334,19 @@ func (a *App) createSettingsWindow(tab string) error {
 		Height:           constants.SETTINGS_WINDOW_HEIGHT,
 	})
 
-	if a.settingsWindow == nil {
+	if window == nil {
 		logger.Error("Failed to create settings window")
 		return fmt.Errorf("failed to create settings window")
 	}
 
-	a.settingsWindow.Center()
-	a.settingsWindow.RegisterHook(events.Common.WindowClosing, func(e *application.WindowEvent) {
-		a.settingsWindow = nil
+	a.settingsWindow = window
+	window.Center()
+	window.RegisterHook(events.Common.WindowClosing, func(e *application.WindowEvent) {
+		a.windowMutex.Lock()
+		if a.settingsWindow == window {
+			a.settingsWindow = nil
+		}
+		a.windowMutex.Unlock()
 	})
 
 	return nil
@@ -368,14 +373,7 @@ func (a *App) Run() error {
 		logger.Error("Failed to create connection window", "error", err.Error())
 		return err
 	}
-
-	go func() {
-		for {
-			now := time.Now().Format(time.RFC1123)
-			a.instance.Event.Emit("time", now)
-			time.Sleep(time.Second)
-		}
-	}()
+	logger.Info("app_launch")
 
 	if enabled, err := update.Setup(a.instance, a.version); err != nil {
 		logger.Error("Failed to configure auto-update", "error", err.Error())
@@ -388,11 +386,4 @@ func (a *App) Run() error {
 		logger.Error("Application run failed", "error", err.Error())
 	}
 	return err
-}
-
-func (a *App) GetStore() *db.Store {
-	if a.engine == nil {
-		return nil
-	}
-	return a.engine.GetStore()
 }

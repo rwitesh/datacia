@@ -19,33 +19,6 @@ export interface FormValues {
   sshKeyPath: string;
 }
 
-export interface ConnectionConfig {
-  engine: DatabaseEngine;
-  host: string;
-  port: string;
-  username: string;
-  password: string;
-  database: string;
-  useSSH?: string;
-  sshHost?: string;
-  sshPort?: string;
-  sshUsername?: string;
-  sshPassword?: string;
-  sshKeyPath?: string;
-}
-
-export interface FetchedConnection {
-  id?: string;
-  name?: string;
-  connectionName?: string;
-  engine?: string;
-  host?: string;
-  port?: string;
-  username?: string;
-  password?: string;
-  database?: string;
-}
-
 export type StatusKind = "success" | "error" | "info";
 
 export interface StatusMessage {
@@ -56,11 +29,3 @@ export interface StatusMessage {
 
 export type Status = StatusMessage | null;
 
-export type ValidationErrors = Partial<Record<keyof FormValues, string>>;
-
-export interface ConnectionFormState {
-  isLoading: boolean;
-  isSubmitting: boolean;
-  hasErrors: boolean;
-  status: Status;
-}

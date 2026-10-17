@@ -6,25 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"sync"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
-
-type PostgresClient interface {
-	Close() error
-	Ping() error
-	RunQuery(queryId, queryType, sql string) (common.QueryResult, error)
-	CancelQuery(queryId string) error
-	ListDatabases() (common.DatabaseInfo, error)
-	ListTables() ([]string, error)
-	GetConnectionInfo() (map[string]string, error)
-}
-
-var _ PostgresClient = (*Postgres)(nil)
 
 type Postgres struct {
 	pool *pgxpool.Pool
@@ -97,8 +84,6 @@ func (p *Postgres) Connect(host, port, username, password, database string, test
 }
 
 func (p *Postgres) Close() error {
-	p.ActiveQueries = sync.Map{} // reset
-
 	p.Mu.Lock()
 	pool := p.pool
 	p.pool = nil
@@ -260,17 +245,6 @@ func scanRows(ctx context.Context, rows pgx.Rows, maxRows int) (common.QueryResu
 	}, nil
 }
 
-func (p *Postgres) CancelQuery(queryID string) error {
-	if cancelFunc, exists := p.ActiveQueries.Load(queryID); exists {
-		if cancel, ok := cancelFunc.(context.CancelFunc); ok {
-			cancel()
-			p.ActiveQueries.Delete(queryID)
-			return nil
-		}
-	}
-	return fmt.Errorf("query with ID %s not found or already completed", queryID)
-}
-
 func (p *Postgres) ListDatabases() (common.DatabaseInfo, error) {
 	p.Mu.RLock()
 	pool := p.pool
@@ -373,10 +347,6 @@ func (p *Postgres) GetConnectionInfo() (map[string]string, error) {
 		"password": "", // Password not exposed for security
 		"database": p.Database,
 	}, nil
-}
-
-func (p *Postgres) GetPassword() string {
-	return p.ConnectionState.GetPassword()
 }
 
 func (p *Postgres) GetTableData(table string, limit, offset int, orderBy, orderDir string) (common.QueryResult, error) {

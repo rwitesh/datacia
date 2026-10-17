@@ -1,10 +1,13 @@
 package files
 
 import (
+	"bytes"
 	"encoding/base64"
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -20,13 +23,10 @@ func NewFileService(app *application.App) *FileService {
 	}
 }
 
-// ExportDataToFile exports data to a file with the given format (csv or json)
-// data: JSON array string of rows
-// suggestedFilename: default filename suggestion
-// ExportDataToFile exports data or image to a file with the given format
-// data: JSON array string for csv/json, or base64 string for png
-// suggestedFilename: default filename suggestion
-func (s *FileService) ExportDataToFile(format string, data string, suggestedFilename string) (string, error) {
+// ExportDataToFile asks where to save and writes the export there. data is a
+// JSON array of rows for csv and json (columns gives the CSV column order), or
+// base64 image data for png. It returns the saved path, or "" if cancelled.
+func (s *FileService) ExportDataToFile(format string, data string, columns []string, suggestedFilename string) (string, error) {
 	if data == "" {
 		return "", fmt.Errorf("no data to export")
 	}
@@ -37,29 +37,27 @@ func (s *FileService) ExportDataToFile(format string, data string, suggestedFile
 	switch strings.ToLower(format) {
 	case "csv":
 		ext = ".csv"
-		var rows []map[string]interface{}
-		if err := json.Unmarshal([]byte(data), &rows); err != nil {
-			return "", fmt.Errorf("failed to parse data: %w", err)
+		csvContent, err := rowsToCSV(data, columns)
+		if err != nil {
+			return "", err
 		}
-		if len(rows) == 0 {
-			return "", fmt.Errorf("no data to export")
-		}
-		content = []byte(convertToCSV(rows))
+		content = csvContent
 	case "json":
 		ext = ".json"
-		var rows []map[string]interface{}
+		var rows []json.RawMessage
 		if err := json.Unmarshal([]byte(data), &rows); err != nil {
 			return "", fmt.Errorf("failed to parse data: %w", err)
 		}
 		if len(rows) == 0 {
 			return "", fmt.Errorf("no data to export")
 		}
-		// Pretty-print JSON
-		jsonBytes, err := json.MarshalIndent(rows, "", "  ")
-		if err != nil {
+		// Indent rather than decode and re-encode, which would sort the keys
+		// and could change how numbers are written.
+		var buf bytes.Buffer
+		if err := json.Indent(&buf, []byte(data), "", "  "); err != nil {
 			return "", fmt.Errorf("failed to format JSON: %w", err)
 		}
-		content = jsonBytes
+		content = buf.Bytes()
 	case "png":
 		ext = ".png"
 		// Remove data URL prefix if present
@@ -90,9 +88,6 @@ func (s *FileService) ExportDataToFile(format string, data string, suggestedFile
 
 	if ext == ".png" {
 		dialog.AddFilter("PNG Image", "*.png")
-	} else {
-		// Default filters for text data? Or just let it be.
-		// Wails SaveFileDialog defaults might be enough or we could add specific ones.
 	}
 
 	path, err := dialog.PromptForSingleSelection()
@@ -111,50 +106,52 @@ func (s *FileService) ExportDataToFile(format string, data string, suggestedFile
 	return path, nil
 }
 
-func convertToCSV(rows []map[string]interface{}) string {
+func rowsToCSV(data string, columns []string) ([]byte, error) {
+	if len(columns) == 0 {
+		return nil, fmt.Errorf("no columns to export")
+	}
+	// UseNumber keeps numbers as written; float64 would print 1234567 as
+	// 1.234567e+06 and round large integers.
+	decoder := json.NewDecoder(strings.NewReader(data))
+	decoder.UseNumber()
+	var rows []map[string]interface{}
+	if err := decoder.Decode(&rows); err != nil {
+		return nil, fmt.Errorf("failed to parse data: %w", err)
+	}
 	if len(rows) == 0 {
-		return ""
+		return nil, fmt.Errorf("no data to export")
 	}
 
-	// Get headers from first row
-	var headers []string
-	for key := range rows[0] {
-		headers = append(headers, key)
-	}
-
-	var sb strings.Builder
-
-	// Write header row
-	sb.WriteString(strings.Join(headers, ","))
-	sb.WriteString("\n")
-
-	// Write data rows
+	var buf bytes.Buffer
+	writer := csv.NewWriter(&buf)
+	_ = writer.Write(columns)
+	record := make([]string, len(columns))
 	for _, row := range rows {
-		var values []string
-		for _, header := range headers {
-			val := row[header]
-			values = append(values, escapeCSVValue(val))
+		for i, column := range columns {
+			record[i] = csvValue(row[column])
 		}
-		sb.WriteString(strings.Join(values, ","))
-		sb.WriteString("\n")
+		_ = writer.Write(record)
 	}
-
-	return sb.String()
+	writer.Flush()
+	return buf.Bytes(), writer.Error()
 }
 
-// properly escapes a value for CSV format
-func escapeCSVValue(val interface{}) string {
-	if val == nil {
+func csvValue(value interface{}) string {
+	switch v := value.(type) {
+	case nil:
 		return ""
+	case string:
+		return v
+	case json.Number:
+		return v.String()
+	case bool:
+		return strconv.FormatBool(v)
+	default:
+		// Objects and arrays, e.g. JSON columns.
+		encoded, err := json.Marshal(v)
+		if err != nil {
+			return fmt.Sprint(v)
+		}
+		return string(encoded)
 	}
-
-	str := fmt.Sprintf("%v", val)
-
-	// If the value contains comma, quote, or newline, wrap in quotes and escape quotes
-	if strings.ContainsAny(str, ",\"\n\r") {
-		str = strings.ReplaceAll(str, "\"", "\"\"")
-		str = "\"" + str + "\""
-	}
-
-	return str
 }

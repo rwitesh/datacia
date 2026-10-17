@@ -39,21 +39,6 @@ func (ss *SecureString) String() string {
 	return string(ss.data)
 }
 
-// Bytes returns a copy of the secure string as a byte slice.
-func (ss *SecureString) Bytes() []byte {
-	if ss == nil {
-		return nil
-	}
-	ss.mu.RLock()
-	defer ss.mu.RUnlock()
-	if ss.data == nil {
-		return nil
-	}
-	result := make([]byte, len(ss.data))
-	copy(result, ss.data)
-	return result
-}
-
 // Clear explicitly zeros the memory and removes the finalizer.
 // This should be called when the password is no longer needed.
 func (ss *SecureString) Clear() {
@@ -76,14 +61,4 @@ func (ss *SecureString) Clear() {
 // finalize is called by the garbage collector to zero memory before collection.
 func (ss *SecureString) finalize() {
 	ss.Clear()
-}
-
-// IsEmpty returns true if the secure string is nil or empty.
-func (ss *SecureString) IsEmpty() bool {
-	if ss == nil {
-		return true
-	}
-	ss.mu.RLock()
-	defer ss.mu.RUnlock()
-	return len(ss.data) == 0
 }

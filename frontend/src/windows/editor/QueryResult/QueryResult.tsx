@@ -1,19 +1,23 @@
 import { useEditorContext } from "@/context/editor/Index";
-import { useGetTableData, useGetDDL } from "@/services/database";
+import { useGetDDL } from "@/services/database";
 import { DataTable } from "./DataTable/DataTable";
 import { ErrorView } from "./ErrorView/ErrorView";
 import { DDLView } from "./DDLView/DDLView";
-import type { QueryResult as QueryResultType } from "@/services/bindings/database";
 import type { SelectionGeometry } from "./DataTable/utils/cellSelection";
+import type { DataRow } from "./DataTable/types";
 import { useCallback } from "react";
+
+// Stable fallbacks: DataTable re-reports the selection whenever its rows
+// change identity, so a fresh [] on each render would loop.
+const NO_COLUMNS: string[] = [];
+const NO_ROWS: DataRow[] = [];
 
 type QueryResultProps = {
   onOpenDataView?: () => void;
 };
 
 export function QueryResult({ onOpenDataView }: QueryResultProps) {
-  const { activeTab, updateTab, tableRef } = useEditorContext();
-  const getTableDataMutation = useGetTableData();
+  const { activeTab, updateTab, tableRef, loadTableData } = useEditorContext();
 
   const table = activeTab?.table;
   const limit = activeTab?.limit;
@@ -30,9 +34,9 @@ export function QueryResult({ onOpenDataView }: QueryResultProps) {
   );
 
   const handleSelectionChange = useCallback(
-    (selection: SelectionGeometry | null) => {
+    (selection: SelectionGeometry | null, selectedRows: DataRow[]) => {
       if (tabId) {
-        updateTab(tabId, { selection });
+        updateTab(tabId, { selection, selectedRows });
       }
     },
     [tabId, updateTab]
@@ -60,43 +64,13 @@ export function QueryResult({ onOpenDataView }: QueryResultProps) {
 
   const handleServerSort = (column: string, direction: "asc" | "desc") => {
     if (!table || limit === undefined || offset === undefined) return;
-
-    updateTab(id, {
-      isExecuting: true,
-      error: undefined,
+    loadTableData(id, {
+      table,
+      limit,
+      offset,
       orderBy: column || undefined,
       orderDir: column ? direction : undefined,
     });
-
-    getTableDataMutation.mutate(
-      {
-        table,
-        limit,
-        offset,
-        orderBy: column || undefined,
-        orderDir: column ? direction : undefined,
-      },
-      {
-        onSuccess: (response: QueryResultType) => {
-          updateTab(id, {
-            results: response,
-            isExecuting: false,
-            pagination: true,
-          });
-        },
-        onError: (err: unknown) => {
-          const message =
-            err instanceof Error
-              ? err.message
-              : String(err) || "Error fetching sorted data";
-          updateTab(id, {
-            error: message,
-            results: null,
-            isExecuting: false,
-          });
-        },
-      }
-    );
   };
 
   const handleScrollChange = (scroll: { left: number; top: number }) => {
@@ -118,8 +92,8 @@ export function QueryResult({ onOpenDataView }: QueryResultProps) {
           <DataTable
             key={id}
             ref={tableRef}
-            columns={results?.columns ?? []}
-            data={results?.data ?? []}
+            columns={results?.columns ?? NO_COLUMNS}
+            data={results?.data ?? NO_ROWS}
             onSelectionChange={handleSelectionChange}
             isTableViewMode={isTableViewMode}
             currentOrderBy={orderBy}

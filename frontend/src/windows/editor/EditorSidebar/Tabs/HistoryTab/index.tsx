@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { Loader2, CheckCircle2, XCircle, Search, CalendarIcon, X } from "lucide-react";
 import { debounce } from "lodash";
