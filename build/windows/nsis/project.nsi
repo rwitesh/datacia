@@ -95,9 +95,9 @@ Section
 
     SetOutPath $INSTDIR
 
-    # When the app launches this installer to apply an update it exits right
-    # away, but Windows can keep the old executable locked for a moment. Wait up
-    # to ~15s for the lock to clear so the silent install can replace the file.
+    # The installer can start while DataCia is still shutting down (e.g. a silent
+    # /S upgrade launched by the app), and Windows keeps a running executable
+    # locked. Wait up to ~15s for the lock to clear before replacing the file.
     StrCpy $R0 0
     wait_for_exe:
         IfFileExists "$INSTDIR\${PRODUCT_EXECUTABLE}" 0 exe_unlocked
