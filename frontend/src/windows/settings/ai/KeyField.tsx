@@ -2,135 +2,120 @@ import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Browser, CancelError, type CancellablePromise } from "@wailsio/runtime";
 import { ExternalLink, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { errorMessage } from "@/lib/utils";
-import { RemoveAPIKey, SetAPIKey, SignIn, type ProviderStatus } from "@/services/ai";
+import { SignIn, type ProviderStatus } from "@/services/ai";
 
-export function KeyField({ status }: { status: ProviderStatus }) {
+type Props = {
+  status: ProviderStatus;
+  /** Unsaved change: a new key, "" to remove the saved one, undefined for none. */
+  change?: string;
+  onChange: (change: string | undefined) => void;
+};
+
+const linkClass = "text-[11px] text-primary hover:underline cursor-pointer disabled:opacity-50 disabled:no-underline";
+
+export function KeyField({ status, change, onChange }: Props) {
   const { provider } = status;
-  const queryClient = useQueryClient();
-  const [key, setKey] = useState("");
-  const [editing, setEditing] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const [signingIn, setSigningIn] = useState(false);
-  const signInCall = useRef<CancellablePromise<void> | null>(null);
-  useEffect(
-    () => () => {
-      signInCall.current?.cancel();
-    },
-    [],
-  );
+  const id = `${provider.id}-key`;
+  const removing = change === "";
+  const signIn = useSignIn(provider.id);
 
-  const act = async (fn: () => Promise<void>) => {
-    setBusy(true);
-    setError("");
-    try {
-      await fn();
-      setKey("");
-      setEditing(false);
-      await queryClient.invalidateQueries({ queryKey: ["ai-providers"] });
-      await queryClient.invalidateQueries({ queryKey: ["ai-models", provider.id] });
-    } catch (err) {
-      if (!(err instanceof CancelError)) setError(errorMessage(err));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const signIn = () => {
-    setSigningIn(true);
-    void act(() => (signInCall.current = SignIn(provider.id))).finally(() => {
-      signInCall.current = null;
-      setSigningIn(false);
-    });
-  };
-
-  const cancelEdit = () => {
-    setEditing(false);
-    setKey("");
-    setError("");
-  };
-
-  const showInput = !status.hasKey || editing;
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between">
-        <Label htmlFor={`${provider.id}-key`} className="text-xs text-muted-foreground">
+        <Label htmlFor={id} className="text-xs text-muted-foreground">
           API key{provider.keyOptional && " (optional)"}
         </Label>
         {provider.keyUrl && (
-          <button
-            type="button"
-            onClick={() => void Browser.OpenURL(provider.keyUrl)}
-            className="inline-flex items-center gap-1 text-[11px] text-primary hover:underline cursor-pointer"
-          >
+          <button type="button" onClick={() => void Browser.OpenURL(provider.keyUrl)} className={`inline-flex items-center gap-1 ${linkClass}`}>
             Get a key
             <ExternalLink className="size-3" />
           </button>
         )}
       </div>
-      {showInput ? (
-        <form
-          className="flex gap-1.5"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (key.trim()) void act(() => SetAPIKey(provider.id, key));
-          }}
-        >
+      {removing ? (
+        <p className="flex h-7 items-center gap-2 text-xs text-muted-foreground">
+          The saved key will be removed.
+          <button type="button" onClick={() => onChange(undefined)} className={linkClass}>
+            Undo
+          </button>
+        </p>
+      ) : (
+        <div className="relative">
           <Input
-            id={`${provider.id}-key`}
+            id={id}
             type="password"
-            value={key}
-            onChange={(e) => setKey(e.target.value)}
-            placeholder="Paste your API key"
+            value={change ?? ""}
+            onChange={(e) => onChange(e.target.value.trim() === "" ? undefined : e.target.value)}
+            placeholder={status.hasKey ? "Saved · paste a new key to replace it" : "Paste your API key"}
             autoComplete="off"
             spellCheck={false}
-            className="h-7 flex-1 text-xs font-mono"
+            className="h-7 pr-16 text-xs font-mono"
           />
-          <Button type="submit" size="sm" variant="outline" disabled={busy || !key.trim()} className="h-7 text-xs cursor-pointer">
-            Save key
-          </Button>
-          {editing && (
-            <Button type="button" size="sm" variant="ghost" onClick={cancelEdit} className="h-7 text-xs cursor-pointer">
-              Cancel
-            </Button>
+          {status.hasKey && change === undefined && (
+            <button
+              type="button"
+              onClick={() => onChange("")}
+              className="absolute inset-y-0 right-2 text-[11px] text-muted-foreground hover:text-destructive cursor-pointer"
+            >
+              Remove
+            </button>
           )}
-        </form>
-      ) : (
-        <div className="flex items-center gap-1.5">
-          <span className="flex-1 text-xs font-mono text-muted-foreground">••••••••••••</span>
-          <Button size="sm" variant="outline" onClick={() => setEditing(true)} className="h-7 text-xs cursor-pointer">
-            Replace
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            disabled={busy}
-            onClick={() => void act(() => RemoveAPIKey(provider.id))}
-            className="h-7 text-xs text-destructive hover:text-destructive cursor-pointer"
-          >
-            Remove
-          </Button>
         </div>
       )}
-      {provider.signIn && showInput && (
-        <div className="flex items-center gap-1.5">
-          <Button size="sm" variant="secondary" disabled={busy} onClick={signIn} className="h-7 text-xs cursor-pointer">
-            {signingIn && <Loader2 className="size-3 animate-spin" />}
-            Sign in with {provider.name}
-          </Button>
-          {signingIn && (
-            <Button size="sm" variant="ghost" onClick={() => signInCall.current?.cancel()} className="h-7 text-xs cursor-pointer">
-              Cancel
-            </Button>
+      {provider.signIn && !status.hasKey && change === undefined && (
+        <p className="flex items-center gap-2 text-[11px] text-muted-foreground">
+          {signIn.pending ? (
+            <>
+              <Loader2 className="size-3 animate-spin" />
+              Waiting for {provider.name} in your browser…
+              <button type="button" onClick={signIn.cancel} className={linkClass}>
+                Cancel
+              </button>
+            </>
+          ) : (
+            <>
+              or
+              <button type="button" onClick={signIn.start} className={linkClass}>
+                sign in with {provider.name}
+              </button>
+            </>
           )}
-        </div>
+        </p>
       )}
       {status.keyError && <p className="text-[11px] text-destructive">{status.keyError}</p>}
-      {error && <p className="text-[11px] text-destructive">{error}</p>}
+      {signIn.error && <p className="text-[11px] text-destructive">{signIn.error}</p>}
     </div>
   );
+}
+
+// Sign-in stores the key itself, so it takes effect without saving.
+function useSignIn(providerId: string) {
+  const queryClient = useQueryClient();
+  const call = useRef<CancellablePromise<void> | null>(null);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState("");
+  const cancel = () => {
+    call.current?.cancel();
+  };
+  useEffect(() => cancel, []);
+
+  const start = () => {
+    setPending(true);
+    setError("");
+    call.current = SignIn(providerId);
+    call.current
+      .then(() => queryClient.invalidateQueries({ queryKey: ["ai-providers"] }))
+      .catch((err) => {
+        if (!(err instanceof CancelError)) setError(errorMessage(err));
+      })
+      .finally(() => {
+        call.current = null;
+        setPending(false);
+      });
+  };
+
+  return { pending, error, start, cancel };
 }

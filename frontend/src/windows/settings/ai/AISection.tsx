@@ -1,26 +1,33 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Check, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn, errorMessage } from "@/lib/utils";
 import { useAIProviders, type ProviderStatus } from "@/services/ai";
-import type { AIProviderConfig, Settings as AppSettings } from "@/services/settings";
+import type { AIProviderConfig, KeyChanges, Settings as AppSettings } from "@/services/settings";
 import { KeyField } from "./KeyField";
 import { ModelSelect } from "./ModelSelect";
 
 type Props = {
   settings: AppSettings;
   onChange: (settings: AppSettings) => void;
+  keys: KeyChanges;
+  onKeysChange: (keys: KeyChanges) => void;
 };
 
-export function AISection({ settings, onChange }: Props) {
+export function AISection({ settings, onChange, keys, onKeysChange }: Props) {
   const { data: providers, error } = useAIProviders();
   const configs = settings.ai?.providers ?? {};
 
-  const update = (status: ProviderStatus, patch: Partial<AIProviderConfig>) => {
-    const id = status.provider.id;
-    const current = configs[id] ?? { models: [], baseUrl: "" };
-    onChange({ ...settings, ai: { ...settings.ai, providers: { ...configs, [id]: { ...current, ...patch } } } });
+  // Empty configs are dropped so undoing every edit leaves nothing to save.
+  const update = (id: string, patch: Partial<AIProviderConfig>) => {
+    const next = { models: [], baseUrl: "", ...configs[id], ...patch };
+    const providers = next.models.length > 0 || next.baseUrl ? { ...configs, [id]: next } : without(configs, id);
+    onChange({ ...settings, ai: { ...settings.ai, providers } });
+  };
+
+  const setKey = (id: string, key: string | undefined) => {
+    onKeysChange(key === undefined ? without(keys, id) : { ...keys, [id]: key });
   };
 
   return (
@@ -33,37 +40,56 @@ export function AISection({ settings, onChange }: Props) {
       </div>
       {error && <p className="text-xs text-destructive">{errorMessage(error)}</p>}
       <div className="space-y-2">
-        {providers?.map((p) => {
-          const config = configs[p.provider.id];
-          return (
-            <ProviderCard
-              key={p.provider.id}
-              status={p}
-              models={config?.models ?? []}
-              baseUrl={config?.baseUrl ?? ""}
-              onChange={(patch) => update(p, patch)}
-            />
-          );
-        })}
+        {providers?.map((p) => (
+          <ProviderCard
+            key={p.provider.id}
+            status={p}
+            config={configs[p.provider.id]}
+            keyChange={keys[p.provider.id]}
+            onChange={(patch) => update(p.provider.id, patch)}
+            onKeyChange={(key) => setKey(p.provider.id, key)}
+          />
+        ))}
       </div>
     </div>
   );
 }
 
+function without<T>(record: Record<string, T>, key: string) {
+  const next = { ...record };
+  delete next[key];
+  return next;
+}
+
+function useDebounced<T>(value: T, ms = 500) {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), ms);
+    return () => clearTimeout(t);
+  }, [value, ms]);
+  return debounced;
+}
+
 function ProviderCard({
   status,
-  models,
-  baseUrl,
+  config,
+  keyChange,
   onChange,
+  onKeyChange,
 }: {
   status: ProviderStatus;
-  models: string[];
-  baseUrl: string;
+  config?: AIProviderConfig;
+  keyChange?: string;
   onChange: (patch: Partial<AIProviderConfig>) => void;
+  onKeyChange: (key: string | undefined) => void;
 }) {
   const { provider } = status;
+  const models = config?.models ?? [];
+  const baseUrl = config?.baseUrl ?? "";
   const [open, setOpen] = useState(status.hasKey);
-  const [listUrl, setListUrl] = useState(baseUrl);
+  const listUrl = useDebounced(baseUrl);
+  const listKey = useDebounced(keyChange ?? "");
+  const hasKey = keyChange === undefined ? status.hasKey : keyChange.trim() !== "";
   const connected = status.hasKey || (provider.keyOptional && models.length > 0);
 
   return (
@@ -81,41 +107,40 @@ function ProviderCard({
         ) : connected ? (
           <span className="inline-flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-500">
             <Check className="size-3" />
-            {status.hasKey ? "Key saved" : "Configured"}
+            Connected
           </span>
         ) : (
           <span className="text-[11px] text-muted-foreground">Not set up</span>
         )}
       </button>
-      {open && (
-        <div className="space-y-3 px-3 pb-3 pl-8">
-          {provider.note && <p className="text-[11px] text-muted-foreground">{provider.note}</p>}
-          <KeyField status={status} />
-          {provider.customUrl && (
-            <div className="space-y-1">
-              <Label htmlFor={`${provider.id}-url`} className="text-xs text-muted-foreground">
-                Server URL
-              </Label>
-              <Input
-                id={`${provider.id}-url`}
-                value={baseUrl}
-                placeholder={provider.defaultBaseUrl}
-                onChange={(e) => onChange({ baseUrl: e.target.value })}
-                onBlur={() => setListUrl(baseUrl)}
-                className="h-7 text-xs font-mono"
-                spellCheck={false}
-              />
-            </div>
-          )}
-          <ModelSelect
-            provider={provider.id}
-            url={listUrl}
-            enabled={status.hasKey || provider.keyOptional}
-            models={models}
-            onChange={(next) => onChange({ models: next })}
-          />
-        </div>
-      )}
+      {/* Hidden rather than unmounted, so collapsing doesn't cancel a sign-in. */}
+      <div className={cn("space-y-3 px-3 pb-3 pl-8", !open && "hidden")}>
+        {provider.note && <p className="text-[11px] text-muted-foreground">{provider.note}</p>}
+        <KeyField status={status} change={keyChange} onChange={onKeyChange} />
+        {provider.customUrl && (
+          <div className="space-y-1">
+            <Label htmlFor={`${provider.id}-url`} className="text-xs text-muted-foreground">
+              Server URL
+            </Label>
+            <Input
+              id={`${provider.id}-url`}
+              value={baseUrl}
+              placeholder={provider.defaultBaseUrl}
+              onChange={(e) => onChange({ baseUrl: e.target.value })}
+              className="h-7 text-xs font-mono"
+              spellCheck={false}
+            />
+          </div>
+        )}
+        <ModelSelect
+          provider={provider.id}
+          url={listUrl}
+          apiKey={listKey}
+          enabled={hasKey || provider.keyOptional}
+          models={models}
+          onChange={(next) => onChange({ models: next })}
+        />
+      </div>
     </div>
   );
 }

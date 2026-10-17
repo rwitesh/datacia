@@ -12,7 +12,7 @@ export class AIConfig {
     "providers": { [_ in string]?: AIProviderConfig };
 
     /**
-     * Keys are encrypted, never sent to the frontend, and only changed through the AI service.
+     * Keys are encrypted and never sent to the frontend.
      */
     "keys"?: { [_ in string]?: string };
 

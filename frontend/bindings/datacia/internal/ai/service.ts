@@ -18,11 +18,12 @@ export function Chat(req: $models.ChatRequest): $CancellablePromise<string> {
 }
 
 /**
- * ListModels returns the provider's chat models for this key, newest first,
- * which also checks the key. An empty url means the saved one.
+ * ListModels returns the provider's chat models, newest first, which also
+ * checks the key. Empty url and key mean the saved ones, so models can be
+ * listed before the settings are saved.
  */
-export function ListModels(providerID: string, url: string): $CancellablePromise<$models.Model[]> {
-    return $Call.ByID(2139047914, providerID, url).then(($result: any) => {
+export function ListModels(providerID: string, url: string, key: string): $CancellablePromise<$models.Model[]> {
+    return $Call.ByID(2139047914, providerID, url, key).then(($result: any) => {
         return $$createType1($result);
     });
 }
@@ -42,16 +43,8 @@ export function Providers(): $CancellablePromise<$models.ProviderStatus[]> {
     });
 }
 
-export function RemoveAPIKey(providerID: string): $CancellablePromise<void> {
-    return $Call.ByID(142598111, providerID);
-}
-
 export function SaveChat(chat: $models.Chat): $CancellablePromise<void> {
     return $Call.ByID(1941189643, chat);
-}
-
-export function SetAPIKey(providerID: string, key: string): $CancellablePromise<void> {
-    return $Call.ByID(698640711, providerID, key);
 }
 
 /**

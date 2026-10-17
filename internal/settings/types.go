@@ -41,7 +41,7 @@ type AIProviderConfig struct {
 
 type AIConfig struct {
 	Providers map[string]AIProviderConfig `json:"providers"` // keyed by provider ID
-	// Keys are encrypted, never sent to the frontend, and only changed through the AI service.
+	// Keys are encrypted and never sent to the frontend.
 	Keys map[string]string `json:"keys,omitempty"`
 }
 

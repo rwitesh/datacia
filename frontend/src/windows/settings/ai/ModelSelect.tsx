@@ -9,14 +9,15 @@ import { useProviderModels } from "@/services/ai";
 type Props = {
   provider: string;
   url: string;
+  apiKey: string;
   enabled: boolean;
   models: string[];
   onChange: (models: string[]) => void;
 };
 
-export function ModelSelect({ provider, url, enabled, models, onChange }: Props) {
-  const { data: available, error, isFetching, refetch } = useProviderModels(provider, url, enabled);
+export function ModelSelect({ provider, url, apiKey, enabled, models, onChange }: Props) {
   const [open, setOpen] = useState(false);
+  const { data: available, error, isFetching, refetch } = useProviderModels(provider, url, apiKey, enabled && open);
   const [search, setSearch] = useState("");
   const [active, setActive] = useState(0);
   const listId = useId();
@@ -82,7 +83,7 @@ export function ModelSelect({ provider, url, enabled, models, onChange }: Props)
             disabled={!enabled}
             className="h-7 w-full justify-between text-xs font-normal text-muted-foreground cursor-pointer"
           >
-            {enabled ? "Add a model…" : "Save an API key to choose models"}
+            {enabled ? "Add a model…" : "Add an API key to choose models"}
             {isFetching ? <Loader2 className="size-3 animate-spin" /> : <ChevronDown className="size-3" />}
           </Button>
         </PopoverTrigger>

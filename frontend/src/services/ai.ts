@@ -8,7 +8,7 @@ import { ChatContext, type ProviderStatus } from "../../bindings/datacia/interna
 
 export type { ProviderStatus };
 export { ChatContext };
-export { SetAPIKey, RemoveAPIKey, SignIn } from "../../bindings/datacia/internal/ai/service";
+export { SignIn } from "../../bindings/datacia/internal/ai/service";
 
 export interface ChatMessage {
   id: string;
@@ -37,11 +37,14 @@ export function useAIProviders() {
   return useQuery({ queryKey: ["ai-providers"], queryFn: () => AI.Providers() });
 }
 
-export function useProviderModels(providerId: string, url: string, enabled: boolean) {
+/** Lists models with the given url and key, or the saved ones when empty. */
+export function useProviderModels(providerId: string, url: string, key: string, enabled: boolean) {
   return useQuery({
-    queryKey: ["ai-models", providerId, url],
-    queryFn: () => AI.ListModels(providerId, url),
+    queryKey: ["ai-models", providerId, url, key],
+    queryFn: () => AI.ListModels(providerId, url, key),
     enabled,
+    // Don't keep typed, unsaved keys around in the cache.
+    gcTime: key ? 0 : undefined,
     staleTime: 10 * 60_000,
     retry: false,
   });

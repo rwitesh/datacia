@@ -5,8 +5,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { useTheme, type Theme } from "@/components/theme";
-import { useSettings } from "@/services/settings";
+import { useSettings, type ThemeConfig } from "@/services/settings";
 import type { Settings as AppSettings, EditorConfig, TokenColors } from "@/services/settings";
 
 type AppearanceSectionProps = {
@@ -47,7 +46,6 @@ const TOKEN_LABELS: Record<string, string> = {
 };
 
 export function AppearanceSection({ settings, onChange }: AppearanceSectionProps) {
-  const { theme, setTheme } = useTheme();
   const { data: settingsData } = useSettings();
 
   const font = settings.font;
@@ -157,8 +155,8 @@ export function AppearanceSection({ settings, onChange }: AppearanceSectionProps
           </div>
           <ToggleGroup
             type="single"
-            value={theme}
-            onValueChange={(val) => val && setTheme(val as Theme)}
+            value={settings.theme}
+            onValueChange={(val) => val && onChange({ ...settings, theme: val as ThemeConfig })}
             size="sm"
           >
             <ToggleGroupItem value="light" aria-label="Light" className="h-7 w-7 p-0 data-[state=on]:bg-muted">

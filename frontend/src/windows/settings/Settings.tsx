@@ -1,10 +1,11 @@
 import { useState, type CSSProperties } from "react";
 import { useSearchParams } from "react-router";
 import { Button } from "@/components/ui/button";
-import { Settings as SettingsIcon } from "lucide-react";
+import { Loader2, Settings as SettingsIcon } from "lucide-react";
 import { Window } from "@wailsio/runtime";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useSettings, useUpdateSettings, type Settings as AppSettings } from "@/services/settings";
+import { deepEqual, errorMessage } from "@/lib/utils";
+import { useSettings, useUpdateSettings, type KeyChanges, type Settings as AppSettings } from "@/services/settings";
 import { AppearanceSection } from "./appearance";
 import { AISection } from "./ai";
 import { PrivacySection } from "./privacy";
@@ -14,31 +15,40 @@ export function Settings() {
   const [activeTab, setActiveTab] = useState(searchParams.get("tab") === "ai" ? "ai" : "settings");
 
   const { data: settings } = useSettings();
-  const { mutate: updateSettings, isPending } = useUpdateSettings();
+  const { mutate: updateSettings, isPending, error, reset } = useUpdateSettings();
   // Unsaved edits; until the user changes something the form shows the stored settings.
   const [draft, setDraft] = useState<AppSettings | null>(null);
-  const formSettings = draft ?? settings?.settings ?? null;
+  const [keys, setKeys] = useState<KeyChanges>({});
   const [showSaved, setShowSaved] = useState(false);
+  const formSettings = draft ?? settings?.settings ?? null;
+  const dirty = (draft !== null && !deepEqual(draft, settings?.settings)) || Object.keys(keys).length > 0;
 
-  const onChange = (next: AppSettings) => {
+  const edited = () => {
     setShowSaved(false);
+    reset();
+  };
+  const onChange = (next: AppSettings) => {
+    edited();
     setDraft(next);
+  };
+  const onKeysChange = (next: KeyChanges) => {
+    edited();
+    setKeys(next);
   };
   const loading = <div className="text-xs text-muted-foreground px-1">Loading settings...</div>;
 
-  const handleCancel = () => {
-    Window.Close();
-  };
-
   const handleSave = () => {
-    if (!formSettings) return;
-    setShowSaved(false);
-    updateSettings(formSettings, {
-      onSuccess: () => {
-        setDraft(null);
-        setShowSaved(true);
+    if (!formSettings || !dirty) return;
+    updateSettings(
+      { settings: formSettings, keys },
+      {
+        onSuccess: () => {
+          setDraft(null);
+          setKeys({});
+          setShowSaved(true);
+        },
       },
-    });
+    );
   };
 
   return (
@@ -80,7 +90,7 @@ export function Settings() {
               {formSettings ? <AppearanceSection settings={formSettings} onChange={onChange} /> : loading}
             </TabsContent>
             <TabsContent value="ai" className="mt-0">
-              {formSettings ? <AISection settings={formSettings} onChange={onChange} /> : loading}
+              {formSettings ? <AISection settings={formSettings} onChange={onChange} keys={keys} onKeysChange={onKeysChange} /> : loading}
             </TabsContent>
             <TabsContent value="privacy" className="mt-0">
               {formSettings ? <PrivacySection settings={formSettings} onChange={onChange} /> : loading}
@@ -91,23 +101,16 @@ export function Settings() {
 
       <div className="border-t p-3 shrink-0 bg-muted/20">
         <div className="flex items-center justify-end gap-3">
-          {showSaved && (
-            <span className="text-xs text-green-500 font-medium">
-              Settings saved
-            </span>
+          {error ? (
+            <span className="mr-auto text-xs text-destructive">{errorMessage(error)}</span>
+          ) : (
+            showSaved && !dirty && <span className="text-xs text-green-500 font-medium">Settings saved</span>
           )}
-          <Button
-            variant="outline"
-            onClick={handleCancel}
-            className="h-8 text-xs px-3 cursor-pointer"
-          >
+          <Button variant="outline" onClick={() => Window.Close()} className="h-8 text-xs px-3 cursor-pointer">
             Cancel
           </Button>
-          <Button
-            onClick={handleSave}
-            className="h-8 text-xs px-3 cursor-pointer"
-            disabled={!formSettings || isPending}
-          >
+          <Button onClick={handleSave} disabled={!dirty || isPending} className="h-8 text-xs px-3 cursor-pointer">
+            {isPending && <Loader2 className="animate-spin" />}
             Save changes
           </Button>
         </div>

@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"datacia/internal/logger"
-	"datacia/internal/security"
 	"datacia/internal/settings"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -85,29 +84,6 @@ func (s *Service) Providers() []ProviderStatus {
 	return out
 }
 
-func (s *Service) SetAPIKey(providerID, key string) error {
-	if _, err := findProvider(providerID); err != nil {
-		return err
-	}
-	key = strings.TrimSpace(key)
-	if key == "" {
-		return errors.New("enter an API key")
-	}
-	enc, err := security.EncryptString(key)
-	if err != nil {
-		logger.Error("Failed to encrypt API key", "provider", providerID, "error", err.Error())
-		return errors.New("couldn't store the key securely")
-	}
-	return settings.SetAIKey(providerID, enc)
-}
-
-func (s *Service) RemoveAPIKey(providerID string) error {
-	if _, err := findProvider(providerID); err != nil {
-		return err
-	}
-	return settings.SetAIKey(providerID, "")
-}
-
 // SignIn signs in through the browser and stores the resulting API key.
 func (s *Service) SignIn(ctx context.Context, providerID string) error {
 	p, err := findProvider(providerID)
@@ -126,19 +102,21 @@ func (s *Service) SignIn(ctx context.Context, providerID string) error {
 	if err != nil {
 		return err
 	}
-	return s.SetAPIKey(p.ID, key)
+	return settings.SetAIKey(p.ID, key)
 }
 
-// ListModels returns the provider's chat models for this key, newest first,
-// which also checks the key. An empty url means the saved one.
-func (s *Service) ListModels(ctx context.Context, providerID, url string) ([]Model, error) {
+// ListModels returns the provider's chat models, newest first, which also
+// checks the key. Empty url and key mean the saved ones, so models can be
+// listed before the settings are saved.
+func (s *Service) ListModels(ctx context.Context, providerID, url, key string) ([]Model, error) {
 	p, err := findProvider(providerID)
 	if err != nil {
 		return nil, err
 	}
-	key, err := apiKey(p)
-	if err != nil {
-		return nil, err
+	if key = strings.TrimSpace(key); key == "" {
+		if key, err = apiKey(p); err != nil {
+			return nil, err
+		}
 	}
 	if url == "" {
 		url = settings.GetSettingsRaw().AI.Providers[p.ID].BaseURL
@@ -238,11 +216,7 @@ func apiKey(p Provider) (string, error) {
 }
 
 func savedKey(p Provider) (string, error) {
-	enc := settings.AIKey(p.ID)
-	if enc == "" {
-		return "", nil
-	}
-	key, err := security.DecryptString(enc)
+	key, err := settings.AIKey(p.ID)
 	if err != nil {
 		return "", fmt.Errorf("the saved %s key can't be read on this computer. Enter it again", p.Name)
 	}

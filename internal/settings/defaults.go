@@ -48,7 +48,10 @@ func fillAIDefaults(s *Settings) {
 		s.AI.Providers = map[string]AIProviderConfig{}
 	}
 	for id, p := range s.AI.Providers {
-		if p.Models == nil {
+		switch {
+		case len(p.Models) == 0 && p.BaseURL == "":
+			delete(s.AI.Providers, id)
+		case p.Models == nil:
 			p.Models = []string{}
 			s.AI.Providers[id] = p
 		}
