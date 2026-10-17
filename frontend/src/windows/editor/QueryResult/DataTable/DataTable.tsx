@@ -16,6 +16,7 @@ import { useTableSelection } from "./hooks/useTableSelection";
 import { useColumnResize } from "./hooks/useColumnResize";
 import { TableHeader } from "./components/TableHeader";
 import { TableRow } from "./components/TableRow";
+import { TableContextMenu } from "./components/TableContextMenu";
 import { ColumnResizeHandles } from "./components/ColumnResizeHandles";
 import { calculateContentWidths, distributeExtraSpace } from "./utils/columnWidths";
 import { useTheme } from "@/components/theme";
@@ -64,43 +65,47 @@ export const DataTable = forwardRef<HTMLDivElement, DataTableProps>(function Dat
   // Expose scrollRef to parent via forwarded ref
   useImperativeHandle(ref, () => scrollRef.current as HTMLDivElement);
 
-  // Restore scroll position when scrollPosition prop changes
+  // Restore the tab's saved scroll once on mount. The latest position lives
+  // in a ref and is saved back on unmount (tab switch), so scrolling doesn't
+  // write to the editor context on every frame.
+  const lastScrollRef = useRef(scrollPosition);
+  const restoredRef = useRef(false);
+  const onScrollChangeRef = useRef(onScrollChange);
   useEffect(() => {
-    if (scrollRef.current && scrollPosition) {
-      scrollRef.current.scrollLeft = scrollPosition.left;
-      scrollRef.current.scrollTop = scrollPosition.top;
-    }
-  }, [scrollPosition]);
+    onScrollChangeRef.current = onScrollChange;
+  }, [onScrollChange]);
 
-  // Save scroll position when user scrolls (throttled with RAF for performance)
+  // The grid isn't rendered while there are no columns, so re-attach when it appears.
+  const hasColumns = columns.length > 0;
   useEffect(() => {
     const scrollElement = scrollRef.current;
-    if (!scrollElement || !onScrollChange) return;
+    if (!scrollElement) return;
 
-    let rafId: number | null = null;
-    let isScheduled = false;
+    if (!restoredRef.current) {
+      restoredRef.current = true;
+      if (lastScrollRef.current) {
+        scrollElement.scrollLeft = lastScrollRef.current.left;
+        scrollElement.scrollTop = lastScrollRef.current.top;
+      }
+    }
 
     const handleScroll = () => {
-      if (isScheduled) return;
-
-      isScheduled = true;
-      rafId = requestAnimationFrame(() => {
-        onScrollChange({
-          left: scrollElement.scrollLeft,
-          top: scrollElement.scrollTop,
-        });
-        isScheduled = false;
-      });
+      lastScrollRef.current = {
+        left: scrollElement.scrollLeft,
+        top: scrollElement.scrollTop,
+      };
     };
 
     scrollElement.addEventListener("scroll", handleScroll, { passive: true });
-    return () => {
-      if (rafId !== null) {
-        cancelAnimationFrame(rafId);
-      }
-      scrollElement.removeEventListener("scroll", handleScroll);
-    };
-  }, [onScrollChange]);
+    return () => scrollElement.removeEventListener("scroll", handleScroll);
+  }, [hasColumns]);
+
+  useEffect(
+    () => () => {
+      if (lastScrollRef.current) onScrollChangeRef.current?.(lastScrollRef.current);
+    },
+    []
+  );
 
   // Custom hooks
   const { containerWidth, containerHeight } = useTableDimensions(containerRef);
@@ -253,83 +258,87 @@ export const DataTable = forwardRef<HTMLDivElement, DataTableProps>(function Dat
         </div>
 
         {/* Body */}
-        <div
-          className="relative"
-          style={{
-            width: totalWidth,
-            height: rowVirtualizer.getTotalSize() + additionalFillerRows * rowHeight,
-          }}
+        <TableContextMenu
+          selection={selection}
+          columns={columns}
+          data={viewRows}
+          onOpenDataView={onOpenDataView}
         >
-          {/* Full-height column resize handles */}
-          <ColumnResizeHandles
-            colWidths={finalColWidths}
-            totalHeight={rowVirtualizer.getTotalSize() + additionalFillerRows * rowHeight}
-            onResizeStart={startResize}
-            resizingColumnIndex={resizingColumnIndex}
-          />
-          {/* Loading overlay - only covers the body, not the header */}
-          {isLoading && (
-            <div
-              className="absolute inset-0 bg-background/60 z-10 flex items-center justify-center"
-              style={{ width: totalWidth }}
-            >
-              <div className="animate-spin h-6 w-6 border-b-2 border-primary rounded-full"></div>
-            </div>
-          )}
+          <div
+            className="relative"
+            style={{
+              width: totalWidth,
+              height: rowVirtualizer.getTotalSize() + additionalFillerRows * rowHeight,
+            }}
+          >
+            {/* Full-height column resize handles */}
+            <ColumnResizeHandles
+              colWidths={finalColWidths}
+              totalHeight={rowVirtualizer.getTotalSize() + additionalFillerRows * rowHeight}
+              onResizeStart={startResize}
+              resizingColumnIndex={resizingColumnIndex}
+            />
+            {/* Loading overlay - only covers the body, not the header */}
+            {isLoading && (
+              <div
+                className="absolute inset-0 bg-background/60 z-10 flex items-center justify-center"
+                style={{ width: totalWidth }}
+              >
+                <div className="animate-spin h-6 w-6 border-b-2 border-primary rounded-full"></div>
+              </div>
+            )}
 
-          {/* Virtualized rows */}
-          {rowVirtualizer.getVirtualItems().map((vi) => {
-            const isDataRow = vi.index < rows.length;
-            const row = isDataRow ? rows[vi.index] : null;
+            {/* Virtualized rows */}
+            {rowVirtualizer.getVirtualItems().map((vi) => {
+              const isDataRow = vi.index < rows.length;
+              const row = isDataRow ? rows[vi.index] : null;
 
-            return (
-              <TableRow
-                key={isDataRow ? row!.id : `blank-row-${vi.index}`}
-                virtualItem={vi}
-                row={row}
-                isDataRow={isDataRow}
-                colWidths={finalColWidths}
-                totalWidth={totalWidth}
-                gridTemplateColumns={gridTemplateColumns}
-                selection={selection}
-                onMouseDown={handleMouseDown}
-                onMouseEnter={handleMouseEnter}
-                columns={columns}
-                data={viewRows}
-                onOpenDataView={onOpenDataView}
-              />
-            );
-          })}
-
-          {/* Additional filler rows */}
-          {additionalFillerRows > 0 &&
-            Array.from({ length: additionalFillerRows }).map((_, idx) => {
-              const top = rowVirtualizer.getTotalSize() + idx * rowHeight;
               return (
-                <div
-                  key={`filler-${idx}`}
-                  role="row"
-                  style={{
-                    position: "absolute",
-                    insetInlineStart: 0,
-                    transform: `translateY(${top}px)`,
-                    width: totalWidth,
-                    height: rowHeight,
-                    display: "grid",
-                    gridTemplateColumns,
-                  }}
-                >
-                  {finalColWidths.map((w, ci) => (
-                    <div
-                      key={`filler-cell-${ci}`}
-                      style={{ width: w }}
-                      className="border-r-[0.5px] border-border/60"
-                    />
-                  ))}
-                </div>
+                <TableRow
+                  key={isDataRow ? row!.id : `blank-row-${vi.index}`}
+                  virtualItem={vi}
+                  row={row}
+                  isDataRow={isDataRow}
+                  colWidths={finalColWidths}
+                  totalWidth={totalWidth}
+                  gridTemplateColumns={gridTemplateColumns}
+                  selection={selection}
+                  onMouseDown={handleMouseDown}
+                  onMouseEnter={handleMouseEnter}
+                />
               );
             })}
-        </div>
+
+            {/* Additional filler rows */}
+            {additionalFillerRows > 0 &&
+              Array.from({ length: additionalFillerRows }).map((_, idx) => {
+                const top = rowVirtualizer.getTotalSize() + idx * rowHeight;
+                return (
+                  <div
+                    key={`filler-${idx}`}
+                    role="row"
+                    style={{
+                      position: "absolute",
+                      insetInlineStart: 0,
+                      transform: `translateY(${top}px)`,
+                      width: totalWidth,
+                      height: rowHeight,
+                      display: "grid",
+                      gridTemplateColumns,
+                    }}
+                  >
+                    {finalColWidths.map((w, ci) => (
+                      <div
+                        key={`filler-cell-${ci}`}
+                        style={{ width: w }}
+                        className="border-r-[0.5px] border-border/60"
+                      />
+                    ))}
+                  </div>
+                );
+              })}
+          </div>
+        </TableContextMenu>
       </div>
     </div>
   );

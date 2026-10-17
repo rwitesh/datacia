@@ -3,7 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Play, Plus, StopCircle } from "lucide-react";
 import { ScriptBlock, type ScriptBlockData } from "./ScriptBlock";
 import { nanoid } from "nanoid";
-import { RunQuery } from "@/services/bindings/database";
+import { v4 as uuidv4 } from "uuid";
+import { useCancelQuery, useRunQuery } from "@/services/database";
+import { errorMessage } from "@/lib/utils";
 
 export function ScriptMode() {
     const [blocks, setBlocks] = useState<ScriptBlockData[]>([
@@ -12,6 +14,10 @@ export function ScriptMode() {
     const [isRunning, setIsRunning] = useState(false);
 
     const shouldStopRef = useRef(false);
+    // The query currently running, so Stop can cancel it.
+    const queryIdRef = useRef<string | null>(null);
+    const { mutateAsync: runQueryAsync } = useRunQuery();
+    const { mutateAsync: cancelQueryAsync } = useCancelQuery();
 
     const addBlock = () => {
         setBlocks((prev) => [
@@ -34,55 +40,71 @@ export function ScriptMode() {
         setBlocks(prev => prev.map(b => b.id === id ? { ...b, status, errorMessage, executionTime } : b));
     }
 
-    const executeBlock = async (id: string) => {
-        const block = blocks.find(b => b.id === id);
-        if (!block) return;
-
-        // If empty sql, just mark success or skip? 
-        // Let's mark success to show it was processed.
+    // Runs one block and rethrows its error so a sequence can stop.
+    const executeBlock = async (block: ScriptBlockData) => {
+        // Empty blocks are marked success to show they were processed.
         if (!block.sql.trim()) {
-            updateBlockStatus(id, "success");
+            updateBlockStatus(block.id, "success");
             return;
         }
 
-        updateBlockStatus(id, "running");
+        updateBlockStatus(block.id, "running");
 
         const startTime = Date.now();
+        const queryId = uuidv4();
+        queryIdRef.current = queryId;
 
         try {
-            await RunQuery(block.sql);
-
-            updateBlockStatus(id, "success", undefined, Date.now() - startTime);
-
+            await runQueryAsync({ sql: block.sql, queryId });
+            updateBlockStatus(block.id, "success", undefined, Date.now() - startTime);
         } catch (e) {
-            updateBlockStatus(id, "error", (e instanceof Error && e.message) || "Unknown error");
+            const message = shouldStopRef.current
+                ? "Query execution cancelled"
+                : errorMessage(e);
+            updateBlockStatus(block.id, "error", message);
             throw e;
+        } finally {
+            queryIdRef.current = null;
         }
     };
 
-    const executeAll = async () => {
+    // Runs blocks in order, stopping at the first error or on Stop.
+    const runBlocks = async (toRun: ScriptBlockData[]) => {
         if (isRunning) return;
         setIsRunning(true);
         shouldStopRef.current = false;
 
-        // Reset all statuses?
-        setBlocks(prev => prev.map(b => ({ ...b, status: 'idle', errorMessage: undefined, executionTime: undefined })));
-
-        for (const block of blocks) {
+        for (const block of toRun) {
             if (shouldStopRef.current) break;
 
             try {
-                await executeBlock(block.id);
+                await executeBlock(block);
             } catch {
-                // Error occurred, stop sequence
                 break;
             }
         }
         setIsRunning(false);
     };
 
+    const executeAll = () => {
+        if (isRunning) return;
+        setBlocks(prev => prev.map(b => ({ ...b, status: 'idle', errorMessage: undefined, executionTime: undefined })));
+        void runBlocks(blocks);
+    };
+
+    const executeOne = (id: string) => {
+        const block = blocks.find(b => b.id === id);
+        if (block) void runBlocks([block]);
+    };
+
     const handleStop = () => {
         shouldStopRef.current = true;
+        const queryId = queryIdRef.current;
+        if (queryId) {
+            cancelQueryAsync(queryId).catch((err) => {
+                console.error("Error cancelling script query:", err);
+            });
+        }
     };
 
     return (
@@ -133,7 +155,7 @@ export function ScriptMode() {
                             block={block}
                             onUpdate={updateBlock}
                             onRemove={removeBlock}
-                            onExecute={() => !isRunning && executeBlock(block.id)}
+                            onExecute={executeOne}
                             isScriptRunning={isRunning}
                         />
                     ))}
