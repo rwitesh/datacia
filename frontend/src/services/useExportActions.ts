@@ -3,6 +3,7 @@ import html2canvaspro from "html2canvas-pro";
 import { useTheme } from "@/components/theme";
 import { useExportData, type ExportFormat } from "./export";
 import { useCopyToClipboard } from "./clipboard";
+import { formatCellValue } from "@/lib/utils";
 
 type UseExportActionsOptions = {
   tableRef?: RefObject<HTMLDivElement | null>;
@@ -73,7 +74,9 @@ export function useExportActions({
 
   const copyText = () => {
     if (!data.length) return;
-    const text = data.map((d) => Object.values(d).join("\t")).join("\n");
+    const text = data
+      .map((row) => columns.map((column) => tsvField(formatCellValue(row[column]))).join("\t"))
+      .join("\n");
     copyMutation.mutate(
       { content: text, type: "text" },
       { onError: (err) => console.error("Failed to copy text", err) }
@@ -117,4 +120,9 @@ export function useExportActions({
     isExporting: exportMutation.isPending,
     isCopying: copyMutation.isPending,
   };
+}
+
+// tsvField quotes a value the way spreadsheets expect when pasting tab-separated text.
+function tsvField(text: string) {
+  return /[\t\n\r"]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 }

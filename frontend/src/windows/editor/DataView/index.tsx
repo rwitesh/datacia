@@ -84,7 +84,7 @@ export function DataView({ activeTab: controlledTab, onTabChange }: DataViewProp
           )}
         </div>
 
-        <TabsContent value="data" className="flex-1 overflow-auto mt-0">
+        <TabsContent value="data" className="flex-1 overflow-hidden mt-0">
           <DataTabContent lines={lines} />
         </TabsContent>
 

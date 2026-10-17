@@ -1,345 +1,294 @@
-import { useState, useRef, useMemo, useEffect, useCallback, forwardRef, useImperativeHandle } from "react";
+import { useEffect, useImperativeHandle, useMemo, useRef, useState, type CSSProperties, type Ref, type SyntheticEvent } from "react";
 import {
-  useReactTable,
   getCoreRowModel,
   getSortedRowModel,
-  type ColumnResizeMode,
+  useReactTable,
+  type ColumnSizingState,
+  type OnChangeFn,
   type SortingState,
 } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
-
+import { useTheme } from "@/components/theme";
+import { useExportActions } from "@/services/useExportActions";
 import type { DataRow } from "./types";
-import { extractSelectedData, type SelectionGeometry } from "./utils/cellSelection";
+import { type CellSelection, getSelectedData, getSelectionBounds } from "./utils/cellSelection";
+import { fillContainer, FONT_SIZE, HEADER_HEIGHT, measureColumnWidths, MIN_COLUMN_WIDTH, ROW_HEIGHT } from "./utils/layout";
 import { useTableDimensions } from "./hooks/useTableDimensions";
 import { useTableColumns } from "./hooks/useTableColumns";
 import { useTableSelection } from "./hooks/useTableSelection";
-import { useColumnResize } from "./hooks/useColumnResize";
 import { TableHeader } from "./components/TableHeader";
 import { TableRow } from "./components/TableRow";
 import { TableContextMenu } from "./components/TableContextMenu";
-import { ColumnResizeHandles } from "./components/ColumnResizeHandles";
-import { calculateContentWidths, distributeExtraSpace } from "./utils/columnWidths";
-import { useTheme } from "@/components/theme";
 
 interface DataTableProps {
+  // The scroll container, used by the result bar's PNG export.
+  ref?: Ref<HTMLDivElement>;
   columns: string[];
   data: DataRow[];
-  // selectedRows are the rows the selection covers, in the order shown.
-  onSelectionChange: (selection: SelectionGeometry | null, selectedRows: DataRow[]) => void;
-  isTableViewMode?: boolean;
+  // selectedRows are the rows the selection covers, in the order shown,
+  // holding only the selected columns.
+  onSelectionChange: (selection: CellSelection | null, selectedRows: DataRow[]) => void;
+  // Set for table tabs, which sort in the database; otherwise sorting is client-side.
+  // An empty column clears the sort.
+  onServerSort?: (column: string, direction: "asc" | "desc") => void;
   currentOrderBy?: string;
   currentOrderDir?: "asc" | "desc";
-  onServerSort?: (column: string, direction: "asc" | "desc") => void;
   isLoading?: boolean;
   onOpenDataView?: () => void;
   scrollPosition?: { left: number; top: number };
   onScrollChange?: (scroll: { left: number; top: number }) => void;
+  // Rows before this page, for row numbers.
   offset?: number;
-  initialSelection?: SelectionGeometry | null;
+  initialSelection?: CellSelection | null;
 }
 
-export const DataTable = forwardRef<HTMLDivElement, DataTableProps>(function DataTable({
+export function DataTable({
+  ref,
   columns,
   data,
   onSelectionChange,
-  isTableViewMode = false,
+  onServerSort,
   currentOrderBy,
   currentOrderDir,
-  onServerSort,
   isLoading = false,
   onOpenDataView,
   scrollPosition,
   onScrollChange,
   offset = 0,
   initialSelection,
-}, ref) {
-  const { editorFontFamily, editorFontSize } = useTheme();
-  const [columnSizing, setColumnSizing] = useState<Record<string, number>>({});
-  // Only use client-side sorting when not in table-view mode
-  const [sorting, setSorting] = useState<SortingState>([]);
-
+}: DataTableProps) {
+  const { editorFontFamily } = useTheme();
   const scrollRef = useRef<HTMLDivElement>(null);
-  // Separate internal ref for dimensions hook
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  // Expose scrollRef to parent via forwarded ref
-  useImperativeHandle(ref, () => scrollRef.current as HTMLDivElement);
+  useImperativeHandle(ref, () => scrollRef.current as HTMLDivElement, []);
 
   // Restore the tab's saved scroll once on mount. The latest position lives
   // in a ref and is saved back on unmount (tab switch), so scrolling doesn't
   // write to the editor context on every frame.
   const lastScrollRef = useRef(scrollPosition);
-  const restoredRef = useRef(false);
   const onScrollChangeRef = useRef(onScrollChange);
   useEffect(() => {
     onScrollChangeRef.current = onScrollChange;
   }, [onScrollChange]);
-
-  // The grid isn't rendered while there are no columns, so re-attach when it appears.
-  const hasColumns = columns.length > 0;
   useEffect(() => {
-    const scrollElement = scrollRef.current;
-    if (!scrollElement) return;
-
-    if (!restoredRef.current) {
-      restoredRef.current = true;
-      if (lastScrollRef.current) {
-        scrollElement.scrollLeft = lastScrollRef.current.left;
-        scrollElement.scrollTop = lastScrollRef.current.top;
-      }
+    const scroller = scrollRef.current;
+    if (scroller && lastScrollRef.current) {
+      scroller.scrollLeft = lastScrollRef.current.left;
+      scroller.scrollTop = lastScrollRef.current.top;
     }
-
-    const handleScroll = () => {
-      lastScrollRef.current = {
-        left: scrollElement.scrollLeft,
-        top: scrollElement.scrollTop,
-      };
-    };
-
-    scrollElement.addEventListener("scroll", handleScroll, { passive: true });
-    return () => scrollElement.removeEventListener("scroll", handleScroll);
-  }, [hasColumns]);
-
-  useEffect(
-    () => () => {
+    return () => {
       if (lastScrollRef.current) onScrollChangeRef.current?.(lastScrollRef.current);
-    },
-    []
+    };
+  }, []);
+
+  // Canvas silently measures with a fallback font until a web font has
+  // loaded, so widths use the editor font only once it is ready.
+  const [loadedFont, setLoadedFont] = useState<string | null>(null);
+  useEffect(() => {
+    document.fonts.load(`${FONT_SIZE}px ${editorFontFamily}`).then(() => setLoadedFont(editorFontFamily));
+  }, [editorFontFamily]);
+
+  const { containerWidth, containerHeight } = useTableDimensions(scrollRef);
+  const contentWidths = useMemo(
+    () => measureColumnWidths(columns, data, offset + data.length, loadedFont ?? "monospace"),
+    [columns, data, offset, loadedFont]
   );
+  const initialWidths = useMemo(
+    () => fillContainer(contentWidths, containerWidth),
+    [contentWidths, containerWidth]
+  );
+  const columnDefs = useTableColumns(columns, initialWidths);
 
-  // Custom hooks
-  const { containerWidth, containerHeight } = useTableDimensions(containerRef);
-  const columnDefs = useTableColumns(columns, offset);
+  const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({});
+  const [clientSorting, setClientSorting] = useState<SortingState>([]);
+  const isServerSort = onServerSort !== undefined;
+  const sorting = useMemo<SortingState>(() => {
+    if (!isServerSort) return clientSorting;
+    return currentOrderBy ? [{ id: currentOrderBy, desc: currentOrderDir === "desc" }] : [];
+  }, [isServerSort, clientSorting, currentOrderBy, currentOrderDir]);
+  const handleSortingChange: OnChangeFn<SortingState> = (updater) => {
+    const next = typeof updater === "function" ? updater(sorting) : updater;
+    if (!onServerSort) {
+      setClientSorting(next);
+      return;
+    }
+    const [first] = next;
+    onServerSort(first?.id ?? "", first?.desc ? "desc" : "asc");
+  };
 
-  // Table setup
   const table = useReactTable({
     data,
     columns: columnDefs,
+    state: { sorting, columnSizing },
+    onSortingChange: handleSortingChange,
+    onColumnSizingChange: setColumnSizing,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    columnResizeMode: "onChange" as ColumnResizeMode,
-    state: { columnSizing, sorting },
-    onColumnSizingChange: setColumnSizing,
-    onSortingChange: setSorting,
-    enableMultiRowSelection: true,
+    manualSorting: isServerSort,
+    sortDescFirst: true,
+    enableMultiSort: !isServerSort,
+    columnResizeMode: "onChange",
   });
 
   const rows = table.getRowModel().rows;
-  // Selection indices are positions in the (possibly sorted) view, so
-  // selected data must be read from these rather than from data.
+  // Selection indices are positions in the (possibly sorted) view.
   const viewRows = useMemo(() => rows.map((row) => row.original), [rows]);
-  // A new identity when the sort changes, so the selection is reported again.
-  const reportSelection = useCallback(
-    (geometry: SelectionGeometry | null) =>
-      onSelectionChange(geometry, extractSelectedData(geometry, columns, viewRows)),
-    [onSelectionChange, columns, viewRows]
-  );
   const headers = table.getFlatHeaders();
-  const rowHeight = 24;
 
-  // Calculate content-based column widths using utility function
-  const baseColWidths = useMemo(
-    () => calculateContentWidths(headers, data, offset),
-    [headers, data, offset]
+  // What each header's getSize() returns, derived from state so it can be
+  // memoized: the selection hook's drag effect depends on columnEdges.
+  const columnWidths = useMemo(
+    () =>
+      columnDefs.map((column) =>
+        Math.max(columnSizing[column.id!] ?? column.size!, MIN_COLUMN_WIDTH)
+      ),
+    [columnDefs, columnSizing]
   );
+  const columnEdges = useMemo(() => {
+    const edges = [0];
+    for (const width of columnWidths) edges.push(edges[edges.length - 1] + width);
+    return edges;
+  }, [columnWidths]);
+  const totalWidth = columnEdges[columnEdges.length - 1];
 
-  // Distribute extra space evenly across all columns
-  const { finalColWidths: distributedWidths } = useMemo(
-    () => distributeExtraSpace(baseColWidths, containerWidth),
-    [baseColWidths, containerWidth]
-  );
-
-  // Column resize hook - applies user resize deltas to distributed widths
-  const allColumnIds = useMemo(() => ["#", ...columns], [columns]);
-  const {
-    columnWidths: finalColWidths,
-    resizingColumnIndex,
-    startResize,
-  } = useColumnResize({
-    columns: allColumnIds,
-    baseWidths: distributedWidths,
-  });
-
-  // Calculate total width after resize
-  const totalWidth = useMemo(
-    () => finalColWidths.reduce((a, b) => a + b, 0),
-    [finalColWidths]
-  );
-
-  // Selection hook - needs rowHeight and colWidths
-  // Note: selection works on data columns (excludes serial # column from selection indices)
-  const {
-    selection,
-    handleMouseDown,
-    handleMouseEnter,
-  } = useTableSelection({
-    columns,
-    data: viewRows,
-    onSelectionChange: reportSelection,
+  const { selection, isDragging, handleMouseDown, handleKeyDown } = useTableSelection({
+    data,
+    colCount: columns.length,
+    columnEdges,
     scrollRef,
-    rowHeight,
-    colWidths: finalColWidths.slice(1),
     initialSelection,
   });
 
-  const gridTemplateColumns = useMemo(
-    () => finalColWidths.map((w) => `${w}px`).join(" "),
-    [finalColWidths]
+  // Built once a drag ends rather than on every cell the pointer crosses.
+  const selected = useMemo(
+    () => (isDragging ? null : getSelectedData(selection, columns, viewRows)),
+    [isDragging, selection, columns, viewRows]
   );
+  useEffect(() => {
+    if (selected) onSelectionChange(selection, selected.rows);
+  }, [selected, selection, onSelectionChange]);
 
-  // Virtualization setup
-  const totalRows = rows.length;
-  const rowVirtualizer = useVirtualizer({
-    count: totalRows,
-    getScrollElement: () => scrollRef.current,
-    estimateSize: () => rowHeight,
-    overscan: 10,
+  const { copyText } = useExportActions({
+    data: selected?.rows ?? [],
+    columns: selected?.columns ?? [],
   });
 
-  // Calculate filler rows
-  const visibleHeight = rowVirtualizer.getTotalSize();
-  const additionalFillerRows =
-    containerHeight > visibleHeight
-      ? Math.ceil((containerHeight - visibleHeight) / rowHeight)
-      : 0;
+  const rowVirtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => ROW_HEIGHT,
+    overscan: 10,
+  });
+  const rowsHeight = rowVirtualizer.getTotalSize();
+  // Empty space below the last row keeps the column lines down to the bottom.
+  const bodyHeight = Math.max(rowsHeight, containerHeight - HEADER_HEIGHT);
+  const bounds = selection && getSelectionBounds(selection);
 
-  if (!columns.length) {
-    return (
-      <div className="p-3 text-muted-foreground text-xs">
-        No columns to display.
-      </div>
-    );
-  }
-
-  const fontStyle = {
+  const gridStyle = {
+    "--grid-columns": columnWidths.map((width) => `${width}px`).join(" "),
+    "--grid-width": `${totalWidth}px`,
     fontFamily: editorFontFamily,
-    fontSize: `${editorFontSize}px`,
-  };
+  } as CSSProperties;
 
   return (
-    <div className="h-full w-full overflow-hidden bg-background" style={fontStyle}>
+    <div className="relative h-full w-full bg-background">
       <div
-        ref={(el) => {
-          scrollRef.current = el;
-          containerRef.current = el;
+        ref={scrollRef}
+        tabIndex={0}
+        className="h-full w-full cursor-default select-none overflow-auto text-xs outline-none"
+        style={{ ...gridStyle, contain: "strict" }}
+        onMouseDown={(event) => {
+          if (isFromGrid(event)) handleMouseDown(event);
         }}
-        className="h-full w-full overflow-auto"
-        style={{ contain: "strict" }}
+        onKeyDown={(event) => {
+          if (!isFromGrid(event)) return;
+          if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "c") {
+            event.preventDefault();
+            copyText();
+            return;
+          }
+          handleKeyDown(event);
+        }}
+        onScroll={(event) => {
+          lastScrollRef.current = {
+            left: event.currentTarget.scrollLeft,
+            top: event.currentTarget.scrollTop,
+          };
+        }}
       >
-        {/* Header */}
-        <div className="sticky top-0 z-10">
-          <table
-            className="table-fixed text-xs cursor-default select-none"
-            style={{ width: totalWidth }}
+        {columns.length === 0 ? (
+          <div className="p-3 text-muted-foreground">No columns to display.</div>
+        ) : (
+          <TableContextMenu
+            rows={selected?.rows ?? []}
+            columns={selected?.columns ?? []}
+            onOpenDataView={onOpenDataView}
           >
-            <thead>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <tr key={headerGroup.id}>
-                  {headerGroup.headers.map((header, i) => (
-                    <TableHeader
-                      key={header.id}
-                      header={header}
-                      colIndex={i}
-                      colWidth={finalColWidths[i]}
-                      isSerialColumn={i === 0}
-                      onMouseDown={handleMouseDown}
-                      onMouseEnter={handleMouseEnter}
-                      isTableViewMode={isTableViewMode}
-                      serverSortColumn={currentOrderBy}
-                      serverSortDir={currentOrderDir}
-                      onServerSort={onServerSort}
-                      onResizeStart={(startX) => startResize(i, startX)}
-                    />
-                  ))}
-                </tr>
-              ))}
-            </thead>
-          </table>
-        </div>
-
-        {/* Body */}
-        <TableContextMenu
-          selection={selection}
-          columns={columns}
-          data={viewRows}
-          onOpenDataView={onOpenDataView}
-        >
-          <div
-            className="relative"
-            style={{
-              width: totalWidth,
-              height: rowVirtualizer.getTotalSize() + additionalFillerRows * rowHeight,
-            }}
-          >
-            {/* Full-height column resize handles */}
-            <ColumnResizeHandles
-              colWidths={finalColWidths}
-              totalHeight={rowVirtualizer.getTotalSize() + additionalFillerRows * rowHeight}
-              onResizeStart={startResize}
-              resizingColumnIndex={resizingColumnIndex}
-            />
-            {/* Loading overlay - only covers the body, not the header */}
-            {isLoading && (
-              <div
-                className="absolute inset-0 bg-background/60 z-10 flex items-center justify-center"
-                style={{ width: totalWidth }}
-              >
-                <div className="animate-spin h-6 w-6 border-b-2 border-primary rounded-full"></div>
-              </div>
-            )}
-
-            {/* Virtualized rows */}
-            {rowVirtualizer.getVirtualItems().map((vi) => {
-              const isDataRow = vi.index < rows.length;
-              const row = isDataRow ? rows[vi.index] : null;
-
-              return (
-                <TableRow
-                  key={isDataRow ? row!.id : `blank-row-${vi.index}`}
-                  virtualItem={vi}
-                  row={row}
-                  isDataRow={isDataRow}
-                  colWidths={finalColWidths}
-                  totalWidth={totalWidth}
-                  gridTemplateColumns={gridTemplateColumns}
-                  selection={selection}
-                  onMouseDown={handleMouseDown}
-                  onMouseEnter={handleMouseEnter}
-                />
-              );
-            })}
-
-            {/* Additional filler rows */}
-            {additionalFillerRows > 0 &&
-              Array.from({ length: additionalFillerRows }).map((_, idx) => {
-                const top = rowVirtualizer.getTotalSize() + idx * rowHeight;
-                return (
+            <div>
+              <TableHeader headers={headers} />
+              <div className="relative" style={{ width: totalWidth, height: bodyHeight }}>
+                {/* Drawn under the rows, whose cells are transparent; the
+                    opaque row-number column covers it when scrolled. */}
+                {bounds && (
                   <div
-                    key={`filler-${idx}`}
-                    role="row"
+                    className="pointer-events-none absolute border-2 border-blue-600 bg-blue-500/20"
                     style={{
-                      position: "absolute",
-                      insetInlineStart: 0,
-                      transform: `translateY(${top}px)`,
+                      top: bounds.top * ROW_HEIGHT,
+                      height: (bounds.bottom - bounds.top + 1) * ROW_HEIGHT,
+                      left: columnEdges[bounds.left + 1],
+                      width: columnEdges[bounds.right + 2] - columnEdges[bounds.left + 1],
+                    }}
+                  />
+                )}
+                {rowVirtualizer.getVirtualItems().map((item) => (
+                  <TableRow
+                    key={rows[item.index].id}
+                    row={rows[item.index]}
+                    index={item.index}
+                    top={item.start}
+                    rowNumber={offset + item.index + 1}
+                  />
+                ))}
+                {bodyHeight > rowsHeight && (
+                  <div
+                    className="absolute left-0 grid"
+                    style={{
+                      top: rowsHeight,
+                      height: bodyHeight - rowsHeight,
                       width: totalWidth,
-                      height: rowHeight,
-                      display: "grid",
-                      gridTemplateColumns,
+                      gridTemplateColumns: "var(--grid-columns)",
                     }}
                   >
-                    {finalColWidths.map((w, ci) => (
+                    {columnWidths.map((_, index) => (
                       <div
-                        key={`filler-cell-${ci}`}
-                        style={{ width: w }}
-                        className="border-r-[0.5px] border-border/60"
+                        key={index}
+                        className={
+                          index === 0
+                            ? "sticky left-0 border-r-[0.5px] border-border/60 bg-muted"
+                            : "border-r-[0.5px] border-border/60"
+                        }
                       />
                     ))}
                   </div>
-                );
-              })}
-          </div>
-        </TableContextMenu>
+                )}
+              </div>
+            </div>
+          </TableContextMenu>
+        )}
       </div>
+      {isLoading && (
+        <div
+          className="absolute inset-x-0 bottom-0 z-30 flex items-center justify-center bg-background/60"
+          style={{ top: HEADER_HEIGHT }}
+        >
+          <div className="h-6 w-6 animate-spin rounded-full border-b-2 border-primary" />
+        </div>
+      )}
     </div>
   );
-});
+}
+
+// React bubbles events from portals (the context menu) through the component
+// tree, so the grid ignores events whose target is outside its own DOM.
+function isFromGrid(event: SyntheticEvent) {
+  return event.currentTarget.contains(event.target as Node);
+}
