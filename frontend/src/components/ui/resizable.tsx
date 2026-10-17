@@ -6,8 +6,8 @@ import { cn } from "@/lib/utils"
 
 type Size = number | string | undefined
 
-// react-resizable-panels v4 treats numeric sizes as pixels; this wrapper keeps
-// the previous behaviour of numbers meaning percentages.
+// Numeric sizes passed to these components are percentages; react-resizable-panels
+// reads numbers as pixels, so they are converted to "<n>%" strings.
 const toPercent = (size: Size) => (typeof size === "number" ? `${size}%` : size)
 
 function ResizablePanelGroup({

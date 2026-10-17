@@ -1,13 +1,12 @@
-import { CheckForUpdates as WCheckForUpdates, Update as WUpdate, RestartApp as WRestartApp } from "./index";
-
-export async function CheckForUpdates(): Promise<boolean> {
-  return WCheckForUpdates();
-}
-
-export async function PerformUpdate(): Promise<unknown> {
-  return WUpdate();
-}
+import {
+  RestartApp as WRestartApp,
+  PendingUpdateVersion as WPendingUpdateVersion,
+} from "./index";
 
 export async function RestartApp(): Promise<void> {
   return WRestartApp();
+}
+
+export async function PendingUpdateVersion(): Promise<string> {
+  return WPendingUpdateVersion();
 }

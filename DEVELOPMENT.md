@@ -76,7 +76,8 @@ cd frontend && npm run build          # production frontend bundle
 | `make package-darwin` | `bin/DataCia.app` for the host architecture |
 | `make package-darwin-universal` | Universal (arm64 + amd64) `bin/DataCia.app` |
 | `make dmg` | Universal app in a styled `bin/DataCia.dmg` |
-| `make package-windows` | `bin/DataCia-amd64_arm64-installer.exe` (cross-compiles from any OS) |
+| `make release-darwin` | `bin/DataCia.dmg` plus `bin/DataCia.zip` (the app bundle for in-app updates) |
+| `make package-windows` | `bin/DataCia-amd64_arm64-installer.exe`, plus `bin/DataCia-amd64.exe` and `bin/DataCia-arm64.exe` (cross-compiles from any OS) |
 | `make package-windows-amd64` / `-arm64` | Single-architecture Windows installer |
 
 The Windows build is pure Go (SQLite via `modernc.org/sqlite`), so it can be cross-compiled
@@ -100,9 +101,9 @@ auto-update.
 ## Releasing (uploading a new version)
 
 Releases are GitHub Releases on [rwitesh/datacia](https://github.com/rwitesh/datacia/releases).
-Installed apps poll `https://api.github.com/repos/rwitesh/datacia/releases/latest`, download the
-asset ending in `.dmg` (macOS) or `-installer.exe` (Windows), and install it once the user restarts.
-The repository must be public for that endpoint to work.
+Installed apps check the latest release with the Wails updater (GitHub provider), so the
+repository must be public. Tags with a pre-release suffix (e.g. `v2.1.0-rc.1`) are published as
+pre-releases and never become the latest release.
 
 1. Run `make test`, then merge to `main`.
 2. Tag the commit with the new version (higher than the latest release) and push the tag:
@@ -113,25 +114,44 @@ The repository must be public for that endpoint to work.
    ```
 
 3. The [Release workflow](.github/workflows/release.yml) reads the version from the tag, builds
-   `DataCia-<version>-darwin-universal.dmg` on macOS and
-   `DataCia-<version>-windows-universal-installer.exe` on Linux, writes a `SHA256SUMS` file,
-   and publishes all three to a new GitHub Release with generated notes. Follow it under the
-   repository's **Actions** tab.
+   the macOS assets on macOS and the Windows assets on Linux, writes `SHA256SUMS`, and publishes
+   everything to a new GitHub Release with generated notes. Follow it under the repository's
+   **Actions** tab.
 
-The updater refuses to install a download whose SHA-256 does not match the release's
-`SHA256SUMS`, so a release without that file cannot be installed automatically.
+Each release has these assets (`<version>` is the tag without the `v`):
 
-To upload a build by hand instead (for example, if the workflow is unavailable), keep the same
-asset names and include the checksums:
+| Asset | Used for |
+| --- | --- |
+| `DataCia-<version>-darwin-universal.dmg` | Download and first install on macOS |
+| `DataCia-<version>-windows-universal-installer.exe` | Download and first install on Windows |
+| `DataCia-<version>-darwin-universal.zip` | In-app update on macOS: contains only `DataCia.app/`, which replaces the installed app |
+| `DataCia-<version>-windows-amd64.exe`, `DataCia-<version>-windows-arm64.exe` | In-app update on Windows: replaces the running `DataCia.exe` for that architecture |
+| `SHA256SUMS` | Checksums of all the above, verified by the updater |
+
+The updater refuses an update whose file is missing from `SHA256SUMS` or does not match it, so a
+release without that file cannot be installed automatically.
+
+Release builds check for an update about 5 seconds after launch (retrying a few times if the
+network is unavailable), download it in the background, and show a **Restart** prompt in the status
+bar. `dev` builds never update, and on macOS updates are skipped when the app runs from a
+read-only location such as the mounted DMG.
+
+To upload a build by hand instead (for example, if the workflow is unavailable), produce the same
+names and checksums (`make release-darwin` needs a Mac):
 
 ```bash
-make dmg package-windows VERSION=2.0.0
+make release-darwin package-windows VERSION=2.0.0
 mkdir -p release
 mv bin/DataCia.dmg release/DataCia-2.0.0-darwin-universal.dmg
+mv bin/DataCia.zip release/DataCia-2.0.0-darwin-universal.zip
 mv bin/DataCia-amd64_arm64-installer.exe release/DataCia-2.0.0-windows-universal-installer.exe
+mv bin/DataCia-amd64.exe release/DataCia-2.0.0-windows-amd64.exe
+mv bin/DataCia-arm64.exe release/DataCia-2.0.0-windows-arm64.exe
 (cd release && shasum -a 256 -- * > SHA256SUMS)
 gh release create v2.0.0 release/* --title "DataCia v2.0.0" --generate-notes
 ```
+
+Add `--prerelease` to `gh release create` for a pre-release tag.
 
 macOS builds are ad-hoc signed only, so Gatekeeper blocks the first launch; allow it under
 System Settings → Privacy & Security → Open Anyway. Developer ID

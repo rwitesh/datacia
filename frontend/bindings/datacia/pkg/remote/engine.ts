@@ -34,10 +34,6 @@ export function CheckConnectionHealth(): $CancellablePromise<number | null> {
     return $Call.ByID(1737579716);
 }
 
-export function CheckForUpdates(): $CancellablePromise<boolean> {
-    return $Call.ByID(3465916777);
-}
-
 export function CloseCurrentConnection(closeEditor: boolean): $CancellablePromise<void> {
     return $Call.ByID(102279455, closeEditor);
 }
@@ -122,6 +118,18 @@ export function OpenSettingsWindow(tab: string): $CancellablePromise<void> {
     return $Call.ByID(3386088671, tab);
 }
 
+/**
+ * PendingUpdateVersion returns the version of the update downloaded in the
+ * background and waiting for a restart, or "" if there is none.
+ */
+export function PendingUpdateVersion(): $CancellablePromise<string> {
+    return $Call.ByID(804023768);
+}
+
+/**
+ * RestartApp quits into the update staged by the background updater and
+ * relaunches the new version.
+ */
 export function RestartApp(): $CancellablePromise<void> {
     return $Call.ByID(1474822044);
 }
@@ -157,14 +165,6 @@ export function SelectSSHKeyFile(): $CancellablePromise<string> {
  */
 export function SetApplication(app: application$0.App | null): $CancellablePromise<void> {
     return $Call.ByID(4084572048, app);
-}
-
-export function StartBackgroundUpdate(): $CancellablePromise<void> {
-    return $Call.ByID(2413143043);
-}
-
-export function Update(): $CancellablePromise<void> {
-    return $Call.ByID(254746859);
 }
 
 export function UpdateConnection(id: string, name: string, config: { [_ in string]?: string }): $CancellablePromise<void> {

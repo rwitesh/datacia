@@ -17,9 +17,8 @@ export {
   ListDatabases,
   ListTables,
   CancelQuery,
-  CheckForUpdates,
-  Update,
   RestartApp,
+  PendingUpdateVersion,
   GetCurrentConnectionInfo,
   // Connection management functions
   SaveConnection,

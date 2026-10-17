@@ -17,9 +17,3 @@ const (
 const (
 	AppSalt = "5f0I4G3KftuiSNKUL9Mvtwhz4kMgyLoAwebUoqRdJJ8="
 )
-
-// GitHub repository that publishes releases (used by the auto-updater).
-const (
-	GITHUB_OWNER = "rwitesh"
-	GITHUB_REPO  = "datacia"
-)

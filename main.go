@@ -6,6 +6,8 @@ import (
 	"datacia/internal/sentry"
 	"embed"
 	"fmt"
+
+	"github.com/wailsapp/wails/v3/pkg/updater"
 )
 
 //go:embed all:frontend/dist
@@ -17,6 +19,11 @@ var assets embed.FS
 var version = "dev"
 
 func main() {
+	// When relaunched as the updater's helper (to swap in a downloaded update),
+	// do the swap and exit before any app initialisation. application.New also
+	// calls this, but running it first keeps Sentry and logging out of the helper.
+	updater.HandleHelperMode()
+
 	defer recoverAndReport()
 
 	if err := sentry.Init(version); err != nil {

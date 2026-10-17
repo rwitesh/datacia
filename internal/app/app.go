@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"datacia/internal/ai"
 	"datacia/internal/clipboard"
 	"datacia/internal/constants"
@@ -11,6 +12,7 @@ import (
 	"datacia/internal/queries"
 	"datacia/internal/security"
 	"datacia/internal/settings"
+	"datacia/internal/update"
 	"datacia/pkg/remote"
 	"embed"
 	"errors"
@@ -79,7 +81,7 @@ func (a *App) Initialize() error {
 		return err
 	}
 
-	engine, err := remote.New(a, version)
+	engine, err := remote.New(a)
 	if err != nil {
 		logger.Error("Failed to create remote engine", "error", err.Error(), "version", version)
 		return err
@@ -295,6 +297,21 @@ func (a *App) OpenConnectionWindow() {
 	}
 }
 
+// RestartForUpdate hands over to the staged update: the updater spawns its
+// helper and quits the app. closingIntentional stops the WindowClosing hooks
+// from treating that shutdown as the user closing a window.
+func (a *App) RestartForUpdate() error {
+	a.windowMutex.Lock()
+	defer a.windowMutex.Unlock()
+
+	a.closingIntentional = true
+	if err := a.instance.Updater.Restart(context.Background()); err != nil {
+		a.closingIntentional = false
+		return err
+	}
+	return nil
+}
+
 func (a *App) createSettingsWindow(tab string) error {
 	url := "/#/settings"
 	if tab == "ai" {
@@ -360,7 +377,11 @@ func (a *App) Run() error {
 		}
 	}()
 
-	a.engine.StartBackgroundUpdate()
+	if enabled, err := update.Setup(a.instance, a.version); err != nil {
+		logger.Error("Failed to configure auto-update", "error", err.Error())
+	} else if enabled {
+		update.CheckInBackground(a.instance, 5*time.Second)
+	}
 
 	err := a.instance.Run()
 	if err != nil {

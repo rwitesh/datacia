@@ -20,14 +20,11 @@ func readPrivateKey(keyPath string) (ssh.Signer, error) {
 		return nil, err
 	}
 
-	// Try parsing as PEM-encoded private key
+	// Only unencrypted keys are supported; passphrase-protected keys fail here.
 	signer, err := ssh.ParsePrivateKey(keyBytes)
 	if err != nil {
-		// If parsing fails, try with passphrase (empty for now)
-		// In production, you might want to support passphrase-protected keys
 		return nil, err
 	}
 
 	return signer, nil
 }
-

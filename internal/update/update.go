@@ -1,210 +1,156 @@
+// Package update wires DataCia's releases into the Wails v3 updater
+// (app.Updater): GitHub Releases as the source, SHA256SUMS as the required
+// integrity check, and a silent check shortly after startup.
 package update
 
 import (
-	"bufio"
+	"context"
 	"crypto/sha256"
-	"datacia/internal/constants"
 	"datacia/internal/logger"
-	"encoding/hex"
-	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
-	"net/http"
-	"os"
-	"path/filepath"
 	"runtime"
 	"strings"
+	"sync/atomic"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
+	"github.com/wailsapp/wails/v3/pkg/application"
+	"github.com/wailsapp/wails/v3/pkg/updater"
+	"github.com/wailsapp/wails/v3/pkg/updater/providers/github"
 )
 
-var ErrNoUpdate = errors.New("no update available")
-
-type ReleaseMetadata struct {
-	Version string `json:"version"`
-	URL     string `json:"url"`
-	// AssetName is the file name of the platform asset in the release.
-	AssetName string `json:"asset_name"`
-	// ChecksumsURL points at the release's SHA256SUMS file, used to verify the download.
-	ChecksumsURL string `json:"checksums_url"`
-}
-
-type Updater struct {
-	ReleaseURL     string
-	CurrentVersion string
-	AppPath        string
-	// AssetSuffix selects the release asset for this platform (e.g. ".dmg").
-	AssetSuffix string
-}
-
-// checksumsAssetName is published by .github/workflows/release.yml next to the installers.
-const checksumsAssetName = "SHA256SUMS"
-
-var (
-	apiClient      = &http.Client{Timeout: 15 * time.Second}
-	downloadClient = &http.Client{Timeout: 10 * time.Minute}
+const (
+	// repository publishes the releases (see .github/workflows/release.yml).
+	repository = "rwitesh/datacia"
+	// checksumAsset is the `sha256sum` listing published next to the release assets.
+	checksumAsset = "SHA256SUMS"
+	// devVersion is what builds without -ldflags "-X main.version=..." report.
+	devVersion = "dev"
+	// checkAttempts bounds the background check; failures are retried with a
+	// doubling delay starting at retryDelay.
+	checkAttempts = 3
+	retryDelay    = 30 * time.Second
 )
 
-// githubRelease is the subset of the GitHub "latest release" API response we use.
-type githubRelease struct {
-	TagName string `json:"tag_name"`
-	Assets  []struct {
-		Name               string `json:"name"`
-		BrowserDownloadURL string `json:"browser_download_url"`
-	} `json:"assets"`
+// readyVersion holds the version of the update staged for the next restart,
+// so windows opened after updater.EventUpdateReady can still offer it.
+var readyVersion atomic.Value
+
+// ReadyVersion returns the version of the downloaded update waiting for a
+// restart, or "" if there is none.
+func ReadyVersion() string {
+	v, _ := readyVersion.Load().(string)
+	return v
 }
 
-func latestReleaseURL() string {
-	return fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/latest", constants.GITHUB_OWNER, constants.GITHUB_REPO)
-}
-
-func (u *Updater) fetchReleaseMetadata() (*ReleaseMetadata, error) {
-	req, err := http.NewRequest(http.MethodGet, u.ReleaseURL, nil)
-	if err != nil {
-		return nil, fmt.Errorf("invalid release URL: %w", err)
+// Setup configures app.Updater for this build. It returns enabled=false
+// without touching the updater when self-update cannot work: dev builds
+// (the updater's semver treats "dev" as older than every release), platforms
+// without an update artifact, and macOS apps the updater cannot replace
+// (see canReplaceAppBundle).
+func Setup(app *application.App, version string) (enabled bool, err error) {
+	if version == devVersion {
+		return false, nil
 	}
-	req.Header.Set("Accept", "application/vnd.github+json")
-
-	response, err := apiClient.Do(req)
-	if err != nil {
-		return nil, err
+	if runtime.GOOS != "darwin" && runtime.GOOS != "windows" {
+		return false, nil
 	}
-	defer response.Body.Close()
-
-	if response.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("invalid status: %s", response.Status)
-	}
-
-	var release githubRelease
-	if err := json.NewDecoder(response.Body).Decode(&release); err != nil {
-		return nil, err
-	}
-
-	meta := &ReleaseMetadata{Version: release.TagName}
-	for _, asset := range release.Assets {
-		if asset.Name == checksumsAssetName {
-			meta.ChecksumsURL = asset.BrowserDownloadURL
-			continue
+	if runtime.GOOS == "darwin" {
+		replaceable, err := canReplaceAppBundle()
+		if err != nil || !replaceable {
+			return false, err
 		}
+	}
+
+	provider, err := github.New(github.Config{
+		Repository:    repository,
+		ChecksumAsset: checksumAsset,
+		AssetMatcher:  matchAsset,
+	})
+	if err != nil {
+		return false, err
+	}
+
+	err = app.Updater.Init(updater.Config{
+		CurrentVersion: version,
+		Providers:      []updater.Provider{checksumRequired{provider}},
+		Window:         updater.WindowNone,
+	})
+	if err != nil {
+		return false, err
+	}
+
+	app.Event.On(updater.EventUpdateReady, func(e *application.CustomEvent) {
+		if release, ok := e.Data.(*updater.Release); ok && release != nil {
+			readyVersion.Store(release.Version)
+		}
+	})
+	return true, nil
+}
+
+// CheckInBackground runs a check-download-install pass after delay, retrying
+// failures (e.g. no network) a few times. When an update is staged the updater
+// emits updater.EventUpdateReady, which the frontend turns into a "Restart"
+// prompt.
+func CheckInBackground(app *application.App, delay time.Duration) {
+	go func() {
+		ctx := app.Context()
+		wait := delay
+		for attempt := 1; attempt <= checkAttempts; attempt++ {
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(wait):
+			}
+
+			err := app.Updater.CheckAndInstall(ctx)
+			if err == nil {
+				if app.Updater.State() == updater.StateReady {
+					logger.Info("Background update downloaded successfully")
+				}
+				return
+			}
+			logger.Error("Background update failed", "attempt", fmt.Sprint(attempt), "error", err.Error())
+			if attempt == 1 {
+				wait = retryDelay
+			} else {
+				wait *= 2
+			}
+		}
+	}()
+}
+
+// matchAsset picks the release asset the updater downloads. macOS uses the
+// zipped universal .app (the .dmg is only for first installs); everything else
+// uses the per-architecture asset, which github.DefaultAssetMatcher finds
+// while skipping the installer and SHA256SUMS.
+func matchAsset(req updater.CheckRequest, assets []github.ReleaseAsset) int {
+	if req.Platform != "darwin" {
+		return github.DefaultAssetMatcher(req, assets)
+	}
+	for i, asset := range assets {
 		name := strings.ToLower(asset.Name)
-		if meta.URL != "" || !strings.HasSuffix(name, u.AssetSuffix) {
-			continue
-		}
-		// Only accept a build for this architecture or a universal build.
-		if strings.Contains(name, runtime.GOARCH) || strings.Contains(name, "universal") {
-			meta.URL = asset.BrowserDownloadURL
-			meta.AssetName = asset.Name
+		if strings.Contains(name, "-darwin-universal") && strings.HasSuffix(name, ".zip") {
+			return i
 		}
 	}
-	if meta.URL == "" {
-		return nil, fmt.Errorf("no %s asset for %s in release %s", u.AssetSuffix, runtime.GOARCH, release.TagName)
-	}
-
-	return meta, nil
+	return -1
 }
 
-func (u *Updater) IsNewerVersion(meta *ReleaseMetadata) bool {
-	cur := strings.TrimPrefix(u.CurrentVersion, "v")
-	lat := strings.TrimPrefix(meta.Version, "v")
-
-	current, err1 := semver.NewVersion(cur)
-	latest, err2 := semver.NewVersion(lat)
-	if err1 != nil || err2 != nil {
-		return false
-	}
-
-	return latest.GreaterThan(current)
+// checksumRequired fails closed when a release has no SHA-256 digest: the
+// GitHub provider silently skips verification if SHA256SUMS is missing or
+// has no entry for the picked asset.
+type checksumRequired struct {
+	updater.Provider
 }
 
-func (u *Updater) IsUpdateAvailable() (*ReleaseMetadata, error) {
-	if u.AssetSuffix == "" {
-		// No release artifact for this platform.
-		return nil, nil
+func (p checksumRequired) Check(ctx context.Context, req updater.CheckRequest) (*updater.Release, error) {
+	release, err := p.Provider.Check(ctx, req)
+	if err != nil || release == nil {
+		return release, err
 	}
-	metadata, err := u.fetchReleaseMetadata()
-	if err != nil {
-		logger.Error("Failed to check for updates", "error", err.Error())
-		return nil, fmt.Errorf("failed to check for updates: %w", err)
+	v := release.Verification
+	if v == nil || v.DigestAlgo != "sha256" || len(v.Digest) != sha256.Size {
+		return nil, fmt.Errorf("release %s has no %s entry for %s", release.Version, checksumAsset, release.Artifact.Filename)
 	}
-	if u.IsNewerVersion(metadata) {
-		return metadata, nil
-	}
-	return nil, nil
-}
-
-// expectedChecksum returns the SHA-256 listed for assetName in the release's SHA256SUMS
-// file (the `sha256sum` format: "<hex>  <name>").
-func expectedChecksum(meta *ReleaseMetadata) (string, error) {
-	if meta.ChecksumsURL == "" {
-		return "", fmt.Errorf("release %s has no %s file", meta.Version, checksumsAssetName)
-	}
-	response, err := apiClient.Get(meta.ChecksumsURL)
-	if err != nil {
-		return "", err
-	}
-	defer response.Body.Close()
-	if response.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("invalid status for %s: %s", checksumsAssetName, response.Status)
-	}
-
-	scanner := bufio.NewScanner(io.LimitReader(response.Body, 1<<20))
-	for scanner.Scan() {
-		fields := strings.Fields(scanner.Text())
-		if len(fields) == 2 && strings.TrimPrefix(fields[1], "*") == meta.AssetName {
-			return strings.ToLower(fields[0]), nil
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		return "", err
-	}
-	return "", fmt.Errorf("%s has no entry for %s", checksumsAssetName, meta.AssetName)
-}
-
-// download fetches the release asset into the temp directory and verifies it against
-// the release's SHA256SUMS before returning its path.
-func (u *Updater) download(meta *ReleaseMetadata) (string, error) {
-	want, err := expectedChecksum(meta)
-	if err != nil {
-		return "", err
-	}
-
-	name := filepath.Base(meta.AssetName)
-	if name == "" || name == "." || name == string(filepath.Separator) {
-		name = "update.bin"
-	}
-	tmp := filepath.Join(os.TempDir(), name)
-	out, err := os.Create(tmp)
-	if err != nil {
-		return "", err
-	}
-
-	response, err := downloadClient.Get(meta.URL)
-	if err != nil {
-		out.Close()
-		os.Remove(tmp)
-		return "", err
-	}
-	defer response.Body.Close()
-
-	if response.StatusCode != http.StatusOK {
-		out.Close()
-		os.Remove(tmp)
-		return "", fmt.Errorf("invalid status: %s", response.Status)
-	}
-
-	hash := sha256.New()
-	_, copyErr := io.Copy(io.MultiWriter(out, hash), response.Body)
-	closeErr := out.Close()
-	if err := errors.Join(copyErr, closeErr); err != nil {
-		os.Remove(tmp)
-		return "", err
-	}
-
-	if got := hex.EncodeToString(hash.Sum(nil)); got != want {
-		os.Remove(tmp)
-		return "", fmt.Errorf("checksum mismatch for %s: got %s, want %s", meta.AssetName, got, want)
-	}
-	return tmp, nil
+	return release, nil
 }

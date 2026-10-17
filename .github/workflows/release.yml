@@ -1,11 +1,16 @@
 name: Release
 
-# Push a version tag (e.g. v2.0.0) to build the macOS DMG and Windows installer
-# and publish them as a GitHub Release. The tag is the only source of the app
-# version: it is passed to the build as VERSION.
-# The in-app updater reads https://api.github.com/repos/rwitesh/datacia/releases/latest,
-# picks the asset ending in `.dmg` (macOS) or `-installer.exe` (Windows) and verifies it
-# against the release's SHA256SUMS file.
+# Push a version tag (e.g. v2.0.0) to build the macOS and Windows assets and
+# publish them as a GitHub Release. The tag is the only source of the app
+# version: it is passed to the build as VERSION. Tags with a pre-release suffix
+# (e.g. v2.1.0-rc.1) are published as pre-releases, so they never become "latest".
+#
+# Assets (X.Y.Z = version):
+#   DataCia-X.Y.Z-darwin-universal.dmg             first installs (macOS)
+#   DataCia-X.Y.Z-windows-universal-installer.exe  first installs (Windows)
+#   DataCia-X.Y.Z-darwin-universal.zip             in-app update: replaces DataCia.app
+#   DataCia-X.Y.Z-windows-amd64.exe / -arm64.exe   in-app update: replaces DataCia.exe
+#   SHA256SUMS                                     checked by the in-app updater
 on:
   push:
     tags: ["v*"]
@@ -46,13 +51,17 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: go install github.com/wailsapp/wails/v3/cmd/wails3@${WAILS_VERSION}
-      - name: Build universal DMG
-        run: wails3 task darwin:package:dmg VERSION=${{ needs.verify.outputs.version }}
-      - run: mv bin/DataCia.dmg "bin/DataCia-${{ needs.verify.outputs.version }}-darwin-universal.dmg"
+      - name: Build universal DMG and update zip
+        run: wails3 task darwin:package:release VERSION=${{ needs.verify.outputs.version }}
+      - run: |
+          mv bin/DataCia.dmg "bin/DataCia-${{ needs.verify.outputs.version }}-darwin-universal.dmg"
+          mv bin/DataCia.zip "bin/DataCia-${{ needs.verify.outputs.version }}-darwin-universal.zip"
       - uses: actions/upload-artifact@v5
         with:
           name: macos
-          path: bin/*.dmg
+          path: |
+            bin/*-darwin-universal.dmg
+            bin/*-darwin-universal.zip
 
   windows:
     needs: verify
@@ -73,11 +82,16 @@ jobs:
       - run: go install github.com/wailsapp/wails/v3/cmd/wails3@${WAILS_VERSION}
       - name: Build universal NSIS installer (cross-compiled, pure Go)
         run: wails3 task windows:package ARCH=universal VERSION=${{ needs.verify.outputs.version }}
-      - run: mv bin/DataCia-amd64_arm64-installer.exe "bin/DataCia-${{ needs.verify.outputs.version }}-windows-universal-installer.exe"
+      # The universal build also leaves the per-architecture binaries, which the
+      # in-app updater swaps in place of the running DataCia.exe.
+      - run: |
+          mv bin/DataCia-amd64_arm64-installer.exe "bin/DataCia-${{ needs.verify.outputs.version }}-windows-universal-installer.exe"
+          mv bin/DataCia-amd64.exe "bin/DataCia-${{ needs.verify.outputs.version }}-windows-amd64.exe"
+          mv bin/DataCia-arm64.exe "bin/DataCia-${{ needs.verify.outputs.version }}-windows-arm64.exe"
       - uses: actions/upload-artifact@v5
         with:
           name: windows
-          path: bin/*-installer.exe
+          path: bin/*-windows-*.exe
 
   publish:
     needs: [verify, macos, windows]
@@ -88,10 +102,14 @@ jobs:
           path: dist
           merge-multiple: true
       - name: Write checksums
-        # The in-app updater refuses downloads that don't match this file.
+        # The in-app updater refuses downloads that are missing from, or don't
+        # match, this file.
         working-directory: dist
         run: sha256sum -- * > SHA256SUMS && cat SHA256SUMS
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --title "DataCia $GITHUB_REF_NAME" --generate-notes
+        run: |
+          prerelease=()
+          case "$GITHUB_REF_NAME" in *-*) prerelease=(--prerelease) ;; esac
+          gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --title "DataCia $GITHUB_REF_NAME" --generate-notes "${prerelease[@]}"

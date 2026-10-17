@@ -95,6 +95,32 @@ tasks:
     cmds:
       - task: create:dmg
 
+  package:release:
+    summary: Packages a universal `.app` into bin/DataCia.dmg and bin/DataCia.zip (release assets)
+    deps:
+      - task: package:universal
+    cmds:
+      - task: create:dmg
+      - task: create:update:zip
+
+  create:update:zip:
+    summary: Zips the `.app` bundle into bin/DataCia.zip for the in-app updater
+    platforms: [darwin]
+    cmds:
+      - rm -f "{{.BIN_DIR}}/{{.APP_NAME}}.zip"
+      # The updater replaces the whole bundle and expects exactly one top-level
+      # entry, `{{.APP_NAME}}.app/`, with no __MACOSX or AppleDouble (._*) entries.
+      - ditto -c -k --norsrc --noextattr --noqtn --keepParent "{{.BIN_DIR}}/{{.APP_NAME}}.app" "{{.BIN_DIR}}/{{.APP_NAME}}.zip"
+      - |
+        entries=$(zipinfo -1 "{{.BIN_DIR}}/{{.APP_NAME}}.zip")
+        if [ -z "$entries" ] \
+          || printf '%s\n' "$entries" | grep -qv '^{{.APP_NAME}}\.app/' \
+          || printf '%s\n' "$entries" | grep -Eq '(^|/)(__MACOSX|\._)'; then
+          echo "{{.BIN_DIR}}/{{.APP_NAME}}.zip must contain only {{.APP_NAME}}.app/ (no __MACOSX or ._ entries)" >&2
+          exit 1
+        fi
+        echo "{{.BIN_DIR}}/{{.APP_NAME}}.zip: $(printf '%s\n' "$entries" | wc -l | tr -d ' ') entries, all under {{.APP_NAME}}.app/"
+
   create:dmg:
     summary: Creates a styled `.dmg` from the `.app` bundle
     platforms: [darwin]
