@@ -1,168 +1,124 @@
 package update
 
 import (
+	"context"
 	"crypto/sha256"
-	"encoding/hex"
-	"fmt"
-	"net/http"
-	"net/http/httptest"
-	"os"
-	"path/filepath"
-	"runtime"
+	"io"
 	"testing"
+
+	"github.com/wailsapp/wails/v3/pkg/updater"
+	"github.com/wailsapp/wails/v3/pkg/updater/providers/github"
 )
 
-func newReleaseServer(t *testing.T, body string) *httptest.Server {
-	t.Helper()
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, body)
-	}))
-	t.Cleanup(srv.Close)
-	return srv
+// releaseAssets mirrors what .github/workflows/release.yml publishes.
+var releaseAssets = []github.ReleaseAsset{
+	{Name: "DataCia-1.4.0-darwin-universal.dmg"},
+	{Name: "DataCia-1.4.0-windows-universal-installer.exe"},
+	{Name: "DataCia-1.4.0-darwin-universal.zip"},
+	{Name: "DataCia-1.4.0-windows-amd64.exe"},
+	{Name: "DataCia-1.4.0-windows-arm64.exe"},
+	{Name: "SHA256SUMS"},
 }
 
-func TestFetchReleaseMetadataPicksPlatformAsset(t *testing.T) {
-	srv := newReleaseServer(t, `{
-		"tag_name": "v1.11.0",
-		"assets": [
-			{"name": "DataCia-1.11.0-windows-universal-installer.exe", "browser_download_url": "https://example.com/win.exe"},
-			{"name": "DataCia-1.11.0-darwin-universal.dmg", "browser_download_url": "https://example.com/mac.dmg"},
-			{"name": "SHA256SUMS", "browser_download_url": "https://example.com/SHA256SUMS"}
-		]
-	}`)
-
-	u := &Updater{ReleaseURL: srv.URL, CurrentVersion: "1.10.80", AssetSuffix: ".dmg"}
-	meta, err := u.IsUpdateAvailable()
-	if err != nil {
-		t.Fatalf("IsUpdateAvailable: %v", err)
+func TestMatchAsset(t *testing.T) {
+	tests := []struct {
+		platform, arch string
+		want           string
+	}{
+		{"darwin", "amd64", "DataCia-1.4.0-darwin-universal.zip"},
+		{"darwin", "arm64", "DataCia-1.4.0-darwin-universal.zip"},
+		{"windows", "amd64", "DataCia-1.4.0-windows-amd64.exe"},
+		{"windows", "arm64", "DataCia-1.4.0-windows-arm64.exe"},
 	}
-	if meta == nil || meta.URL != "https://example.com/mac.dmg" || meta.Version != "v1.11.0" ||
-		meta.AssetName != "DataCia-1.11.0-darwin-universal.dmg" || meta.ChecksumsURL != "https://example.com/SHA256SUMS" {
-		t.Fatalf("unexpected metadata: %+v", meta)
-	}
-}
-
-func TestFetchReleaseMetadataPrefersMatchingArch(t *testing.T) {
-	other := "arm64"
-	if runtime.GOARCH == "arm64" {
-		other = "amd64"
-	}
-	srv := newReleaseServer(t, fmt.Sprintf(`{
-		"tag_name": "v2.0.0",
-		"assets": [
-			{"name": "DataCia-%s-installer.exe", "browser_download_url": "https://example.com/other.exe"},
-			{"name": "DataCia-%s-installer.exe", "browser_download_url": "https://example.com/native.exe"}
-		]
-	}`, other, runtime.GOARCH))
-
-	u := &Updater{ReleaseURL: srv.URL, CurrentVersion: "1.0.0", AssetSuffix: "-installer.exe"}
-	meta, err := u.fetchReleaseMetadata()
-	if err != nil {
-		t.Fatalf("fetchReleaseMetadata: %v", err)
-	}
-	if meta.URL != "https://example.com/native.exe" {
-		t.Fatalf("expected native-arch asset, got %s", meta.URL)
+	for _, tt := range tests {
+		t.Run(tt.platform+"/"+tt.arch, func(t *testing.T) {
+			idx := matchAsset(updater.CheckRequest{Platform: tt.platform, Arch: tt.arch}, releaseAssets)
+			if idx < 0 {
+				t.Fatalf("no asset matched, want %s", tt.want)
+			}
+			if got := releaseAssets[idx].Name; got != tt.want {
+				t.Fatalf("matched %s, want %s", got, tt.want)
+			}
+		})
 	}
 }
 
-func TestNoUpdateWhenCurrentIsLatest(t *testing.T) {
-	srv := newReleaseServer(t, `{"tag_name": "v1.10.80", "assets": [{"name": "DataCia-1.10.80-darwin-universal.dmg", "browser_download_url": "https://example.com/mac.dmg"}]}`)
-
-	u := &Updater{ReleaseURL: srv.URL, CurrentVersion: "1.10.80", AssetSuffix: ".dmg"}
-	meta, err := u.IsUpdateAvailable()
-	if err != nil || meta != nil {
-		t.Fatalf("expected no update, got %+v, %v", meta, err)
+func TestMatchAssetWithoutPlatformAsset(t *testing.T) {
+	assets := []github.ReleaseAsset{
+		{Name: "DataCia-1.4.0-darwin-universal.dmg"},
+		{Name: "DataCia-1.4.0-windows-universal-installer.exe"},
+		{Name: "SHA256SUMS"},
 	}
-}
-
-func TestNoUpdateForUnsupportedPlatform(t *testing.T) {
-	u := &Updater{CurrentVersion: "1.0.0"}
-	meta, err := u.IsUpdateAvailable()
-	if err != nil || meta != nil {
-		t.Fatalf("expected no update, got %+v, %v", meta, err)
-	}
-}
-
-func TestFetchReleaseMetadataRejectsOtherArch(t *testing.T) {
-	other := "arm64"
-	if runtime.GOARCH == "arm64" {
-		other = "amd64"
-	}
-	srv := newReleaseServer(t, fmt.Sprintf(`{
-		"tag_name": "v2.0.0",
-		"assets": [{"name": "DataCia-%s-installer.exe", "browser_download_url": "https://example.com/other.exe"}]
-	}`, other))
-
-	u := &Updater{ReleaseURL: srv.URL, CurrentVersion: "1.0.0", AssetSuffix: "-installer.exe"}
-	if _, err := u.fetchReleaseMetadata(); err == nil {
-		t.Fatal("expected an error when only another architecture's asset exists")
-	}
-}
-
-// newAssetServer serves a release payload and a SHA256SUMS file listing sums.
-func newAssetServer(t *testing.T, payload []byte, sums string) *httptest.Server {
-	t.Helper()
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case "/DataCia-1.11.0-darwin-universal.dmg":
-			w.Write(payload)
-		case "/SHA256SUMS":
-			fmt.Fprint(w, sums)
-		default:
-			http.NotFound(w, r)
+	for _, platform := range []string{"darwin", "windows"} {
+		if idx := matchAsset(updater.CheckRequest{Platform: platform, Arch: "arm64"}, assets); idx != -1 {
+			t.Errorf("%s: matched %s, want none", platform, assets[idx].Name)
 		}
-	}))
-	t.Cleanup(srv.Close)
-	return srv
-}
-
-func checksumOf(b []byte) string {
-	sum := sha256.Sum256(b)
-	return hex.EncodeToString(sum[:])
-}
-
-func TestDownloadVerifiesChecksum(t *testing.T) {
-	payload := []byte("dmg bytes")
-	srv := newAssetServer(t, payload, checksumOf(payload)+"  DataCia-1.11.0-darwin-universal.dmg\n")
-	meta := &ReleaseMetadata{
-		Version:      "v1.11.0",
-		URL:          srv.URL + "/DataCia-1.11.0-darwin-universal.dmg",
-		AssetName:    "DataCia-1.11.0-darwin-universal.dmg",
-		ChecksumsURL: srv.URL + "/SHA256SUMS",
-	}
-
-	path, err := (&Updater{}).download(meta)
-	if err != nil {
-		t.Fatalf("download: %v", err)
-	}
-	defer os.Remove(path)
-	got, err := os.ReadFile(path)
-	if err != nil || string(got) != string(payload) {
-		t.Fatalf("downloaded file = %q, %v", got, err)
 	}
 }
 
-func TestDownloadRejectsChecksumMismatch(t *testing.T) {
-	srv := newAssetServer(t, []byte("tampered"), checksumOf([]byte("original"))+"  DataCia-1.11.0-darwin-universal.dmg\n")
-	meta := &ReleaseMetadata{
-		Version:      "v1.11.0",
-		URL:          srv.URL + "/DataCia-1.11.0-darwin-universal.dmg",
-		AssetName:    "DataCia-1.11.0-darwin-universal.dmg",
-		ChecksumsURL: srv.URL + "/SHA256SUMS",
-	}
+// fakeProvider returns a fixed release from Check.
+type fakeProvider struct {
+	release *updater.Release
+}
 
-	if _, err := (&Updater{}).download(meta); err == nil {
-		t.Fatal("expected checksum mismatch error")
+func (p fakeProvider) Name() string { return "fake" }
+
+func (p fakeProvider) Check(context.Context, updater.CheckRequest) (*updater.Release, error) {
+	return p.release, nil
+}
+
+func (p fakeProvider) Download(context.Context, *updater.Release, io.Writer, func(written, total int64)) error {
+	return nil
+}
+
+func TestChecksumRequired(t *testing.T) {
+	digest := sha256.Sum256([]byte("DataCia"))
+	tests := []struct {
+		name         string
+		verification *updater.Verification
+		wantErr      bool
+	}{
+		{"no verification", nil, true},
+		{"empty digest", &updater.Verification{DigestAlgo: "sha256"}, true},
+		{"sha256 digest", &updater.Verification{DigestAlgo: "sha256", Digest: digest[:]}, false},
 	}
-	if _, err := os.Stat(filepath.Join(os.TempDir(), meta.AssetName)); !os.IsNotExist(err) {
-		t.Fatalf("mismatched download should be removed, stat err = %v", err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			release := &updater.Release{
+				Version:      "1.4.0",
+				Artifact:     updater.Artifact{Filename: "DataCia-1.4.0-windows-amd64.exe"},
+				Verification: tt.verification,
+			}
+			p := checksumRequired{fakeProvider{release: release}}
+			got, err := p.Check(context.Background(), updater.CheckRequest{})
+			if tt.wantErr {
+				if err == nil || got != nil {
+					t.Fatalf("Check() = %v, %v; want an error", got, err)
+				}
+				return
+			}
+			if err != nil || got != release {
+				t.Fatalf("Check() = %v, %v; want the release", got, err)
+			}
+		})
 	}
 }
 
-func TestDownloadRequiresChecksums(t *testing.T) {
-	meta := &ReleaseMetadata{Version: "v1.11.0", URL: "https://example.com/x.dmg", AssetName: "x.dmg"}
-	if _, err := (&Updater{}).download(meta); err == nil {
-		t.Fatal("expected an error when the release has no SHA256SUMS")
+func TestChecksumRequiredUpToDate(t *testing.T) {
+	p := checksumRequired{fakeProvider{}}
+	got, err := p.Check(context.Background(), updater.CheckRequest{})
+	if got != nil || err != nil {
+		t.Fatalf("Check() = %v, %v; want nil, nil", got, err)
+	}
+	if p.Name() != "fake" {
+		t.Fatalf("Name() = %q, want the wrapped provider's name", p.Name())
+	}
+}
+
+func TestSetupSkipsDevBuilds(t *testing.T) {
+	// A nil app would panic if Setup tried to configure the updater.
+	enabled, err := Setup(nil, "dev")
+	if enabled || err != nil {
+		t.Fatalf("Setup(dev) = %v, %v; want false, nil", enabled, err)
 	}
 }

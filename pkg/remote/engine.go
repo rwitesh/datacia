@@ -24,6 +24,7 @@ type UIController interface {
 	CloseEditor()
 	OpenConnectionWindow()
 	OpenSettingsWindow(tab string)
+	RestartForUpdate() error
 }
 
 type Engine struct {
@@ -32,10 +33,9 @@ type Engine struct {
 	uiController UIController
 	sshTunnel    *ssh.Tunnel
 	wailsApp     *application.App
-	updater      *update.Updater
 }
 
-func New(uiController UIController, version string) (*Engine, error) {
+func New(uiController UIController) (*Engine, error) {
 	// Get encryption key from security context (cached at startup)
 	ctx, err := security.GetSecurityContext()
 	if err != nil {
@@ -48,15 +48,9 @@ func New(uiController UIController, version string) (*Engine, error) {
 		return nil, fmt.Errorf("failed to initialize database: %w", err)
 	}
 
-	updater, err := update.NewUpdater(version)
-	if err != nil {
-		return nil, err
-	}
-
 	return &Engine{
 		store:        store,
 		uiController: uiController,
-		updater:      updater,
 	}, nil
 }
 
@@ -67,6 +61,22 @@ func (e *Engine) SetApplication(app *application.App) {
 
 func (e *Engine) GetStore() *db.Store {
 	return e.store
+}
+
+// PendingUpdateVersion returns the version of the update downloaded in the
+// background and waiting for a restart, or "" if there is none.
+func (e *Engine) PendingUpdateVersion() string {
+	return update.ReadyVersion()
+}
+
+// RestartApp quits into the update staged by the background updater and
+// relaunches the new version.
+func (e *Engine) RestartApp() error {
+	if err := e.uiController.RestartForUpdate(); err != nil {
+		logger.Error("Failed to restart app", "error", err.Error())
+		return errors.New("Failed to restart app")
+	}
+	return nil
 }
 
 // getDBClient creates a new database client instance based on the engine type

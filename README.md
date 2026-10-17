@@ -25,6 +25,9 @@ Get the latest version from [Releases](https://github.com/rwitesh/datacia/releas
 - **macOS** (Apple Silicon and Intel): `DataCia-<version>-darwin-universal.dmg`
 - **Windows** (x64 and ARM64): `DataCia-<version>-windows-universal-installer.exe`
 
+The other files in a release (`.zip`, per-architecture `.exe`, `SHA256SUMS`) are used by the app's
+automatic updates; you don't need to download them.
+
 ## Install
 
 **macOS** – open the `.dmg` and drag DataCia into Applications. The first time you open it, macOS

@@ -49,10 +49,6 @@ type RemoteEngine interface {
 	GetTableSchema(table string) (common.QueryResult, error)
 	GetDDL(table string) (string, error)
 
-	// Check for updates
-	CheckForUpdates() (bool, error)
-	Update() error
-
 	// Connection Health
 	CheckConnectionHealth() (*float64, error)
 }

@@ -1,20 +1,26 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { CheckForUpdates, PerformUpdate, RestartApp } from "./bindings/updates";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { Events, Updater } from "@wailsio/runtime";
+import { PendingUpdateVersion, RestartApp } from "./bindings/updates";
 
-export function useCheckForUpdates() {
+const pendingUpdateKey = ["pending-update"];
+
+// Version of the update downloaded in the background and waiting for a restart
+// ("" when there is none). Refreshed when the updater reports a staged update.
+export function usePendingUpdate() {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const unsubscribe = Events.On(Updater.Events.UpdateReady, () => {
+      queryClient.invalidateQueries({ queryKey: pendingUpdateKey });
+    });
+    return () => unsubscribe();
+  }, [queryClient]);
+
   return useQuery({
-    queryKey: ["check-for-updates"],
-    queryFn: () => CheckForUpdates(),
-    retry: 3,
+    queryKey: pendingUpdateKey,
+    queryFn: () => PendingUpdateVersion(),
   });
-}
-
-export function useUpdateApp() {
-  return useMutation({
-    mutationFn: async () => {
-      return PerformUpdate();
-    },
-  })
 }
 
 export function useRestartApp() {
