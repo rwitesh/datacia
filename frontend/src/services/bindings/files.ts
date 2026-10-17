@@ -1,15 +1,17 @@
 import { ExportDataToFile as WExportDataToFile } from "../../../bindings/datacia/internal/files/fileservice";
 
 /**
- * Export data to a file with the given format (csv or json)
- * @param format - "csv" or "json"
- * @param data - JSON string of data array
+ * Export data to a file with the given format (csv, json or png)
+ * @param format - "csv", "json" or "png"
+ * @param data - JSON string of the rows, or base64 image data for png
+ * @param columns - column order for csv
  * @param suggestedFilename - default filename suggestion
  * @returns The path of the saved file, or empty string if cancelled
  */
 export async function ExportDataToFile(
   format: string,
   data: string,
+  columns: string[],
   suggestedFilename: string
 ): Promise<string> {
   if (!format?.trim()) {
@@ -21,7 +23,5 @@ export async function ExportDataToFile(
   if (!suggestedFilename?.trim()) {
     throw new Error("Filename cannot be empty");
   }
-  return WExportDataToFile(format, data, suggestedFilename);
+  return WExportDataToFile(format, data, columns, suggestedFilename);
 }
-
-

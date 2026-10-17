@@ -1,7 +1,13 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { useTables, useCancelQuery, useRunQuery } from "@/services/database";
+import {
+  useTables,
+  useCancelQuery,
+  useRunQuery,
+  useGetTableData,
+} from "@/services/database";
 import { v4 as uuidv4 } from "uuid";
-import { EditorContext, type Tab } from "./Context";
+import { errorMessage } from "@/lib/utils";
+import { EditorContext, type Tab, type TableDataParams } from "./Context";
 
 export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
   const { data = [], isLoading, isFetching, error, refetch } = useTables();
@@ -9,8 +15,12 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
   const tableRef = useRef<HTMLDivElement>(null);
 
-  const runQueryMutation = useRunQuery();
-  const cancelQueryMutation = useCancelQuery();
+  /* Each call below uses mutateAsync: a shared mutation only calls the
+     onSuccess/onError passed to its latest mutate(), so with mutate() a
+     query running in one tab never finished once another tab ran one. */
+  const { mutateAsync: runQueryAsync } = useRunQuery();
+  const { mutateAsync: cancelQueryAsync } = useCancelQuery();
+  const { mutateAsync: getTableDataAsync } = useGetTableData();
 
   const createTab = useCallback(
     (title?: string, type: "query" | "table" = "query"): Tab => {
@@ -55,24 +65,22 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
       const targetTab = tabs.find((tab) => tab.id === targetTabId);
       if (!targetTab?.queryID) return;
 
-      cancelQueryMutation.mutate(targetTab.queryID, {
-        onSuccess: () => {
-          updateTab(targetTabId, {
-            error: "Query execution cancelled",
-            results: null,
-            isExecuting: false,
-            queryID: undefined,
-          });
-        },
-        onError: () => {
-          updateTab(targetTabId, {
-            error: "Error cancelling query",
-            isExecuting: false,
-          });
-        },
-      });
+      try {
+        await cancelQueryAsync(targetTab.queryID);
+        updateTab(targetTabId, {
+          error: "Query execution cancelled",
+          results: null,
+          isExecuting: false,
+          queryID: undefined,
+        });
+      } catch {
+        updateTab(targetTabId, {
+          error: "Error cancelling query",
+          isExecuting: false,
+        });
+      }
     },
-    [activeTabId, tabs, updateTab, cancelQueryMutation]
+    [activeTabId, tabs, updateTab, cancelQueryAsync]
   );
 
   const closeTab = useCallback(
@@ -81,19 +89,15 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
         console.error("Error cancelling query for closed tab:", err);
       });
 
-      setTabs((prev) => {
-        const filtered = prev.filter((tab) => tab.id !== tabId);
-
-        // If closing an active tab, switch to another tab
-        if (activeTabId === tabId && filtered.length > 0) {
-          const currentIndex = prev.findIndex((tab) => tab.id === tabId);
-          const newActiveIndex = Math.min(currentIndex, filtered.length - 1);
-          setActiveTabId(filtered[newActiveIndex].id);
-        }
-        return filtered;
-      });
+      if (activeTabId === tabId) {
+        const index = tabs.findIndex((tab) => tab.id === tabId);
+        const remaining = tabs.filter((tab) => tab.id !== tabId);
+        const next = remaining[Math.min(index, remaining.length - 1)];
+        setActiveTabId(next?.id ?? null);
+      }
+      setTabs((prev) => prev.filter((tab) => tab.id !== tabId));
     },
-    [activeTabId, stopQuery]
+    [activeTabId, tabs, stopQuery]
   );
 
   const setActiveTab = useCallback((tabId: string) => {
@@ -124,32 +128,54 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
         error: undefined,
       });
 
-      runQueryMutation.mutate(
-        { sql: querySQL, queryId },
-        {
-          onSuccess: (response) => {
-            updateTab(targetTabId, {
-              results: response,
-              isExecuting: false,
-              pagination,
-            });
-          },
-          onError: (err: unknown) => {
-            const message =
-              err instanceof Error
-                ? err.message
-                : String(err) || "Error executing query";
+      // Only the run that is still the tab's current query may write to it,
+      // so a cancelled run can't overwrite the "cancelled" message.
+      const finishRun = (updates: Partial<Tab>) =>
+        setTabs((prev) =>
+          prev.map((tab) =>
+            tab.id === targetTabId && tab.queryID === queryId
+              ? { ...tab, ...updates, isExecuting: false }
+              : tab
+          )
+        );
 
-            updateTab(targetTabId, {
-              error: message,
-              results: null,
-              isExecuting: false,
-            });
-          },
-        }
-      );
+      try {
+        const response = await runQueryAsync({ sql: querySQL, queryId });
+        finishRun({ results: response, pagination });
+      } catch (err) {
+        finishRun({ error: errorMessage(err), results: null });
+      }
     },
-    [activeTabId, tabs, updateTab, runQueryMutation]
+    [activeTabId, tabs, updateTab, runQueryAsync]
+  );
+
+  // The latest table load per tab: paging or sorting quickly can finish
+  // requests out of order, and only the newest may write to the tab.
+  const latestTableLoad = useRef(new Map<string, TableDataParams>());
+
+  const loadTableData = useCallback(
+    async (tabId: string, params: TableDataParams) => {
+      latestTableLoad.current.set(tabId, params);
+      const isLatest = () => latestTableLoad.current.get(tabId) === params;
+
+      updateTab(tabId, { ...params, isExecuting: true, error: undefined });
+      try {
+        const results = await getTableDataAsync(params);
+        if (isLatest()) {
+          updateTab(tabId, { results, isExecuting: false, pagination: true });
+        }
+      } catch (err) {
+        if (isLatest()) {
+          updateTab(tabId, {
+            error: errorMessage(err),
+            results: null,
+            isExecuting: false,
+            pagination: false,
+          });
+        }
+      }
+    },
+    [updateTab, getTableDataAsync]
   );
 
   const activeTab = tabs.find((tab) => tab.id === activeTabId);
@@ -165,6 +191,7 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
       updateTab,
       runQuery,
       stopQuery,
+      loadTableData,
       tableRef,
     }),
     [
@@ -181,6 +208,7 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
       updateTab,
       runQuery,
       stopQuery,
+      loadTableData,
     ]
   );
 

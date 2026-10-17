@@ -13,19 +13,6 @@ import (
 	"github.com/google/uuid"
 )
 
-type ClickHouseClient interface {
-	Connect(host, port, username, password, database string, test bool) error
-	Close() error
-	Ping() error
-	RunQuery(queryId, queryType, sql string) (common.QueryResult, error)
-	CancelQuery(queryId string) error
-	ListTables() ([]string, error)
-	ListDatabases() (common.DatabaseInfo, error)
-	GetConnectionInfo() (map[string]string, error)
-}
-
-var _ ClickHouseClient = (*ClickHouse)(nil)
-
 type ClickHouse struct {
 	conn driver.Conn
 	*common.ConnectionState
@@ -63,6 +50,7 @@ func (ch *ClickHouse) Connect(host, port, username, password, database string, t
 	ctx, cancel := common.NewTimeoutContext(2 * time.Second)
 	defer cancel()
 	if err := connection.Ping(ctx); err != nil {
+		_ = connection.Close()
 		return err
 	}
 
@@ -91,8 +79,6 @@ func (ch *ClickHouse) Connect(host, port, username, password, database string, t
 }
 
 func (ch *ClickHouse) Close() error {
-	ch.ActiveQueries = sync.Map{}
-
 	ch.Mu.Lock()
 	conn := ch.conn
 	ch.conn = nil
@@ -398,10 +384,6 @@ func (ch *ClickHouse) GetConnectionInfo() (map[string]string, error) {
 	}, nil
 }
 
-func (ch *ClickHouse) GetPassword() string {
-	return ch.ConnectionState.GetPassword()
-}
-
 func (ch *ClickHouse) GetTableData(table string, limit, offset int, orderBy, orderDir string) (common.QueryResult, error) {
 	ch.Mu.RLock()
 	conn := ch.conn
@@ -500,15 +482,3 @@ func (ch *ClickHouse) GetDDL(table string) (string, error) {
 	}
 	return ddl, nil
 }
-
-// func (ch *ClickHouse) SaveConnection(name string, config map[string]string) error {
-// 	return ch.engine.SaveConnection(name, config)
-// }
-
-// func (ch *ClickHouse) ListConnections() []string {
-// 	connections, err := ch.engine.ListConnections()
-// 	if err != nil {
-// 		return []string{}
-// 	}
-// 	return connections
-// }

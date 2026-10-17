@@ -2,6 +2,7 @@ package clickhouse
 
 import (
 	"context"
+	"encoding"
 	"fmt"
 	"math"
 	"reflect"
@@ -60,7 +61,23 @@ func prepareScanTargets(columnTypes []driver.ColumnType) ([]interface{}, error) 
 	return scanTargets, nil
 }
 
+// normalizeValue converts a scanned value into one encoding/json can marshal
+// the way the UI expects.
 func normalizeValue(v interface{}) interface{} {
+	rv := reflect.ValueOf(v)
+	if rv.Kind() == reflect.Pointer && rv.IsNil() {
+		return nil
+	}
+	// Check before dereferencing: *big.Int (Int128/256) only marshals
+	// through its pointer, and UUID ([16]byte) and IPv4/IPv6 (net.IP) would
+	// otherwise become arrays of numbers below.
+	if _, ok := v.(encoding.TextMarshaler); ok {
+		return v
+	}
+	if rv.Kind() == reflect.Pointer {
+		return normalizeValue(rv.Elem().Interface())
+	}
+
 	switch val := v.(type) {
 	case float32:
 		return normalizeFloat(float64(val))
@@ -76,7 +93,6 @@ func normalizeValue(v interface{}) interface{} {
 		return normalizeValue(value)
 	}
 
-	rv := reflect.ValueOf(v)
 	switch rv.Kind() {
 	case reflect.Map:
 		m := make(map[string]interface{}, rv.Len())

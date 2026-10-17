@@ -1,21 +1,18 @@
 package security
 
 import (
-	"crypto/sha256"
-	"datacia/internal/constants"
 	"fmt"
 	"sync"
 
 	deviceid "github.com/microsoft/go-deviceid"
-	"golang.org/x/crypto/pbkdf2"
 )
 
 // SecurityContext holds machine-specific encryption keys and identifiers
 // that are computed once at startup and reused throughout the application.
+// Both fields are set once by InitSecurityContext and only read afterwards.
 type SecurityContext struct {
 	machineID     string // SHA-256 hash of device ID (used as machine identity everywhere)
 	encryptionKey []byte // Derived encryption key (machine ID + app salt)
-	mu            sync.RWMutex
 }
 
 var (
@@ -43,13 +40,7 @@ func InitSecurityContext() error {
 
 		ctx.machineID = Sha256Hex(id)
 
-		ctx.encryptionKey = pbkdf2.Key(
-			[]byte(ctx.machineID),
-			[]byte(constants.AppSalt),
-			4096,
-			32,
-			sha256.New,
-		)
+		ctx.encryptionKey = deriveEncryptionKey(ctx.machineID)
 
 		globalContext = ctx
 	})
@@ -67,29 +58,14 @@ func GetSecurityContext() (*SecurityContext, error) {
 
 // returns the SHA-256 hash of the machine ID.
 func (c *SecurityContext) GetMachineID() string {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
 	return c.machineID
 }
 
 // returns a copy of the encryption key.
 // The caller should call Wipe() on the returned slice when done.
 func (c *SecurityContext) GetEncryptionKey() []byte {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-
 	// Return a copy to prevent accidental modification
 	keyCopy := make([]byte, len(c.encryptionKey))
 	copy(keyCopy, c.encryptionKey)
 	return keyCopy
-}
-
-// Cleanup wipes sensitive data from memory.
-// This should be called when the application is shutting down.
-func (c *SecurityContext) Cleanup() {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	Wipe(c.encryptionKey)
-	c.machineID = ""
 }

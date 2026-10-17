@@ -154,9 +154,6 @@ export function QueriesTab() {
             onSuccess: () => {
               toast.success(`File saved as ${availableFileName}`);
             },
-            onError: (err: Error) => {
-              toast.error(err.message || "Failed to save file");
-            },
           },
         );
       } catch (err: unknown) {

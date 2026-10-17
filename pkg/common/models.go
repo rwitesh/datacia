@@ -2,6 +2,7 @@ package common
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 )
@@ -50,17 +51,6 @@ type ConnectionState struct {
 	Mu            sync.RWMutex
 }
 
-// SetPassword securely stores a password in the ConnectionState.
-func (cs *ConnectionState) SetPassword(password string) {
-	cs.Mu.Lock()
-	defer cs.Mu.Unlock()
-	// Clear existing password if any
-	if cs.Password != nil {
-		cs.Password.Clear()
-	}
-	cs.Password = NewSecureString(password)
-}
-
 // GetPassword returns a copy of the password as a string.
 // Returns empty string if password is not set.
 func (cs *ConnectionState) GetPassword() string {
@@ -72,21 +62,17 @@ func (cs *ConnectionState) GetPassword() string {
 	return cs.Password.String()
 }
 
-// ClearPassword zeros the password from memory.
-func (cs *ConnectionState) ClearPassword() {
-	cs.Mu.Lock()
-	defer cs.Mu.Unlock()
-	if cs.Password != nil {
-		cs.Password.Clear()
-		cs.Password = nil
+// CancelQuery cancels a running query started with its ID. ClickHouse
+// overrides it to also kill the query on the server.
+func (cs *ConnectionState) CancelQuery(queryID string) error {
+	if cancelFunc, exists := cs.ActiveQueries.Load(queryID); exists {
+		if cancel, ok := cancelFunc.(context.CancelFunc); ok {
+			cancel()
+			cs.ActiveQueries.Delete(queryID)
+			return nil
+		}
 	}
-}
-
-// ClearAllState clears all connection state fields.
-func (cs *ConnectionState) ClearAllState() {
-	cs.Mu.Lock()
-	defer cs.Mu.Unlock()
-	cs.ClearAllStateUnsafe()
+	return fmt.Errorf("query with ID %s not found or already completed", queryID)
 }
 
 // ClearAllStateUnsafe clears all connection state fields without locking.
@@ -102,30 +88,9 @@ func (cs *ConnectionState) ClearAllStateUnsafe() {
 	}
 }
 
-// DatabaseClient defines the common interface for all database implementations
-type DatabaseClient interface {
-	Connect(host, port, username, password, database string, test bool) error
-	Close() error
-	Ping() error
-	RunQuery(queryId, queryType, sql string) (QueryResult, error)
-	CancelQuery(queryId string) error
-	ListTables() ([]string, error)
-	ListDatabases() (DatabaseInfo, error)
-	GetConnectionInfo() (map[string]string, error)
-	GetTableData(table string, limit, offset int, orderBy, orderDir string) (QueryResult, error)
-	GetTableSchema(table string) (QueryResult, error)
-	GetDDL(table string) (string, error) // Returns CREATE TABLE statement
-	GetPassword() string                 // Returns password for reconnection purposes (internal use)
-	// ReadOnlyQuery runs sql, which must pass CheckReadOnly, with writes
-	// blocked by the database, returning at most maxRows rows.
-	ReadOnlyQuery(ctx context.Context, sql string, maxRows int) (QueryResult, error)
-}
-
 const (
-	CONNECT_TIMEOUT   = 10 * time.Second
-	META_TIMEOUT      = 10 * time.Second
-	CHANGE_DB_TIMEOUT = 10 * time.Second
-	QUERY_TIMEOUT     = 30 * time.Second
+	META_TIMEOUT  = 10 * time.Second
+	QUERY_TIMEOUT = 30 * time.Second
 )
 
 func NewTimeoutContext(d time.Duration) (context.Context, context.CancelFunc) {

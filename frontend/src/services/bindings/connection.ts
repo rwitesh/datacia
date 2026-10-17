@@ -5,7 +5,6 @@ import {
   CreateNewConnectionWithSSH as WCreateNewConnectionWithSSH,
   CloseCurrentConnection as WCloseCurrentConnection,
   EstablishConnection as WEstablishConnection,
-  ChangeDatabase as WChangeDatabase,
   ChangeDatabaseByName as WChangeDatabaseByName,
   UpdateConnection as WUpdateConnection,
   SelectSSHKeyFile as WSelectSSHKeyFile,
@@ -25,10 +24,6 @@ export const TestNewConnection = (engine: DatabaseEngine, host: string, port: st
 export const SelectSSHKeyFile = () => {
   return WSelectSSHKeyFile();
 };
-
-export const ChangeDatabase = (engine: DatabaseEngine, host: string, port: string, username: string, password: string, database: string) => {
-  return WChangeDatabase(engine, host, port, username, password, database);
-}
 
 export const ChangeDatabaseByName = (database: string) => {
   return WChangeDatabaseByName(database);

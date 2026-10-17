@@ -80,31 +80,15 @@ func Decrypt(masterKey, ciphertext []byte) ([]byte, error) {
 func EncryptString(plaintext string) (string, error) {
 	ctx, err := GetSecurityContext()
 	if err != nil {
-		// Fall back to deriving key on-the-fly if context not initialized
-		key, err := DeriveHardwareEncryptionKey()
-		if err != nil {
-			return "", fmt.Errorf("failed to derive encryption key: %w", err)
-		}
-		defer Wipe(key)
-
-		plaintextBytes := []byte(plaintext)
-		ciphertext, err := Encrypt(key, plaintextBytes)
-		if err != nil {
-			return "", fmt.Errorf("failed to encrypt data: %w", err)
-		}
-		return base64.StdEncoding.EncodeToString(ciphertext), nil
+		return "", err
 	}
-
 	key := ctx.GetEncryptionKey()
 	defer Wipe(key)
 
-	plaintextBytes := []byte(plaintext)
-	ciphertext, err := Encrypt(key, plaintextBytes)
+	ciphertext, err := Encrypt(key, []byte(plaintext))
 	if err != nil {
 		return "", fmt.Errorf("failed to encrypt data: %w", err)
 	}
-
-	// Return base64-encoded ciphertext
 	return base64.StdEncoding.EncodeToString(ciphertext), nil
 }
 
@@ -113,41 +97,20 @@ func EncryptString(plaintext string) (string, error) {
 func DecryptString(ciphertext string) (string, error) {
 	ctx, err := GetSecurityContext()
 	if err != nil {
-		// Fall back to deriving key on-the-fly if context not initialized
-		key, err := DeriveHardwareEncryptionKey()
-		if err != nil {
-			return "", fmt.Errorf("failed to derive encryption key: %w", err)
-		}
-		defer Wipe(key)
-
-		ciphertextBytes, err := base64.StdEncoding.DecodeString(ciphertext)
-		if err != nil {
-			return "", fmt.Errorf("failed to decode base64 ciphertext: %w", err)
-		}
-
-		plaintext, err := Decrypt(key, ciphertextBytes)
-		if err != nil {
-			return "", fmt.Errorf("failed to decrypt data: %w", err)
-		}
-		defer Wipe(plaintext)
-		return string(plaintext), nil
+		return "", err
 	}
-
 	key := ctx.GetEncryptionKey()
 	defer Wipe(key)
 
-	// Decode base64
 	ciphertextBytes, err := base64.StdEncoding.DecodeString(ciphertext)
 	if err != nil {
 		return "", fmt.Errorf("failed to decode base64 ciphertext: %w", err)
 	}
-
 	plaintext, err := Decrypt(key, ciphertextBytes)
 	if err != nil {
 		return "", fmt.Errorf("failed to decrypt data: %w", err)
 	}
 	defer Wipe(plaintext)
-
 	return string(plaintext), nil
 }
 
@@ -170,22 +133,9 @@ func GetMachineID() (string, error) {
 	return Sha256Hex(id), nil
 }
 
-// DeriveHardwareEncryptionKey derives a 32-byte AES-256 key from the machine's hardware ID
-// using PBKDF2. The key is deterministically derived each time, making it
-// machine-bound. Data encrypted on one machine cannot be decrypted on another.
-func DeriveHardwareEncryptionKey() ([]byte, error) {
-	machineID, err := GetMachineID()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get machine ID for key derivation: %w", err)
-	}
-
-	key := pbkdf2.Key(
-		[]byte(machineID),
-		[]byte(constants.AppSalt),
-		4096,
-		32,
-		sha256.New,
-	)
-
-	return key, nil
+// deriveEncryptionKey derives the 32-byte AES-256 key from the hashed machine
+// ID. Changing the salt, iteration count or hash makes every saved password
+// and API key unreadable.
+func deriveEncryptionKey(machineID string) []byte {
+	return pbkdf2.Key([]byte(machineID), []byte(constants.AppSalt), 4096, 32, sha256.New)
 }

@@ -7,12 +7,14 @@ import { useCopyToClipboard } from "./clipboard";
 type UseExportActionsOptions = {
   tableRef?: RefObject<HTMLDivElement | null>;
   data: Record<string, unknown>[];
+  columns: string[];
   tableName?: string;
 };
 
 export function useExportActions({
   tableRef,
   data,
+  columns,
   tableName,
 }: UseExportActionsOptions) {
   const { resolvedTheme } = useTheme();
@@ -34,6 +36,7 @@ export function useExportActions({
     exportMutation.mutate({
       format: "json",
       data,
+      columns,
       suggestedFilename: getFilename("json"),
     });
   };
@@ -43,6 +46,7 @@ export function useExportActions({
     exportMutation.mutate({
       format: "csv",
       data,
+      columns,
       suggestedFilename: getFilename("csv"),
     });
   };

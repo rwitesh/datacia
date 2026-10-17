@@ -69,7 +69,8 @@ is no HTTP API and no server.
   enforces read-only at the database. Both layers are intentional.
 - Timeouts: `common.QUERY_TIMEOUT`, `common.NewTimeoutContext`.
 - Encryption: `internal/security` (`EncryptString`/`DecryptString`, or the store's
-  `encryptField`/`decryptField`). Do not add another scheme.
+  `encryptField`/`decryptField`). Do not add another scheme. The key comes only from
+  `deriveEncryptionKey`, pinned by a test.
 - File locations: `internal/paths` (and `xdg` as used there). Do not hard-code paths.
 - Logging: `internal/logger` (`logger.Error("message", "key", value, ...)`).
 - Frontend: `cn()` for class names, `errorMessage()` for unknown errors, `sonner` `toast` for user
@@ -77,6 +78,12 @@ is no HTTP API and no server.
   `components/ui/` before adding new ones, `lucide-react` for icons.
 - Frontend `detectQueryType` (`services/bindings/utils.ts`) only routes a query to the read or
   command path. It is not a safety check; don't merge it with `CheckReadOnly`.
+- Mutations shared across tabs or rows (one `useMutation` used for many calls): use
+  `mutateAsync` per call. TanStack Query only runs the `onSuccess`/`onError` passed to the latest
+  `mutate()`, so earlier calls' callbacks are silently dropped. Editor table loads go through
+  `loadTableData` in the editor context.
+- Query cancellation: `common.ConnectionState.CancelQuery` (promoted into each engine; ClickHouse
+  overrides it to also `KILL QUERY`).
 
 ## Coding principles
 
@@ -129,9 +136,14 @@ is no HTTP API and no server.
   read-only queries it runs, capped by the constants in `internal/ai/tools.go`).
 - **SQL safety.** Keep identifier quoting and the read-only path (check + read-only transaction or
   engine setting) intact in all four engines.
-- **Window lifecycle and concurrency.** `internal/app/app.go` uses `windowMutex` and
-  `closingIntentional` to avoid quitting the app while swapping windows. Engines guard connection
-  state with mutexes. Keep locking patterns when touching these.
+- **Window lifecycle and concurrency.** In Wails, `Close()` only queues `WindowClosing`; the
+  hooks run later on another goroutine. So `internal/app/app.go` clears a window's field (under
+  `windowMutex`) before closing it itself, and each hook ignores a window that is no longer
+  current. `closingIntentional` is only for quitting into an update. Wails also runs bound
+  methods concurrently: `remote.Engine` guards `activeClient`/`sshTunnel` with `mu` (read them
+  through `client()`), connects a new client before closing the old one, and never lets a test
+  connection touch the active one. Engines guard their own state with mutexes. Keep these
+  patterns.
 - **Auto-update and versioning.** The version comes from the git tag (`main.version`, ldflags).
   The updater depends on release asset names and `SHA256SUMS` (`internal/update`,
   `.github/workflows/release.yml`). Windows installs per user in `%LOCALAPPDATA%\DataCia`.

@@ -27,7 +27,6 @@ export {
   CreateNewConnectionWithSSH,
   CloseCurrentConnection,
   EstablishConnection,
-  ChangeDatabase,
   ChangeDatabaseByName,
   UpdateConnection,
   SelectSSHKeyFile,
@@ -36,10 +35,6 @@ export {
   OpenConnectionWindow,
   OpenSettingsWindow,
 } from "../../../bindings/datacia/pkg/remote/engine";
-
-export {
-  GetAppInfo,
-} from "../../../bindings/datacia/internal/settings/service";
 
 // Query service functions
 export {

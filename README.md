@@ -44,8 +44,11 @@ DataCia sends anonymous error reports (crashes, error messages, app version, OS 
 device ID) to help fix bugs. Queries, results and passwords are never sent. Turn this off in
 **Settings → Privacy**.
 
-The AI assistant sends your messages, the SQL in the active tab, its last error and your table
-names to the AI provider you choose, and nothing else. Query results are never sent.
+The AI assistant sends your messages, the SQL in the active tab and its last error to the AI
+provider you choose. To answer from your data it can also read the connected database, and what it
+reads is sent too: table names, table definitions (`CREATE TABLE` statements), and the rows of
+read-only queries it runs (at most 200 rows and 16 KB per query, long values cut to 200
+characters). The chat shows each of these as it happens. Nothing else is sent.
 
 ## Building from source
 

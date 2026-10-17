@@ -9,24 +9,11 @@ import (
 	"net/url"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/google/uuid"
 	_ "modernc.org/sqlite"
 )
-
-type SQLiteClient interface {
-	Close() error
-	Ping() error
-	RunQuery(queryId, queryType, sql string) (common.QueryResult, error)
-	CancelQuery(queryId string) error
-	ListDatabases() (common.DatabaseInfo, error)
-	ListTables() ([]string, error)
-	GetConnectionInfo() (map[string]string, error)
-}
-
-var _ SQLiteClient = (*SQLite)(nil)
 
 type SQLite struct {
 	db   *sql.DB
@@ -81,8 +68,6 @@ func (s *SQLite) Connect(host, port, username, password, database string, test b
 }
 
 func (s *SQLite) Close() error {
-	s.ActiveQueries = sync.Map{} // reset
-
 	s.Mu.Lock()
 	db, roDB := s.db, s.roDB
 	s.db, s.roDB = nil, nil
@@ -243,17 +228,6 @@ func scanRows(ctx context.Context, rows *sql.Rows, maxRows int) (common.QueryRes
 	}, nil
 }
 
-func (s *SQLite) CancelQuery(queryID string) error {
-	if cancelFunc, exists := s.ActiveQueries.Load(queryID); exists {
-		if cancel, ok := cancelFunc.(context.CancelFunc); ok {
-			cancel()
-			s.ActiveQueries.Delete(queryID)
-			return nil
-		}
-	}
-	return fmt.Errorf("query with ID %s not found or already completed", queryID)
-}
-
 func (s *SQLite) ListDatabases() (common.DatabaseInfo, error) {
 	// SQLite only has one database (the file), but we can return "main" or the filename
 	s.Mu.RLock()
@@ -306,11 +280,6 @@ func (s *SQLite) GetConnectionInfo() (map[string]string, error) {
 		"engine": "sqlite",
 		"host":   s.Host,
 	}, nil
-}
-
-func (s *SQLite) GetPassword() string {
-	// SQLite doesn't use passwords, but we implement the interface
-	return s.ConnectionState.GetPassword()
 }
 
 func (s *SQLite) GetTableData(table string, limit, offset int, orderBy, orderDir string) (common.QueryResult, error) {

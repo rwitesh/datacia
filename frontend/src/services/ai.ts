@@ -2,13 +2,13 @@ import { useEffect, useSyncExternalStore } from "react";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CancelError, Events, type CancellablePromise } from "@wailsio/runtime";
 import { nanoid } from "nanoid";
-import * as AI from "../../bindings/datacia/internal/ai/service";
+import * as AI from "./bindings/ai";
 import { errorMessage } from "@/lib/utils";
-import { ChatContext, type ModelRef, type ProviderStatus, type ToolUse } from "../../bindings/datacia/internal/ai/models";
+import { ChatContext, type ModelRef, type ProviderStatus, type ToolUse } from "./bindings/ai";
 
 export type { ModelRef, ProviderStatus, ToolUse };
 export { ChatContext };
-export { SignIn } from "../../bindings/datacia/internal/ai/service";
+export { SignIn } from "./bindings/ai";
 
 export interface ChatMessage {
   id: string;

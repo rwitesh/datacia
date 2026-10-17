@@ -6,26 +6,11 @@ import (
 	"datacia/pkg/common"
 	"errors"
 	"fmt"
-	"sync"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/google/uuid"
 )
-
-type MySQLClient interface {
-	Close() error
-	Ping() error
-	RunQuery(queryId, queryType, sql string) (common.QueryResult, error)
-	CancelQuery(queryId string) error
-	ListDatabases() (common.DatabaseInfo, error)
-	ListTables() ([]string, error)
-	GetConnectionInfo() (map[string]string, error)
-	GetTableData(table string, limit, offset int, orderBy, orderDir string) (common.QueryResult, error)
-	GetTableSchema(table string) (common.QueryResult, error)
-}
-
-var _ MySQLClient = (*MySQL)(nil)
 
 type MySQL struct {
 	db *sql.DB
@@ -87,8 +72,6 @@ func (m *MySQL) Connect(host, port, username, password, database string, test bo
 }
 
 func (m *MySQL) Close() error {
-	m.ActiveQueries = sync.Map{} // reset
-
 	m.Mu.Lock()
 	db := m.db
 	m.db = nil
@@ -256,20 +239,6 @@ func scanRows(ctx context.Context, rows *sql.Rows, maxRows int) (common.QueryRes
 	}, nil
 }
 
-func (m *MySQL) CancelQuery(queryID string) error {
-	if cancelFunc, exists := m.ActiveQueries.Load(queryID); exists {
-		if cancel, ok := cancelFunc.(context.CancelFunc); ok {
-			cancel()
-			m.ActiveQueries.Delete(queryID)
-			return nil
-		}
-	}
-	// Note: MySQL cancellation via context only works if the driver supports it and the query is actively running.
-	// For true server-side cancellation, we might need a separate connection to run KILL QUERY,
-	// but context cancellation is the standard Go way.
-	return fmt.Errorf("query with ID %s not found or already completed", queryID)
-}
-
 func (m *MySQL) ListDatabases() (common.DatabaseInfo, error) {
 	m.Mu.RLock()
 	db := m.db
@@ -358,10 +327,6 @@ func (m *MySQL) GetConnectionInfo() (map[string]string, error) {
 		"password": "", // Password not exposed for security
 		"database": m.Database,
 	}, nil
-}
-
-func (m *MySQL) GetPassword() string {
-	return m.ConnectionState.GetPassword()
 }
 
 func (m *MySQL) GetTableData(table string, limit, offset int, orderBy, orderDir string) (common.QueryResult, error) {

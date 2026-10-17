@@ -1,12 +1,6 @@
 import { format, type FormatOptionsWithLanguage } from "sql-formatter";
 import { getFormatterLanguage } from "@/shared/utils/engines";
 
-
-function normalizeSQL(sql: string): string {
-  // Replace `identifier` with "identifier", escaping any " inside
-  return sql.replace(/`([^`]*)`/g, (_, ident) => `"${ident.replace(/"/g, '""')}"`);
-}
-
 /**
  * Formats SQL query using sql-formatter library
  * Engine-specific formatting is handled automatically via centralized config
@@ -19,14 +13,14 @@ export const formatSQL = (sql: string, engine: string): string => {
   if (!sql) return "";
 
   const formatterLanguage = getFormatterLanguage(engine);
-  const normalized = normalizeSQL(sql);
 
   try {
-    return format(normalized, {
+    return format(sql, {
       language: formatterLanguage,
       tabWidth: 2,
       useTabs: true,
-      dataTypeCase: "upper",
+      // ClickHouse type names are case-sensitive (UInt64, not UINT64).
+      dataTypeCase: formatterLanguage === "clickhouse" ? "preserve" : "upper",
       logicalOperatorNewline: 'before',
       linesBetweenQueries: 2,
     } as FormatOptionsWithLanguage);
