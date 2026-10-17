@@ -15,6 +15,9 @@ export function GetAppInfo(): $CancellablePromise<$models.Info | null> {
     });
 }
 
+/**
+ * UpdateSettings replaces the settings. API keys are kept as they are.
+ */
 export function UpdateSettings(settings: $models.Settings): $CancellablePromise<$models.Info | null> {
     return $Call.ByID(2695642745, settings).then(($result: any) => {
         return $$createType1($result);

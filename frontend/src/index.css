@@ -151,3 +151,13 @@
     }
   }
 }
+
+/* Reserve the scrollbar's space so content doesn't shift when it appears. */
+@utility scroll-stable {
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+
+  @supports not (scrollbar-gutter: stable) {
+    overflow-y: scroll;
+  }
+}

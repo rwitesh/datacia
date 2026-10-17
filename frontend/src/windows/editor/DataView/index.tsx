@@ -67,29 +67,31 @@ export function DataView({ activeTab: controlledTab, onTabChange }: DataViewProp
               AI
             </TabsTrigger>
           </TabsList>
-          <div className="flex items-center gap-1">
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-primary/10 text-primary border border-primary/20">
-              {rowCount} {rowCount === 1 ? 'row' : 'rows'}
-            </span>
-            <button
-              type="button"
-              aria-label="Copy JSON to clipboard"
-              title={copied ? "Copied!" : "Copy to clipboard"}
-              onClick={handleCopy}
-              onPointerLeave={() => setCopied(false)}
-              onBlur={() => setCopied(false)}
-              className="p-1.5 rounded-md hover:bg-muted transition-all duration-200 group"
-            >
-              {copied ? (
-                <Check className="w-3.5 h-3.5 text-emerald-500 transition-transform duration-200 scale-110" />
-              ) : (
-                <Copy className="w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground transition-colors duration-200" />
-              )}
-              <span className="sr-only">
-                {copied ? "Copied to clipboard" : "Copy JSON"}
+          {activeTabValue === "data" && (
+            <div className="flex items-center gap-1">
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-primary/10 text-primary border border-primary/20">
+                {rowCount} {rowCount === 1 ? 'row' : 'rows'}
               </span>
-            </button>
-          </div>
+              <button
+                type="button"
+                aria-label="Copy JSON to clipboard"
+                title={copied ? "Copied!" : "Copy to clipboard"}
+                onClick={handleCopy}
+                onPointerLeave={() => setCopied(false)}
+                onBlur={() => setCopied(false)}
+                className="p-1.5 rounded-md hover:bg-muted transition-all duration-200 group"
+              >
+                {copied ? (
+                  <Check className="w-3.5 h-3.5 text-emerald-500 transition-transform duration-200 scale-110" />
+                ) : (
+                  <Copy className="w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground transition-colors duration-200" />
+                )}
+                <span className="sr-only">
+                  {copied ? "Copied to clipboard" : "Copy JSON"}
+                </span>
+              </button>
+            </div>
+          )}
         </div>
 
         <TabsContent value="data" className="flex-1 overflow-auto mt-0">

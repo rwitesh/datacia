@@ -1,4 +1,4 @@
-import { useState, useMemo, type CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import { useSearchParams } from "react-router";
 import { Button } from "@/components/ui/button";
 import { Settings as SettingsIcon } from "lucide-react";
@@ -11,12 +11,7 @@ import { PrivacySection } from "./privacy";
 
 export function Settings() {
   const [searchParams] = useSearchParams();
-  const tabFromUrl = searchParams.get("tab");
-  const initialTab = useMemo(
-    () => (tabFromUrl === "ai" ? "ai" : "settings"),
-    [tabFromUrl]
-  );
-  const [activeTab, setActiveTab] = useState(initialTab);
+  const [activeTab, setActiveTab] = useState(searchParams.get("tab") === "ai" ? "ai" : "settings");
 
   const { data: settings } = useSettings();
   const { mutate: updateSettings, isPending } = useUpdateSettings();
@@ -24,6 +19,12 @@ export function Settings() {
   const [draft, setDraft] = useState<AppSettings | null>(null);
   const formSettings = draft ?? settings?.settings ?? null;
   const [showSaved, setShowSaved] = useState(false);
+
+  const onChange = (next: AppSettings) => {
+    setShowSaved(false);
+    setDraft(next);
+  };
+  const loading = <div className="text-xs text-muted-foreground px-1">Loading settings...</div>;
 
   const handleCancel = () => {
     Window.Close();
@@ -34,7 +35,6 @@ export function Settings() {
     setShowSaved(false);
     updateSettings(formSettings, {
       onSuccess: () => {
-        // The mutation has stored the saved settings in the query cache.
         setDraft(null);
         setShowSaved(true);
       },
@@ -75,55 +75,15 @@ export function Settings() {
             </div>
           </div>
 
-          <div className="flex-1 overflow-auto px-5 pb-5 pt-4">
+          <div className="flex-1 scroll-stable px-5 pb-5 pt-4">
             <TabsContent value="settings" className="mt-0">
-              {formSettings ? (
-                <div className="space-y-6">
-                  <AppearanceSection
-                    settings={formSettings}
-                    onChange={(next) => {
-                      setShowSaved(false);
-                      setDraft(next);
-                    }}
-                  />
-                </div>
-              ) : (
-                <div className="text-xs text-muted-foreground px-1">
-                  Loading settings...
-                </div>
-              )}
+              {formSettings ? <AppearanceSection settings={formSettings} onChange={onChange} /> : loading}
             </TabsContent>
             <TabsContent value="ai" className="mt-0">
-              {formSettings ? (
-                <div className="space-y-6">
-                  <AISection
-                    settings={formSettings}
-                    onChange={(next) => {
-                      setShowSaved(false);
-                      setDraft(next);
-                    }}
-                  />
-                </div>
-              ) : (
-                <div className="text-xs text-muted-foreground px-1">
-                  Loading settings...
-                </div>
-              )}
+              {formSettings ? <AISection settings={formSettings} onChange={onChange} /> : loading}
             </TabsContent>
             <TabsContent value="privacy" className="mt-0">
-              {formSettings ? (
-                <PrivacySection
-                  settings={formSettings}
-                  onChange={(next) => {
-                    setShowSaved(false);
-                    setDraft(next);
-                  }}
-                />
-              ) : (
-                <div className="text-xs text-muted-foreground px-1">
-                  Loading settings...
-                </div>
-              )}
+              {formSettings ? <PrivacySection settings={formSettings} onChange={onChange} /> : loading}
             </TabsContent>
           </div>
         </Tabs>
