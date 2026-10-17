@@ -2,7 +2,6 @@ import { type VirtualItem } from "@tanstack/react-virtual";
 import { type Row as TanStackRow } from "@tanstack/react-table";
 import { TableCell } from "./TableCell";
 import type { DataRow } from "../types";
-import { TableContextMenu } from "./TableContextMenu";
 import type { CellType } from "../hooks/useTableSelection";
 import type { SelectionGeometry } from "../utils/cellSelection";
 
@@ -16,9 +15,6 @@ interface TableRowProps {
     selection: SelectionGeometry | null;
     onMouseDown: (cellType: CellType, row: number, col: number, event: React.MouseEvent) => void;
     onMouseEnter: (cellType: CellType, row: number, col: number) => void;
-    columns: string[];
-    data: DataRow[];
-    onOpenDataView?: () => void;
 }
 
 export function TableRow({
@@ -31,11 +27,8 @@ export function TableRow({
     selection,
     onMouseDown,
     onMouseEnter,
-    columns,
-    data,
-    onOpenDataView,
 }: TableRowProps) {
-    const rowContent = (
+    return (
         <div
             key={isDataRow ? row!.id : `blank-row-${virtualItem.index}`}
             role="row"
@@ -74,21 +67,5 @@ export function TableRow({
                     </div>
                 ))}
         </div>
-    );
-
-    if (!isDataRow || !row) {
-        return rowContent;
-    }
-
-    return (
-        <TableContextMenu
-            row={row.original}
-            selection={selection}
-            columns={columns}
-            data={data}
-            onOpenDataView={onOpenDataView}
-        >
-            {rowContent}
-        </TableContextMenu>
     );
 }

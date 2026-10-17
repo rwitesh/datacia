@@ -232,6 +232,8 @@ function createIdleTrigger(config: GhostTextConfig) {
       private lastInput = ""; // Dedup same input
 
       destroy() {
+        // Drop any in-flight response; the view is gone.
+        this.requestId++;
         if (this.timer) {
           clearTimeout(this.timer);
           this.timer = null;
@@ -240,6 +242,9 @@ function createIdleTrigger(config: GhostTextConfig) {
 
       update(update: ViewUpdate) {
         if (!update.docChanged) return;
+
+        // Any in-flight response is for an older document.
+        this.requestId++;
 
         // Clear pending timer on new input
         if (this.timer) {
@@ -262,11 +267,10 @@ function createIdleTrigger(config: GhostTextConfig) {
           return;
         }
 
-        // Skip if same input as last request (dedup)
+        // Skip if same input as the last applied response (dedup)
         if (currentInput === this.lastInput) {
           return;
         }
-        this.lastInput = currentInput;
 
         // Increment request ID to track this request
         const thisRequestId = ++this.requestId;
@@ -274,16 +278,22 @@ function createIdleTrigger(config: GhostTextConfig) {
         try {
           const suggestion = await getSuggestion(currentInput);
 
-          // Ignore stale response (user typed more while waiting)
-          if (thisRequestId !== this.requestId) {
+          // Ignore stale responses: the user typed, the view was destroyed,
+          // or the cursor moved while waiting.
+          if (
+            thisRequestId !== this.requestId ||
+            view.state.doc !== state.doc ||
+            view.state.selection.main.head !== pos
+          ) {
             return;
           }
+          this.lastInput = currentInput;
 
           if (suggestion && suggestion.length > 0) {
             view.dispatch({
               effects: setInlineHint.of({
                 text: suggestion,
-                pos: view.state.selection.main.head, // Use current pos, not stale
+                pos,
                 inputLength: currentInput.length,
               }),
             });

@@ -26,7 +26,9 @@ export function QueryInput() {
 
   return (
     <div className="relative h-full w-full">
+      {/* Keyed per tab so each tab gets its own undo history. */}
       <SQLCodeEditor
+        key={activeTab.id}
         value={activeTab.sql || ""}
         onChange={(val) => updateTab(activeTab.id, { sql: val })}
         className="h-full"
