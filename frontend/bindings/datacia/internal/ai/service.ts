@@ -5,6 +5,58 @@
 // @ts-ignore: Unused imports
 import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
 
-export function SendMessage(engine: string, context: string, message: string, model: string): $CancellablePromise<string> {
-    return $Call.ByID(3335267621, engine, context, message, model);
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as $models from "./models.js";
+
+/**
+ * Chat streams the reply as DeltaEvent events and returns the full text.
+ * Cancelling the call from the frontend stops the request.
+ */
+export function Chat(req: $models.ChatRequest): $CancellablePromise<string> {
+    return $Call.ByID(1524910126, req);
 }
+
+/**
+ * ListModels returns the provider's chat models, newest first, which also
+ * checks the key. Empty url and key mean the saved ones, so models can be
+ * listed before the settings are saved.
+ */
+export function ListModels(providerID: string, url: string, key: string): $CancellablePromise<$models.Model[]> {
+    return $Call.ByID(2139047914, providerID, url, key).then(($result: any) => {
+        return $$createType1($result);
+    });
+}
+
+export function LoadChat(): $CancellablePromise<$models.Chat> {
+    return $Call.ByID(2539027554).then(($result: any) => {
+        return $$createType2($result);
+    });
+}
+
+/**
+ * Providers returns every provider with the user's configuration.
+ */
+export function Providers(): $CancellablePromise<$models.ProviderStatus[]> {
+    return $Call.ByID(3848986658).then(($result: any) => {
+        return $$createType4($result);
+    });
+}
+
+export function SaveChat(chat: $models.Chat): $CancellablePromise<void> {
+    return $Call.ByID(1941189643, chat);
+}
+
+/**
+ * SignIn signs in through the browser and stores the resulting API key.
+ */
+export function SignIn(providerID: string): $CancellablePromise<void> {
+    return $Call.ByID(1933992826, providerID);
+}
+
+// Private type creation functions
+const $$createType0 = $models.Model.createFrom;
+const $$createType1 = $Create.Array($$createType0);
+const $$createType2 = $models.Chat.createFrom;
+const $$createType3 = $models.ProviderStatus.createFrom;
+const $$createType4 = $Create.Array($$createType3);

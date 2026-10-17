@@ -1,7 +1,10 @@
 package settings
 
 import (
+	"errors"
+	"maps"
 	"runtime"
+	"strings"
 	"sync"
 
 	"datacia/internal/logger"
@@ -14,6 +17,7 @@ import (
 )
 
 var (
+	commitMu       sync.Mutex
 	globalInfo     *Info
 	globalInfoOnce sync.Once
 	configDir      string
@@ -95,12 +99,10 @@ func GetSettingsRaw() Settings {
 	return globalInfo.Settings
 }
 
+// getSanitized returns the settings for the frontend, without API keys.
+// The caller must hold globalInfo.mu.
 func getSanitized() *Info {
 	s := globalInfo.Settings
-	keyOut := ""
-	if s.AI.Gemini.Key != "" {
-		keyOut = KeyMask
-	}
 	return &Info{
 		OS:                      globalInfo.OS,
 		OSVersion:               globalInfo.OSVersion,
@@ -112,19 +114,88 @@ func getSanitized() *Info {
 		DefaultTokenColorsLight: defaultTokenColorsLight(),
 		DefaultTokenColorsDark:  defaultTokenColorsDark(),
 		Settings: Settings{
-			Theme:  s.Theme,
-			Editor: s.Editor,
-			Font:   s.Font,
-			AI: AIConfig{
-				Gemini: AIProviderConfig{
-					Enabled: s.AI.Gemini.Enabled,
-					Key:     keyOut,
-					Models:  s.AI.Gemini.Models,
-				},
-			},
+			Theme:   s.Theme,
+			Editor:  s.Editor,
+			Font:    s.Font,
+			AI:      AIConfig{Providers: maps.Clone(s.AI.Providers)},
 			Privacy: s.Privacy,
 		},
 	}
+}
+
+// AIKey returns the decrypted API key stored for a provider, or "".
+func AIKey(provider string) (string, error) {
+	if globalInfo == nil {
+		return "", nil
+	}
+	globalInfo.mu.RLock()
+	enc := globalInfo.Settings.AI.Keys[provider]
+	globalInfo.mu.RUnlock()
+	if enc == "" {
+		return "", nil
+	}
+	return security.DecryptString(enc)
+}
+
+// SetAIKey encrypts and stores a provider's API key; "" removes it.
+func SetAIKey(provider, key string) error {
+	if globalInfo == nil {
+		return errors.New("settings are not loaded")
+	}
+	commitMu.Lock()
+	defer commitMu.Unlock()
+	keys, err := withKeys(GetSettingsRaw().AI.Keys, map[string]string{provider: key})
+	if err != nil {
+		return err
+	}
+	_, err = commit(func(s *Settings) { s.AI.Keys = keys })
+	return err
+}
+
+// withKeys returns a copy of keys with changes applied: each value is a new
+// plaintext key, or "" to remove the provider's key.
+func withKeys(keys, changes map[string]string) (map[string]string, error) {
+	out := maps.Clone(keys)
+	if out == nil {
+		out = map[string]string{}
+	}
+	for provider, key := range changes {
+		if key == "" {
+			delete(out, provider)
+			continue
+		}
+		if key = strings.TrimSpace(key); key == "" {
+			return nil, errors.New("An API key can't be blank.")
+		}
+		enc, err := security.EncryptString(key)
+		if err != nil {
+			logger.Error("Failed to encrypt API key", "provider", provider, "error", err.Error())
+			return nil, errors.New("Couldn't store the API key securely.")
+		}
+		out[provider] = enc
+	}
+	return out, nil
+}
+
+// commit applies change to the settings, saves them and notifies every window.
+// The caller must hold commitMu.
+func commit(change func(*Settings)) (*Info, error) {
+	globalInfo.mu.Lock()
+	change(&globalInfo.Settings)
+	next := globalInfo.Settings
+	info := getSanitized()
+	globalInfo.mu.Unlock()
+
+	applyPrivacy(next)
+	err := saveSettings()
+	if err != nil {
+		logger.Error("Failed to save settings", "error", err.Error())
+	}
+	if appInstance != nil {
+		// Send the sanitized settings: the event reaches every window.
+		appInstance.Event.Emit("app:settings-changed", info.Settings)
+	}
+	return info, err
 }
 
 type Service struct {
@@ -141,37 +212,25 @@ func (s *Service) GetAppInfo() *Info {
 	return Get()
 }
 
-func (s *Service) UpdateSettings(settings Settings) *Info {
+// UpdateSettings replaces the settings and applies API key changes in one
+// save. keys maps a provider ID to its new key, or "" to remove it.
+func (s *Service) UpdateSettings(settings Settings, keys map[string]string) (*Info, error) {
 	if globalInfo == nil {
-		return nil
+		return nil, errors.New("settings are not loaded")
 	}
-	globalInfo.mu.Lock()
-	defer globalInfo.mu.Unlock()
-	current := globalInfo.Settings
 	next := settings
-	if k := settings.AI.Gemini.Key; k != "" && k != KeyMask {
-		enc, err := security.EncryptString(k)
-		if err == nil {
-			next.AI.Gemini.Key = enc
-		} else {
-			logger.Warn("Failed to encrypt AI API key, keeping previous", "error", err.Error())
-			next.AI.Gemini.Key = current.AI.Gemini.Key
-		}
-	} else {
-		next.AI.Gemini.Key = current.AI.Gemini.Key
-	}
 	next.Editor.Light = fillTokenColorsDefaults(next.Editor.Light, defaultTokenColorsLight())
 	next.Editor.Dark = fillTokenColorsDefaults(next.Editor.Dark, defaultTokenColorsDark())
 	fillAIDefaults(&next)
-	globalInfo.Settings = next
-	globalInfo.mu.Unlock()
-	applyPrivacy(next)
-	saveSettings()
-	globalInfo.mu.Lock()
-	if appInstance != nil {
-		appInstance.Event.Emit("app:settings-changed", next)
+
+	commitMu.Lock()
+	defer commitMu.Unlock()
+	nextKeys, err := withKeys(GetSettingsRaw().AI.Keys, keys)
+	if err != nil {
+		return nil, err
 	}
-	return getSanitized()
+	next.AI.Keys = nextKeys
+	return commit(func(cur *Settings) { *cur = next })
 }
 
 // applyPrivacy applies the error-report setting to the reporter.

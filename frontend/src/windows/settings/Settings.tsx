@@ -1,44 +1,58 @@
-import { useState, useMemo, type CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import { useSearchParams } from "react-router";
 import { Button } from "@/components/ui/button";
-import { Settings as SettingsIcon } from "lucide-react";
+import { Loader2, Settings as SettingsIcon } from "lucide-react";
 import { Window } from "@wailsio/runtime";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useSettings, useUpdateSettings, type Settings as AppSettings } from "@/services/settings";
+import { isEqual } from "lodash";
+import { errorMessage } from "@/lib/utils";
+import { useSettings, useUpdateSettings, type KeyChanges, type Settings as AppSettings } from "@/services/settings";
 import { AppearanceSection } from "./appearance";
 import { AISection } from "./ai";
 import { PrivacySection } from "./privacy";
 
+// Bindings return class instances; compare their JSON form instead.
+const plain = (value: unknown) => JSON.parse(JSON.stringify(value ?? null));
+
 export function Settings() {
   const [searchParams] = useSearchParams();
-  const tabFromUrl = searchParams.get("tab");
-  const initialTab = useMemo(
-    () => (tabFromUrl === "ai" ? "ai" : "settings"),
-    [tabFromUrl]
-  );
-  const [activeTab, setActiveTab] = useState(initialTab);
+  const [activeTab, setActiveTab] = useState(searchParams.get("tab") === "ai" ? "ai" : "settings");
 
   const { data: settings } = useSettings();
-  const { mutate: updateSettings, isPending } = useUpdateSettings();
+  const { mutate: updateSettings, isPending, error, reset } = useUpdateSettings();
   // Unsaved edits; until the user changes something the form shows the stored settings.
   const [draft, setDraft] = useState<AppSettings | null>(null);
-  const formSettings = draft ?? settings?.settings ?? null;
+  const [keys, setKeys] = useState<KeyChanges>({});
   const [showSaved, setShowSaved] = useState(false);
+  const formSettings = draft ?? settings?.settings ?? null;
+  const dirty = (draft !== null && !isEqual(plain(draft), plain(settings?.settings))) || Object.keys(keys).length > 0;
 
-  const handleCancel = () => {
-    Window.Close();
+  const edited = () => {
+    setShowSaved(false);
+    reset();
   };
+  const onChange = (next: AppSettings) => {
+    edited();
+    setDraft(next);
+  };
+  const onKeysChange = (next: KeyChanges) => {
+    edited();
+    setKeys(next);
+  };
+  const loading = <div className="text-xs text-muted-foreground px-1">Loading…</div>;
 
   const handleSave = () => {
-    if (!formSettings) return;
-    setShowSaved(false);
-    updateSettings(formSettings, {
-      onSuccess: () => {
-        // The mutation has stored the saved settings in the query cache.
-        setDraft(null);
-        setShowSaved(true);
+    if (!formSettings || !dirty) return;
+    updateSettings(
+      { settings: formSettings, keys },
+      {
+        onSuccess: () => {
+          setDraft(null);
+          setKeys({});
+          setShowSaved(true);
+        },
       },
-    });
+    );
   };
 
   return (
@@ -53,13 +67,10 @@ export function Settings() {
           <div className="px-5 pt-3 pb-2 border-b">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <div className="flex items-center gap-2 mb-1">
+                <div className="flex items-center gap-2">
                   <SettingsIcon className="h-4 w-4 text-muted-foreground" />
                   <span className="font-medium text-base">Settings</span>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Preferences and configuration
-                </p>
               </div>
               <TabsList className="h-8 shrink-0">
                 <TabsTrigger value="settings" className="text-xs h-7 px-3">
@@ -75,55 +86,15 @@ export function Settings() {
             </div>
           </div>
 
-          <div className="flex-1 overflow-auto px-5 pb-5 pt-4">
+          <div className="flex-1 overflow-y-scroll px-5 pb-5 pt-4">
             <TabsContent value="settings" className="mt-0">
-              {formSettings ? (
-                <div className="space-y-6">
-                  <AppearanceSection
-                    settings={formSettings}
-                    onChange={(next) => {
-                      setShowSaved(false);
-                      setDraft(next);
-                    }}
-                  />
-                </div>
-              ) : (
-                <div className="text-xs text-muted-foreground px-1">
-                  Loading settings...
-                </div>
-              )}
+              {formSettings ? <AppearanceSection settings={formSettings} onChange={onChange} /> : loading}
             </TabsContent>
             <TabsContent value="ai" className="mt-0">
-              {formSettings ? (
-                <div className="space-y-6">
-                  <AISection
-                    settings={formSettings}
-                    onChange={(next) => {
-                      setShowSaved(false);
-                      setDraft(next);
-                    }}
-                  />
-                </div>
-              ) : (
-                <div className="text-xs text-muted-foreground px-1">
-                  Loading settings...
-                </div>
-              )}
+              {formSettings ? <AISection settings={formSettings} onChange={onChange} keys={keys} onKeysChange={onKeysChange} /> : loading}
             </TabsContent>
             <TabsContent value="privacy" className="mt-0">
-              {formSettings ? (
-                <PrivacySection
-                  settings={formSettings}
-                  onChange={(next) => {
-                    setShowSaved(false);
-                    setDraft(next);
-                  }}
-                />
-              ) : (
-                <div className="text-xs text-muted-foreground px-1">
-                  Loading settings...
-                </div>
-              )}
+              {formSettings ? <PrivacySection settings={formSettings} onChange={onChange} /> : loading}
             </TabsContent>
           </div>
         </Tabs>
@@ -131,24 +102,17 @@ export function Settings() {
 
       <div className="border-t p-3 shrink-0 bg-muted/20">
         <div className="flex items-center justify-end gap-3">
-          {showSaved && (
-            <span className="text-xs text-green-500 font-medium">
-              Settings saved
-            </span>
+          {error ? (
+            <span className="mr-auto text-xs text-destructive">{errorMessage(error)}</span>
+          ) : (
+            showSaved && !dirty && <span className="text-xs text-green-500 font-medium">Saved</span>
           )}
-          <Button
-            variant="outline"
-            onClick={handleCancel}
-            className="h-8 text-xs px-3 cursor-pointer"
-          >
+          <Button variant="outline" onClick={() => Window.Close()} className="h-8 text-xs px-3 cursor-pointer">
             Cancel
           </Button>
-          <Button
-            onClick={handleSave}
-            className="h-8 text-xs px-3 cursor-pointer"
-            disabled={!formSettings || isPending}
-          >
-            Save changes
+          <Button onClick={handleSave} disabled={!dirty || isPending} className="h-8 text-xs px-3 cursor-pointer">
+            {isPending && <Loader2 className="animate-spin" />}
+            Save
           </Button>
         </div>
       </div>

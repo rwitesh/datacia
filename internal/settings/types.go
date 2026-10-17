@@ -34,17 +34,15 @@ type FontConfig struct {
 	EditorFontSize   int    `json:"editorFontSize"`
 }
 
-// KeyMask is returned to frontend when a key is stored (key never visible).
-const KeyMask = "***"
-
 type AIProviderConfig struct {
-	Enabled bool     `json:"enabled"`
-	Key     string   `json:"key"`
 	Models  []string `json:"models"`
+	BaseURL string   `json:"baseUrl"` // empty: the provider's default
 }
 
 type AIConfig struct {
-	Gemini AIProviderConfig `json:"gemini"`
+	Providers map[string]AIProviderConfig `json:"providers"` // keyed by provider ID
+	// Keys are encrypted and never sent to the frontend.
+	Keys map[string]string `json:"keys,omitempty"`
 }
 
 // PrivacyConfig is stored as an opt-out so settings saved before it existed

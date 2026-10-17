@@ -1,5 +1,7 @@
 package settings
 
+import "maps"
+
 func defaultTokenColorsLight() TokenColors {
 	return TokenColors{
 		Keyword:  "#d73a49",
@@ -39,18 +41,22 @@ func defaultSettings() Settings {
 			EditorFontFamily: "JetBrains Mono",
 			EditorFontSize:   12,
 		},
-		AI: AIConfig{
-			Gemini: AIProviderConfig{Enabled: true, Key: "", Models: []string{"gemini-3-flash-preview"}},
-		},
+		AI: AIConfig{Providers: map[string]AIProviderConfig{}},
 	}
 }
 
-const defaultGeminiModel = "gemini-3-flash-preview"
-
-// fillAIDefaults sets default Gemini models if empty (for backward compatibility).
 func fillAIDefaults(s *Settings) {
-	if len(s.AI.Gemini.Models) == 0 {
-		s.AI.Gemini.Models = []string{defaultGeminiModel}
+	if s.AI.Providers == nil {
+		s.AI.Providers = map[string]AIProviderConfig{}
+	}
+	maps.DeleteFunc(s.AI.Providers, func(_ string, p AIProviderConfig) bool {
+		return len(p.Models) == 0 && p.BaseURL == ""
+	})
+	for id, p := range s.AI.Providers {
+		if p.Models == nil {
+			p.Models = []string{}
+			s.AI.Providers[id] = p
+		}
 	}
 }
 

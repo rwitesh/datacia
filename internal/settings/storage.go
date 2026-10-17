@@ -2,6 +2,7 @@ package settings
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 
@@ -19,8 +20,11 @@ func loadSettings() {
 		return
 	}
 	data, err := os.ReadFile(settingsPath)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		logger.Warn("Failed to read settings file, using defaults for this session", "error", err.Error())
+		return
+	}
 	if err != nil {
-		logger.Warn("Failed to read settings file, using defaults", "error", err.Error())
 		if err := os.MkdirAll(filepath.Dir(settingsPath), 0755); err != nil {
 			logger.Warn("Failed to create settings directory", "error", err.Error())
 			return
@@ -37,6 +41,7 @@ func loadSettings() {
 	var s Settings
 	if err := json.Unmarshal(data, &s); err != nil {
 		logger.Warn("Failed to parse settings file, resetting to defaults", "error", err.Error())
+		_ = os.Rename(settingsPath, settingsPath+".bak")
 		def := defaultSettings()
 		globalInfo.mu.Lock()
 		globalInfo.Settings = def
@@ -74,7 +79,12 @@ func saveSettings() error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(settingsPath, data, 0644)
+	// Atomic, and 0600 because the file holds encrypted API keys.
+	tmp := settingsPath + ".tmp"
+	if err := os.WriteFile(tmp, data, 0600); err != nil {
+		return err
+	}
+	return os.Rename(tmp, settingsPath)
 }
 
 // ErrorReportsEnabled reads only the privacy setting from disk, for use before

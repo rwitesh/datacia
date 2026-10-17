@@ -52,6 +52,3 @@ export {
   WriteFile,
   Move,
 } from "../../../bindings/datacia/internal/queries/queriesservice";
-
-// AI service functions
-export { SendMessage } from "./ai";

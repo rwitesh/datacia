@@ -14,7 +14,8 @@ A fast, free desktop SQL client for PostgreSQL, MySQL, SQLite and ClickHouse, fo
 - **Script mode** – run a sequence of statements one after another.
 - **Query history and saved queries** – search past queries by text and date, and organise your
   own queries in folders.
-- **AI assistant** – ask for SQL help with your own Google Gemini API key.
+- **AI assistant** – chat about your queries with Anthropic, OpenAI, Google Gemini, OpenRouter,
+  OpenCode or a local OpenAI-compatible model (Ollama, LM Studio), using your own API key.
 - **Make it yours** – light, dark or system theme, and configurable fonts and editor colours.
 - **Automatic updates** – new versions download in the background and install on restart.
 
@@ -42,6 +43,9 @@ needed. If SmartScreen appears, choose **More info → Run anyway**.
 DataCia sends anonymous error reports (crashes, error messages, app version, OS and an anonymous
 device ID) to help fix bugs. Queries, results and passwords are never sent. Turn this off in
 **Settings → Privacy**.
+
+The AI assistant sends your messages, the SQL in the active tab, its last error and your table
+names to the AI provider you choose, and nothing else. Query results are never sent.
 
 ## Building from source
 

@@ -6,4 +6,17 @@
 // @ts-ignore: Unused imports
 import { Create as $Create } from "@wailsio/runtime";
 
-Object.freeze($Create.Events);
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as ai$0 from "../../../../../datacia/internal/ai/models.js";
+
+function configure() {
+    Object.freeze(Object.assign($Create.Events, {
+        "ai:delta": $$createType0,
+    }));
+}
+
+// Private type creation functions
+const $$createType0 = ai$0.ChatDelta.createFrom;
+
+configure();

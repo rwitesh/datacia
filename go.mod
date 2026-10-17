@@ -11,6 +11,7 @@ require (
 	github.com/jackc/pgx/v5 v5.11.0
 	github.com/microsoft/go-deviceid v1.0.0
 	github.com/wailsapp/wails/v3 v3.0.0-beta.30
+	github.com/zendev-sh/goai v0.10.8
 	golang.design/x/clipboard v0.11.0
 	golang.org/x/crypto v0.58.0
 	golang.org/x/sys v0.49.0

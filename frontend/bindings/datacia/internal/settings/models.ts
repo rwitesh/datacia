@@ -6,12 +6,20 @@
 import { Create as $Create } from "@wailsio/runtime";
 
 export class AIConfig {
-    "gemini": AIProviderConfig;
+    /**
+     * keyed by provider ID
+     */
+    "providers": { [_ in string]?: AIProviderConfig };
+
+    /**
+     * Keys are encrypted and never sent to the frontend.
+     */
+    "keys"?: { [_ in string]?: string };
 
     /** Creates a new AIConfig instance. */
     constructor($$source: Partial<AIConfig> = {}) {
-        if (!("gemini" in $$source)) {
-            this["gemini"] = (new AIProviderConfig());
+        if (!("providers" in $$source)) {
+            this["providers"] = {};
         }
 
         Object.assign(this, $$source);
@@ -21,30 +29,34 @@ export class AIConfig {
      * Creates a new AIConfig instance from a string or object.
      */
     static createFrom($$source: any = {}): AIConfig {
-        const $$createField0_0 = $$createType0;
+        const $$createField0_0 = $$createType1;
+        const $$createField1_0 = $$createType2;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        if ("gemini" in $$parsedSource) {
-            $$parsedSource["gemini"] = $$createField0_0($$parsedSource["gemini"]);
+        if ("providers" in $$parsedSource) {
+            $$parsedSource["providers"] = $$createField0_0($$parsedSource["providers"]);
+        }
+        if ("keys" in $$parsedSource) {
+            $$parsedSource["keys"] = $$createField1_0($$parsedSource["keys"]);
         }
         return new AIConfig($$parsedSource as Partial<AIConfig>);
     }
 }
 
 export class AIProviderConfig {
-    "enabled": boolean;
-    "key": string;
     "models": string[];
+
+    /**
+     * empty: the provider's default
+     */
+    "baseUrl": string;
 
     /** Creates a new AIProviderConfig instance. */
     constructor($$source: Partial<AIProviderConfig> = {}) {
-        if (!("enabled" in $$source)) {
-            this["enabled"] = false;
-        }
-        if (!("key" in $$source)) {
-            this["key"] = "";
-        }
         if (!("models" in $$source)) {
             this["models"] = [];
+        }
+        if (!("baseUrl" in $$source)) {
+            this["baseUrl"] = "";
         }
 
         Object.assign(this, $$source);
@@ -54,10 +66,10 @@ export class AIProviderConfig {
      * Creates a new AIProviderConfig instance from a string or object.
      */
     static createFrom($$source: any = {}): AIProviderConfig {
-        const $$createField2_0 = $$createType1;
+        const $$createField0_0 = $$createType3;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("models" in $$parsedSource) {
-            $$parsedSource["models"] = $$createField2_0($$parsedSource["models"]);
+            $$parsedSource["models"] = $$createField0_0($$parsedSource["models"]);
         }
         return new AIProviderConfig($$parsedSource as Partial<AIProviderConfig>);
     }
@@ -86,8 +98,8 @@ export class EditorConfig {
      * Creates a new EditorConfig instance from a string or object.
      */
     static createFrom($$source: any = {}): EditorConfig {
-        const $$createField0_0 = $$createType2;
-        const $$createField1_0 = $$createType2;
+        const $$createField0_0 = $$createType4;
+        const $$createField1_0 = $$createType4;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("light" in $$parsedSource) {
             $$parsedSource["light"] = $$createField0_0($$parsedSource["light"]);
@@ -187,10 +199,10 @@ export class Info {
      * Creates a new Info instance from a string or object.
      */
     static createFrom($$source: any = {}): Info {
-        const $$createField5_0 = $$createType3;
-        const $$createField7_0 = $$createType2;
-        const $$createField8_0 = $$createType2;
-        const $$createField9_0 = $$createType2;
+        const $$createField5_0 = $$createType5;
+        const $$createField7_0 = $$createType4;
+        const $$createField8_0 = $$createType4;
+        const $$createField9_0 = $$createType4;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("settings" in $$parsedSource) {
             $$parsedSource["settings"] = $$createField5_0($$parsedSource["settings"]);
@@ -265,10 +277,10 @@ export class Settings {
      * Creates a new Settings instance from a string or object.
      */
     static createFrom($$source: any = {}): Settings {
-        const $$createField1_0 = $$createType4;
-        const $$createField2_0 = $$createType5;
-        const $$createField3_0 = $$createType6;
-        const $$createField4_0 = $$createType7;
+        const $$createField1_0 = $$createType6;
+        const $$createField2_0 = $$createType7;
+        const $$createField3_0 = $$createType8;
+        const $$createField4_0 = $$createType9;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("editor" in $$parsedSource) {
             $$parsedSource["editor"] = $$createField1_0($$parsedSource["editor"]);
@@ -348,10 +360,12 @@ export class TokenColors {
 
 // Private type creation functions
 const $$createType0 = AIProviderConfig.createFrom;
-const $$createType1 = $Create.Array($Create.Any);
-const $$createType2 = TokenColors.createFrom;
-const $$createType3 = Settings.createFrom;
-const $$createType4 = EditorConfig.createFrom;
-const $$createType5 = FontConfig.createFrom;
-const $$createType6 = AIConfig.createFrom;
-const $$createType7 = PrivacyConfig.createFrom;
+const $$createType1 = $Create.Map($Create.Any, $$createType0);
+const $$createType2 = $Create.Map($Create.Any, $Create.Any);
+const $$createType3 = $Create.Array($Create.Any);
+const $$createType4 = TokenColors.createFrom;
+const $$createType5 = Settings.createFrom;
+const $$createType6 = EditorConfig.createFrom;
+const $$createType7 = FontConfig.createFrom;
+const $$createType8 = AIConfig.createFrom;
+const $$createType9 = PrivacyConfig.createFrom;

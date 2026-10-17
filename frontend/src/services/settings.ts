@@ -16,17 +16,22 @@ export function useSettings() {
     });
 }
 
+/** API key changes by provider ID: a new key, or "" to remove the saved one. */
+export type KeyChanges = Record<string, string>;
+
 export function useUpdateSettings() {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: async (settings: models.Settings) => {
-            const info = await UpdateSettings(settings);
+        mutationFn: async ({ settings, keys = {} }: { settings: models.Settings; keys?: KeyChanges }) => {
+            const info = await UpdateSettings(settings, keys);
             if (!info) throw new Error("Failed to update settings");
             return info;
         },
         onSuccess: (info) => {
             queryClient.setQueryData(["settings"], info);
             queryClient.invalidateQueries({ queryKey: ["settings"] });
+            queryClient.invalidateQueries({ queryKey: ["ai-providers"] });
+            queryClient.invalidateQueries({ queryKey: ["ai-models"] });
         },
     });
 }

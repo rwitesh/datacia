@@ -37,9 +37,8 @@ export function PrivacySection({ settings, onChange }: PrivacySectionProps) {
         </Label>
       </div>
       <p className="text-xs text-muted-foreground pl-6">
-        Reports contain crashes and error messages (which can include a database name or host),
-        the app version, OS and an anonymous device ID. Queries, results and passwords are never
-        sent.
+        Includes errors (which may name a database or host), app version, OS and an anonymous
+        device ID. Never queries, results or passwords.
       </p>
     </div>
   );

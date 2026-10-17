@@ -5,3 +5,15 @@ import * as Service from "./service.js";
 export {
     Service
 };
+
+export {
+    Chat,
+    ChatContext,
+    ChatDelta,
+    ChatRequest,
+    Message,
+    Model,
+    Provider,
+    ProviderStatus,
+    StoredMessage
+} from "./models.js";

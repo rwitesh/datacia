@@ -62,7 +62,7 @@ export function ThemeProvider({ children, ...props }: { children: React.ReactNod
         uiFontSize,
         setTheme: (newTheme: Theme) => {
           if (!settings) return
-          updateSettings({ ...settings.settings, theme: newTheme as unknown as ThemeConfig })
+          updateSettings({ settings: { ...settings.settings, theme: newTheme as unknown as ThemeConfig } })
         },
       }}
     >
