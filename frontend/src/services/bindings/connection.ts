@@ -30,8 +30,8 @@ export const ChangeDatabaseByName = (database: string) => {
   return WChangeDatabaseByName(database);
 }
 
-export const EstablishConnection = (id: string) => {
-  return WEstablishConnection(id);
+export const EstablishConnection = (id: string, acceptedFingerprint: string) => {
+  return WEstablishConnection(id, acceptedFingerprint);
 }
 
 export const CloseCurrentConnection = (closeEditor: boolean = true) => {

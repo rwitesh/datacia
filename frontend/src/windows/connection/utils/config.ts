@@ -4,7 +4,8 @@ import { DEFAULT_SSL_MODE } from "./constants";
 import type { FormValues } from "./types";
 
 // An SSH key replaces the password, so only the one in use is sent.
-export const toConnectionConfig = (values: FormValues): ConnectionConfig => {
+// acceptedFingerprint is an SSH host key the user confirmed, if any.
+export const toConnectionConfig = (values: FormValues, acceptedFingerprint = ""): ConnectionConfig => {
   const supportsSSL = DATABASE_ENGINES[values.engine].supportsSSL;
   return new ConnectionConfig({
     name: values.connectionName,
@@ -25,6 +26,7 @@ export const toConnectionConfig = (values: FormValues): ConnectionConfig => {
           username: values.sshUsername,
           password: values.useSSHKey ? "" : values.sshPassword,
           keyPath: values.useSSHKey ? values.sshKeyPath : "",
+          acceptedFingerprint,
         })
       : new SSHConfig(),
   });

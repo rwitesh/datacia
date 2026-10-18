@@ -18,6 +18,7 @@ import {
   validateForSave,
   validateForTestConnect,
 } from "../utils/validation";
+import { useTrustHostKey } from "@/shared/HostKey/HostKeyContext";
 import { useConnectDatabase } from "./useConnectDatabase";
 import { errorMessage } from "@/lib/utils";
 import { queryKeys } from "@/services/queryKeys";
@@ -53,6 +54,7 @@ export const useConnectionForm = ({
   fetchedData
 }: UseConnectionFormProps) => {
   const queryClient = useQueryClient();
+  const trustHostKey = useTrustHostKey();
 
   const [status, setStatus] = useState<Status>(null);
 
@@ -167,8 +169,9 @@ export const useConnectionForm = ({
   });
 
   const testMutation = useMutation<void, Error, void, unknown>({
-    mutationFn: async () => {
-      await TestConnection(toConnectionConfig(getValues()));
+    mutationFn: () => {
+      const values = getValues();
+      return trustHostKey((accepted) => TestConnection(toConnectionConfig(values, accepted)));
     },
     onMutate: () => {
       setStatus({
