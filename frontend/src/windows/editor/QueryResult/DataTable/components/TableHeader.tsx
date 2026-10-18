@@ -11,10 +11,14 @@ interface TableHeaderProps {
 // TableHeader is the sticky header row. The row-number corner (data-col -1)
 // selects everything; other headers select their column.
 export function TableHeader({ headers }: TableHeaderProps) {
+  // The last column's resize handle straddles the grid's right edge. Clipping
+  // it keeps a grid that exactly fills the container from overflowing, which
+  // toggles the scrollbars in a resize loop. Unlike overflow-hidden, clip
+  // keeps the sticky corner cell working.
   return (
     <div
       role="row"
-      className="sticky top-0 z-20 grid font-medium"
+      className="sticky top-0 z-20 grid overflow-x-clip font-medium"
       style={{
         height: HEADER_HEIGHT,
         width: "var(--grid-width)",
