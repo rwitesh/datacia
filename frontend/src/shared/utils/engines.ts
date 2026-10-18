@@ -17,6 +17,7 @@ interface EngineConfig {
   label: string;              // Display name
   icon: string;               // Icon/logo path
   defaultPort: string;        // Default connection port
+  supportsSSL: boolean;       // Whether the connection form offers an SSL mode
   formatterLanguage: string;  // sql-formatter language identifier
   dialect: SQLDialect;        // CodeMirror SQL dialect for syntax highlighting
 }
@@ -26,6 +27,7 @@ export const DATABASE_ENGINES: Record<DatabaseEngine, EngineConfig> = {
     label: "PostgreSQL",
     icon: PostgreSQLIcon,
     defaultPort: "5432",
+    supportsSSL: true,
     formatterLanguage: "postgresql",
     dialect: PostgreSQL,
   },
@@ -33,6 +35,7 @@ export const DATABASE_ENGINES: Record<DatabaseEngine, EngineConfig> = {
     label: "ClickHouse",
     icon: ClickhouseIcon,
     defaultPort: "9000",
+    supportsSSL: true,
     formatterLanguage: "clickhouse",
     dialect: ClickhouseDialect,
   },
@@ -40,6 +43,7 @@ export const DATABASE_ENGINES: Record<DatabaseEngine, EngineConfig> = {
     label: "MySQL",
     icon: MySQLIcon,
     defaultPort: "3306",
+    supportsSSL: true,
     formatterLanguage: "mysql",
     dialect: MySQL,
   },
@@ -47,6 +51,7 @@ export const DATABASE_ENGINES: Record<DatabaseEngine, EngineConfig> = {
     label: "SQLite",
     icon: SQLiteIcon,
     defaultPort: "",
+    supportsSSL: false,
     formatterLanguage: "sqlite",
     dialect: SQLite,
   },
@@ -65,6 +70,7 @@ export const getEngineConfig = (engine: string | null | undefined): EngineConfig
     label: "Unknown",
     icon: "",
     defaultPort: "",
+    supportsSSL: false,
     formatterLanguage: "sql",
     dialect: StandardSQL,
   };

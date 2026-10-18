@@ -96,6 +96,8 @@ func (s *Store) initSchema() error {
 			ssh_password TEXT,
 			use_ssh_key INTEGER DEFAULT 0,
 			ssh_key_path TEXT,
+			ssl_mode TEXT NOT NULL DEFAULT 'automatic',
+			ssl_ca_path TEXT NOT NULL DEFAULT '',
 			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		)`,
@@ -117,11 +119,47 @@ func (s *Store) initSchema() error {
 		}
 	}
 
+	if err := s.addMissingColumns("connections", map[string]string{
+		"ssl_mode":    "TEXT NOT NULL DEFAULT 'automatic'",
+		"ssl_ca_path": "TEXT NOT NULL DEFAULT ''",
+	}); err != nil {
+		return err
+	}
+
 	cutoff := time.Now().UTC().Add(-365 * 24 * time.Hour).Format(time.RFC3339)
 	if _, err := s.db.Exec(`DELETE FROM query_history WHERE timestamp < ?`, cutoff); err != nil {
 		logger.Error("Failed to prune query history", "error", err.Error())
 	}
 
+	return nil
+}
+
+// addMissingColumns adds the columns, with their type and default, that a
+// table created by an older version lacks. CREATE TABLE IF NOT EXISTS leaves
+// such a table as it was.
+func (s *Store) addMissingColumns(table string, columns map[string]string) error {
+	rows, err := s.db.Query(`SELECT name FROM pragma_table_info(?)`, table)
+	if err != nil {
+		return fmt.Errorf("failed to read %s columns: %w", table, err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return err
+		}
+		delete(columns, name)
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	rows.Close()
+
+	for name, definition := range columns {
+		if _, err := s.db.Exec(fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s", table, name, definition)); err != nil {
+			return fmt.Errorf("failed to add %s.%s: %w", table, name, err)
+		}
+	}
 	return nil
 }
 
@@ -152,7 +190,7 @@ func (s *Store) decryptField(value string) (string, error) {
 }
 
 // connectionColumns returns a saved connection's column values, from engine
-// to ssh_key_path, in table order, with the passwords encrypted. use_ssh_key
+// to ssl_ca_path, in table order, with the passwords encrypted. use_ssh_key
 // only mirrors whether a key path is set; loading doesn't read it.
 func (s *Store) connectionColumns(config common.ConnectionConfig) ([]any, error) {
 	encPassword, err := s.encryptField(config.Password)
@@ -166,7 +204,7 @@ func (s *Store) connectionColumns(config common.ConnectionConfig) ([]any, error)
 	return []any{
 		config.Engine, config.Host, config.Port, config.Username, encPassword, config.Database,
 		config.SSH.Enabled, config.SSH.Host, config.SSH.Port, config.SSH.Username, encSSHPassword,
-		config.SSH.KeyPath != "", config.SSH.KeyPath,
+		config.SSH.KeyPath != "", config.SSH.KeyPath, config.SSLMode, config.SSLCAPath,
 	}, nil
 }
 
@@ -181,9 +219,9 @@ func (s *Store) SaveConnection(config common.ConnectionConfig) error {
 		INSERT INTO connections (
 			id, name, engine, host, port, username, password, database,
 			use_ssh, ssh_host, ssh_port, ssh_username, ssh_password,
-			use_ssh_key, ssh_key_path, created_at, updated_at
+			use_ssh_key, ssh_key_path, ssl_mode, ssl_ca_path, created_at, updated_at
 		)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 	`, append([]any{uuid.New().String(), config.Name}, columns...)...)
 	if err != nil {
 		logger.Error("Failed to save connection", "error", err.Error())
@@ -203,7 +241,7 @@ func (s *Store) UpdateConnection(config common.ConnectionConfig) error {
 		SET name = ?,
 			engine = ?, host = ?, port = ?, username = ?, password = ?, database = ?,
 			use_ssh = ?, ssh_host = ?, ssh_port = ?, ssh_username = ?, ssh_password = ?,
-			use_ssh_key = ?, ssh_key_path = ?,
+			use_ssh_key = ?, ssh_key_path = ?, ssl_mode = ?, ssl_ca_path = ?,
 			updated_at = CURRENT_TIMESTAMP
 		WHERE id = ?
 	`, append(args, config.ID)...)
@@ -217,7 +255,8 @@ func (s *Store) LoadConnection(id string) (common.ConnectionConfig, error) {
 	query := `
 		SELECT
 			name, engine, host, port, username, password, database,
-			use_ssh, ssh_host, ssh_port, ssh_username, ssh_password, ssh_key_path
+			use_ssh, ssh_host, ssh_port, ssh_username, ssh_password, ssh_key_path,
+			ssl_mode, ssl_ca_path
 		FROM connections WHERE id = ?
 	`
 	config := common.ConnectionConfig{ID: id}
@@ -226,6 +265,7 @@ func (s *Store) LoadConnection(id string) (common.ConnectionConfig, error) {
 	if err := s.db.QueryRow(query, id).Scan(
 		&config.Name, &config.Engine, &config.Host, &config.Port, &config.Username, &encPassword, &config.Database,
 		&config.SSH.Enabled, &config.SSH.Host, &config.SSH.Port, &config.SSH.Username, &encSSHPassword, &config.SSH.KeyPath,
+		&config.SSLMode, &config.SSLCAPath,
 	); err != nil {
 		if err == sql.ErrNoRows {
 			return common.ConnectionConfig{}, errors.New("connection not found")

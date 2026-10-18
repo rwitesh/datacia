@@ -52,6 +52,15 @@ func (m *MySQL) Connect(config common.ConnectionConfig) error {
 	cfg.Addr = net.JoinHostPort(config.Host, config.Port)
 	cfg.DBName = config.Database
 	cfg.ParseTime = true
+	tlsSettings, err := config.TLSSettings()
+	if err != nil {
+		return err
+	}
+	// Automatic keeps the driver's default, plaintext: "preferred" would make
+	// servers with a broken TLS stack, which worked before, fail to connect.
+	if tlsSettings.Config != nil {
+		cfg.TLS = tlsSettings.Config
+	}
 	connector, err := mysql.NewConnector(cfg)
 	if err != nil {
 		return err
@@ -82,6 +91,7 @@ func (m *MySQL) Connect(config common.ConnectionConfig) error {
 	m.Port = config.Port
 	m.Username = config.Username
 	m.Database = config.Database
+	m.SetSSL(config)
 	m.Password = common.NewSecureString(config.Password)
 	m.Mu.Unlock()
 	return nil

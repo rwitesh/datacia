@@ -146,6 +146,7 @@ func (e *Engine) connect(config common.ConnectionConfig, test bool) error {
 		if err != nil {
 			return fmt.Errorf("failed to establish SSH tunnel: %w", err)
 		}
+		config.TLSServerName = config.Host
 		config.Host = "127.0.0.1"
 		if _, config.Port, err = net.SplitHostPort(tunnel.LocalAddr()); err != nil {
 			tunnel.Close()
@@ -278,13 +279,17 @@ func (e *Engine) ChangeDatabaseByName(database string) error {
 		return nil
 	}
 	// GetConnectionInfo doesn't expose the password, so take it from the client.
+	sslMode, sslCAPath, serverName := current.GetSSL()
 	dbClient, err := connectClient(common.ConnectionConfig{
-		Engine:   connInfo["engine"],
-		Host:     connInfo["host"],
-		Port:     connInfo["port"],
-		Username: connInfo["username"],
-		Password: current.GetPassword(),
-		Database: database,
+		Engine:        connInfo["engine"],
+		Host:          connInfo["host"],
+		Port:          connInfo["port"],
+		Username:      connInfo["username"],
+		Password:      current.GetPassword(),
+		Database:      database,
+		SSLMode:       sslMode,
+		SSLCAPath:     sslCAPath,
+		TLSServerName: serverName,
 	})
 	if err != nil {
 		return err

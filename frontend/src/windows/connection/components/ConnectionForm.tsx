@@ -4,7 +4,9 @@ import { Eye, EyeOff, X, FileKey } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DATABASE_ENGINES, SQLITE, type DatabaseEngine } from "@/shared/utils/engines";
+import { SSL_MODES } from "../utils/constants";
 import type { FormValues } from "../utils/types";
 
 interface ConnectionFormProps {
@@ -30,6 +32,7 @@ export const ConnectionForm: React.FC<ConnectionFormProps> = ({
   const [showSSHPassword, setShowSSHPassword] = useState(false);
 
   const useSSH = watch("useSSH");
+  const sslMode = watch("sslMode");
   const useSSHKey = watch("useSSHKey");
   const sshKeyPath = watch("sshKeyPath");
 
@@ -172,6 +175,39 @@ export const ConnectionForm: React.FC<ConnectionFormProps> = ({
             />
           </div>
         </>
+      )}
+
+      {DATABASE_ENGINES[currentEngine].supportsSSL && (
+        <div className="pt-2 border-t space-y-1">
+          <Label htmlFor="sslMode">SSL Mode</Label>
+          <Select value={sslMode} onValueChange={(value) => setValue("sslMode", value)} disabled={loading}>
+            <SelectTrigger id="sslMode" className="h-6 px-2 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {SSL_MODES.map((mode) => (
+                <SelectItem key={mode.value} value={mode.value} className="text-sm">
+                  {mode.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            {SSL_MODES.find((mode) => mode.value === sslMode)?.hint}
+          </p>
+          {sslMode === "verify-full" && (
+            <div className="space-y-1 pt-1">
+              <Label htmlFor="sslCaPath">CA Certificate (optional)</Label>
+              <Input
+                id="sslCaPath"
+                disabled={loading}
+                {...register("sslCaPath")}
+                placeholder="/path/to/ca.pem (default: system certificates)"
+                className="h-6 px-2 text-sm"
+              />
+            </div>
+          )}
+        </div>
       )}
 
       <div className="pt-2 border-t">

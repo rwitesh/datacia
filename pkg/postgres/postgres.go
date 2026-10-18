@@ -58,6 +58,17 @@ func (p *Postgres) Connect(config common.ConnectionConfig) error {
 	if err != nil {
 		return err
 	}
+	tlsSettings, err := config.TLSSettings()
+	if err != nil {
+		return err
+	}
+	// Without an sslmode pgx tries TLS and then falls back to plaintext, which
+	// is Automatic. Every other mode replaces that, and drops the plaintext
+	// fallback that would defeat it.
+	if tlsSettings.Mode != common.SSLModeAutomatic {
+		poolConfig.ConnConfig.TLSConfig = tlsSettings.Config
+		poolConfig.ConnConfig.Fallbacks = nil
+	}
 
 	// Configure pool settings
 	poolConfig.MaxConns = 10
@@ -86,6 +97,7 @@ func (p *Postgres) Connect(config common.ConnectionConfig) error {
 	p.Port = config.Port
 	p.Username = config.Username
 	p.Database = config.Database
+	p.SetSSL(config)
 	p.Password = common.NewSecureString(config.Password)
 	p.Mu.Unlock()
 	return nil

@@ -8,6 +8,8 @@ export interface FormValues {
   username: string;
   password: string;
   database: string;
+  sslMode: string;
+  sslCaPath: string;
   useSSH: boolean;
   sshHost: string;
   sshPort: string;
