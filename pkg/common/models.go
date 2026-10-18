@@ -46,6 +46,9 @@ type SSHConfig struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 	KeyPath  string `json:"keyPath"`
+	// AcceptedFingerprint is the host key fingerprint the user just confirmed.
+	// It is never stored: the key is trusted through known_hosts afterwards.
+	AcceptedFingerprint string `json:"acceptedFingerprint"`
 }
 
 // ConnectionConfig is everything needed to connect to a database. ID and Name

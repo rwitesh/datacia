@@ -2,7 +2,8 @@ import { ConnectionConfig, SSHConfig } from "@/services/bindings";
 import type { FormValues } from "./types";
 
 // An SSH key replaces the password, so only the one in use is sent.
-export const toConnectionConfig = (values: FormValues): ConnectionConfig =>
+// acceptedFingerprint is an SSH host key the user confirmed, if any.
+export const toConnectionConfig = (values: FormValues, acceptedFingerprint = ""): ConnectionConfig =>
   new ConnectionConfig({
     name: values.connectionName,
     engine: values.engine,
@@ -19,6 +20,7 @@ export const toConnectionConfig = (values: FormValues): ConnectionConfig =>
           username: values.sshUsername,
           password: values.useSSHKey ? "" : values.sshPassword,
           keyPath: values.useSSHKey ? values.sshKeyPath : "",
+          acceptedFingerprint,
         })
       : new SSHConfig(),
   });

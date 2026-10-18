@@ -7,6 +7,7 @@ import {
 import type { ConnectionInfo } from "./bindings";
 import { EstablishConnection } from "./bindings/connection";
 import { CheckConnectionHealth } from "./bindings/connection";
+import { useTrustHostKey } from "@/shared/HostKey/HostKeyContext";
 import { queryKeys } from "./queryKeys";
 
 export type ConnectionHealth = number | null;
@@ -45,10 +46,12 @@ export function useFetchConnectionById(id: string) {
 }
 
 export function useSwitchConnectionMutation() {
+  const trustHostKey = useTrustHostKey();
   return useMutation({
     // The backend closes the current connection only once the new one is
     // up, so a failed switch leaves the editor connected.
-    mutationFn: (id: string) => EstablishConnection(id),
+    mutationFn: (id: string) =>
+      trustHostKey((accepted) => EstablishConnection(id, accepted)),
   });
 }
 

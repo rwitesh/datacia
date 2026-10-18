@@ -220,6 +220,12 @@ export class SSHConfig {
     "password": string;
     "keyPath": string;
 
+    /**
+     * AcceptedFingerprint is the host key fingerprint the user just confirmed.
+     * It is never stored: the key is trusted through known_hosts afterwards.
+     */
+    "acceptedFingerprint": string;
+
     /** Creates a new SSHConfig instance. */
     constructor($$source: Partial<SSHConfig> = {}) {
         if (!("enabled" in $$source)) {
@@ -239,6 +245,9 @@ export class SSHConfig {
         }
         if (!("keyPath" in $$source)) {
             this["keyPath"] = "";
+        }
+        if (!("acceptedFingerprint" in $$source)) {
+            this["acceptedFingerprint"] = "";
         }
 
         Object.assign(this, $$source);

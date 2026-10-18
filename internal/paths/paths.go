@@ -37,3 +37,8 @@ func GetConfigDir() (string, error) {
 func GetSettingsPath() (string, error) {
 	return xdg.ConfigFile(filepath.Join(constants.APP_NAME, "settings.json"))
 }
+
+// GetKnownHostsPath is the OpenSSH known_hosts file of trusted SSH tunnel hosts.
+func GetKnownHostsPath() (string, error) {
+	return xdg.DataFile(filepath.Join(constants.APP_NAME, "known_hosts"))
+}

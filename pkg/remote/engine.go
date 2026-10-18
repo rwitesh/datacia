@@ -4,6 +4,7 @@ import (
 	"context"
 	"datacia/internal/db"
 	"datacia/internal/logger"
+	"datacia/internal/paths"
 	"datacia/internal/update"
 	"datacia/pkg/clickhouse"
 	"datacia/pkg/common"
@@ -130,20 +131,30 @@ func (e *Engine) connect(config common.ConnectionConfig, test bool) error {
 		if config.SSH.Host == "" {
 			return errors.New("SSH host is required")
 		}
+		knownHostsPath, err := paths.GetKnownHostsPath()
+		if err != nil {
+			return fmt.Errorf("failed to resolve known hosts path: %w", err)
+		}
 		sshConfig := ssh.Config{
-			Host:     config.SSH.Host,
-			Port:     config.SSH.Port,
-			Username: config.SSH.Username,
-			Password: config.SSH.Password,
-			KeyPath:  config.SSH.KeyPath,
+			Host:                config.SSH.Host,
+			Port:                config.SSH.Port,
+			Username:            config.SSH.Username,
+			Password:            config.SSH.Password,
+			KeyPath:             config.SSH.KeyPath,
+			KnownHostsPath:      knownHostsPath,
+			AcceptedFingerprint: config.SSH.AcceptedFingerprint,
 		}
 		if sshConfig.Port == "" {
 			sshConfig.Port = "22"
 		}
 
-		var err error
 		tunnel, err = ssh.NewTunnel(sshConfig, config.Host, config.Port)
 		if err != nil {
+			// The UI recognizes this one by its fields, so it can't be wrapped.
+			var unknown *ssh.HostKeyUnknownError
+			if errors.As(err, &unknown) {
+				return unknown
+			}
 			return fmt.Errorf("failed to establish SSH tunnel: %w", err)
 		}
 		config.Host = "127.0.0.1"
@@ -223,6 +234,12 @@ func (e *Engine) client() (DatabaseClient, error) {
 	if e.activeClient == nil {
 		return nil, errors.New("no active database connection found")
 	}
+	// Otherwise queries on a dead tunnel fail with an opaque EOF.
+	if e.sshTunnel != nil {
+		if err := e.sshTunnel.Err(); err != nil {
+			return nil, err
+		}
+	}
 	return e.activeClient, nil
 }
 
@@ -251,7 +268,9 @@ func (e *Engine) UpdateConnection(config common.ConnectionConfig) error {
 	return e.store.UpdateConnection(config)
 }
 
-func (e *Engine) EstablishConnection(id string) error {
+// EstablishConnection connects with the saved connection id. acceptedFingerprint
+// is the SSH host key fingerprint the user confirmed after an unknown-host error.
+func (e *Engine) EstablishConnection(id, acceptedFingerprint string) error {
 	config, err := e.store.LoadConnection(id)
 	if errors.Is(err, db.ErrUnreadableSecret) {
 		return errors.New("the saved password can't be decrypted on this device; edit the connection and enter it again")
@@ -259,6 +278,7 @@ func (e *Engine) EstablishConnection(id string) error {
 	if err != nil {
 		return err
 	}
+	config.SSH.AcceptedFingerprint = acceptedFingerprint
 	return e.Connect(config)
 }
 

@@ -2,6 +2,7 @@ import { lazy, Suspense } from "react";
 import "./App.css";
 import { ThemeProvider } from "@/components/theme";
 import { Routes, Route, HashRouter } from "react-router";
+import { HostKeyProvider } from "@/shared/HostKey/HostKeyProvider";
 import { Home } from "@/windows/connection/Home";
 import { DatabaseConnection } from "@/windows/connection/Connection";
 import { WelcomePanel } from "@/windows/connection/WelcomePanel";
@@ -21,6 +22,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <AppProvider>
         <ThemeProvider>
+          <HostKeyProvider>
           <HashRouter basename="/">
             <div className="h-screen w-screen flex flex-col overflow-hidden">
               <Toaster position="top-center" richColors closeButton />
@@ -43,6 +45,7 @@ function App() {
               </Suspense>
             </div>
           </HashRouter>
+          </HostKeyProvider>
         </ThemeProvider>
       </AppProvider>
     </QueryClientProvider>

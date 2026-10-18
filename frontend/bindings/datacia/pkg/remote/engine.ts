@@ -48,8 +48,12 @@ export function DeleteConnection(id: string): $CancellablePromise<boolean> {
     return $Call.ByID(2249538913, id);
 }
 
-export function EstablishConnection(id: string): $CancellablePromise<void> {
-    return $Call.ByID(3001152197, id);
+/**
+ * EstablishConnection connects with the saved connection id. acceptedFingerprint
+ * is the SSH host key fingerprint the user confirmed after an unknown-host error.
+ */
+export function EstablishConnection(id: string, acceptedFingerprint: string): $CancellablePromise<void> {
+    return $Call.ByID(3001152197, id, acceptedFingerprint);
 }
 
 export function GetCurrentConnectionInfo(): $CancellablePromise<{ [_ in string]?: string }> {
