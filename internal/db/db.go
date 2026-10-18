@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -17,6 +18,11 @@ import (
 	"github.com/google/uuid"
 	_ "modernc.org/sqlite"
 )
+
+// ErrUnreadableSecret is returned with a loaded connection whose saved
+// password can't be decrypted, for example after the device ID changed. The
+// connection is still returned, with that password empty.
+var ErrUnreadableSecret = errors.New("saved password can't be decrypted")
 
 type Store struct {
 	db           *sql.DB
@@ -251,18 +257,21 @@ func (s *Store) LoadConnection(id string) (map[string]string, error) {
 		&useSSHKey, &sshKeyPath,
 	); err != nil {
 		if err == sql.ErrNoRows {
-			return map[string]string{}, nil
+			return map[string]string{}, errors.New("connection not found")
 		}
 		return map[string]string{}, err
 	}
 
+	var secretErr error
 	password, err := s.decryptField(encPassword)
 	if err != nil {
 		logger.Warn("Failed to decrypt password", "error", err.Error())
+		secretErr = ErrUnreadableSecret
 	}
 	sshPassword, err := s.decryptField(encSSHPassword)
 	if err != nil {
 		logger.Warn("Failed to decrypt SSH password", "error", err.Error())
+		secretErr = ErrUnreadableSecret
 	}
 
 	config := map[string]string{
@@ -293,7 +302,7 @@ func (s *Store) LoadConnection(id string) (map[string]string, error) {
 		config["useSSHKey"] = "false"
 	}
 
-	return config, nil
+	return config, secretErr
 }
 
 func (s *Store) ListConnections() (map[string]common.ConnectionInfo, error) {

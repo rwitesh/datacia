@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -18,7 +19,18 @@ import (
 type SQLite struct {
 	db   *sql.DB
 	roDB *sql.DB // the same file opened read-only, for ReadOnlyQuery
+	// session runs the editor's statements, so a transaction, PRAGMA, ATTACH
+	// or temporary table carries over from one run to the next. Everything
+	// else uses the pools. It is only used while holding sessionLock.
+	session     *sql.Conn
+	sessionLock chan struct{}
 	*common.ConnectionState
+}
+
+// querier is the pool or the session connection.
+type querier interface {
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
 }
 
 func New() *SQLite {
@@ -27,10 +39,15 @@ func New() *SQLite {
 	}
 }
 
-func (s *SQLite) Connect(host, port, username, password, database string, test bool) error {
+func (s *SQLite) Connect(host, port, username, password, database string) error {
 	// For SQLite, 'database' is the file path. Host, port, username, password are ignored.
 	if database == "" {
 		return errors.New("database file path is required")
+	}
+	// SQLite creates a missing file, so a mistyped path would silently open
+	// a new empty database.
+	if _, err := os.Stat(database); err != nil {
+		return fmt.Errorf("cannot open database file: %w", err)
 	}
 
 	db, err := sql.Open("sqlite", database+"?_busy_timeout=5000")
@@ -38,28 +55,24 @@ func (s *SQLite) Connect(host, port, username, password, database string, test b
 		return err
 	}
 
-	// Test connection
-	if err := db.Ping(); err != nil {
-		db.Close()
-		return err
-	}
-
-	if test {
-		return db.Close()
-	}
-
-	roDB, err := sql.Open("sqlite", readOnlyDSN(database))
+	// Opening the session connection also checks that the file can be opened.
+	session, err := db.Conn(context.Background())
 	if err != nil {
 		db.Close()
 		return err
 	}
 
-	s.Mu.Lock()
-	if s.db != nil {
-		s.db.Close()
-		s.roDB.Close()
+	roDB, err := sql.Open("sqlite", readOnlyDSN(database))
+	if err != nil {
+		session.Close()
+		db.Close()
+		return err
 	}
+
+	s.Mu.Lock()
 	s.db = db
+	s.session = session
+	s.sessionLock = make(chan struct{}, 1)
 	s.roDB = roDB
 	s.Host = database
 	s.Mu.Unlock()
@@ -69,7 +82,7 @@ func (s *SQLite) Connect(host, port, username, password, database string, test b
 
 func (s *SQLite) Close() error {
 	s.Mu.Lock()
-	db, roDB := s.db, s.roDB
+	db, roDB, lock := s.db, s.roDB, s.sessionLock
 	s.db, s.roDB = nil, nil
 	s.ClearAllStateUnsafe() // Calling unsafe method since it is already in lock
 	s.Mu.Unlock()
@@ -78,6 +91,12 @@ func (s *SQLite) Close() error {
 		return nil
 	}
 
+	// Stop running statements, then wait for the session to be free. The
+	// lock is never released, so statements still waiting for it give up.
+	s.CancelAll()
+	lock <- struct{}{}
+	s.session.Close()
+	s.session = nil
 	roDB.Close()
 	return db.Close()
 }
@@ -100,7 +119,7 @@ func (s *SQLite) RunQuery(queryID, queryType, querySql string) (common.QueryResu
 	}
 
 	s.Mu.RLock()
-	db := s.db
+	db, lock := s.db, s.sessionLock
 	s.Mu.RUnlock()
 
 	if db == nil {
@@ -118,17 +137,24 @@ func (s *SQLite) RunQuery(queryID, queryType, querySql string) (common.QueryResu
 		s.ActiveQueries.Delete(queryID)
 	}()
 
+	if err := common.LockSession(ctx, lock); err != nil {
+		return common.QueryResult{}, err
+	}
+	defer func() { <-lock }()
+
+	// A local file can't drop the connection, and a cancelled statement is
+	// interrupted without closing it, so the session never needs replacing.
 	switch common.QueryType(queryType) {
 	case common.QueryTypeCommand:
-		return s.execute(ctx, db, querySql)
+		return s.execute(ctx, s.session, querySql)
 	case common.QueryTypeRead:
-		return s.query(ctx, db, querySql)
+		return s.query(ctx, s.session, querySql)
 	default:
 		return common.QueryResult{Type: common.QueryTypeUnknown}, fmt.Errorf("unsupported query type: %s", queryType)
 	}
 }
 
-func (s *SQLite) execute(ctx context.Context, db *sql.DB, sql string) (common.QueryResult, error) {
+func (s *SQLite) execute(ctx context.Context, db querier, sql string) (common.QueryResult, error) {
 	_, err := db.ExecContext(ctx, sql)
 	if err != nil {
 		return common.QueryResult{Type: common.QueryTypeCommand}, err
@@ -167,7 +193,7 @@ func readOnlyDSN(path string) string {
 	return "file:" + (&url.URL{Path: p}).EscapedPath() + "?mode=ro&_busy_timeout=5000"
 }
 
-func (s *SQLite) query(ctx context.Context, db *sql.DB, sql string) (common.QueryResult, error) {
+func (s *SQLite) query(ctx context.Context, db querier, sql string) (common.QueryResult, error) {
 	rows, err := db.QueryContext(ctx, sql)
 	if err != nil {
 		return common.QueryResult{Type: common.QueryTypeRead}, err

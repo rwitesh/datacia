@@ -5,16 +5,25 @@ import (
 	"datacia/pkg/common"
 	"errors"
 	"fmt"
+	"net"
 	"net/url"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgconn/ctxwatch"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Postgres struct {
 	pool *pgxpool.Pool
+	// session runs the editor's statements, so a transaction, SET or temporary
+	// table carries over from one run to the next. Everything else uses the
+	// pool. session and sessionInTx are only used while holding sessionLock.
+	session     *pgxpool.Conn
+	sessionInTx bool
+	sessionLock chan struct{}
 	*common.ConnectionState
 }
 
@@ -24,17 +33,25 @@ func New() *Postgres {
 	}
 }
 
-func (p *Postgres) Connect(host, port, username, password, database string, test bool) error {
+// cancelOnServer makes a cancelled context send a cancel request, so the
+// server stops the statement and the connection (and its transaction) stays
+// usable. pgx's default only closes the socket, leaving the statement
+// running. The deadline is the fallback if the server doesn't respond.
+func cancelOnServer(conn *pgconn.PgConn) ctxwatch.Handler {
+	return &pgconn.CancelRequestContextWatcherHandler{Conn: conn, DeadlineDelay: 5 * time.Second}
+}
+
+func (p *Postgres) Connect(host, port, username, password, database string) error {
 	// Construct DSN with proper URL encoding for username, password, and database
 	u := &url.URL{
 		Scheme: "postgres",
 		User:   url.UserPassword(username, password),
-		Host:   fmt.Sprintf("%s:%s", host, port),
+		Host:   net.JoinHostPort(host, port),
 		Path:   "/" + database,
 	}
 	dsn := u.String()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := common.NewTimeoutContext(common.CONNECT_TIMEOUT)
 	defer cancel()
 
 	config, err := pgxpool.ParseConfig(dsn)
@@ -47,45 +64,36 @@ func (p *Postgres) Connect(host, port, username, password, database string, test
 	config.MinConns = 1
 	config.MaxConnLifetime = time.Hour
 	config.MaxConnIdleTime = time.Minute * 1
+	config.ConnConfig.BuildContextWatcherHandler = cancelOnServer
 
 	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
 		return err
 	}
 
-	// Test connection
-	if err := pool.Ping(ctx); err != nil {
+	// Acquiring the session connection also checks that the server is reachable.
+	session, err := pool.Acquire(ctx)
+	if err != nil {
 		pool.Close()
 		return err
 	}
 
-	if !test {
-		p.Mu.Lock()
-		if p.pool != nil {
-			p.pool.Close()
-		}
-		p.pool = pool
-		p.Host = host
-		p.Port = port
-		p.Username = username
-		p.Database = database
-		// Set password directly when we already hold the lock
-		if p.Password != nil {
-			p.Password.Clear()
-		}
-		p.Password = common.NewSecureString(password)
-		p.Mu.Unlock()
-	} else {
-		// if test=true → close right away (don't keep state)
-		pool.Close()
-	}
-
+	p.Mu.Lock()
+	p.pool = pool
+	p.session = session
+	p.sessionLock = make(chan struct{}, 1)
+	p.Host = host
+	p.Port = port
+	p.Username = username
+	p.Database = database
+	p.Password = common.NewSecureString(password)
+	p.Mu.Unlock()
 	return nil
 }
 
 func (p *Postgres) Close() error {
 	p.Mu.Lock()
-	pool := p.pool
+	pool, lock := p.pool, p.sessionLock
 	p.pool = nil
 	p.ClearAllStateUnsafe() // Calling unsafe method since it is already in lock
 	p.Mu.Unlock()
@@ -94,8 +102,46 @@ func (p *Postgres) Close() error {
 		return nil
 	}
 
+	// Stop running statements, then wait for the session to be free. The
+	// lock is never released, so statements still waiting for it give up.
+	p.CancelAll()
+	lock <- struct{}{}
+	if p.session != nil {
+		p.session.Release()
+		p.session = nil
+	}
 	pool.Close()
 	return nil
+}
+
+// sessionConn returns the session connection, replacing it if it dropped.
+// Losing it mid-transaction is an error: the server rolled that work back.
+func (p *Postgres) sessionConn(ctx context.Context, pool *pgxpool.Pool) (*pgxpool.Conn, error) {
+	if p.session != nil {
+		// The pool only checks idle connections, so a held one that the
+		// server or network dropped (restart, idle timeout, sleep) would
+		// otherwise fail the next statement.
+		err := p.session.Ping(ctx)
+		if err == nil {
+			return p.session, nil
+		}
+		// A cancelled ping leaves the connection open, and it is still the session.
+		if !p.session.Conn().IsClosed() {
+			return nil, err
+		}
+		p.session.Release()
+		p.session = nil
+	}
+	conn, err := pool.Acquire(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to acquire connection: %w", err)
+	}
+	lostTx := p.sessionInTx
+	p.session, p.sessionInTx = conn, false
+	if lostTx {
+		return nil, common.ErrSessionLost
+	}
+	return conn, nil
 }
 
 func (p *Postgres) Ping() error {
@@ -118,9 +164,8 @@ func (p *Postgres) RunQuery(queryID, queryType, sql string) (common.QueryResult,
 		queryID = uuid.NewString()
 	}
 
-	// Grab pool under read lock
 	p.Mu.RLock()
-	pool := p.pool
+	pool, lock := p.pool, p.sessionLock
 	p.Mu.RUnlock()
 
 	if pool == nil {
@@ -138,12 +183,15 @@ func (p *Postgres) RunQuery(queryID, queryType, sql string) (common.QueryResult,
 		p.ActiveQueries.Delete(queryID)
 	}()
 
-	// Acquire a connection from the pool
-	conn, err := pool.Acquire(ctx)
-	if err != nil {
-		return common.QueryResult{}, fmt.Errorf("failed to acquire connection: %w", err)
+	if err := common.LockSession(ctx, lock); err != nil {
+		return common.QueryResult{}, err
 	}
-	defer conn.Release()
+	defer func() { <-lock }()
+	conn, err := p.sessionConn(ctx, pool)
+	if err != nil {
+		return common.QueryResult{}, err
+	}
+	defer func() { p.sessionInTx = conn.Conn().PgConn().TxStatus() != 'I' }()
 
 	switch common.QueryType(queryType) {
 	case common.QueryTypeCommand:
@@ -181,7 +229,7 @@ func (p *Postgres) ReadOnlyQuery(ctx context.Context, sql string, maxRows int) (
 		return common.QueryResult{Type: common.QueryTypeRead}, err
 	}
 	defer tx.Rollback(context.Background())
-	// Cancelling only closes the socket, so let the server stop the query too.
+	// A cancel request may not reach the server, so it also stops the query.
 	if _, err := tx.Exec(ctx, fmt.Sprintf("SET LOCAL statement_timeout = %d", common.QUERY_TIMEOUT.Milliseconds())); err != nil {
 		return common.QueryResult{Type: common.QueryTypeRead}, err
 	}

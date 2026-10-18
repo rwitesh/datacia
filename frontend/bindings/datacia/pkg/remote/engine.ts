@@ -113,6 +113,10 @@ export function ListTables(): $CancellablePromise<string[]> {
     });
 }
 
+/**
+ * LoadConnection returns a saved connection for editing. A password that
+ * can't be decrypted comes back empty so the user can enter it again.
+ */
 export function LoadConnection(id: string): $CancellablePromise<{ [_ in string]?: string }> {
     return $Call.ByID(1470478446, id).then(($result: any) => {
         return $$createType0($result);

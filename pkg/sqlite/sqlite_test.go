@@ -2,6 +2,7 @@ package sqlite
 
 import (
 	"context"
+	"os"
 	"path/filepath"
 	"slices"
 	"testing"
@@ -9,12 +10,33 @@ import (
 	"datacia/pkg/common"
 )
 
-func TestReadOnlyQuery(t *testing.T) {
+// connectNew connects to a new, empty database file.
+func connectNew(t *testing.T) *SQLite {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "t.db")
+	if err := os.WriteFile(path, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
 	s := New()
-	if err := s.Connect("", "", "", "", filepath.Join(t.TempDir(), "t.db"), false); err != nil {
+	if err := s.Connect("", "", "", "", path); err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { s.Close() })
+	return s
+}
+
+func TestMissingFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "missing.db")
+	if err := New().Connect("", "", "", "", path); err == nil {
+		t.Fatal("connected to a file that doesn't exist")
+	}
+	if _, err := os.Stat(path); err == nil {
+		t.Fatal("connecting created the file")
+	}
+}
+
+func TestReadOnlyQuery(t *testing.T) {
+	s := connectNew(t)
 	run := func(sql string) error {
 		_, err := s.RunQuery("", string(common.QueryTypeCommand), sql)
 		return err
@@ -50,11 +72,7 @@ func TestReadOnlyQuery(t *testing.T) {
 }
 
 func TestDuplicateColumnNames(t *testing.T) {
-	s := New()
-	if err := s.Connect("", "", "", "", filepath.Join(t.TempDir(), "t.db"), false); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { s.Close() })
+	s := connectNew(t)
 
 	res, err := s.RunQuery("", string(common.QueryTypeRead), "SELECT 1 AS id, 2 AS id")
 	if err != nil {
@@ -65,5 +83,34 @@ func TestDuplicateColumnNames(t *testing.T) {
 	}
 	if row := res.Data[0]; row["id"] != int64(1) || row["id_2"] != int64(2) {
 		t.Fatalf("row = %v, want id=1 id_2=2", row)
+	}
+}
+
+func TestSessionKeepsTransaction(t *testing.T) {
+	s := connectNew(t)
+	run := func(sql string) {
+		t.Helper()
+		if _, err := s.RunQuery("", string(common.QueryTypeCommand), sql); err != nil {
+			t.Fatalf("%s: %v", sql, err)
+		}
+	}
+	count := func() int {
+		t.Helper()
+		res, err := s.RunQuery("", string(common.QueryTypeRead), "SELECT n FROM t")
+		if err != nil {
+			t.Fatal(err)
+		}
+		return len(res.Data)
+	}
+
+	run("CREATE TEMP TABLE t (n INTEGER)") // visible only on the same connection
+	run("BEGIN")
+	run("INSERT INTO t VALUES (1)")
+	if got := count(); got != 1 {
+		t.Fatalf("inside the transaction: %d rows, want 1", got)
+	}
+	run("ROLLBACK")
+	if got := count(); got != 0 {
+		t.Fatalf("after rollback: %d rows, want 0", got)
 	}
 }

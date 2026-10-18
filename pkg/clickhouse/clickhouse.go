@@ -5,6 +5,7 @@ import (
 	"datacia/pkg/common"
 	"errors"
 	"fmt"
+	"net"
 	"sync"
 	"time"
 
@@ -24,9 +25,9 @@ func New() *ClickHouse {
 	}
 }
 
-func (ch *ClickHouse) Connect(host, port, username, password, database string, test bool) error {
+func (ch *ClickHouse) Connect(host, port, username, password, database string) error {
 	connection, err := clickhouse.Open(&clickhouse.Options{
-		Addr: []string{fmt.Sprintf("%s:%s", host, port)},
+		Addr: []string{net.JoinHostPort(host, port)},
 		Auth: clickhouse.Auth{
 			Database: database,
 			Username: username,
@@ -38,7 +39,7 @@ func (ch *ClickHouse) Connect(host, port, username, password, database string, t
 		Compression: &clickhouse.Compression{
 			Method: clickhouse.CompressionZSTD,
 		},
-		DialTimeout:     10 * time.Second,
+		DialTimeout:     common.CONNECT_TIMEOUT,
 		MaxOpenConns:    10,
 		MaxIdleConns:    5,
 		ConnMaxLifetime: 0,
@@ -47,34 +48,21 @@ func (ch *ClickHouse) Connect(host, port, username, password, database string, t
 		return err
 	}
 
-	ctx, cancel := common.NewTimeoutContext(2 * time.Second)
+	ctx, cancel := common.NewTimeoutContext(common.CONNECT_TIMEOUT)
 	defer cancel()
 	if err := connection.Ping(ctx); err != nil {
 		_ = connection.Close()
 		return err
 	}
 
-	if !test {
-		ch.Mu.Lock()
-		if ch.conn != nil {
-			_ = ch.conn.Close()
-		}
-		ch.conn = connection
-		ch.Host = host
-		ch.Port = port
-		ch.Username = username
-		ch.Database = database
-		// Set password directly when we already hold the lock
-		if ch.Password != nil {
-			ch.Password.Clear()
-		}
-		ch.Password = common.NewSecureString(password)
-		ch.Mu.Unlock()
-	} else {
-		// if test=true → close right away (don't keep state)
-		_ = connection.Close()
-	}
-
+	ch.Mu.Lock()
+	ch.conn = connection
+	ch.Host = host
+	ch.Port = port
+	ch.Username = username
+	ch.Database = database
+	ch.Password = common.NewSecureString(password)
+	ch.Mu.Unlock()
 	return nil
 }
 

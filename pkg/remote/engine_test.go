@@ -1,13 +1,13 @@
 package remote
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 )
 
 func TestConnectionLifecycle(t *testing.T) {
-	dir := t.TempDir()
-	first, second := filepath.Join(dir, "first.db"), filepath.Join(dir, "second.db")
+	first, second := newSQLiteFile(t), newSQLiteFile(t)
 	e := &Engine{}
 
 	if err := e.CreateNewConnection("sqlite", "", "", "", "", first, false); err != nil {
@@ -29,11 +29,11 @@ func TestConnectionLifecycle(t *testing.T) {
 		t.Fatalf("after test connection: tables %v, err %v", tables, err)
 	}
 
-	if err := e.ChangeDatabaseByName(second); err != nil {
+	if err := e.CreateNewConnection("sqlite", "", "", "", "", second, false); err != nil {
 		t.Fatal(err)
 	}
 	if tables, err := e.ListTables(); err != nil || len(tables) != 0 {
-		t.Fatalf("after changing database: tables %v, err %v", tables, err)
+		t.Fatalf("after replacing the connection: tables %v, err %v", tables, err)
 	}
 	if err := active.Ping(); err == nil {
 		t.Error("previous connection was not closed")
@@ -45,4 +45,54 @@ func TestConnectionLifecycle(t *testing.T) {
 	if _, err := e.ListTables(); err == nil {
 		t.Error("expected no active connection after close")
 	}
+}
+
+func TestChangeDatabaseKeepsSQLiteFile(t *testing.T) {
+	t.Chdir(t.TempDir())
+	path := newSQLiteFile(t)
+	e := &Engine{}
+	if err := e.CreateNewConnection("sqlite", "", "", "", "", path, false); err != nil {
+		t.Fatal(err)
+	}
+	active, _ := e.client()
+
+	// The database menu lists SQLite's only database as "main".
+	if err := e.ChangeDatabaseByName("main"); err == nil {
+		t.Error("switching a SQLite connection to \"main\" didn't fail")
+	}
+	if client, _ := e.client(); client != active {
+		t.Fatal("switching to \"main\" replaced the SQLite connection")
+	}
+	if _, err := os.Stat("main"); err == nil {
+		t.Fatal("switching to \"main\" created a database file named main")
+	}
+}
+
+func TestSQLiteMissingFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "typo.db")
+	e := &Engine{}
+	if err := e.CreateNewConnection("sqlite", "", "", "", "", path, true); err == nil {
+		t.Fatal("connected to a SQLite file that doesn't exist")
+	}
+	if _, err := os.Stat(path); err == nil {
+		t.Fatal("testing the connection created the file")
+	}
+}
+
+func TestSSHWithoutHost(t *testing.T) {
+	e := &Engine{}
+	err := e.CreateNewConnectionWithSSH("sqlite", "", "", "", "", newSQLiteFile(t), "true", "", "", "", "", "", true)
+	if err == nil {
+		t.Fatal("connected without the SSH tunnel that was asked for")
+	}
+}
+
+// newSQLiteFile creates an empty database file.
+func newSQLiteFile(t *testing.T) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "test.db")
+	if err := os.WriteFile(path, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return path
 }
