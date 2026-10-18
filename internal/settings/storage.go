@@ -74,24 +74,7 @@ func saveSettings(s Settings) error {
 		return err
 	}
 	// 0600 because the file holds encrypted API keys.
-	tmp := settingsPath + ".tmp"
-	f, err := os.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
-	if err != nil {
-		return err
-	}
-	_, err = f.Write(data)
-	if err == nil {
-		// Without it, a crash right after the rename can leave an empty file.
-		err = f.Sync()
-	}
-	if closeErr := f.Close(); err == nil {
-		err = closeErr
-	}
-	if err != nil {
-		_ = os.Remove(tmp)
-		return err
-	}
-	return os.Rename(tmp, settingsPath)
+	return paths.WriteFileAtomic(settingsPath, data, 0600)
 }
 
 // ErrorReportsEnabled reads only the privacy setting from disk, for use before

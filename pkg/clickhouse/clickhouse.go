@@ -130,7 +130,7 @@ func (ch *ClickHouse) RunQuery(queryID, queryType, sql string) (common.QueryResu
 	case common.QueryTypeCommand:
 		return ch.execute(ctx, conn, sql, queryID)
 	case common.QueryTypeRead:
-		return ch.query(ctx, conn, sql, queryID)
+		return ch.query(ctx, conn, sql, queryID, common.MaxEditorRows)
 	default:
 		return common.QueryResult{Type: common.QueryTypeUnknown}, fmt.Errorf("unsupported query type: %s", queryType)
 	}
@@ -147,7 +147,7 @@ type queryProgress struct {
 	bytesRead uint64
 }
 
-func (ch *ClickHouse) query(ctx context.Context, conn driver.Conn, sql string, queryID string) (common.QueryResult, error) {
+func (ch *ClickHouse) query(ctx context.Context, conn driver.Conn, sql string, queryID string, maxRows int) (common.QueryResult, error) {
 	progress := &queryProgress{}
 	progressCB := clickhouse.WithProgress(func(p *clickhouse.Progress) {
 		progress.mu.Lock()
@@ -168,7 +168,7 @@ func (ch *ClickHouse) query(ctx context.Context, conn driver.Conn, sql string, q
 	}
 	defer rows.Close()
 
-	columns, data, err := scanDynamicColumns(queryCtx, rows, 0)
+	columns, data, truncated, err := scanDynamicColumns(queryCtx, rows, maxRows)
 	if err != nil {
 		return common.QueryResult{Type: common.QueryTypeRead}, err
 	}
@@ -187,10 +187,11 @@ func (ch *ClickHouse) query(ctx context.Context, conn driver.Conn, sql string, q
 	}
 
 	return common.QueryResult{
-		Type:    common.QueryTypeRead,
-		Columns: columns,
-		Data:    data,
-		Logs:    logs,
+		Type:      common.QueryTypeRead,
+		Columns:   columns,
+		Data:      data,
+		Logs:      logs,
+		Truncated: truncated,
 	}, nil
 }
 
@@ -218,11 +219,11 @@ func (ch *ClickHouse) ReadOnlyQuery(ctx context.Context, sql string, maxRows int
 	// Cancel before rows.Close so unread rows aren't drained.
 	defer cancel()
 
-	columns, data, err := scanDynamicColumns(queryCtx, rows, maxRows)
+	columns, data, truncated, err := scanDynamicColumns(queryCtx, rows, maxRows)
 	if err != nil {
 		return common.QueryResult{Type: common.QueryTypeRead}, err
 	}
-	return common.QueryResult{Type: common.QueryTypeRead, Columns: columns, Data: data}, nil
+	return common.QueryResult{Type: common.QueryTypeRead, Columns: columns, Data: data, Truncated: truncated}, nil
 }
 
 func (ch *ClickHouse) CancelQuery(queryID string) error {
@@ -384,7 +385,7 @@ func (ch *ClickHouse) GetTableData(table string, limit, offset int, orderBy, ord
 	if err != nil {
 		return common.QueryResult{}, err
 	}
-	return ch.query(ctx, conn, sqlStr, "")
+	return ch.query(ctx, conn, sqlStr, "", 0)
 }
 
 func (ch *ClickHouse) GetTableSchema(table string) (common.QueryResult, error) {
@@ -415,7 +416,7 @@ func (ch *ClickHouse) GetTableSchema(table string) (common.QueryResult, error) {
 	}
 	defer rows.Close()
 
-	columns, data, err := scanDynamicColumns(ctx, rows, 0)
+	columns, data, _, err := scanDynamicColumns(ctx, rows, 0)
 	if err != nil {
 		return common.QueryResult{Type: common.QueryTypeRead}, err
 	}

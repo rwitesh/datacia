@@ -2,6 +2,7 @@ package sqlite
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -143,5 +144,32 @@ func TestTableMetadata(t *testing.T) {
 	}
 	if len(page.Data) != 2 || page.Data[0]["name"] != "b" || page.Data[1]["name"] != "a" {
 		t.Errorf("page %v", page.Data)
+	}
+}
+
+func TestEditorResultCap(t *testing.T) {
+	s := connectNew(t)
+
+	tests := []struct {
+		name          string
+		rows          int
+		wantRows      int
+		wantTruncated bool
+	}{
+		{"below cap", common.MaxEditorRows - 1, common.MaxEditorRows - 1, false},
+		{"exactly cap", common.MaxEditorRows, common.MaxEditorRows, false},
+		{"above cap", common.MaxEditorRows + 1, common.MaxEditorRows, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sql := fmt.Sprintf("WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < %d) SELECT i FROM n", tt.rows)
+			res, err := s.RunQuery("", string(common.QueryTypeRead), sql)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(res.Data) != tt.wantRows || res.Truncated != tt.wantTruncated {
+				t.Fatalf("got %d rows, truncated=%v; want %d, %v", len(res.Data), res.Truncated, tt.wantRows, tt.wantTruncated)
+			}
+		})
 	}
 }

@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { SQLCodeEditor } from "../components/SQLEditor";
+import { SQLCodeEditor } from "../QueryInput/SQLCodeEditor";
 import { Play, Loader2, CircleCheck, CircleX, X } from "lucide-react";
 
 export interface ScriptBlockData {

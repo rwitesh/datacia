@@ -1,5 +1,5 @@
 import { QueryInput } from "./QueryInput/QueryInput";
-import { TabBar } from "./TabBar/Tab";
+import { TabBar } from "./TabBar/TabBar";
 import { EditorSidebar } from "./EditorSidebar/EditorSidebar";
 import {
   ResizableHandle,

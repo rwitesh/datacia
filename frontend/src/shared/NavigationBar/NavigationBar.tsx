@@ -22,6 +22,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { queryKeys } from "@/services/queryKeys";
 
 type NavigationBarProps = {
   sidebarCollapsed: boolean;
@@ -50,7 +51,7 @@ export function NavigationBar({
     try {
       await CloseCurrentConnection();
       // Invalidate current connection query so it refetches (will return null)
-      queryClient.invalidateQueries({ queryKey: ["current-connection"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.currentConnection });
       // Window transition handled by backend
     } catch (error: unknown) {
       console.error("Error disconnecting:", errorMessage(error));

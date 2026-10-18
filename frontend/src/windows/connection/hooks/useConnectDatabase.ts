@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import {
   CreateNewConnection as Connect,
   EstablishConnection,
@@ -13,8 +13,6 @@ export type ConnectArgs = ConnectByIdArgs | ConnectByValuesArgs;
 export const useConnectDatabase = (opts?: {
   setStatus?: (s: Status) => void;
 }) => {
-  const queryClient = useQueryClient();
-
   return useMutation<void, Error, ConnectArgs, unknown>({
     mutationFn: async (payload) => {
       if ("id" in payload) {
@@ -42,13 +40,8 @@ export const useConnectDatabase = (opts?: {
     onMutate: () => {
       opts?.setStatus?.({ kind: "info", title: "Connecting..." });
     },
-    onSuccess: () => {
-      // Invalidate queries to refetch current connection from backend
-      queryClient.invalidateQueries({ queryKey: ["current-connection"] });
-      queryClient.invalidateQueries({ queryKey: ["databases"] });
-      queryClient.invalidateQueries({ queryKey: ["tables"] });
-      // Window transition handled by backend
-    },
+    // No invalidation: the backend emits connection-changed once the editor
+    // opens, and every window's AppProvider refreshes on it.
     onError: (err) => {
       opts?.setStatus?.({
         kind: "error",

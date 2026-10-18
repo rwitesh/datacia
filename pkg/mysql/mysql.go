@@ -241,7 +241,7 @@ func (m *MySQL) RunQuery(queryID, queryType, sqlStr string) (common.QueryResult,
 		m.sessionDirty = true
 		return m.execute(runCtx, conn, sqlStr)
 	case common.QueryTypeRead:
-		return m.query(runCtx, conn, sqlStr)
+		return m.query(runCtx, conn, sqlStr, common.MaxEditorRows)
 	default:
 		return common.QueryResult{Type: common.QueryTypeUnknown}, fmt.Errorf("unsupported query type: %s", queryType)
 	}
@@ -290,13 +290,13 @@ func (m *MySQL) ReadOnlyQuery(ctx context.Context, sqlStr string, maxRows int) (
 	return scanRows(ctx, rows, maxRows)
 }
 
-func (m *MySQL) query(ctx context.Context, db querier, sqlStr string) (common.QueryResult, error) {
+func (m *MySQL) query(ctx context.Context, db querier, sqlStr string, maxRows int) (common.QueryResult, error) {
 	rows, err := db.QueryContext(ctx, sqlStr)
 	if err != nil {
 		return common.QueryResult{Type: common.QueryTypeRead}, err
 	}
 	defer rows.Close()
-	return scanRows(ctx, rows, 0)
+	return scanRows(ctx, rows, maxRows)
 }
 
 // scanRows reads up to maxRows rows, or all of them when maxRows is 0.
@@ -342,14 +342,18 @@ func scanRows(ctx context.Context, rows *sql.Rows, maxRows int) (common.QueryRes
 		data = append(data, row)
 	}
 
+	// Peek one row past the cap so a result of exactly maxRows isn't flagged.
+	truncated := maxRows > 0 && len(data) == maxRows && rows.Next()
+
 	if err := rows.Err(); err != nil {
 		return common.QueryResult{Type: common.QueryTypeRead}, err
 	}
 
 	return common.QueryResult{
-		Type:    common.QueryTypeRead,
-		Columns: columns,
-		Data:    data,
+		Type:      common.QueryTypeRead,
+		Columns:   columns,
+		Data:      data,
+		Truncated: truncated,
 	}, nil
 }
 
@@ -459,7 +463,7 @@ func (m *MySQL) GetTableData(table string, limit, offset int, orderBy, orderDir 
 	if err != nil {
 		return common.QueryResult{}, err
 	}
-	return m.query(ctx, db, sqlStr)
+	return m.query(ctx, db, sqlStr, 0)
 }
 
 func (m *MySQL) GetTableSchema(table string) (common.QueryResult, error) {

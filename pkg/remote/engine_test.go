@@ -1,6 +1,8 @@
 package remote
 
 import (
+	"bytes"
+	"datacia/internal/db"
 	"os"
 	"path/filepath"
 	"testing"
@@ -99,4 +101,29 @@ func newSQLiteFile(t *testing.T) string {
 
 func connectSQLite(e *Engine, path string, test bool) error {
 	return e.CreateNewConnectionWithSSH("sqlite", "", "", "", "", path, "", "", "", "", "", "", "", "", test)
+}
+
+func TestServiceShutdownReleasesEverything(t *testing.T) {
+	store, err := db.OpenFile(filepath.Join(t.TempDir(), "data.db"), bytes.Repeat([]byte{1}, 32))
+	if err != nil {
+		t.Fatal(err)
+	}
+	e := &Engine{store: store}
+	if err := connectSQLite(e, newSQLiteFile(t), false); err != nil {
+		t.Fatal(err)
+	}
+	active, _ := e.client()
+
+	if err := e.ServiceShutdown(); err != nil {
+		t.Fatal(err)
+	}
+	if err := active.Ping(); err == nil {
+		t.Error("connection was not closed")
+	}
+	if _, err := e.client(); err == nil {
+		t.Error("expected no active connection after shutdown")
+	}
+	if _, err := store.ListConnections(); err == nil {
+		t.Error("store was not closed")
+	}
 }

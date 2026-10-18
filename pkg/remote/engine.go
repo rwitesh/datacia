@@ -20,6 +20,13 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
+// ConnectionChangedEvent fires, without data, when the active connection is replaced.
+const ConnectionChangedEvent = "connection-changed"
+
+func init() {
+	application.RegisterEvent[application.Void](ConnectionChangedEvent)
+}
+
 type UIController interface {
 	OpenEditor()
 	CloseEditor()
@@ -46,6 +53,23 @@ func New(wailsApp *application.App, uiController UIController, store *db.Store) 
 		uiController: uiController,
 		wailsApp:     wailsApp,
 	}
+}
+
+// ServiceShutdown runs when the app quits and releases the connection, its SSH
+// tunnel and the local store. It is a Wails lifecycle hook, so the UI can't call it.
+func (e *Engine) ServiceShutdown() error {
+	e.mu.Lock()
+	client, tunnel := e.activeClient, e.sshTunnel
+	e.activeClient, e.sshTunnel = nil, nil
+	e.mu.Unlock()
+
+	if client != nil {
+		_ = client.Close()
+	}
+	if tunnel != nil {
+		tunnel.Close()
+	}
+	return e.store.Close()
 }
 
 // PendingUpdateVersion returns the version of the update downloaded in the
@@ -87,7 +111,6 @@ func getDBClient(engineType string) (DatabaseClient, error) {
 func (e *Engine) CreateNewConnectionWithSSH(engine, host, port, username, password, database string, useSSH, sshHost, sshPort, sshUsername, sshPassword, sshKeyPath, sslMode, sslCAPath string, test bool) error {
 	logger.Info("db_connection_attempt",
 		"engine", engine,
-		"database", database,
 		"ssh", fmt.Sprint(useSSH == "true"),
 		"test", fmt.Sprint(test),
 	)
@@ -143,6 +166,21 @@ func (e *Engine) CreateNewConnectionWithSSH(engine, host, port, username, passwo
 	return nil
 }
 
+// connectErrorKind describes a connect error for logs without its text, which
+// driver errors fill with the host, user and database.
+func connectErrorKind(err error) string {
+	var netErr net.Error
+	switch {
+	case errors.Is(err, context.Canceled):
+		return "canceled"
+	case errors.Is(err, context.DeadlineExceeded):
+		return "timeout"
+	case errors.As(err, &netErr):
+		return "network"
+	}
+	return "other"
+}
+
 func connectClient(engine, host, port, username, password, database string, tlsSettings common.TLSSettings) (DatabaseClient, error) {
 	dbClient, err := getDBClient(engine)
 	if err != nil {
@@ -150,10 +188,10 @@ func connectClient(engine, host, port, username, password, database string, tlsS
 		return nil, err
 	}
 	if err := dbClient.Connect(host, port, username, password, database, tlsSettings); err != nil {
-		logger.Warn("db_connection_failed", "engine", engine, "database", database, "error", err.Error())
+		logger.Warn("db_connection_failed", "engine", engine, "kind", connectErrorKind(err))
 		return nil, err
 	}
-	logger.Info("db_connection_success", "engine", engine, "database", database)
+	logger.Info("db_connection_success", "engine", engine)
 	return dbClient, nil
 }
 
@@ -190,7 +228,7 @@ func (e *Engine) openEditor() {
 		return
 	}
 	e.uiController.OpenEditor()
-	e.wailsApp.Event.Emit("connection-changed", nil)
+	e.wailsApp.Event.Emit(ConnectionChangedEvent, nil)
 }
 
 func (e *Engine) OpenConnectionWindow() {

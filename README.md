@@ -16,7 +16,8 @@ A fast, free desktop SQL client for PostgreSQL, MySQL, SQLite and ClickHouse, fo
   suggestions drawn from the queries you have run before.
 - **Results** – a fast table with sorting, column resizing and cell selection, plus a JSON view of
   the selected rows.
-- **Export** – copy or export results as JSON, CSV or PNG.
+- **Export** – copy or export results as JSON, CSV or PNG. The editor loads at most 10,000 rows per
+  query and says so when it cuts a result off; exports contain only the rows shown.
 - **Script mode** – run a sequence of statements one after another.
 - **Query history and saved queries** – search past queries by text and date, and organise your
   own queries in folders.

@@ -11,10 +11,11 @@ import {
 } from "./bindings";
 import type { FileNode } from "./bindings";
 import { toast } from "sonner";
+import { queryKeys } from "./queryKeys";
 
 export const useGetQueriesTree = () => {
     return useQuery<FileNode[]>({
-        queryKey: ["queries-tree"],
+        queryKey: queryKeys.queriesTree,
         queryFn: ListTree,
     });
 };
@@ -24,7 +25,7 @@ export const useCreateFolder = () => {
     return useMutation<void, Error, string>({
         mutationFn: CreateFolder,
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["queries-tree"] });
+            queryClient.invalidateQueries({ queryKey: queryKeys.queriesTree });
         },
         onError: (err: Error) => {
             toast.error(err.message || "Failed to create folder");
@@ -37,7 +38,7 @@ export const useCreateQueryFile = () => {
     return useMutation<void, Error, string>({
         mutationFn: CreateQueryFile,
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["queries-tree"] });
+            queryClient.invalidateQueries({ queryKey: queryKeys.queriesTree });
         },
         onError: (err: Error) => {
             toast.error(err.message || "Failed to create file");
@@ -50,7 +51,7 @@ export const useRenameNode = () => {
     return useMutation<void, Error, { path: string; newName: string }>({
         mutationFn: ({ path, newName }) => Rename(path, newName),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["queries-tree"] });
+            queryClient.invalidateQueries({ queryKey: queryKeys.queriesTree });
         },
         onError: (err: Error) => {
             toast.error(err.message || "Failed to rename");
@@ -63,7 +64,7 @@ export const useMoveNode = () => {
     return useMutation<void, Error, { src: string; dest: string }>({
         mutationFn: ({ src, dest }) => Move(src, dest),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["queries-tree"] });
+            queryClient.invalidateQueries({ queryKey: queryKeys.queriesTree });
         },
         onError: (err: Error) => {
             toast.error(err.message || "Failed to move");
@@ -76,7 +77,7 @@ export const useDeleteNode = () => {
     return useMutation<void, Error, string>({
         mutationFn: Delete,
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["queries-tree"] });
+            queryClient.invalidateQueries({ queryKey: queryKeys.queriesTree });
         },
         onError: (err: Error) => {
             toast.error(err.message || "Failed to delete");
@@ -98,7 +99,7 @@ export const useWriteFile = () => {
     return useMutation<void, Error, { path: string; content: string }>({
         mutationFn: ({ path, content }) => WriteFile(path, content),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["queries-tree"] });
+            queryClient.invalidateQueries({ queryKey: queryKeys.queriesTree });
             toast.success("File saved");
         },
         onError: (err: Error) => {

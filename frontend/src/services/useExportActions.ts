@@ -1,5 +1,4 @@
 import type { RefObject } from "react";
-import html2canvaspro from "html2canvas-pro";
 import { useTheme } from "@/components/theme";
 import { useExportData, type ExportFormat } from "./export";
 import { useCopyToClipboard } from "./clipboard";
@@ -57,6 +56,8 @@ export function useExportActions({
   const capturePNG = async () => {
     if (!data.length || !tableRef?.current) return null;
     try {
+      // Loaded on first use: only PNG export needs it.
+      const { default: html2canvaspro } = await import("html2canvas-pro");
       const canvas = await html2canvaspro(tableRef.current, {
         backgroundColor: pngBackgroundColor,
         scale: 2,
