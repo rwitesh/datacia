@@ -37,13 +37,11 @@ export function CloseCurrentConnection(closeEditor: boolean): $CancellablePromis
 }
 
 /**
- * CreateNewConnectionWithSSH connects to a database, optionally through an
- * SSH tunnel. A test connection is closed straight away and never touches the
- * active connection, since the connection window can test while an editor is
- * open.
+ * Connect connects to a database, optionally through an SSH tunnel, makes it
+ * the active connection and opens the editor.
  */
-export function CreateNewConnectionWithSSH(engine: string, host: string, port: string, username: string, password: string, database: string, useSSH: string, sshHost: string, sshPort: string, sshUsername: string, sshPassword: string, sshKeyPath: string, test: boolean): $CancellablePromise<void> {
-    return $Call.ByID(3942865490, engine, host, port, username, password, database, useSSH, sshHost, sshPort, sshUsername, sshPassword, sshKeyPath, test);
+export function Connect(config: common$0.ConnectionConfig): $CancellablePromise<void> {
+    return $Call.ByID(2864482224, config);
 }
 
 export function DeleteConnection(id: string): $CancellablePromise<boolean> {
@@ -104,9 +102,9 @@ export function ListTables(): $CancellablePromise<string[]> {
  * LoadConnection returns a saved connection for editing. A password that
  * can't be decrypted comes back empty so the user can enter it again.
  */
-export function LoadConnection(id: string): $CancellablePromise<{ [_ in string]?: string }> {
+export function LoadConnection(id: string): $CancellablePromise<common$0.ConnectionConfig> {
     return $Call.ByID(1470478446, id).then(($result: any) => {
-        return $$createType0($result);
+        return $$createType8($result);
     });
 }
 
@@ -150,8 +148,11 @@ export function RunQuery(queryId: string, queryType: string, sql: string): $Canc
     });
 }
 
-export function SaveConnection(name: string, config: { [_ in string]?: string }): $CancellablePromise<void> {
-    return $Call.ByID(3657704791, name, config);
+/**
+ * SaveConnection saves config as a new connection named config.Name.
+ */
+export function SaveConnection(config: common$0.ConnectionConfig): $CancellablePromise<void> {
+    return $Call.ByID(3657704791, config);
 }
 
 /**
@@ -170,8 +171,20 @@ export function SelectSSHKeyFile(): $CancellablePromise<string> {
     return $Call.ByID(2756786305);
 }
 
-export function UpdateConnection(id: string, name: string, config: { [_ in string]?: string }): $CancellablePromise<void> {
-    return $Call.ByID(2109296315, id, name, config);
+/**
+ * TestConnection connects like Connect and closes the connection straight
+ * away. It never touches the active connection, since the connection window
+ * can test while an editor is open.
+ */
+export function TestConnection(config: common$0.ConnectionConfig): $CancellablePromise<void> {
+    return $Call.ByID(3449334550, config);
+}
+
+/**
+ * UpdateConnection saves config over the saved connection with config.ID.
+ */
+export function UpdateConnection(config: common$0.ConnectionConfig): $CancellablePromise<void> {
+    return $Call.ByID(2109296315, config);
 }
 
 // Private type creation functions
@@ -183,3 +196,4 @@ const $$createType4 = common$0.ConnectionInfo.createFrom;
 const $$createType5 = $Create.Map($Create.Any, $$createType4);
 const $$createType6 = common$0.DatabaseInfo.createFrom;
 const $$createType7 = $Create.Array($Create.Any);
+const $$createType8 = common$0.ConnectionConfig.createFrom;

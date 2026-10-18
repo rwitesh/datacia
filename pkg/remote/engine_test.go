@@ -3,6 +3,7 @@ package remote
 import (
 	"bytes"
 	"datacia/internal/db"
+	"datacia/pkg/common"
 	"os"
 	"path/filepath"
 	"testing"
@@ -83,7 +84,7 @@ func TestSQLiteMissingFile(t *testing.T) {
 
 func TestSSHWithoutHost(t *testing.T) {
 	e := &Engine{}
-	err := e.CreateNewConnectionWithSSH("sqlite", "", "", "", "", newSQLiteFile(t), "true", "", "", "", "", "", true)
+	err := e.TestConnection(common.ConnectionConfig{Engine: "sqlite", Database: newSQLiteFile(t), SSH: common.SSHConfig{Enabled: true}})
 	if err == nil {
 		t.Fatal("connected without the SSH tunnel that was asked for")
 	}
@@ -100,7 +101,11 @@ func newSQLiteFile(t *testing.T) string {
 }
 
 func connectSQLite(e *Engine, path string, test bool) error {
-	return e.CreateNewConnectionWithSSH("sqlite", "", "", "", "", path, "", "", "", "", "", "", test)
+	config := common.ConnectionConfig{Engine: "sqlite", Database: path}
+	if test {
+		return e.TestConnection(config)
+	}
+	return e.Connect(config)
 }
 
 func TestServiceShutdownReleasesEverything(t *testing.T) {

@@ -37,6 +37,31 @@ type DatabaseInfo struct {
 	CurrentDatabase string   `json:"currentDatabase"`
 }
 
+// SSHConfig is the optional SSH tunnel a connection goes through. A key file,
+// when set, is used instead of the password.
+type SSHConfig struct {
+	Enabled  bool   `json:"enabled"`
+	Host     string `json:"host"`
+	Port     string `json:"port"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+	KeyPath  string `json:"keyPath"`
+}
+
+// ConnectionConfig is everything needed to connect to a database. ID and Name
+// are set only for saved connections. For SQLite, Database is the file path.
+type ConnectionConfig struct {
+	ID       string    `json:"id"`
+	Name     string    `json:"name"`
+	Engine   string    `json:"engine"`
+	Host     string    `json:"host"`
+	Port     string    `json:"port"`
+	Username string    `json:"username"`
+	Password string    `json:"password"`
+	Database string    `json:"database"`
+	SSH      SSHConfig `json:"ssh"`
+}
+
 // ConnectionInfo represents a connection list item with name and engine
 type ConnectionInfo struct {
 	Name   string `json:"name"`

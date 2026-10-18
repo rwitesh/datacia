@@ -152,24 +152,27 @@ func (s *Store) decryptField(value string) (string, error) {
 }
 
 // connectionColumns returns a saved connection's column values, from engine
-// to ssh_key_path, in table order, with the passwords encrypted.
-func (s *Store) connectionColumns(config map[string]string) ([]any, error) {
-	encPassword, err := s.encryptField(config["password"])
+// to ssh_key_path, in table order, with the passwords encrypted. use_ssh_key
+// only mirrors whether a key path is set; loading doesn't read it.
+func (s *Store) connectionColumns(config common.ConnectionConfig) ([]any, error) {
+	encPassword, err := s.encryptField(config.Password)
 	if err != nil {
 		return nil, err
 	}
-	encSSHPassword, err := s.encryptField(config["sshPassword"])
+	encSSHPassword, err := s.encryptField(config.SSH.Password)
 	if err != nil {
 		return nil, err
 	}
 	return []any{
-		config["engine"], config["host"], config["port"], config["username"], encPassword, config["database"],
-		config["useSSH"] == "true", config["sshHost"], config["sshPort"], config["sshUsername"], encSSHPassword,
-		config["useSSHKey"] == "true", config["sshKeyPath"],
+		config.Engine, config.Host, config.Port, config.Username, encPassword, config.Database,
+		config.SSH.Enabled, config.SSH.Host, config.SSH.Port, config.SSH.Username, encSSHPassword,
+		config.SSH.KeyPath != "", config.SSH.KeyPath,
 	}, nil
 }
 
-func (s *Store) SaveConnection(name string, config map[string]string) error {
+// SaveConnection stores config as a new connection named config.Name; its ID
+// is ignored.
+func (s *Store) SaveConnection(config common.ConnectionConfig) error {
 	columns, err := s.connectionColumns(config)
 	if err != nil {
 		return err
@@ -181,19 +184,20 @@ func (s *Store) SaveConnection(name string, config map[string]string) error {
 			use_ssh_key, ssh_key_path, created_at, updated_at
 		)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-	`, append([]any{uuid.New().String(), name}, columns...)...)
+	`, append([]any{uuid.New().String(), config.Name}, columns...)...)
 	if err != nil {
 		logger.Error("Failed to save connection", "error", err.Error())
 	}
 	return err
 }
 
-func (s *Store) UpdateConnection(id, name string, config map[string]string) error {
+// UpdateConnection overwrites the connection with config.ID.
+func (s *Store) UpdateConnection(config common.ConnectionConfig) error {
 	columns, err := s.connectionColumns(config)
 	if err != nil {
 		return err
 	}
-	args := append([]any{name}, columns...)
+	args := append([]any{config.Name}, columns...)
 	_, err = s.db.Exec(`
 		UPDATE connections
 		SET name = ?,
@@ -202,80 +206,45 @@ func (s *Store) UpdateConnection(id, name string, config map[string]string) erro
 			use_ssh_key = ?, ssh_key_path = ?,
 			updated_at = CURRENT_TIMESTAMP
 		WHERE id = ?
-	`, append(args, id)...)
+	`, append(args, config.ID)...)
 	if err != nil {
 		logger.Error("Failed to update connection", "error", err.Error())
 	}
 	return err
 }
 
-func (s *Store) LoadConnection(id string) (map[string]string, error) {
+func (s *Store) LoadConnection(id string) (common.ConnectionConfig, error) {
 	query := `
-		SELECT 
+		SELECT
 			name, engine, host, port, username, password, database,
-			use_ssh, ssh_host, ssh_port, ssh_username, ssh_password,
-			use_ssh_key, ssh_key_path
+			use_ssh, ssh_host, ssh_port, ssh_username, ssh_password, ssh_key_path
 		FROM connections WHERE id = ?
 	`
-	row := s.db.QueryRow(query, id)
+	config := common.ConnectionConfig{ID: id}
+	var encPassword, encSSHPassword string
 
-	var name, engine, host, port, username, encPassword, database string
-	var useSSH int
-	var sshHost, sshPort, sshUsername, encSSHPassword string
-	var useSSHKey int
-	var sshKeyPath string
-
-	if err := row.Scan(
-		&name, &engine, &host, &port, &username, &encPassword, &database,
-		&useSSH, &sshHost, &sshPort, &sshUsername, &encSSHPassword,
-		&useSSHKey, &sshKeyPath,
+	if err := s.db.QueryRow(query, id).Scan(
+		&config.Name, &config.Engine, &config.Host, &config.Port, &config.Username, &encPassword, &config.Database,
+		&config.SSH.Enabled, &config.SSH.Host, &config.SSH.Port, &config.SSH.Username, &encSSHPassword, &config.SSH.KeyPath,
 	); err != nil {
 		if err == sql.ErrNoRows {
-			return map[string]string{}, errors.New("connection not found")
+			return common.ConnectionConfig{}, errors.New("connection not found")
 		}
-		return map[string]string{}, err
+		return common.ConnectionConfig{}, err
 	}
 
 	var secretErr error
-	password, err := s.decryptField(encPassword)
+	var err error
+	config.Password, err = s.decryptField(encPassword)
 	if err != nil {
 		logger.Warn("Failed to decrypt password", "error", err.Error())
 		secretErr = ErrUnreadableSecret
 	}
-	sshPassword, err := s.decryptField(encSSHPassword)
+	config.SSH.Password, err = s.decryptField(encSSHPassword)
 	if err != nil {
 		logger.Warn("Failed to decrypt SSH password", "error", err.Error())
 		secretErr = ErrUnreadableSecret
 	}
-
-	config := map[string]string{
-		"id":          id,
-		"name":        name,
-		"engine":      engine,
-		"host":        host,
-		"port":        port,
-		"username":    username,
-		"password":    password,
-		"database":    database,
-		"sshHost":     sshHost,
-		"sshPort":     sshPort,
-		"sshUsername": sshUsername,
-		"sshPassword": sshPassword,
-		"sshKeyPath":  sshKeyPath,
-	}
-
-	if useSSH == 1 {
-		config["useSSH"] = "true"
-	} else {
-		config["useSSH"] = "false"
-	}
-
-	if useSSHKey == 1 {
-		config["useSSHKey"] = "true"
-	} else {
-		config["useSSHKey"] = "false"
-	}
-
 	return config, secretErr
 }
 

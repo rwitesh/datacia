@@ -6,6 +6,67 @@
 import { Create as $Create } from "@wailsio/runtime";
 
 /**
+ * ConnectionConfig is everything needed to connect to a database. ID and Name
+ * are set only for saved connections. For SQLite, Database is the file path.
+ */
+export class ConnectionConfig {
+    "id": string;
+    "name": string;
+    "engine": string;
+    "host": string;
+    "port": string;
+    "username": string;
+    "password": string;
+    "database": string;
+    "ssh": SSHConfig;
+
+    /** Creates a new ConnectionConfig instance. */
+    constructor($$source: Partial<ConnectionConfig> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = "";
+        }
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("engine" in $$source)) {
+            this["engine"] = "";
+        }
+        if (!("host" in $$source)) {
+            this["host"] = "";
+        }
+        if (!("port" in $$source)) {
+            this["port"] = "";
+        }
+        if (!("username" in $$source)) {
+            this["username"] = "";
+        }
+        if (!("password" in $$source)) {
+            this["password"] = "";
+        }
+        if (!("database" in $$source)) {
+            this["database"] = "";
+        }
+        if (!("ssh" in $$source)) {
+            this["ssh"] = (new SSHConfig());
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ConnectionConfig instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ConnectionConfig {
+        const $$createField8_0 = $$createType0;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("ssh" in $$parsedSource) {
+            $$parsedSource["ssh"] = $$createField8_0($$parsedSource["ssh"]);
+        }
+        return new ConnectionConfig($$parsedSource as Partial<ConnectionConfig>);
+    }
+}
+
+/**
  * ConnectionInfo represents a connection list item with name and engine
  */
 export class ConnectionInfo {
@@ -53,7 +114,7 @@ export class DatabaseInfo {
      * Creates a new DatabaseInfo instance from a string or object.
      */
     static createFrom($$source: any = {}): DatabaseInfo {
-        const $$createField0_0 = $$createType0;
+        const $$createField0_0 = $$createType1;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("databases" in $$parsedSource) {
             $$parsedSource["databases"] = $$createField0_0($$parsedSource["databases"]);
@@ -119,9 +180,9 @@ export class QueryResult {
      * Creates a new QueryResult instance from a string or object.
      */
     static createFrom($$source: any = {}): QueryResult {
-        const $$createField1_0 = $$createType0;
-        const $$createField2_0 = $$createType2;
-        const $$createField4_0 = $$createType3;
+        const $$createField1_0 = $$createType1;
+        const $$createField2_0 = $$createType3;
+        const $$createField4_0 = $$createType4;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("columns" in $$parsedSource) {
             $$parsedSource["columns"] = $$createField1_0($$parsedSource["columns"]);
@@ -147,8 +208,54 @@ export enum QueryType {
     QueryTypeUnknown = "unknown",
 };
 
+/**
+ * SSHConfig is the optional SSH tunnel a connection goes through. A key file,
+ * when set, is used instead of the password.
+ */
+export class SSHConfig {
+    "enabled": boolean;
+    "host": string;
+    "port": string;
+    "username": string;
+    "password": string;
+    "keyPath": string;
+
+    /** Creates a new SSHConfig instance. */
+    constructor($$source: Partial<SSHConfig> = {}) {
+        if (!("enabled" in $$source)) {
+            this["enabled"] = false;
+        }
+        if (!("host" in $$source)) {
+            this["host"] = "";
+        }
+        if (!("port" in $$source)) {
+            this["port"] = "";
+        }
+        if (!("username" in $$source)) {
+            this["username"] = "";
+        }
+        if (!("password" in $$source)) {
+            this["password"] = "";
+        }
+        if (!("keyPath" in $$source)) {
+            this["keyPath"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new SSHConfig instance from a string or object.
+     */
+    static createFrom($$source: any = {}): SSHConfig {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new SSHConfig($$parsedSource as Partial<SSHConfig>);
+    }
+}
+
 // Private type creation functions
-const $$createType0 = $Create.Array($Create.Any);
-const $$createType1 = $Create.Map($Create.Any, $Create.Any);
-const $$createType2 = $Create.Array($$createType1);
-const $$createType3 = QueryLogs.createFrom;
+const $$createType0 = SSHConfig.createFrom;
+const $$createType1 = $Create.Array($Create.Any);
+const $$createType2 = $Create.Map($Create.Any, $Create.Any);
+const $$createType3 = $Create.Array($$createType2);
+const $$createType4 = QueryLogs.createFrom;

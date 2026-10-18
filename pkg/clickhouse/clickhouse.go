@@ -25,13 +25,13 @@ func New() *ClickHouse {
 	}
 }
 
-func (ch *ClickHouse) Connect(host, port, username, password, database string) error {
+func (ch *ClickHouse) Connect(config common.ConnectionConfig) error {
 	connection, err := clickhouse.Open(&clickhouse.Options{
-		Addr: []string{net.JoinHostPort(host, port)},
+		Addr: []string{net.JoinHostPort(config.Host, config.Port)},
 		Auth: clickhouse.Auth{
-			Database: database,
-			Username: username,
-			Password: password,
+			Database: config.Database,
+			Username: config.Username,
+			Password: config.Password,
 		},
 		Settings: clickhouse.Settings{
 			"max_execution_time": 300,
@@ -57,11 +57,11 @@ func (ch *ClickHouse) Connect(host, port, username, password, database string) e
 
 	ch.Mu.Lock()
 	ch.conn = connection
-	ch.Host = host
-	ch.Port = port
-	ch.Username = username
-	ch.Database = database
-	ch.Password = common.NewSecureString(password)
+	ch.Host = config.Host
+	ch.Port = config.Port
+	ch.Username = config.Username
+	ch.Database = config.Database
+	ch.Password = common.NewSecureString(config.Password)
 	ch.Mu.Unlock()
 	return nil
 }

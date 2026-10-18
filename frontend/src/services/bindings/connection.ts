@@ -1,24 +1,25 @@
-import { type DatabaseEngine } from "@/shared/utils/engines";
 import {
   SaveConnection as WSaveConnection,
   DeleteConnection as WDeleteConnection,
-  CreateNewConnectionWithSSH as WCreateNewConnectionWithSSH,
+  Connect as WConnect,
+  TestConnection as WTestConnection,
   CloseCurrentConnection as WCloseCurrentConnection,
   EstablishConnection as WEstablishConnection,
   ChangeDatabaseByName as WChangeDatabaseByName,
   UpdateConnection as WUpdateConnection,
   SelectSSHKeyFile as WSelectSSHKeyFile,
   SelectSQLiteFile as WSelectSQLiteFile,
-  CheckConnectionHealth as WCheckConnectionHealth
+  CheckConnectionHealth as WCheckConnectionHealth,
+  type ConnectionConfig,
 } from "./index";
 
 
-export const CreateNewConnection = (engine: DatabaseEngine, host: string, port: string, username: string, password: string, database: string, useSSH: string = "", sshHost: string = "", sshPort: string = "", sshUsername: string = "", sshPassword: string = "", sshKeyPath: string = "") => {
-  return WCreateNewConnectionWithSSH(engine, host, port, username, password, database, useSSH, sshHost, sshPort, sshUsername, sshPassword, sshKeyPath, false);
+export const Connect = (config: ConnectionConfig) => {
+  return WConnect(config);
 };
 
-export const TestNewConnection = (engine: DatabaseEngine, host: string, port: string, username: string, password: string, database: string, useSSH: string = "", sshHost: string = "", sshPort: string = "", sshUsername: string = "", sshPassword: string = "", sshKeyPath: string = "") => {
-  return WCreateNewConnectionWithSSH(engine, host, port, username, password, database, useSSH, sshHost, sshPort, sshUsername, sshPassword, sshKeyPath, true);
+export const TestConnection = (config: ConnectionConfig) => {
+  return WTestConnection(config);
 };
 
 export const SelectSSHKeyFile = () => {
@@ -37,12 +38,12 @@ export const CloseCurrentConnection = (closeEditor: boolean = true) => {
   return WCloseCurrentConnection(closeEditor);
 };
 
-export const SaveConnection = (name: string, config: { [key: string]: string }) => {
-  return WSaveConnection(name, config);
+export const SaveConnection = (config: ConnectionConfig) => {
+  return WSaveConnection(config);
 };
 
-export const UpdateConnection = (id: string, name: string, config: { [key: string]: string }) => {
-  return WUpdateConnection(id, name, config);
+export const UpdateConnection = (config: ConnectionConfig) => {
+  return WUpdateConnection(config);
 }
 
 export const DeleteConnection = (id: string) => {

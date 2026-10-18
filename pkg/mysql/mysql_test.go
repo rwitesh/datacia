@@ -25,7 +25,7 @@ func connectTest(t *testing.T) *MySQL {
 	}
 	password, _ := u.User.Password()
 	m := New()
-	if err := m.Connect(u.Hostname(), u.Port(), u.User.Username(), password, u.Path[1:]); err != nil {
+	if err := m.Connect(common.ConnectionConfig{Host: u.Hostname(), Port: u.Port(), Username: u.User.Username(), Password: password, Database: u.Path[1:]}); err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { m.Close() })

@@ -37,18 +37,18 @@ func New() *SQLite {
 	}
 }
 
-func (s *SQLite) Connect(host, port, username, password, database string) error {
-	// For SQLite, 'database' is the file path. Host, port, username, password are ignored.
-	if database == "" {
+func (s *SQLite) Connect(config common.ConnectionConfig) error {
+	// For SQLite, 'Database' is the file path. The other fields are ignored.
+	if config.Database == "" {
 		return errors.New("database file path is required")
 	}
 	// SQLite creates a missing file, so a mistyped path would silently open
 	// a new empty database.
-	if _, err := os.Stat(database); err != nil {
+	if _, err := os.Stat(config.Database); err != nil {
 		return fmt.Errorf("cannot open database file: %w", err)
 	}
 
-	db, err := sql.Open("sqlite", database+"?_busy_timeout=5000")
+	db, err := sql.Open("sqlite", config.Database+"?_busy_timeout=5000")
 	if err != nil {
 		return err
 	}
@@ -60,7 +60,7 @@ func (s *SQLite) Connect(host, port, username, password, database string) error 
 		return err
 	}
 
-	roDB, err := sql.Open("sqlite", readOnlyDSN(database))
+	roDB, err := sql.Open("sqlite", readOnlyDSN(config.Database))
 	if err != nil {
 		session.Close()
 		db.Close()
@@ -72,7 +72,7 @@ func (s *SQLite) Connect(host, port, username, password, database string) error 
 	s.session = session
 	s.sessionLock = make(chan struct{}, 1)
 	s.roDB = roDB
-	s.Host = database
+	s.Host = config.Database
 	s.Mu.Unlock()
 
 	return nil
