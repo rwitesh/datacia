@@ -4,6 +4,7 @@ import (
 	"context"
 	"datacia/internal/db"
 	"datacia/internal/logger"
+	"datacia/internal/paths"
 	"datacia/internal/update"
 	"datacia/pkg/clickhouse"
 	"datacia/pkg/common"
@@ -108,8 +109,13 @@ func (e *Engine) CreateNewConnectionWithSSH(engine, host, port, username, passwo
 		if sshConfig.Port == "" {
 			sshConfig.Port = "22"
 		}
+		knownHosts, err := paths.GetKnownHostsPath()
+		if err != nil {
+			return fmt.Errorf("failed to resolve known hosts path: %w", err)
+		}
+		sshConfig.KnownHostsPath = knownHosts
+		sshConfig.Confirm = e.confirmHostKey
 
-		var err error
 		tunnel, err = ssh.NewTunnel(sshConfig, host, port)
 		if err != nil {
 			return fmt.Errorf("failed to establish SSH tunnel: %w", err)
@@ -135,6 +141,24 @@ func (e *Engine) CreateNewConnectionWithSSH(engine, host, port, username, passwo
 	e.replaceConnection(dbClient, tunnel)
 	e.openEditor()
 	return nil
+}
+
+// confirmHostKey asks the user to trust an SSH server on first connection. A
+// native dialog works for both a new connection and a saved one, and blocks
+// the connect until answered.
+func (e *Engine) confirmHostKey(host, fingerprint string) bool {
+	if e.wailsApp == nil {
+		return false
+	}
+	trusted := false
+	dialog := e.wailsApp.Dialog.Question().SetTitle("Trust SSH host?")
+	dialog.SetMessage(fmt.Sprintf(
+		"DataCia has not connected to %s before.\n\nHost key fingerprint:\n%s\n\n"+
+			"Only continue if this matches the fingerprint of your server.", host, fingerprint))
+	dialog.AddButton("Cancel").SetAsCancel().SetAsDefault()
+	dialog.AddButton("Trust and Connect").OnClick(func() { trusted = true })
+	dialog.Show()
+	return trusted
 }
 
 func connectClient(engine, host, port, username, password, database string) (DatabaseClient, error) {
@@ -175,6 +199,12 @@ func (e *Engine) client() (DatabaseClient, error) {
 	defer e.mu.Unlock()
 	if e.activeClient == nil {
 		return nil, errors.New("no active database connection found")
+	}
+	// Report the cause instead of the opaque EOF a dead tunnel gives queries.
+	if e.sshTunnel != nil {
+		if err := e.sshTunnel.Err(); err != nil {
+			return nil, err
+		}
 	}
 	return e.activeClient, nil
 }

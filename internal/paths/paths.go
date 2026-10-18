@@ -37,3 +37,7 @@ func GetConfigDir() (string, error) {
 func GetSettingsPath() (string, error) {
 	return xdg.ConfigFile(filepath.Join(constants.APP_NAME, "settings.json"))
 }
+
+func GetKnownHostsPath() (string, error) {
+	return xdg.ConfigFile(filepath.Join(constants.APP_NAME, "known_hosts"))
+}
