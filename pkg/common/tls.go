@@ -9,20 +9,16 @@ import (
 )
 
 const (
-	// SSLModeAutomatic leaves each driver's default, which is what connections
-	// made before this setting did: PostgreSQL tries TLS without verifying the
-	// certificate and falls back to plaintext (an attacker on the network can
-	// force that), MySQL and ClickHouse use plaintext. It only suits trusted
-	// networks.
+	// SSLModeAutomatic keeps each driver's default, as connections did before
+	// this setting: pgx tries TLS unverified and falls back to plaintext, which
+	// an attacker can force; MySQL and ClickHouse use plaintext.
 	SSLModeAutomatic = "automatic"
 	// SSLModeDisable never uses TLS.
 	SSLModeDisable = "disable"
-	// SSLModeRequire always uses TLS but doesn't check the certificate, so it
-	// protects against eavesdropping only, not against someone impersonating
-	// the server.
+	// SSLModeRequire uses TLS without checking the certificate, so it stops
+	// eavesdropping but not impersonation.
 	SSLModeRequire = "require"
-	// SSLModeVerifyFull always uses TLS and checks the certificate chain and
-	// host name.
+	// SSLModeVerifyFull uses TLS and checks the certificate chain and host name.
 	SSLModeVerifyFull = "verify-full"
 )
 
@@ -33,9 +29,8 @@ type TLSSettings struct {
 	Config *tls.Config
 }
 
-// TLSSettings resolves the connection's SSL mode. An empty mode, as in
-// connections saved before the setting existed, is Automatic, which is what
-// those connections already did.
+// TLSSettings resolves the connection's SSL mode. An empty mode (saved before
+// the setting existed) is Automatic.
 func (c ConnectionConfig) TLSSettings() (TLSSettings, error) {
 	mode := strings.TrimSpace(c.SSLMode)
 	if mode == "" {

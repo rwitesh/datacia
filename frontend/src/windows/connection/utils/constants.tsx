@@ -7,28 +7,13 @@ export const DEFAULT_PORTS: Record<DatabaseEngine, string> = Object.fromEntries(
 
 export const DEFAULT_SSL_MODE = "automatic";
 
-// The values match the SSLMode constants in pkg/common/tls.go.
+// The values match the SSLMode constants in pkg/common/tls.go. A note shows
+// only for modes that leave the connection open to eavesdropping or spoofing.
 export const SSL_MODES = [
-  {
-    value: DEFAULT_SSL_MODE,
-    label: "Automatic",
-    hint: "The driver's default: PostgreSQL tries TLS without checking the certificate and falls back to unencrypted; MySQL and ClickHouse are unencrypted. Use another mode on untrusted networks.",
-  },
-  {
-    value: "disable",
-    label: "Disable",
-    hint: "Never encrypts the connection.",
-  },
-  {
-    value: "require",
-    label: "Require (no verification)",
-    hint: "Always encrypts, but doesn't check who the server is. This only protects against eavesdropping, not against someone impersonating the server.",
-  },
-  {
-    value: "verify-full",
-    label: "Verify certificate",
-    hint: "Always encrypts and checks the server's certificate and host name. Recommended for remote servers.",
-  },
+  { value: DEFAULT_SSL_MODE, label: "Auto" },
+  { value: "disable", label: "Disable", note: "Traffic is not encrypted." },
+  { value: "require", label: "Require", note: "Encrypted, but the server is not verified." },
+  { value: "verify-full", label: "Verify" },
 ];
 
 // Field labels for form validation messages
@@ -40,8 +25,8 @@ export const FIELD_LABELS: Record<keyof FormValues, string> = {
   username: "Username",
   password: "Password",
   database: "Database",
-  sslMode: "SSL Mode",
-  sslCaPath: "CA Certificate",
+  sslMode: "SSL",
+  sslCaPath: "CA File",
   useSSH: "Use SSH",
   sshHost: "SSH Host",
   sshPort: "SSH Port",

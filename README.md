@@ -11,7 +11,7 @@ A fast, free desktop SQL client for PostgreSQL, MySQL, SQLite and ClickHouse, fo
 - **Results** – a fast table with sorting, column resizing and cell selection, plus a JSON view of
   the selected rows.
 - **Export** – copy or export results as JSON, CSV or PNG. The editor loads at most 10,000 rows per
-  query and says so when it cuts a result off; exports contain only the rows shown.
+  query; exports contain only the rows shown.
 - **Script mode** – run a sequence of statements one after another.
 - **Query history and saved queries** – search past queries by text and date, and organise your
   own queries in folders.
@@ -41,23 +41,18 @@ needed. If SmartScreen appears, choose **More info → Run anyway**.
 
 ## Encrypted connections (SSL/TLS)
 
-PostgreSQL, MySQL and ClickHouse connections have an **SSL Mode**:
+PostgreSQL, MySQL and ClickHouse connections have an **SSL** setting:
 
-| Mode | What it does |
+| Mode | Behavior |
 | --- | --- |
-| **Automatic** (default) | Each database's driver default, as before this setting existed: PostgreSQL tries TLS without checking the certificate and otherwise connects unencrypted; MySQL and ClickHouse connect unencrypted. Anyone on the network can read or tamper with that traffic, so use another mode on untrusted networks. |
+| **Auto** (default) | The driver default: PostgreSQL tries TLS without checking the certificate and may fall back to plaintext; MySQL and ClickHouse use plaintext. |
 | **Disable** | Never encrypts. |
-| **Require (no verification)** | Always encrypts, but doesn't check who the server is. It protects against eavesdropping only, not against someone impersonating the server. |
-| **Verify certificate** | Always encrypts and checks the server's certificate chain and host name. Uses your system's trusted certificates, or the CA file you choose for a private or self-signed CA. |
+| **Require** | Always encrypts, but doesn't check the server's certificate. |
+| **Verify** | Always encrypts and checks the certificate chain and host name, against the system roots or an optional CA file. |
 
-Connections saved before this setting existed keep their old behaviour (Automatic). Nothing is
-refused unless you choose a stricter mode. If a connection fails after you choose **Require** or
-**Verify certificate**, the server may not have TLS enabled, or its certificate may not be trusted:
-turn TLS on in the server (TLS 1.2 or newer is required), choose the CA file, or pick a weaker mode if you accept the risk. For
-ClickHouse, use the server's secure native port (9440 by default) when you enable TLS.
-
-With an SSH tunnel the certificate is checked against the database host you typed, not the tunnel
-address.
+Saved connections keep Auto. If a connection fails after choosing Require or Verify, the server may
+lack TLS (1.2 or newer) or its certificate may not be trusted. ClickHouse needs its secure native
+port (9440 by default). With an SSH tunnel the certificate is checked against the host you typed.
 
 ## Privacy
 
