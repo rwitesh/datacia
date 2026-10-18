@@ -9,24 +9,16 @@ import { v4 as uuidv4 } from "uuid";
 import { errorMessage } from "@/lib/utils";
 import {
   EditorContext,
-  type SelectedData,
   type Tab,
   type TableDataParams,
 } from "./Context";
+import { clearTabSql, getTabSql, setTabSql } from "./store";
 
 export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
   const { data = [], isLoading, error } = useTables();
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
   const tableRef = useRef<HTMLDivElement>(null);
-  const [readSelection, setReadSelectionState] = useState<(() => SelectedData) | null>(null);
-  const setReadSelection = useCallback(
-    (read: (() => SelectedData) | null) => setReadSelectionState(() => read),
-    []
-  );
-  // SQL typed in an editor but not yet committed to its tab, so typing
-  // doesn't rebuild the tabs (and re-render every consumer) per keystroke.
-  const drafts = useRef(new Map<string, string>());
   // Numbers "Query N" titles; unlike tabs.length it never repeats after a close.
   const queryTabCount = useRef(0);
 
@@ -45,7 +37,6 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
         id: newId,
         title: title || `Query ${++queryTabCount.current}`,
         table: type === "table" ? title : undefined,
-        sql: "",
         results: null,
         error: undefined,
         isExecuting: false,
@@ -64,30 +55,10 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
   );
 
   const updateTab = useCallback((tabId: string, updates: Partial<Tab>) => {
-    // An explicit write replaces whatever was typed since the last commit.
-    if (updates.sql !== undefined) drafts.current.delete(tabId);
     setTabs((prev) =>
       prev.map((tab) => (tab.id === tabId ? { ...tab, ...updates } : tab))
     );
   }, []);
-
-  const getSql = useCallback(
-    (tabId: string) =>
-      drafts.current.get(tabId) ?? tabs.find((tab) => tab.id === tabId)?.sql ?? "",
-    [tabs]
-  );
-
-  const setDraftSql = useCallback((tabId: string, sql: string) => {
-    drafts.current.set(tabId, sql);
-  }, []);
-
-  const commitDraftSql = useCallback(
-    (tabId: string) => {
-      const sql = drafts.current.get(tabId);
-      if (sql !== undefined) updateTab(tabId, { sql });
-    },
-    [updateTab]
-  );
 
   // The latest table load per tab: paging or sorting quickly can finish
   // requests out of order, and only the newest may write to the tab.
@@ -129,7 +100,7 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
           console.error("Error cancelling query for closed tab:", err);
         });
       }
-      drafts.current.delete(tabId);
+      clearTabSql(tabId);
       latestTableLoad.current.delete(tabId);
 
       if (activeTabId === tabId) {
@@ -152,18 +123,17 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
       const targetTabId = tabId || activeTabId;
       if (!targetTabId) return;
 
-      const querySQL = sql || getSql(targetTabId);
+      if (sql) setTabSql(targetTabId, sql);
+      const querySQL = getTabSql(targetTabId);
       if (!querySQL.trim()) return;
 
       const queryId = uuidv4();
 
       updateTab(targetTabId, {
         isExecuting: true,
-        sql: querySQL,
         queryID: queryId,
         results: null,
         error: undefined,
-        // The previous result's selection doesn't apply to the new one.
       });
 
       // Only the run that is still the tab's current query may write to it,
@@ -186,7 +156,7 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
         finishRun({ error: errorMessage(err), results: null });
       }
     },
-    [activeTabId, getSql, updateTab, runQueryAsync]
+    [activeTabId, updateTab, runQueryAsync]
   );
 
   const loadTableData = useCallback(
@@ -225,15 +195,10 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
       closeTab,
       setActiveTab,
       updateTab,
-      getSql,
-      setDraftSql,
-      commitDraftSql,
       runQuery,
       stopQuery,
       loadTableData,
       tableRef,
-      readSelection,
-      setReadSelection,
     }),
     [
       data,
@@ -245,14 +210,9 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
       closeTab,
       setActiveTab,
       updateTab,
-      getSql,
-      setDraftSql,
-      commitDraftSql,
       runQuery,
       stopQuery,
       loadTableData,
-      readSelection,
-      setReadSelection,
     ]
   );
 

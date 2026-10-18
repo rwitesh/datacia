@@ -3,6 +3,7 @@ import { AlertTriangle, ArrowUp, Database, Loader2, RotateCcw, Settings2, Sparkl
 import { Button } from "@/components/ui/button";
 import { useAppContext } from "@/context/app/Index";
 import { useEditorContext } from "@/context/editor/Index";
+import { useTabSql } from "@/context/editor/store";
 import { cn } from "@/lib/utils";
 import { OpenSettingsWindow } from "@/services/bindings";
 import {
@@ -22,9 +23,10 @@ import { ModelPicker } from "./ModelPicker";
 function useChatContext(): ChatContext {
   const { engine } = useAppContext();
   const { activeTab } = useEditorContext();
+  const sql = useTabSql(activeTab?.id);
   return {
     engine,
-    sql: activeTab?.type === "query" ? activeTab.sql : "",
+    sql: activeTab?.type === "query" ? sql : "",
     error: activeTab?.error ?? "",
   };
 }

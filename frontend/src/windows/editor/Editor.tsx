@@ -9,6 +9,7 @@ import {
 import { QueryResult } from "./QueryResult/QueryResult";
 import { ResultBar } from "./QueryResult/ResultBar/ResultBar";
 import { useEditorContext } from "@/context/editor/Index";
+import { getTabSql, setTabSql } from "@/context/editor/store";
 import { EditorFooter } from "./EditorFooter/EditorFooter";
 import { NavigationBar } from "@/shared/NavigationBar/NavigationBar";
 import { DataView } from "./DataView";
@@ -22,7 +23,7 @@ import { ScriptMode } from "./ScriptMode/ScriptMode";
 type ViewPanels = { resultCollapsed: boolean; dataViewOpen: boolean };
 
 export const Editor = () => {
-  const { activeTab, createTab, updateTab, getSql } = useEditorContext();
+  const { activeTab, createTab } = useEditorContext();
   const [viewPanels, setViewPanels] = useState<ViewPanels>({
     resultCollapsed: false,
     dataViewOpen: false,
@@ -64,7 +65,7 @@ export const Editor = () => {
           if (activeTab.savedPath) {
             writeFile.mutate({
               path: activeTab.savedPath,
-              content: getSql(activeTab.id),
+              content: getTabSql(activeTab.id),
             });
           } else {
             toast(
@@ -77,7 +78,7 @@ export const Editor = () => {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [activeTab, getSql, writeFile]);
+  }, [activeTab, writeFile]);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -100,10 +101,10 @@ export const Editor = () => {
       const text = await sqlFile.text();
 
       if (activeTab && activeTab.type === "query") {
-        updateTab(activeTab.id, { sql: text });
+        setTabSql(activeTab.id, text);
       } else {
         const newTab = createTab(sqlFile.name, "query");
-        updateTab(newTab.id, { sql: text });
+        setTabSql(newTab.id, text);
       }
     }
   };

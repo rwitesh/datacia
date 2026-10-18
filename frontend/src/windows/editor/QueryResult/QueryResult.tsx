@@ -11,7 +11,7 @@ type QueryResultProps = {
 };
 
 export function QueryResult({ onOpenDataView }: QueryResultProps) {
-  const { activeTab, updateTab, tableRef, setReadSelection, loadTableData } = useEditorContext();
+  const { activeTab, updateTab, tableRef, loadTableData } = useEditorContext();
 
   const table = activeTab?.table;
   const limit = activeTab?.limit;
@@ -82,7 +82,6 @@ export function QueryResult({ onOpenDataView }: QueryResultProps) {
             ref={tableRef}
             columns={results.columns}
             data={results.data}
-            onSelectedDataChange={setReadSelection}
             onSelectionSave={handleSelectionSave}
             currentOrderBy={orderBy}
             currentOrderDir={orderDir}

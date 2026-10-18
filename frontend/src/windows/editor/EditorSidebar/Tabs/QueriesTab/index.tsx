@@ -10,6 +10,7 @@ import {
   useWriteFile,
 } from "@/services/queries";
 import { useEditorContext } from "@/context/editor/Index";
+import { setTabSql } from "@/context/editor/store";
 import { CreationInput } from "../utils/CreationInput";
 import { FileTree } from "./FileTree";
 import type { FileNode } from "@/services/bindings";
@@ -244,7 +245,8 @@ export function QueriesTab() {
               try {
                 const content = await readFile.mutateAsync(path);
                 const tab = createTab(name, "query");
-                updateTab(tab.id, { sql: content, savedPath: path });
+                setTabSql(tab.id, content);
+                updateTab(tab.id, { savedPath: path });
               } catch {
                 // useReadFile already shows the error.
               }

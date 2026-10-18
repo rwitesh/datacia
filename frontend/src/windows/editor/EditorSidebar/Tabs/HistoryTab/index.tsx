@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { Loader2, CheckCircle2, XCircle, Search, CalendarIcon, X } from "lucide-react";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { useEditorContext } from "@/context/editor/Index";
+import { setTabSql } from "@/context/editor/store";
 import { useGetQueryHistory } from "@/services/database";
 import { startOfDay, endOfDay, differenceInHours } from "date-fns";
 import {
@@ -37,7 +38,7 @@ function formatTimestamp(timestamp: string, hasDateFilter: boolean): string {
 }
 
 export function HistoryTab() {
-  const { createTab, updateTab } = useEditorContext();
+  const { createTab } = useEditorContext();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
@@ -71,7 +72,7 @@ export function HistoryTab() {
 
   const handleHistoryClick = (sql: string) => {
     const tab = createTab("Query", "query");
-    updateTab(tab.id, { sql });
+    setTabSql(tab.id, sql);
   };
 
   const clearDateRange = () => {
