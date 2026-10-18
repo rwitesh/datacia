@@ -9,41 +9,42 @@ import {
 } from "@/components/ui/context-menu";
 import { formatCellValue } from "@/lib/utils";
 import { useExportActions } from "@/services/useExportActions";
-import type { DataRow } from "../types";
+import type { SelectedData } from "@/context/editor/Context";
 
 interface TableContextMenuProps {
   children: React.ReactNode;
   // The selected rows, holding only the selected columns. A right-click
   // selects the cell, row or column it lands on first, so this is what was clicked.
-  rows: DataRow[];
-  columns: string[];
+  getSelected: () => SelectedData;
   onOpenDataView: () => void;
 }
 
-export function TableContextMenu({ children, rows, columns, onOpenDataView }: TableContextMenuProps) {
+export function TableContextMenu({ children, getSelected, onOpenDataView }: TableContextMenuProps) {
   const exportRef = useRef<HTMLDivElement>(null);
   // The off-screen table a PNG is drawn from only exists during a capture,
   // since a selection can be large.
-  const [isCapturing, setIsCapturing] = useState(false);
+  const [captured, setCaptured] = useState<SelectedData | null>(null);
   const { exportJSON, exportCSV, exportPNG, copyText, copyJSON, copyPNG } = useExportActions({
     tableRef: exportRef,
-    data: rows,
-    columns,
+    source: () => {
+      const { rows, columns } = getSelected();
+      return { data: rows, columns };
+    },
   });
 
   const capturePNG = async (action: () => Promise<void>) => {
     // Render the table before the action reads it through exportRef.
-    flushSync(() => setIsCapturing(true));
+    flushSync(() => setCaptured(getSelected()));
     try {
       await action();
     } finally {
-      setIsCapturing(false);
+      setCaptured(null);
     }
   };
 
   const handleContextMenu = (event: React.MouseEvent) => {
     const onGridCell = (event.target as HTMLElement).closest("[data-col]");
-    if (!onGridCell || rows.length === 0) event.preventDefault();
+    if (!onGridCell || getSelected().rows.length === 0) event.preventDefault();
   };
 
   const items = [
@@ -70,13 +71,13 @@ export function TableContextMenu({ children, rows, columns, onOpenDataView }: Ta
         ))}
       </ContextMenuContent>
 
-      {isCapturing && (
+      {captured && (
         <div className="absolute -left-[10000px] -top-[10000px]">
           <div ref={exportRef} className="min-w-[800px] p-2 text-foreground">
             <table className="w-full border-collapse font-mono text-xs">
               <thead>
                 <tr>
-                  {columns.map((column) => (
+                  {captured.columns.map((column) => (
                     <th key={column} className="border border-border p-1 font-semibold">
                       {column}
                     </th>
@@ -84,9 +85,9 @@ export function TableContextMenu({ children, rows, columns, onOpenDataView }: Ta
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row, index) => (
+                {captured.rows.map((row, index) => (
                   <tr key={index}>
-                    {columns.map((column) => (
+                    {captured.columns.map((column) => (
                       <td key={column} className="whitespace-pre-wrap border border-border p-1">
                         {formatCellValue(row[column])}
                       </td>

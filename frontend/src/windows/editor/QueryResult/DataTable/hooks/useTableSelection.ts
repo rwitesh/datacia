@@ -1,10 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent, type RefObject } from "react";
-import {
-  type CellPosition,
-  type CellSelection,
-  isCellSelected,
-  isSelectionInGrid,
-} from "../utils/cellSelection";
+import type { CellPosition, CellSelection } from "@/context/editor/Context";
+import { isCellSelected, isSelectionInGrid } from "../utils/cellSelection";
 import { HEADER_HEIGHT, ROW_HEIGHT } from "../utils/layout";
 
 // How a press started: on a cell, a row number or a column header. Dragging
@@ -22,7 +18,7 @@ interface UseTableSelectionOptions {
   // edge of the last one, in px from the grid's left edge.
   columnEdges: number[];
   scrollRef: RefObject<HTMLDivElement | null>;
-  initialSelection?: CellSelection | null;
+  initialSelection?: CellSelection;
 }
 
 // useTableSelection implements spreadsheet-style range selection: click,

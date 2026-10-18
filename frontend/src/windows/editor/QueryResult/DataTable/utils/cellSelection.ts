@@ -1,19 +1,5 @@
+import type { CellPosition, CellSelection, SelectedData } from "@/context/editor/Context";
 import type { DataRow } from "../types";
-
-// Row and column indices are positions in the grid as shown (after any client
-// sort). Columns count data columns only; the row-number column is not part
-// of a selection.
-export interface CellPosition {
-  row: number;
-  col: number;
-}
-
-// CellSelection is a rectangular range. anchor is the cell it started from
-// (Shift+click and Shift+arrow extend from it); focus is the end that moves.
-export interface CellSelection {
-  anchor: CellPosition;
-  focus: CellPosition;
-}
 
 interface SelectionBounds {
   top: number;
@@ -58,7 +44,7 @@ export function getSelectedData(
   selection: CellSelection | null,
   columns: string[],
   rows: DataRow[]
-): { columns: string[]; rows: DataRow[] } {
+): SelectedData {
   if (!isSelectionInGrid(selection, rows.length, columns.length)) {
     return { columns: [], rows: [] };
   }

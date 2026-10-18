@@ -20,7 +20,7 @@ function openLink(href = "") {
 }
 
 function CodeBlock({ code, language }: { code: string; language: string }) {
-  const { activeTab, createTab, updateTab } = useEditorContext();
+  const { activeTab, createTab, updateTab, getSql } = useEditorContext();
   const [copied, setCopied] = useState(false);
   const isSQL = language === "" || language.toLowerCase() === "sql";
   const canInsert = activeTab?.type === "query";
@@ -35,7 +35,7 @@ function CodeBlock({ code, language }: { code: string; language: string }) {
 
   const insert = () => {
     if (activeTab?.type !== "query") return;
-    const current = activeTab.sql.trimEnd();
+    const current = getSql(activeTab.id).trimEnd();
     updateTab(activeTab.id, { sql: current ? `${current}\n\n${code}` : code });
   };
 

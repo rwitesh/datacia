@@ -7,13 +7,28 @@ import {
 } from "@/services/database";
 import { v4 as uuidv4 } from "uuid";
 import { errorMessage } from "@/lib/utils";
-import { EditorContext, type Tab, type TableDataParams } from "./Context";
+import {
+  EditorContext,
+  type SelectedData,
+  type Tab,
+  type TableDataParams,
+} from "./Context";
 
 export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
   const { data = [], isLoading, error } = useTables();
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
   const tableRef = useRef<HTMLDivElement>(null);
+  const [readSelection, setReadSelectionState] = useState<(() => SelectedData) | null>(null);
+  const setReadSelection = useCallback(
+    (read: (() => SelectedData) | null) => setReadSelectionState(() => read),
+    []
+  );
+  // SQL typed in an editor but not yet committed to its tab, so typing
+  // doesn't rebuild the tabs (and re-render every consumer) per keystroke.
+  const drafts = useRef(new Map<string, string>());
+  // Numbers "Query N" titles; unlike tabs.length it never repeats after a close.
+  const queryTabCount = useRef(0);
 
   /* Each call below uses mutateAsync: a shared mutation only calls the
      onSuccess/onError passed to its latest mutate(), so with mutate() a
@@ -24,14 +39,11 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
 
   const createTab = useCallback(
     (title?: string, type: "query" | "table" = "query"): Tab => {
-      const newId = `tab-${Date.now()}-${Math.random()
-        .toString(36)
-        .substring(2, 9)}`;
-      const tabNumber = tabs.length + 1;
+      const newId = uuidv4();
 
       const newTab: Tab = {
         id: newId,
-        title: title || `Query ${tabNumber}`,
+        title: title || `Query ${++queryTabCount.current}`,
         table: type === "table" ? title : undefined,
         sql: "",
         results: null,
@@ -48,14 +60,38 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
       setActiveTabId(newId);
       return newTab;
     },
-    [tabs.length]
+    []
   );
 
   const updateTab = useCallback((tabId: string, updates: Partial<Tab>) => {
+    // An explicit write replaces whatever was typed since the last commit.
+    if (updates.sql !== undefined) drafts.current.delete(tabId);
     setTabs((prev) =>
       prev.map((tab) => (tab.id === tabId ? { ...tab, ...updates } : tab))
     );
   }, []);
+
+  const getSql = useCallback(
+    (tabId: string) =>
+      drafts.current.get(tabId) ?? tabs.find((tab) => tab.id === tabId)?.sql ?? "",
+    [tabs]
+  );
+
+  const setDraftSql = useCallback((tabId: string, sql: string) => {
+    drafts.current.set(tabId, sql);
+  }, []);
+
+  const commitDraftSql = useCallback(
+    (tabId: string) => {
+      const sql = drafts.current.get(tabId);
+      if (sql !== undefined) updateTab(tabId, { sql });
+    },
+    [updateTab]
+  );
+
+  // The latest table load per tab: paging or sorting quickly can finish
+  // requests out of order, and only the newest may write to the tab.
+  const latestTableLoad = useRef(new Map<string, TableDataParams>());
 
   const stopQuery = useCallback(
     async (tabId?: string) => {
@@ -85,9 +121,16 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
 
   const closeTab = useCallback(
     (tabId: string) => {
-      stopQuery(tabId).catch((err) => {
-        console.error("Error cancelling query for closed tab:", err);
-      });
+      // Cancelled directly rather than through stopQuery, which would write
+      // a "cancelled" error into the tab being closed.
+      const queryID = tabs.find((tab) => tab.id === tabId)?.queryID;
+      if (queryID) {
+        cancelQueryAsync(queryID).catch((err) => {
+          console.error("Error cancelling query for closed tab:", err);
+        });
+      }
+      drafts.current.delete(tabId);
+      latestTableLoad.current.delete(tabId);
 
       if (activeTabId === tabId) {
         const index = tabs.findIndex((tab) => tab.id === tabId);
@@ -97,7 +140,7 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
       }
       setTabs((prev) => prev.filter((tab) => tab.id !== tabId));
     },
-    [activeTabId, tabs, stopQuery]
+    [activeTabId, tabs, cancelQueryAsync]
   );
 
   const setActiveTab = useCallback((tabId: string) => {
@@ -109,14 +152,8 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
       const targetTabId = tabId || activeTabId;
       if (!targetTabId) return;
 
-      let querySQL = sql;
-      if (!querySQL) {
-        const currentTab = tabs.find((tab) => tab.id === targetTabId);
-        if (!currentTab || !currentTab.sql.trim()) {
-          return;
-        }
-        querySQL = currentTab.sql;
-      }
+      const querySQL = sql || getSql(targetTabId);
+      if (!querySQL.trim()) return;
 
       const queryId = uuidv4();
 
@@ -127,8 +164,6 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
         results: null,
         error: undefined,
         // The previous result's selection doesn't apply to the new one.
-        selection: null,
-        selectedRows: undefined,
       });
 
       // Only the run that is still the tab's current query may write to it,
@@ -137,9 +172,9 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
         setTabs((prev) =>
           prev.map((tab) =>
             tab.id === targetTabId && tab.queryID === queryId
-              ? // The old grid saves its scroll as it unmounts, after the run
-                // starts, so the new result's scroll is reset only here.
-                { ...tab, ...updates, scroll: undefined, isExecuting: false }
+              ? // The old grid saves its scroll and selection as it unmounts,
+                // after the run starts, so the new result's are reset only here.
+                { ...tab, ...updates, scroll: undefined, selection: undefined, isExecuting: false }
               : tab
           )
         );
@@ -151,12 +186,8 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
         finishRun({ error: errorMessage(err), results: null });
       }
     },
-    [activeTabId, tabs, updateTab, runQueryAsync]
+    [activeTabId, getSql, updateTab, runQueryAsync]
   );
-
-  // The latest table load per tab: paging or sorting quickly can finish
-  // requests out of order, and only the newest may write to the tab.
-  const latestTableLoad = useRef(new Map<string, TableDataParams>());
 
   const loadTableData = useCallback(
     async (tabId: string, params: TableDataParams) => {
@@ -194,10 +225,15 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
       closeTab,
       setActiveTab,
       updateTab,
+      getSql,
+      setDraftSql,
+      commitDraftSql,
       runQuery,
       stopQuery,
       loadTableData,
       tableRef,
+      readSelection,
+      setReadSelection,
     }),
     [
       data,
@@ -209,9 +245,14 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
       closeTab,
       setActiveTab,
       updateTab,
+      getSql,
+      setDraftSql,
+      commitDraftSql,
       runQuery,
       stopQuery,
       loadTableData,
+      readSelection,
+      setReadSelection,
     ]
   );
 
