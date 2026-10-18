@@ -3,21 +3,15 @@ import { useGetDDL } from "@/services/database";
 import { DataTable } from "./DataTable/DataTable";
 import { ErrorView } from "./ErrorView/ErrorView";
 import { DDLView } from "./DDLView/DDLView";
-import type { CellSelection } from "./DataTable/utils/cellSelection";
-import type { DataRow } from "./DataTable/types";
+import type { CellSelection } from "@/context/editor/Context";
 import { useCallback } from "react";
-
-// Stable fallbacks: DataTable re-reports the selection whenever its rows
-// change identity, so a fresh [] on each render would loop.
-const NO_COLUMNS: string[] = [];
-const NO_ROWS: DataRow[] = [];
 
 type QueryResultProps = {
   onOpenDataView: () => void;
 };
 
 export function QueryResult({ onOpenDataView }: QueryResultProps) {
-  const { activeTab, updateTab, tableRef, loadTableData } = useEditorContext();
+  const { activeTab, updateTab, tableRef, setReadSelection, loadTableData } = useEditorContext();
 
   const table = activeTab?.table;
   const limit = activeTab?.limit;
@@ -27,12 +21,11 @@ export function QueryResult({ onOpenDataView }: QueryResultProps) {
   const ddlQuery = useGetDDL(table, isDDLMode);
 
   const tabId = activeTab?.id;
-  const showDataTable = activeTab?.results?.type === "read";
 
-  const handleSelectionChange = useCallback(
-    (selection: CellSelection | null, selectedRows: DataRow[]) => {
+  const handleSelectionSave = useCallback(
+    (range: CellSelection | null, sorted: boolean) => {
       if (tabId) {
-        updateTab(tabId, { selection, selectedRows });
+        updateTab(tabId, { selection: range ? { range, sorted } : undefined });
       }
     },
     [tabId, updateTab]
@@ -83,13 +76,14 @@ export function QueryResult({ onOpenDataView }: QueryResultProps) {
           />
         ) : error ? (
           <ErrorView error={error} />
-        ) : showDataTable ? (
+        ) : results?.type === "read" ? (
           <DataTable
             key={id}
             ref={tableRef}
-            columns={results?.columns ?? NO_COLUMNS}
-            data={results?.data ?? NO_ROWS}
-            onSelectionChange={handleSelectionChange}
+            columns={results.columns}
+            data={results.data}
+            onSelectedDataChange={setReadSelection}
+            onSelectionSave={handleSelectionSave}
             currentOrderBy={orderBy}
             currentOrderDir={orderDir}
             onServerSort={isTableViewMode ? handleServerSort : undefined}
@@ -98,7 +92,9 @@ export function QueryResult({ onOpenDataView }: QueryResultProps) {
             scrollPosition={activeTab.scroll}
             onScrollChange={handleScrollChange}
             offset={offset ?? 0}
-            initialSelection={activeTab.selection}
+            initialSelection={
+              activeTab.selection?.sorted ? undefined : activeTab.selection?.range
+            }
           />
         ) : isExecuting ? (
           <div className="flex justify-center items-center h-full">

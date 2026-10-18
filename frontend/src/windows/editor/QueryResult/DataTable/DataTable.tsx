@@ -1,4 +1,4 @@
-import { useEffect, useImperativeHandle, useMemo, useRef, useState, type CSSProperties, type Ref, type SyntheticEvent } from "react";
+import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type CSSProperties, type Ref, type SyntheticEvent } from "react";
 import {
   getCoreRowModel,
   getSortedRowModel,
@@ -11,7 +11,8 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useTheme } from "@/components/theme";
 import { useExportActions } from "@/services/useExportActions";
 import type { DataRow } from "./types";
-import { type CellSelection, getSelectedData, getSelectionBounds } from "./utils/cellSelection";
+import type { CellSelection, SelectedData } from "@/context/editor/Context";
+import { getSelectedData, getSelectionBounds } from "./utils/cellSelection";
 import { fillContainer, FONT_SIZE, HEADER_HEIGHT, measureColumnWidths, MIN_COLUMN_WIDTH, ROW_HEIGHT } from "./utils/layout";
 import { useTableDimensions } from "./hooks/useTableDimensions";
 import { useTableColumns } from "./hooks/useTableColumns";
@@ -25,9 +26,11 @@ interface DataTableProps {
   ref?: Ref<HTMLDivElement>;
   columns: string[];
   data: DataRow[];
-  // selectedRows are the rows the selection covers, in the order shown,
-  // holding only the selected columns.
-  onSelectionChange: (selection: CellSelection | null, selectedRows: DataRow[]) => void;
+  // A reader of the selected rows, in the order shown; null once unmounted.
+  onSelectedDataChange: (read: (() => SelectedData) | null) => void;
+  // Called on unmount with where the selection is, to restore it on remount.
+  // sorted: made under a client sort, whose order the grid loses on remount.
+  onSelectionSave: (selection: CellSelection | null, sorted: boolean) => void;
   // Set for table tabs, which sort in the database; otherwise sorting is client-side.
   // An empty column clears the sort.
   onServerSort?: (column: string, direction: "asc" | "desc") => void;
@@ -39,14 +42,15 @@ interface DataTableProps {
   onScrollChange?: (scroll: { left: number; top: number }) => void;
   // Rows before this page, for row numbers.
   offset?: number;
-  initialSelection?: CellSelection | null;
+  initialSelection?: CellSelection;
 }
 
 export function DataTable({
   ref,
   columns,
   data,
-  onSelectionChange,
+  onSelectedDataChange,
+  onSelectionSave,
   onServerSort,
   currentOrderBy,
   currentOrderDir,
@@ -164,21 +168,34 @@ export function DataTable({
     initialSelection,
   });
 
-  // Built once a drag ends rather than on every cell the pointer crosses.
-  const selected = useMemo(
-    () => (isDragging ? null : getSelectedData(selection, columns, viewRows)),
-    [isDragging, selection, columns, viewRows]
+  const getSelected = useCallback(
+    () => getSelectedData(selection, columns, viewRows),
+    [selection, columns, viewRows]
   );
-  // The selection is saved to the tab as view positions, but a client sort is
-  // lost when the grid remounts (tab switch), so a sorted selection isn't saved.
-  const hasClientSort = clientSorting.length > 0;
+  // Not while dragging: every cell the pointer crosses would re-render the
+  // editor context's consumers.
   useEffect(() => {
-    if (selected) onSelectionChange(hasClientSort ? null : selection, selected.rows);
-  }, [selected, selection, hasClientSort, onSelectionChange]);
+    if (!isDragging) onSelectedDataChange(getSelected);
+  }, [isDragging, onSelectedDataChange, getSelected]);
+  useEffect(() => () => onSelectedDataChange(null), [onSelectedDataChange]);
+
+  const hasClientSort = clientSorting.length > 0;
+  const lastSelectionRef = useRef({ selection, sorted: hasClientSort });
+  const onSelectionSaveRef = useRef(onSelectionSave);
+  useEffect(() => {
+    lastSelectionRef.current = { selection, sorted: hasClientSort };
+    onSelectionSaveRef.current = onSelectionSave;
+  }, [selection, hasClientSort, onSelectionSave]);
+  useEffect(
+    () => () => onSelectionSaveRef.current(lastSelectionRef.current.selection, lastSelectionRef.current.sorted),
+    []
+  );
 
   const { copyText } = useExportActions({
-    data: selected?.rows ?? [],
-    columns: selected?.columns ?? [],
+    source: () => {
+      const { rows, columns } = getSelected();
+      return { data: rows, columns };
+    },
   });
 
   const rowVirtualizer = useVirtualizer({
@@ -228,8 +245,7 @@ export function DataTable({
           <div className="p-3 text-muted-foreground">No columns to display.</div>
         ) : (
           <TableContextMenu
-            rows={selected?.rows ?? []}
-            columns={selected?.columns ?? []}
+            getSelected={getSelected}
             onOpenDataView={onOpenDataView}
           >
             <div>

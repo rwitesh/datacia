@@ -42,8 +42,7 @@ export function ResultBar() {
 
   const { exportJSON, exportCSV, exportPNG, isExporting } = useExportActions({
     tableRef,
-    data,
-    columns: activeTab?.results?.columns ?? [],
+    source: () => ({ data, columns: activeTab?.results?.columns ?? [] }),
     tableName,
   });
 

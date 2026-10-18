@@ -8,15 +8,14 @@ import { errorMessage, formatCellValue } from "@/lib/utils";
 
 type UseExportActionsOptions = {
   tableRef?: RefObject<HTMLDivElement | null>;
-  data: Record<string, unknown>[];
-  columns: string[];
+  // Read when an action runs, so a large selection is only built on demand.
+  source: () => { data: Record<string, unknown>[]; columns: string[] };
   tableName?: string;
 };
 
 export function useExportActions({
   tableRef,
-  data,
-  columns,
+  source,
   tableName,
 }: UseExportActionsOptions) {
   const { resolvedTheme } = useTheme();
@@ -25,8 +24,7 @@ export function useExportActions({
 
   const pngBackgroundColor = resolvedTheme === "dark" ? "#0f0f10" : "#ffffff";
 
-  const getFilename = (format: ExportFormat) => {
-    const count = data.length;
+  const getFilename = (format: ExportFormat, count: number) => {
     const base = tableName || "export";
     return count > 1
       ? `${base}-${count}-rows.${format}`
@@ -34,28 +32,30 @@ export function useExportActions({
   };
 
   const exportJSON = () => {
+    const { data, columns } = source();
     if (!data.length) return;
     exportMutation.mutate({
       format: "json",
       data,
       columns,
-      suggestedFilename: getFilename("json"),
+      suggestedFilename: getFilename("json", data.length),
     });
   };
 
   const exportCSV = () => {
+    const { data, columns } = source();
     if (!data.length) return;
     exportMutation.mutate({
       format: "csv",
       data,
       columns,
-      suggestedFilename: getFilename("csv"),
+      suggestedFilename: getFilename("csv", data.length),
     });
   };
 
   // capturePNG renders the table to base64 PNG data, or null if there is nothing to capture.
   const capturePNG = async () => {
-    if (!data.length || !tableRef?.current) return null;
+    if (!source().data.length || !tableRef?.current) return null;
     try {
       const canvas = await html2canvaspro(tableRef.current, {
         backgroundColor: pngBackgroundColor,
@@ -73,12 +73,13 @@ export function useExportActions({
     if (!imageData) return;
     exportMutation.mutate({
       format: "png",
-      suggestedFilename: getFilename("png"),
+      suggestedFilename: getFilename("png", source().data.length),
       imageData,
     });
   };
 
   const copyText = () => {
+    const { data, columns } = source();
     if (!data.length) return;
     const text = data
       .map((row) => columns.map((column) => tsvField(formatCellValue(row[column]))).join("\t"))
@@ -87,6 +88,7 @@ export function useExportActions({
   };
 
   const copyJSON = () => {
+    const { data } = source();
     if (!data.length) return;
     copyMutation.mutate({ content: JSON.stringify(data, null, 2), type: "text" });
   };

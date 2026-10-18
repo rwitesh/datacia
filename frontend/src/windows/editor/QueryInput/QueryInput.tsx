@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useEditorContext } from "@/context/editor/Index";
 import { useAppContext } from "@/context/app/Index";
 import { formatSQL } from "./utils/formatter";
@@ -11,13 +12,25 @@ export function QueryInput() {
   const {
     activeTab,
     updateTab,
+    getSql,
+    setDraftSql,
+    commitDraftSql,
     runQuery,
     stopQuery,
   } = useEditorContext();
 
+  // Typed text lives in the editor and is committed to the tab on blur and
+  // when the editor goes away (tab switch, script mode), so a keystroke
+  // doesn't re-render everything that reads the editor context.
+  const tabId = activeTab?.id;
+  useEffect(() => {
+    if (!tabId) return;
+    return () => commitDraftSql(tabId);
+  }, [tabId, commitDraftSql]);
+
   const handleFormat = () => {
     if (activeTab && activeTab.type === "query") {
-      const formatted = formatSQL(activeTab.sql || "", engine || "sql");
+      const formatted = formatSQL(getSql(activeTab.id), engine || "sql");
       updateTab(activeTab.id, { sql: formatted });
     }
   };
@@ -30,7 +43,8 @@ export function QueryInput() {
       <SQLCodeEditor
         key={activeTab.id}
         value={activeTab.sql || ""}
-        onChange={(val) => updateTab(activeTab.id, { sql: val })}
+        onChange={(val) => setDraftSql(activeTab.id, val)}
+        onBlur={() => commitDraftSql(activeTab.id)}
         className="h-full"
       />
 

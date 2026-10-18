@@ -16,10 +16,11 @@ import { useTheme } from "@/components/theme";
 interface SQLCodeEditorProps {
     value: string;
     onChange: (value: string) => void;
+    onBlur?: () => void;
     className?: string;
 }
 
-export function SQLCodeEditor({ value, onChange, className }: SQLCodeEditorProps) {
+export function SQLCodeEditor({ value, onChange, onBlur, className }: SQLCodeEditorProps) {
     const editorEl = useRef<HTMLDivElement | null>(null);
     const viewRef = useRef<EditorView | null>(null);
 
@@ -37,11 +38,16 @@ export function SQLCodeEditor({ value, onChange, className }: SQLCodeEditorProps
 
     // store mutable refs to avoid effect re-runs
     const latestOnChange = useRef(onChange);
+    const latestOnBlur = useRef(onBlur);
     const latestEngine = useRef(engine);
 
     useEffect(() => {
         latestOnChange.current = onChange;
     }, [onChange]);
+
+    useEffect(() => {
+        latestOnBlur.current = onBlur;
+    }, [onBlur]);
 
     useEffect(() => {
         latestEngine.current = engine;
@@ -87,6 +93,10 @@ export function SQLCodeEditor({ value, onChange, className }: SQLCodeEditorProps
                 closeBrackets(),
                 history(),
                 keymap.of([...historyKeymap, ...defaultKeymap]),
+
+                EditorView.domEventHandlers({
+                    blur: () => latestOnBlur.current?.(),
+                }),
 
                 EditorView.updateListener.of((v) => {
                     if (!v.docChanged) return;

@@ -14,9 +14,9 @@ export interface DataViewProps {
 
 export function DataView({ activeTab: activeTabValue, onTabChange }: DataViewProps) {
   const [copied, setCopied] = useState(false);
-  const { activeTab } = useEditorContext();
+  const { readSelection } = useEditorContext();
 
-  const selectedData = useMemo(() => activeTab?.selectedRows ?? [], [activeTab?.selectedRows]);
+  const selectedData = useMemo(() => readSelection?.().rows ?? [], [readSelection]);
 
   const lines = useMemo(() => {
     if (selectedData.length === 0) return [];

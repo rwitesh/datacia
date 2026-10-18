@@ -22,7 +22,7 @@ import { ScriptMode } from "./ScriptMode/ScriptMode";
 type ViewPanels = { resultCollapsed: boolean; dataViewOpen: boolean };
 
 export const Editor = () => {
-  const { activeTab, createTab, updateTab } = useEditorContext();
+  const { activeTab, createTab, updateTab, getSql } = useEditorContext();
   const [viewPanels, setViewPanels] = useState<ViewPanels>({
     resultCollapsed: false,
     dataViewOpen: false,
@@ -64,7 +64,7 @@ export const Editor = () => {
           if (activeTab.savedPath) {
             writeFile.mutate({
               path: activeTab.savedPath,
-              content: activeTab.sql || "",
+              content: getSql(activeTab.id),
             });
           } else {
             toast(
@@ -77,7 +77,7 @@ export const Editor = () => {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [activeTab, writeFile]);
+  }, [activeTab, getSql, writeFile]);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -147,9 +147,11 @@ export const Editor = () => {
 
           {/* Right Content Area - Resizable */}
           <ResizablePanel className="min-w-0" defaultSize={80}>
-            {isScriptMode ? (
+            {/* Always mounted so its blocks survive toggling the mode. */}
+            <div className={isScriptMode ? "h-full" : "hidden"}>
               <ScriptMode />
-            ) : (
+            </div>
+            {!isScriptMode && (
               <div
                 className="flex h-full w-full flex-col overflow-hidden relative"
                 onDragOver={handleDragOver}
