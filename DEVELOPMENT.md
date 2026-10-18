@@ -61,6 +61,16 @@ cd frontend && npm run typecheck      # frontend types only
 cd frontend && npm run build          # production frontend bundle
 ```
 
+The Postgres and MySQL tests need a server and skip without one. To run them against throwaway
+containers:
+
+```bash
+docker run -d --rm --name datacia-pg -e POSTGRES_PASSWORD=test -p 127.0.0.1:55432:5432 postgres:17-alpine
+docker run -d --rm --name datacia-mysql -e MYSQL_ROOT_PASSWORD=test -e MYSQL_DATABASE=test -p 127.0.0.1:53306:3306 mysql:8.0
+DATACIA_TEST_POSTGRES=postgres://postgres:test@127.0.0.1:55432/postgres \
+DATACIA_TEST_MYSQL=mysql://root:test@127.0.0.1:53306/test go test ./pkg/postgres ./pkg/mysql
+```
+
 [CI](.github/workflows/ci.yml) runs on every push to `main` and every pull request:
 
 - frontend: `npm ci`, `typecheck`, `lint`, `build`

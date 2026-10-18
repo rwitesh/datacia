@@ -82,8 +82,13 @@ is no HTTP API and no server.
   `mutateAsync` per call. TanStack Query only runs the `onSuccess`/`onError` passed to the latest
   `mutate()`, so earlier calls' callbacks are silently dropped. Editor table loads go through
   `loadTableData` in the editor context.
-- Query cancellation: `common.ConnectionState.CancelQuery` (promoted into each engine; ClickHouse
-  overrides it to also `KILL QUERY`).
+- Editor statements (`RunQuery`) run one at a time on each engine's session connection, so
+  `BEGIN`, `USE`, `SET` and temp tables carry over between runs (not ClickHouse, which has no
+  pinned connection). Metadata, table data and AI queries use the pool and don't see the
+  session's uncommitted work.
+- Query cancellation: `common.ConnectionState.CancelQuery` (promoted into each engine). Each
+  engine stops the statement on the server and keeps the session: Postgres sends a cancel request
+  (`cancelOnServer`), MySQL and ClickHouse run `KILL QUERY`, SQLite interrupts.
 
 ## Coding principles
 

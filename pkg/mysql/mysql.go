@@ -6,15 +6,36 @@ import (
 	"datacia/pkg/common"
 	"errors"
 	"fmt"
+	"net"
 	"time"
 
-	_ "github.com/go-sql-driver/mysql"
+	"github.com/go-sql-driver/mysql"
 	"github.com/google/uuid"
 )
 
 type MySQL struct {
 	db *sql.DB
+	// session runs the editor's statements, so a transaction, USE, SET or
+	// temporary table carries over from one run to the next. Everything else
+	// uses the pool. sessionID is its server connection ID, for KILL QUERY.
+	// sessionDirty records that it ran a command, which may have left a
+	// transaction open. The session fields are only used while holding
+	// sessionLock.
+	session      *sql.Conn
+	sessionID    int64
+	sessionDirty bool
+	sessionLock  chan struct{}
 	*common.ConnectionState
+}
+
+// killGrace is how long a killed statement has to stop before its connection
+// is closed instead.
+const killGrace = 5 * time.Second
+
+// querier is the pool or the session connection.
+type querier interface {
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
 }
 
 func New() *MySQL {
@@ -23,14 +44,19 @@ func New() *MySQL {
 	}
 }
 
-func (m *MySQL) Connect(host, port, username, password, database string, test bool) error {
-	// DSN format: username:password@tcp(host:port)/database
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true", username, password, host, port, database)
-
-	db, err := sql.Open("mysql", dsn)
+func (m *MySQL) Connect(host, port, username, password, database string) error {
+	cfg := mysql.NewConfig()
+	cfg.User = username
+	cfg.Passwd = password
+	cfg.Net = "tcp"
+	cfg.Addr = net.JoinHostPort(host, port)
+	cfg.DBName = database
+	cfg.ParseTime = true
+	connector, err := mysql.NewConnector(cfg)
 	if err != nil {
 		return err
 	}
+	db := sql.OpenDB(connector)
 
 	// Configure pool settings
 	db.SetMaxOpenConns(10)
@@ -38,42 +64,32 @@ func (m *MySQL) Connect(host, port, username, password, database string, test bo
 	db.SetConnMaxLifetime(time.Hour)
 	db.SetConnMaxIdleTime(time.Minute * 30)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := common.NewTimeoutContext(common.CONNECT_TIMEOUT)
 	defer cancel()
 
-	// Test connection
-	if err := db.PingContext(ctx); err != nil {
+	// Opening the session connection also checks that the server is reachable.
+	session, sessionID, err := openSession(ctx, db)
+	if err != nil {
 		db.Close()
 		return err
 	}
 
-	if !test {
-		m.Mu.Lock()
-		if m.db != nil {
-			m.db.Close()
-		}
-		m.db = db
-		m.Host = host
-		m.Port = port
-		m.Username = username
-		m.Database = database
-		// Set password directly when we already hold the lock
-		if m.Password != nil {
-			m.Password.Clear()
-		}
-		m.Password = common.NewSecureString(password)
-		m.Mu.Unlock()
-	} else {
-		// if test=true → close right away
-		db.Close()
-	}
-
+	m.Mu.Lock()
+	m.db = db
+	m.session, m.sessionID = session, sessionID
+	m.sessionLock = make(chan struct{}, 1)
+	m.Host = host
+	m.Port = port
+	m.Username = username
+	m.Database = database
+	m.Password = common.NewSecureString(password)
+	m.Mu.Unlock()
 	return nil
 }
 
 func (m *MySQL) Close() error {
 	m.Mu.Lock()
-	db := m.db
+	db, lock := m.db, m.sessionLock
 	m.db = nil
 	m.ClearAllStateUnsafe() // Calling unsafe method since it is already in lock
 	m.Mu.Unlock()
@@ -82,7 +98,62 @@ func (m *MySQL) Close() error {
 		return nil
 	}
 
+	// Stop running statements, then wait for the session to be free. The
+	// lock is never released, so statements still waiting for it give up.
+	m.CancelAll()
+	lock <- struct{}{}
+	if m.session != nil {
+		m.session.Close()
+		m.session = nil
+	}
 	return db.Close()
+}
+
+func openSession(ctx context.Context, db *sql.DB) (*sql.Conn, int64, error) {
+	conn, err := db.Conn(ctx)
+	if err != nil {
+		return nil, 0, err
+	}
+	var id int64
+	if err := conn.QueryRowContext(ctx, "SELECT CONNECTION_ID()").Scan(&id); err != nil {
+		conn.Close()
+		return nil, 0, err
+	}
+	return conn, id, nil
+}
+
+// sessionConn returns the session connection, replacing it if it dropped.
+// Losing it after it ran a command is an error, since any transaction that
+// command opened was rolled back.
+func (m *MySQL) sessionConn(ctx context.Context, db *sql.DB) (*sql.Conn, error) {
+	if m.session != nil {
+		// A held connection isn't checked by database/sql, and a server that
+		// closed it (wait_timeout) would make the statement fail midway.
+		if m.session.PingContext(ctx) == nil {
+			return m.session, nil
+		}
+		m.session.Close()
+		m.session = nil
+	}
+	conn, id, err := openSession(ctx, db)
+	if err != nil {
+		return nil, err
+	}
+	lostTx := m.sessionDirty
+	m.session, m.sessionID, m.sessionDirty = conn, id, false
+	if lostTx {
+		return nil, common.ErrSessionLost
+	}
+	return conn, nil
+}
+
+// killQuery stops the statement running on the server connection id.
+func killQuery(db *sql.DB, id int64) {
+	ctx, cancel := common.NewTimeoutContext(killGrace)
+	defer cancel()
+	// Errors are ignored: the statement may have finished already, and the
+	// connection is closed after killGrace if it didn't stop.
+	_, _ = db.ExecContext(ctx, fmt.Sprintf("KILL QUERY %d", id))
 }
 
 func (m *MySQL) Ping() error {
@@ -106,7 +177,7 @@ func (m *MySQL) RunQuery(queryID, queryType, sqlStr string) (common.QueryResult,
 	}
 
 	m.Mu.RLock()
-	db := m.db
+	db, lock := m.db, m.sessionLock
 	m.Mu.RUnlock()
 
 	if db == nil {
@@ -124,17 +195,48 @@ func (m *MySQL) RunQuery(queryID, queryType, sqlStr string) (common.QueryResult,
 		m.ActiveQueries.Delete(queryID)
 	}()
 
+	if err := common.LockSession(ctx, lock); err != nil {
+		return common.QueryResult{}, err
+	}
+	defer func() { <-lock }()
+	conn, err := m.sessionConn(ctx, db)
+	if err != nil {
+		return common.QueryResult{}, err
+	}
+
+	// The driver closes the connection when a statement's context is
+	// cancelled, which would end the session and leave the statement running
+	// on the server. So the statement gets its own context, and cancelling
+	// (or the timeout) kills it on the server instead. Its context only
+	// closes the connection if the kill doesn't stop it within killGrace.
+	runCtx, stopRun := context.WithCancel(context.Background())
+	defer stopRun()
+	sessionID := m.sessionID
+	killed := make(chan struct{})
+	stopKill := context.AfterFunc(ctx, func() {
+		defer close(killed)
+		time.AfterFunc(killGrace, stopRun)
+		killQuery(db, sessionID)
+	})
+	// Wait for a kill in progress, so it can't hit the session's next statement.
+	defer func() {
+		if !stopKill() {
+			<-killed
+		}
+	}()
+
 	switch common.QueryType(queryType) {
 	case common.QueryTypeCommand:
-		return m.execute(ctx, db, sqlStr)
+		m.sessionDirty = true
+		return m.execute(runCtx, conn, sqlStr)
 	case common.QueryTypeRead:
-		return m.query(ctx, db, sqlStr)
+		return m.query(runCtx, conn, sqlStr)
 	default:
 		return common.QueryResult{Type: common.QueryTypeUnknown}, fmt.Errorf("unsupported query type: %s", queryType)
 	}
 }
 
-func (m *MySQL) execute(ctx context.Context, db *sql.DB, sqlStr string) (common.QueryResult, error) {
+func (m *MySQL) execute(ctx context.Context, db querier, sqlStr string) (common.QueryResult, error) {
 	_, err := db.ExecContext(ctx, sqlStr)
 	if err != nil {
 		return common.QueryResult{Type: common.QueryTypeCommand}, err
@@ -177,7 +279,7 @@ func (m *MySQL) ReadOnlyQuery(ctx context.Context, sqlStr string, maxRows int) (
 	return scanRows(ctx, rows, maxRows)
 }
 
-func (m *MySQL) query(ctx context.Context, db *sql.DB, sqlStr string) (common.QueryResult, error) {
+func (m *MySQL) query(ctx context.Context, db querier, sqlStr string) (common.QueryResult, error) {
 	rows, err := db.QueryContext(ctx, sqlStr)
 	if err != nil {
 		return common.QueryResult{Type: common.QueryTypeRead}, err

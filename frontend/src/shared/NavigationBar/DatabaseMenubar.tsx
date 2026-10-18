@@ -21,6 +21,7 @@ export function DatabaseMenuBar() {
   const currentDatabase = databaseInfo?.currentDatabase || "";
 
   const changeDatabaseHandler = (db: string) => async () => {
+    if (db === currentDatabase) return;
     try {
       await ChangeDatabaseByName(db);
       // Invalidate the databases query to refresh the current database

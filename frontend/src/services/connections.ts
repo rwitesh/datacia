@@ -5,7 +5,7 @@ import {
   GetCurrentConnectionInfo,
 } from "./bindings";
 import type { ConnectionInfo } from "./bindings";
-import { CloseCurrentConnection, EstablishConnection } from "./bindings/connection";
+import { EstablishConnection } from "./bindings/connection";
 import { CheckConnectionHealth } from "./bindings/connection";
 
 export type ConnectionHealth = number | null;
@@ -45,17 +45,9 @@ export function useFetchConnectionById(id: string) {
 
 export function useSwitchConnectionMutation() {
   return useMutation({
-    mutationFn: async (id: string) => {
-      // Close the current connection first (quietly)
-      // Pass false to not close editor - we're just switching connections
-      try {
-        await CloseCurrentConnection(false);
-      } catch {
-        // Ignore close errors - connection might already be closed
-      }
-      // Establish the new connection
-      await EstablishConnection(id);
-    },
+    // The backend closes the current connection only once the new one is
+    // up, so a failed switch leaves the editor connected.
+    mutationFn: (id: string) => EstablishConnection(id),
   });
 }
 

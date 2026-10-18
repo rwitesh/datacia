@@ -2,6 +2,7 @@ package common
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -75,6 +76,34 @@ func (cs *ConnectionState) CancelQuery(queryID string) error {
 	return fmt.Errorf("query with ID %s not found or already completed", queryID)
 }
 
+// CancelAll cancels every running query, so closing a connection doesn't
+// wait for them to finish or time out.
+func (cs *ConnectionState) CancelAll() {
+	cs.ActiveQueries.Range(func(_, cancel any) bool {
+		if cancel, ok := cancel.(context.CancelFunc); ok {
+			cancel()
+		}
+		return true
+	})
+}
+
+// ErrSessionLost is returned when the editor's session connection dropped
+// after statements that may have left a transaction or session settings,
+// which the server has discarded.
+var ErrSessionLost = errors.New("the connection to the server was lost, so any open transaction was rolled back and session settings were reset; run those statements again")
+
+// LockSession takes lock, a one-slot semaphore that lets one editor
+// statement at a time use the session connection. Unlike a mutex, waiting
+// for it stops when ctx is cancelled.
+func LockSession(ctx context.Context, lock chan struct{}) error {
+	select {
+	case lock <- struct{}{}:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
 // ClearAllStateUnsafe clears all connection state fields without locking.
 // Caller must hold the lock (cs.Mu.Lock()).
 func (cs *ConnectionState) ClearAllStateUnsafe() {
@@ -89,8 +118,10 @@ func (cs *ConnectionState) ClearAllStateUnsafe() {
 }
 
 const (
-	META_TIMEOUT  = 10 * time.Second
-	QUERY_TIMEOUT = 30 * time.Second
+	// CONNECT_TIMEOUT bounds opening a connection and checking it with a ping.
+	CONNECT_TIMEOUT = 10 * time.Second
+	META_TIMEOUT    = 10 * time.Second
+	QUERY_TIMEOUT   = 30 * time.Second
 )
 
 func NewTimeoutContext(d time.Duration) (context.Context, context.CancelFunc) {

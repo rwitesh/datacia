@@ -114,10 +114,15 @@ func (e *Engine) CreateNewConnectionWithSSH(engine, host, port, username, passwo
 		"engine", engine,
 		"database", database,
 		"ssh", fmt.Sprint(useSSH == "true"),
+		"test", fmt.Sprint(test),
 	)
 
 	var tunnel *ssh.Tunnel
-	if useSSH == "true" && sshHost != "" {
+	if useSSH == "true" {
+		// Without this check a missing SSH host would connect directly.
+		if sshHost == "" {
+			return errors.New("SSH host is required")
+		}
 		sshConfig := ssh.Config{
 			Host:     sshHost,
 			Port:     sshPort,
@@ -141,7 +146,10 @@ func (e *Engine) CreateNewConnectionWithSSH(engine, host, port, username, passwo
 		}
 	}
 
-	dbClient, err := connectClient(engine, host, port, username, password, database, test)
+	dbClient, err := connectClient(engine, host, port, username, password, database)
+	if test && err == nil {
+		err = dbClient.Close()
+	}
 	if test || err != nil {
 		if tunnel != nil {
 			tunnel.Close()
@@ -154,17 +162,17 @@ func (e *Engine) CreateNewConnectionWithSSH(engine, host, port, username, passwo
 	return nil
 }
 
-func connectClient(engine, host, port, username, password, database string, test bool) (DatabaseClient, error) {
+func connectClient(engine, host, port, username, password, database string) (DatabaseClient, error) {
 	dbClient, err := getDBClient(engine)
 	if err != nil {
 		logger.Warn("db_connection_client_create_failed", "engine", engine, "error", err.Error())
 		return nil, err
 	}
-	if err := dbClient.Connect(host, port, username, password, database, test); err != nil {
+	if err := dbClient.Connect(host, port, username, password, database); err != nil {
 		logger.Warn("db_connection_failed", "engine", engine, "database", database, "error", err.Error())
 		return nil, err
 	}
-	logger.Info("db_connection_success", "engine", engine, "database", database, "test_mode", fmt.Sprint(test))
+	logger.Info("db_connection_success", "engine", engine, "database", database)
 	return dbClient, nil
 }
 
@@ -222,6 +230,9 @@ func (e *Engine) UpdateConnection(id, name string, config map[string]string) err
 
 func (e *Engine) EstablishConnection(id string) error {
 	config, err := e.store.LoadConnection(id)
+	if errors.Is(err, db.ErrUnreadableSecret) {
+		return errors.New("the saved password can't be decrypted on this device; edit the connection and enter it again")
+	}
 	if err != nil {
 		return err
 	}
@@ -263,8 +274,16 @@ func (e *Engine) ChangeDatabaseByName(database string) error {
 	if err != nil {
 		return err
 	}
+	// A SQLite connection is a file: its only database is "main", and the
+	// name would otherwise be opened as a new file.
+	if connInfo["engine"] == "sqlite" {
+		return errors.New("a SQLite connection has only one database")
+	}
+	if database == connInfo["database"] {
+		return nil
+	}
 	// GetConnectionInfo doesn't expose the password, so take it from the client.
-	dbClient, err := connectClient(connInfo["engine"], connInfo["host"], connInfo["port"], connInfo["username"], current.GetPassword(), database, false)
+	dbClient, err := connectClient(connInfo["engine"], connInfo["host"], connInfo["port"], connInfo["username"], current.GetPassword(), database)
 	if err != nil {
 		return err
 	}
@@ -310,8 +329,14 @@ func (e *Engine) SaveConnection(name string, config map[string]string) error {
 	return e.store.SaveConnection(name, config)
 }
 
+// LoadConnection returns a saved connection for editing. A password that
+// can't be decrypted comes back empty so the user can enter it again.
 func (e *Engine) LoadConnection(id string) (map[string]string, error) {
-	return e.store.LoadConnection(id)
+	config, err := e.store.LoadConnection(id)
+	if errors.Is(err, db.ErrUnreadableSecret) {
+		return config, nil
+	}
+	return config, err
 }
 
 func (e *Engine) ListConnections() (map[string]common.ConnectionInfo, error) {
