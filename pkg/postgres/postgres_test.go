@@ -80,19 +80,29 @@ func TestCancelStopsQueryOnServer(t *testing.T) {
 	}
 }
 
-func TestLostSessionInTransaction(t *testing.T) {
-	p := connectTest(t)
-	pid := run(t, p, common.QueryTypeRead, "SELECT pg_backend_pid() AS pid").Data[0]["pid"]
-	run(t, p, common.QueryTypeCommand, "BEGIN")
-	// Terminate the session from another pooled connection.
-	if _, err := p.ReadOnlyQuery(t.Context(), fmt.Sprintf("SELECT pg_terminate_backend(%v)", pid), 1); err != nil {
-		t.Fatal(err)
+func TestLostSession(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		setup string
+		want  error
+	}{
+		{"idle", "SET application_name = 'datacia_idle'", nil},
+		{"in transaction", "BEGIN", common.ErrSessionLost},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			p := connectTest(t)
+			pid := run(t, p, common.QueryTypeRead, "SELECT pg_backend_pid() AS pid").Data[0]["pid"]
+			run(t, p, common.QueryTypeCommand, tc.setup)
+			// Terminate the session from another pooled connection.
+			if _, err := p.ReadOnlyQuery(t.Context(), fmt.Sprintf("SELECT pg_terminate_backend(%v)", pid), 1); err != nil {
+				t.Fatal(err)
+			}
+			time.Sleep(200 * time.Millisecond)
+			// The next statement finds the session gone before running.
+			if _, err := p.RunQuery("", string(common.QueryTypeRead), "SELECT 1"); !errors.Is(err, tc.want) {
+				t.Fatalf("err = %v, want %v", err, tc.want)
+			}
+			run(t, p, common.QueryTypeRead, "SELECT 1")
+		})
 	}
-	time.Sleep(200 * time.Millisecond)
-	// The first statement finds the connection closed.
-	p.RunQuery("", string(common.QueryTypeCommand), "INSERT INTO nowhere VALUES (1)")
-	if _, err := p.RunQuery("", string(common.QueryTypeRead), "SELECT 1"); !errors.Is(err, common.ErrSessionLost) {
-		t.Fatalf("err = %v, want ErrSessionLost", err)
-	}
-	run(t, p, common.QueryTypeRead, "SELECT 1")
 }

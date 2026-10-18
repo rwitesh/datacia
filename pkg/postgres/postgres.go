@@ -118,8 +118,16 @@ func (p *Postgres) Close() error {
 // Losing it mid-transaction is an error: the server rolled that work back.
 func (p *Postgres) sessionConn(ctx context.Context, pool *pgxpool.Pool) (*pgxpool.Conn, error) {
 	if p.session != nil {
-		if !p.session.Conn().IsClosed() {
+		// The pool only checks idle connections, so a held one that the
+		// server or network dropped (restart, idle timeout, sleep) would
+		// otherwise fail the next statement.
+		err := p.session.Ping(ctx)
+		if err == nil {
 			return p.session, nil
+		}
+		// A cancelled ping leaves the connection open, and it is still the session.
+		if !p.session.Conn().IsClosed() {
+			return nil, err
 		}
 		p.session.Release()
 		p.session = nil
