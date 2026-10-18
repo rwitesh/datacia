@@ -9,8 +9,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"strings"
-	"time"
 
 	"github.com/google/uuid"
 	_ "modernc.org/sqlite"
@@ -126,12 +124,11 @@ func (s *SQLite) RunQuery(queryID, queryType, querySql string) (common.QueryResu
 		return common.QueryResult{}, errors.New("no active connection found")
 	}
 
-	if _, exists := s.ActiveQueries.Load(queryID); exists {
+	ctx, cancel := common.NewTimeoutContext(common.QUERY_TIMEOUT)
+	if _, exists := s.ActiveQueries.LoadOrStore(queryID, cancel); exists {
+		cancel()
 		return common.QueryResult{}, fmt.Errorf("query with ID %s is already running", queryID)
 	}
-
-	ctx, cancel := common.NewTimeoutContext(common.QUERY_TIMEOUT)
-	s.ActiveQueries.Store(queryID, cancel)
 	defer func() {
 		cancel()
 		s.ActiveQueries.Delete(queryID)
@@ -256,9 +253,7 @@ func scanRows(ctx context.Context, rows *sql.Rows, maxRows int) (common.QueryRes
 }
 
 func (s *SQLite) ListDatabases() (common.DatabaseInfo, error) {
-	// SQLite only has one database (the file), but we can return "main" or the filename
-	s.Mu.RLock()
-	defer s.Mu.RUnlock()
+	// The file is the only database; SQLite names it "main".
 	return common.DatabaseInfo{
 		Databases:       []string{"main"},
 		CurrentDatabase: "main",
@@ -274,7 +269,7 @@ func (s *SQLite) ListTables() ([]string, error) {
 		return nil, errors.New("no active connection found")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := common.NewTimeoutContext(common.META_TIMEOUT)
 	defer cancel()
 
 	rows, err := db.QueryContext(ctx, "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
@@ -291,8 +286,7 @@ func (s *SQLite) ListTables() ([]string, error) {
 		}
 		tables = append(tables, name)
 	}
-
-	return tables, nil
+	return tables, rows.Err()
 }
 
 func (s *SQLite) GetConnectionInfo() (map[string]string, error) {
@@ -321,24 +315,10 @@ func (s *SQLite) GetTableData(table string, limit, offset int, orderBy, orderDir
 	ctx, cancel := common.NewTimeoutContext(common.QUERY_TIMEOUT)
 	defer cancel()
 
-	quotedTable, err := common.QuoteIdentifier(table, common.QuoteDoubleQuote)
+	sqlStr, err := common.TableDataSQL(table, orderBy, orderDir, limit, offset, common.QuoteDoubleQuote)
 	if err != nil {
 		return common.QueryResult{}, err
 	}
-
-	sqlStr := fmt.Sprintf(`SELECT * FROM %s`, quotedTable)
-	if orderBy != "" {
-		quotedCol, err := common.QuoteIdentifier(orderBy, common.QuoteDoubleQuote)
-		if err != nil {
-			return common.QueryResult{}, err
-		}
-		dir := "ASC"
-		if orderDir == "desc" {
-			dir = "DESC"
-		}
-		sqlStr += fmt.Sprintf(` ORDER BY %s %s`, quotedCol, dir)
-	}
-	sqlStr += fmt.Sprintf(` LIMIT %d OFFSET %d`, limit, offset)
 	return s.query(ctx, db, sqlStr)
 }
 
@@ -354,52 +334,12 @@ func (s *SQLite) GetTableSchema(table string) (common.QueryResult, error) {
 	ctx, cancel := common.NewTimeoutContext(common.META_TIMEOUT)
 	defer cancel()
 
-	// Validate table name before using in PRAGMA
-	if err := common.ValidateIdentifier(table); err != nil {
-		return common.QueryResult{}, err
-	}
-
-	// Use PRAGMA table_info for SQLite schema
-	// Note: PRAGMA doesn't support parameterized queries, but we've validated the identifier
-	pragmaSQL := fmt.Sprintf("PRAGMA table_info('%s')", strings.ReplaceAll(table, "'", "''"))
-
-	rows, err := db.QueryContext(ctx, pragmaSQL)
+	rows, err := db.QueryContext(ctx, "SELECT * FROM pragma_table_info(?)", table)
 	if err != nil {
 		return common.QueryResult{Type: common.QueryTypeRead}, err
 	}
 	defer rows.Close()
-
-	// PRAGMA table_info returns: cid, name, type, notnull, dflt_value, pk
-	columns := []string{"cid", "name", "type", "notnull", "dflt_value", "pk"}
-
-	var data []map[string]interface{}
-	for rows.Next() {
-		var cid int
-		var name, typeStr string
-		var notnull int
-		var dfltValue interface{}
-		var pk int
-
-		if err := rows.Scan(&cid, &name, &typeStr, &notnull, &dfltValue, &pk); err != nil {
-			return common.QueryResult{Type: common.QueryTypeRead}, err
-		}
-
-		row := map[string]interface{}{
-			"cid":        cid,
-			"name":       name,
-			"type":       typeStr,
-			"notnull":    notnull,
-			"dflt_value": dfltValue,
-			"pk":         pk,
-		}
-		data = append(data, row)
-	}
-
-	return common.QueryResult{
-		Type:    common.QueryTypeRead,
-		Columns: columns,
-		Data:    data,
-	}, nil
+	return scanRows(ctx, rows, 0)
 }
 
 func (s *SQLite) GetDDL(table string) (string, error) {

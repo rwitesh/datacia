@@ -3,20 +3,14 @@ package intellisense
 import (
 	"datacia/internal/db"
 	"strings"
-
-	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 type Service struct {
-	app   *application.App
 	store *db.Store
 }
 
-func NewService(app *application.App, store *db.Store) *Service {
-	return &Service{
-		app:   app,
-		store: store,
-	}
+func NewService(store *db.Store) *Service {
+	return &Service{store: store}
 }
 
 // GetSuggestion returns a ghost text suggestion for the given SQL input.

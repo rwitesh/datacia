@@ -42,6 +42,28 @@ func QuoteIdentifier(name string, quoteChar string) (string, error) {
 	return quoteChar + escaped + quoteChar, nil
 }
 
+// TableDataSQL builds the query for one page of a table, optionally ordered
+// by a column (orderDir "desc" sorts descending, anything else ascending).
+func TableDataSQL(table, orderBy, orderDir string, limit, offset int, quoteChar string) (string, error) {
+	quotedTable, err := QuoteIdentifier(table, quoteChar)
+	if err != nil {
+		return "", err
+	}
+	sql := "SELECT * FROM " + quotedTable
+	if orderBy != "" {
+		quotedCol, err := QuoteIdentifier(orderBy, quoteChar)
+		if err != nil {
+			return "", err
+		}
+		dir := "ASC"
+		if orderDir == "desc" {
+			dir = "DESC"
+		}
+		sql += fmt.Sprintf(" ORDER BY %s %s", quotedCol, dir)
+	}
+	return sql + fmt.Sprintf(" LIMIT %d OFFSET %d", limit, offset), nil
+}
+
 // ensures a string is a valid UUID format
 // Returns an error if the string is not a valid UUID
 func ValidateUUID(id string) error {

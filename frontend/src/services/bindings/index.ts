@@ -23,7 +23,6 @@ export {
   // Connection management functions
   SaveConnection,
   DeleteConnection,
-  CreateNewConnection,
   CreateNewConnectionWithSSH,
   CloseCurrentConnection,
   EstablishConnection,

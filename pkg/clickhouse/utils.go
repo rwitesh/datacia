@@ -12,8 +12,8 @@ import (
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 )
 
-// ScanDynamicColumns reads up to maxRows rows, or all of them when maxRows is 0.
-func ScanDynamicColumns(ctx context.Context, rows driver.Rows, maxRows int) ([]string, []map[string]interface{}, error) {
+// scanDynamicColumns reads up to maxRows rows, or all of them when maxRows is 0.
+func scanDynamicColumns(ctx context.Context, rows driver.Rows, maxRows int) ([]string, []map[string]interface{}, error) {
 	var response []map[string]interface{}
 	columns := common.UniqueColumnNames(rows.Columns())
 	colTypes := rows.ColumnTypes()
@@ -25,11 +25,7 @@ func ScanDynamicColumns(ctx context.Context, rows driver.Rows, maxRows int) ([]s
 		default:
 		}
 
-		scanTargets, err := prepareScanTargets(colTypes)
-		if err != nil {
-			return nil, nil, err
-		}
-
+		scanTargets := prepareScanTargets(colTypes)
 		if err := rows.Scan(scanTargets...); err != nil {
 			return nil, nil, err
 		}
@@ -53,13 +49,13 @@ func ScanDynamicColumns(ctx context.Context, rows driver.Rows, maxRows int) ([]s
 	return columns, response, nil
 }
 
-func prepareScanTargets(columnTypes []driver.ColumnType) ([]interface{}, error) {
+func prepareScanTargets(columnTypes []driver.ColumnType) []interface{} {
 	scanTargets := make([]interface{}, len(columnTypes))
 	for i, ct := range columnTypes {
 		scanType := ct.ScanType()
 		scanTargets[i] = reflect.New(scanType).Interface()
 	}
-	return scanTargets, nil
+	return scanTargets
 }
 
 // normalizeValue converts a scanned value into one encoding/json can marshal

@@ -19,10 +19,6 @@ func Info(msg string, attrs ...string) {
 	emit("info", msg, attrs...)
 }
 
-func Debug(msg string, attrs ...string) {
-	emit("debug", msg, attrs...)
-}
-
 func emit(level, msg string, attrs ...string) {
 	if Logger == nil {
 		args := make([]any, 0, len(attrs))
@@ -45,8 +41,6 @@ func logEntry(level string) sentry.LogEntry {
 		return Logger.Error()
 	case "warn":
 		return Logger.Warn()
-	case "debug":
-		return Logger.Debug()
 	default:
 		return Logger.Info()
 	}
@@ -58,8 +52,6 @@ func slogLevel(level string) slog.Level {
 		return slog.LevelError
 	case "warn":
 		return slog.LevelWarn
-	case "debug":
-		return slog.LevelDebug
 	default:
 		return slog.LevelInfo
 	}

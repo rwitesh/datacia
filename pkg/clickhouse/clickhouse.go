@@ -76,7 +76,7 @@ func (ch *ClickHouse) Close() error {
 	if conn == nil {
 		return nil
 	}
-
+	ch.CancelAll()
 	return conn.Close()
 }
 
@@ -109,12 +109,11 @@ func (ch *ClickHouse) RunQuery(queryID, queryType, sql string) (common.QueryResu
 		return common.QueryResult{}, errors.New("no active connection found")
 	}
 
-	if _, exists := ch.ActiveQueries.Load(queryID); exists {
+	ctx, cancel := common.NewTimeoutContext(common.QUERY_TIMEOUT)
+	if _, exists := ch.ActiveQueries.LoadOrStore(queryID, cancel); exists {
+		cancel()
 		return common.QueryResult{}, fmt.Errorf("query with ID %s is already running", queryID)
 	}
-
-	ctx, cancel := common.NewTimeoutContext(common.QUERY_TIMEOUT)
-	ch.ActiveQueries.Store(queryID, cancel)
 	defer func() {
 		cancel()
 		ch.ActiveQueries.Delete(queryID)
@@ -131,18 +130,8 @@ func (ch *ClickHouse) RunQuery(queryID, queryType, sql string) (common.QueryResu
 }
 
 func (ch *ClickHouse) execute(ctx context.Context, conn driver.Conn, sql string, queryID string) (common.QueryResult, error) {
-	var queryCtx context.Context
-	if queryID != "" {
-		queryCtx = clickhouse.Context(ctx, clickhouse.WithQueryID(queryID))
-	} else {
-		queryCtx = ctx
-	}
-
-	err := conn.Exec(queryCtx, sql)
-	if err != nil {
-		return common.QueryResult{Type: common.QueryTypeCommand}, err
-	}
-	return common.QueryResult{Type: common.QueryTypeCommand}, nil
+	err := conn.Exec(clickhouse.Context(ctx, clickhouse.WithQueryID(queryID)), sql)
+	return common.QueryResult{Type: common.QueryTypeCommand}, err
 }
 
 type queryProgress struct {
@@ -172,7 +161,7 @@ func (ch *ClickHouse) query(ctx context.Context, conn driver.Conn, sql string, q
 	}
 	defer rows.Close()
 
-	columns, data, err := ScanDynamicColumns(queryCtx, rows, 0)
+	columns, data, err := scanDynamicColumns(queryCtx, rows, 0)
 	if err != nil {
 		return common.QueryResult{Type: common.QueryTypeRead}, err
 	}
@@ -222,7 +211,7 @@ func (ch *ClickHouse) ReadOnlyQuery(ctx context.Context, sql string, maxRows int
 	// Cancel before rows.Close so unread rows aren't drained.
 	defer cancel()
 
-	columns, data, err := ScanDynamicColumns(queryCtx, rows, maxRows)
+	columns, data, err := scanDynamicColumns(queryCtx, rows, maxRows)
 	if err != nil {
 		return common.QueryResult{Type: common.QueryTypeRead}, err
 	}
@@ -384,24 +373,10 @@ func (ch *ClickHouse) GetTableData(table string, limit, offset int, orderBy, ord
 	ctx, cancel := common.NewTimeoutContext(common.QUERY_TIMEOUT)
 	defer cancel()
 
-	quotedTable, err := common.QuoteIdentifier(table, common.QuoteBacktick)
+	sqlStr, err := common.TableDataSQL(table, orderBy, orderDir, limit, offset, common.QuoteBacktick)
 	if err != nil {
 		return common.QueryResult{}, err
 	}
-
-	sqlStr := fmt.Sprintf("SELECT * FROM %s", quotedTable)
-	if orderBy != "" {
-		quotedCol, err := common.QuoteIdentifier(orderBy, common.QuoteBacktick)
-		if err != nil {
-			return common.QueryResult{}, err
-		}
-		dir := "ASC"
-		if orderDir == "desc" {
-			dir = "DESC"
-		}
-		sqlStr += fmt.Sprintf(" ORDER BY %s %s", quotedCol, dir)
-	}
-	sqlStr += fmt.Sprintf(" LIMIT %d OFFSET %d", limit, offset)
 	return ch.query(ctx, conn, sqlStr, "")
 }
 
@@ -433,7 +408,7 @@ func (ch *ClickHouse) GetTableSchema(table string) (common.QueryResult, error) {
 	}
 	defer rows.Close()
 
-	columns, data, err := ScanDynamicColumns(ctx, rows, 0)
+	columns, data, err := scanDynamicColumns(ctx, rows, 0)
 	if err != nil {
 		return common.QueryResult{Type: common.QueryTypeRead}, err
 	}

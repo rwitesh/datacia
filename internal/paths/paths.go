@@ -9,12 +9,12 @@ import (
 	"github.com/adrg/xdg"
 )
 
-func GetDataDir() (string, error) {
-	return xdg.DataFile(constants.APP_NAME)
-}
-
 func GetDBPath() (string, error) {
 	return xdg.DataFile(filepath.Join(constants.APP_NAME, "data.db"))
+}
+
+func GetChatPath() (string, error) {
+	return xdg.DataFile(filepath.Join(constants.APP_NAME, "chat.json"))
 }
 
 func GetQueriesDir() (string, error) {

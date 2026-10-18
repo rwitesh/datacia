@@ -11,9 +11,6 @@ import * as db$0 from "../../internal/db/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as common$0 from "../common/models.js";
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore: Unused imports
-import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/application/models.js";
 
 export function CancelQuery(queryId: string): $CancellablePromise<void> {
     return $Call.ByID(1861391844, queryId);
@@ -37,10 +34,6 @@ export function CheckConnectionHealth(): $CancellablePromise<number | null> {
 
 export function CloseCurrentConnection(closeEditor: boolean): $CancellablePromise<void> {
     return $Call.ByID(102279455, closeEditor);
-}
-
-export function CreateNewConnection(engine: string, host: string, port: string, username: string, password: string, database: string, test: boolean): $CancellablePromise<void> {
-    return $Call.ByID(3984386824, engine, host, port, username, password, database, test);
 }
 
 /**
@@ -77,39 +70,33 @@ export function GetQueryHistory(limit: number, search: string, dateFrom: string,
     });
 }
 
-export function GetStore(): $CancellablePromise<db$0.Store | null> {
-    return $Call.ByID(431469839).then(($result: any) => {
-        return $$createType4($result);
-    });
-}
-
 export function GetTableData(table: string, limit: number, offset: number, orderBy: string, orderDir: string): $CancellablePromise<common$0.QueryResult> {
     return $Call.ByID(2699628066, table, limit, offset, orderBy, orderDir).then(($result: any) => {
-        return $$createType5($result);
+        return $$createType3($result);
     });
 }
 
 export function GetTableSchema(table: string): $CancellablePromise<common$0.QueryResult> {
     return $Call.ByID(2740712797, table).then(($result: any) => {
-        return $$createType5($result);
+        return $$createType3($result);
     });
 }
 
 export function ListConnections(): $CancellablePromise<{ [_ in string]?: common$0.ConnectionInfo }> {
     return $Call.ByID(3165584091).then(($result: any) => {
-        return $$createType7($result);
+        return $$createType5($result);
     });
 }
 
 export function ListDatabases(): $CancellablePromise<common$0.DatabaseInfo> {
     return $Call.ByID(3297870880).then(($result: any) => {
-        return $$createType8($result);
+        return $$createType6($result);
     });
 }
 
 export function ListTables(): $CancellablePromise<string[]> {
     return $Call.ByID(3417806403).then(($result: any) => {
-        return $$createType9($result);
+        return $$createType7($result);
     });
 }
 
@@ -145,7 +132,7 @@ export function PendingUpdateVersion(): $CancellablePromise<string> {
  */
 export function ReadOnlyQuery(sql: string, maxRows: number): $CancellablePromise<common$0.QueryResult> {
     return $Call.ByID(4102310872, sql, maxRows).then(($result: any) => {
-        return $$createType5($result);
+        return $$createType3($result);
     });
 }
 
@@ -159,7 +146,7 @@ export function RestartApp(): $CancellablePromise<void> {
 
 export function RunQuery(queryId: string, queryType: string, sql: string): $CancellablePromise<common$0.QueryResult> {
     return $Call.ByID(1539590401, queryId, queryType, sql).then(($result: any) => {
-        return $$createType5($result);
+        return $$createType3($result);
     });
 }
 
@@ -183,13 +170,6 @@ export function SelectSSHKeyFile(): $CancellablePromise<string> {
     return $Call.ByID(2756786305);
 }
 
-/**
- * SetApplication sets the Wails application instance for file dialogs
- */
-export function SetApplication(app: application$0.App | null): $CancellablePromise<void> {
-    return $Call.ByID(4084572048, app);
-}
-
 export function UpdateConnection(id: string, name: string, config: { [_ in string]?: string }): $CancellablePromise<void> {
     return $Call.ByID(2109296315, id, name, config);
 }
@@ -198,10 +178,8 @@ export function UpdateConnection(id: string, name: string, config: { [_ in strin
 const $$createType0 = $Create.Map($Create.Any, $Create.Any);
 const $$createType1 = db$0.QueryHistoryItem.createFrom;
 const $$createType2 = $Create.Array($$createType1);
-const $$createType3 = db$0.Store.createFrom;
-const $$createType4 = $Create.Nullable($$createType3);
-const $$createType5 = common$0.QueryResult.createFrom;
-const $$createType6 = common$0.ConnectionInfo.createFrom;
-const $$createType7 = $Create.Map($Create.Any, $$createType6);
-const $$createType8 = common$0.DatabaseInfo.createFrom;
-const $$createType9 = $Create.Array($Create.Any);
+const $$createType3 = common$0.QueryResult.createFrom;
+const $$createType4 = common$0.ConnectionInfo.createFrom;
+const $$createType5 = $Create.Map($Create.Any, $$createType4);
+const $$createType6 = common$0.DatabaseInfo.createFrom;
+const $$createType7 = $Create.Array($Create.Any);

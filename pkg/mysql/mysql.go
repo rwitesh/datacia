@@ -129,8 +129,14 @@ func (m *MySQL) sessionConn(ctx context.Context, db *sql.DB) (*sql.Conn, error) 
 	if m.session != nil {
 		// A held connection isn't checked by database/sql, and a server that
 		// closed it (wait_timeout) would make the statement fail midway.
-		if m.session.PingContext(ctx) == nil {
+		err := m.session.PingContext(ctx)
+		if err == nil {
 			return m.session, nil
+		}
+		// A ping cut short by the caller's context says nothing about the
+		// connection; closing it would roll back a healthy transaction.
+		if ctx.Err() != nil {
+			return nil, err
 		}
 		m.session.Close()
 		m.session = nil
@@ -184,12 +190,11 @@ func (m *MySQL) RunQuery(queryID, queryType, sqlStr string) (common.QueryResult,
 		return common.QueryResult{}, errors.New("no active connection found")
 	}
 
-	if _, exists := m.ActiveQueries.Load(queryID); exists {
+	ctx, cancel := common.NewTimeoutContext(common.QUERY_TIMEOUT)
+	if _, exists := m.ActiveQueries.LoadOrStore(queryID, cancel); exists {
+		cancel()
 		return common.QueryResult{}, fmt.Errorf("query with ID %s is already running", queryID)
 	}
-
-	ctx, cancel := common.NewTimeoutContext(common.QUERY_TIMEOUT)
-	m.ActiveQueries.Store(queryID, cancel)
 	defer func() {
 		cancel()
 		m.ActiveQueries.Delete(queryID)
@@ -352,7 +357,7 @@ func (m *MySQL) ListDatabases() (common.DatabaseInfo, error) {
 		return common.DatabaseInfo{}, errors.New("no active connection found")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := common.NewTimeoutContext(common.META_TIMEOUT)
 	defer cancel()
 
 	rows, err := db.QueryContext(ctx, "SHOW DATABASES")
@@ -389,7 +394,7 @@ func (m *MySQL) ListTables() ([]string, error) {
 		return nil, errors.New("no active connection found")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := common.NewTimeoutContext(common.META_TIMEOUT)
 	defer cancel()
 
 	rows, err := db.QueryContext(ctx, "SHOW TABLES")
@@ -444,24 +449,10 @@ func (m *MySQL) GetTableData(table string, limit, offset int, orderBy, orderDir 
 	ctx, cancel := common.NewTimeoutContext(common.QUERY_TIMEOUT)
 	defer cancel()
 
-	quotedTable, err := common.QuoteIdentifier(table, common.QuoteBacktick)
+	sqlStr, err := common.TableDataSQL(table, orderBy, orderDir, limit, offset, common.QuoteBacktick)
 	if err != nil {
 		return common.QueryResult{}, err
 	}
-
-	sqlStr := fmt.Sprintf("SELECT * FROM %s", quotedTable)
-	if orderBy != "" {
-		quotedCol, err := common.QuoteIdentifier(orderBy, common.QuoteBacktick)
-		if err != nil {
-			return common.QueryResult{}, err
-		}
-		dir := "ASC"
-		if orderDir == "desc" {
-			dir = "DESC"
-		}
-		sqlStr += fmt.Sprintf(" ORDER BY %s %s", quotedCol, dir)
-	}
-	sqlStr += fmt.Sprintf(" LIMIT %d OFFSET %d", limit, offset)
 	return m.query(ctx, db, sqlStr)
 }
 
@@ -478,58 +469,17 @@ func (m *MySQL) GetTableSchema(table string) (common.QueryResult, error) {
 	ctx, cancel := common.NewTimeoutContext(common.META_TIMEOUT)
 	defer cancel()
 
-	// Query information_schema.columns for table schema
-	// Note: MySQL uses ? for placeholders
-	sqlStr := `
-		SELECT 
-			*
+	rows, err := db.QueryContext(ctx, `
+		SELECT *
 		FROM information_schema.columns
 		WHERE table_schema = ? AND table_name = ?
 		ORDER BY ordinal_position
-	`
-
-	// We need to pass database name as table_schema
-	rows, err := db.QueryContext(ctx, sqlStr, database, table)
+	`, database, table)
 	if err != nil {
 		return common.QueryResult{Type: common.QueryTypeRead}, err
 	}
 	defer rows.Close()
-
-	// ... (Scanning logic similar to query method)
-	columns, err := rows.Columns()
-	if err != nil {
-		return common.QueryResult{Type: common.QueryTypeRead}, err
-	}
-
-	var data []map[string]interface{}
-	values := make([]interface{}, len(columns))
-	valuePtrs := make([]interface{}, len(columns))
-	for i := range columns {
-		valuePtrs[i] = &values[i]
-	}
-
-	for rows.Next() {
-		if err := rows.Scan(valuePtrs...); err != nil {
-			return common.QueryResult{Type: common.QueryTypeRead}, err
-		}
-
-		row := make(map[string]interface{})
-		for i, col := range columns {
-			val := values[i]
-			if b, ok := val.([]byte); ok {
-				row[col] = string(b)
-			} else {
-				row[col] = val
-			}
-		}
-		data = append(data, row)
-	}
-
-	return common.QueryResult{
-		Type:    common.QueryTypeRead,
-		Columns: columns,
-		Data:    data,
-	}, nil
+	return scanRows(ctx, rows, 0)
 }
 
 func (m *MySQL) GetDDL(table string) (string, error) {
