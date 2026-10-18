@@ -23,7 +23,7 @@ func useTempConfig(t *testing.T) string {
 	}
 	configDir = dir
 	globalInfo = &Info{Settings: defaultSettings()}
-	t.Cleanup(func() { configDir, globalInfo = "", nil })
+	t.Cleanup(func() { configDir, globalInfo, errNotLoaded = "", nil, nil })
 	path, err := paths.GetSettingsPath()
 	if err != nil {
 		t.Fatal(err)
@@ -142,6 +142,31 @@ func TestUpdateSettingsSaveFailure(t *testing.T) {
 	}
 	if got := readSettingsFile(t, path); got.Theme != ThemeSystem {
 		t.Fatal("failed save changed the file")
+	}
+}
+
+// An unreadable settings.json must not be replaced by the defaults the
+// session falls back to, or the user loses their saved API keys.
+func TestUnreadableSettingsAreNotOverwritten(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root ignores file permissions")
+	}
+	path := useTempConfig(t)
+	const saved = `{"theme":"dark","ai":{"keys":{"openai":"enc"}}}`
+	if err := os.WriteFile(path, []byte(saved), 0000); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(path, 0600) })
+	loadSettings()
+
+	if err := SetAIModel("openai", "gpt-x"); err == nil {
+		t.Fatal("saved over an unreadable settings file")
+	}
+	if err := os.Chmod(path, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if data, _ := os.ReadFile(path); string(data) != saved {
+		t.Fatalf("settings file changed: %s", data)
 	}
 }
 

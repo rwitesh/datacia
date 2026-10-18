@@ -9,6 +9,10 @@ import (
 	"datacia/internal/paths"
 )
 
+// errNotLoaded blocks saving after settings.json existed but couldn't be read
+// or backed up: saving would replace it, and the API keys in it, with defaults.
+var errNotLoaded error
+
 // loadSettings reads settings.json into globalInfo, which starts with the
 // defaults. A missing file is created with them; a corrupt one is moved to
 // settings.json.bak first so the API keys in it can still be recovered.
@@ -27,14 +31,15 @@ func loadSettings() {
 	case errors.Is(err, os.ErrNotExist):
 	case err != nil:
 		logger.Warn("Failed to read settings file, using defaults for this session", "error", err.Error())
+		errNotLoaded = errors.New("settings.json couldn't be read, so changes can't be saved until DataCia restarts")
 		return
 	default:
 		var loaded Settings
 		if err := json.Unmarshal(data, &loaded); err != nil {
 			logger.Warn("Failed to parse settings file, resetting to defaults", "error", err.Error())
 			if err := os.Rename(settingsPath, settingsPath+".bak"); err != nil {
-				// Don't overwrite the only copy of the user's settings.
 				logger.Warn("Failed to back up settings file, using defaults for this session", "error", err.Error())
+				errNotLoaded = errors.New("settings.json couldn't be backed up, so changes can't be saved until DataCia restarts")
 				return
 			}
 		} else {
@@ -56,6 +61,9 @@ func loadSettings() {
 func saveSettings(s Settings) error {
 	if configDir == "" {
 		return nil
+	}
+	if errNotLoaded != nil {
+		return errNotLoaded
 	}
 	settingsPath, err := paths.GetSettingsPath()
 	if err != nil {
