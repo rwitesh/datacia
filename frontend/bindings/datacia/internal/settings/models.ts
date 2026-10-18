@@ -143,19 +143,16 @@ export class FontConfig {
 }
 
 /**
- * Info is the app/settings info returned to the frontend (OS, version, settings, defaults).
+ * Info is the app/settings info returned to the frontend: OS, version, the
+ * current settings and the defaults the settings window resets to.
  */
 export class Info {
     "os": string;
     "os_version": string;
     "os_arch": string;
     "app_version": string;
-    "machineId": string;
     "settings": Settings;
-    "appearance": string;
-    "activeTokenColors": TokenColors;
-    "defaultTokenColorsLight": TokenColors;
-    "defaultTokenColorsDark": TokenColors;
+    "defaults": Settings;
 
     /** Creates a new Info instance. */
     constructor($$source: Partial<Info> = {}) {
@@ -171,23 +168,11 @@ export class Info {
         if (!("app_version" in $$source)) {
             this["app_version"] = "";
         }
-        if (!("machineId" in $$source)) {
-            this["machineId"] = "";
-        }
         if (!("settings" in $$source)) {
             this["settings"] = (new Settings());
         }
-        if (!("appearance" in $$source)) {
-            this["appearance"] = "";
-        }
-        if (!("activeTokenColors" in $$source)) {
-            this["activeTokenColors"] = (new TokenColors());
-        }
-        if (!("defaultTokenColorsLight" in $$source)) {
-            this["defaultTokenColorsLight"] = (new TokenColors());
-        }
-        if (!("defaultTokenColorsDark" in $$source)) {
-            this["defaultTokenColorsDark"] = (new TokenColors());
+        if (!("defaults" in $$source)) {
+            this["defaults"] = (new Settings());
         }
 
         Object.assign(this, $$source);
@@ -197,22 +182,14 @@ export class Info {
      * Creates a new Info instance from a string or object.
      */
     static createFrom($$source: any = {}): Info {
+        const $$createField4_0 = $$createType4;
         const $$createField5_0 = $$createType4;
-        const $$createField7_0 = $$createType3;
-        const $$createField8_0 = $$createType3;
-        const $$createField9_0 = $$createType3;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("settings" in $$parsedSource) {
-            $$parsedSource["settings"] = $$createField5_0($$parsedSource["settings"]);
+            $$parsedSource["settings"] = $$createField4_0($$parsedSource["settings"]);
         }
-        if ("activeTokenColors" in $$parsedSource) {
-            $$parsedSource["activeTokenColors"] = $$createField7_0($$parsedSource["activeTokenColors"]);
-        }
-        if ("defaultTokenColorsLight" in $$parsedSource) {
-            $$parsedSource["defaultTokenColorsLight"] = $$createField8_0($$parsedSource["defaultTokenColorsLight"]);
-        }
-        if ("defaultTokenColorsDark" in $$parsedSource) {
-            $$parsedSource["defaultTokenColorsDark"] = $$createField9_0($$parsedSource["defaultTokenColorsDark"]);
+        if ("defaults" in $$parsedSource) {
+            $$parsedSource["defaults"] = $$createField5_0($$parsedSource["defaults"]);
         }
         return new Info($$parsedSource as Partial<Info>);
     }

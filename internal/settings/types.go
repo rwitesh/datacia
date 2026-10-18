@@ -62,17 +62,14 @@ type Settings struct {
 	Privacy PrivacyConfig `json:"privacy"`
 }
 
-// Info is the app/settings info returned to the frontend (OS, version, settings, defaults).
+// Info is the app/settings info returned to the frontend: OS, version, the
+// current settings and the defaults the settings window resets to.
 type Info struct {
-	OS                      string      `json:"os"`
-	OSVersion               string      `json:"os_version"`
-	OSArch                  string      `json:"os_arch"`
-	AppVersion              string      `json:"app_version"`
-	MachineId               string      `json:"machineId"`
-	Settings                Settings    `json:"settings"`
-	Appearance              string      `json:"appearance"`
-	ActiveTokenColors       TokenColors `json:"activeTokenColors"`
-	DefaultTokenColorsLight TokenColors `json:"defaultTokenColorsLight"`
-	DefaultTokenColorsDark  TokenColors `json:"defaultTokenColorsDark"`
-	mu                      sync.RWMutex
+	OS         string   `json:"os"`
+	OSVersion  string   `json:"os_version"`
+	OSArch     string   `json:"os_arch"`
+	AppVersion string   `json:"app_version"`
+	Settings   Settings `json:"settings"`
+	Defaults   Settings `json:"defaults"`
+	mu         sync.RWMutex
 }

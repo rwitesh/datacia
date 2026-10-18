@@ -31,9 +31,9 @@ export const initialState: ThemeProviderState = {
   resolvedTheme: "dark",
   tokenColors: EMPTY_TOKEN_COLORS,
   editorFontFamily: "JetBrains Mono",
-  editorFontSize: 14,
+  editorFontSize: 12,
   uiFontFamily: "JetBrains Mono",
-  uiFontSize: 14,
+  uiFontSize: 12,
   setTheme: () => null,
 }
 

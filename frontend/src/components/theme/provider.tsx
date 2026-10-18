@@ -4,6 +4,8 @@ import { ThemeConfig } from "@/services/settings"
 import { useQueryClient } from "@tanstack/react-query"
 import { ThemeProviderContext, type Theme, EMPTY_TOKEN_COLORS, initialState } from "./context"
 import { Events } from "@wailsio/runtime"
+import { toast } from "sonner"
+import { errorMessage } from "@/lib/utils"
 
 export function ThemeProvider({ children, ...props }: { children: React.ReactNode }) {
   const { data: settings } = useSettings()
@@ -15,10 +17,7 @@ export function ThemeProvider({ children, ...props }: { children: React.ReactNod
   const resolvedTheme: "dark" | "light" =
     theme === "system" ? (systemDark ? "dark" : "light") : theme
   const { font, editor } = settings?.settings ?? {}
-  const tokenColors =
-    (resolvedTheme === "dark" ? editor?.dark : editor?.light) ??
-    (resolvedTheme === "dark" ? settings?.defaultTokenColorsDark : settings?.defaultTokenColorsLight) ??
-    EMPTY_TOKEN_COLORS
+  const tokenColors = (resolvedTheme === "dark" ? editor?.dark : editor?.light) ?? EMPTY_TOKEN_COLORS
 
   const editorFontFamily = font?.editorFontFamily ?? initialState.editorFontFamily
   const editorFontSize = font?.editorFontSize ?? initialState.editorFontSize
@@ -62,7 +61,10 @@ export function ThemeProvider({ children, ...props }: { children: React.ReactNod
         uiFontSize,
         setTheme: (newTheme: Theme) => {
           if (!settings) return
-          updateSettings({ settings: { ...settings.settings, theme: newTheme as unknown as ThemeConfig } })
+          updateSettings(
+            { settings: { ...settings.settings, theme: newTheme as unknown as ThemeConfig } },
+            { onError: (error) => toast.error(errorMessage(error)) },
+          )
         },
       }}
     >

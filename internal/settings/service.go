@@ -2,6 +2,7 @@ package settings
 
 import (
 	"errors"
+	"fmt"
 	"maps"
 	"runtime"
 	"strings"
@@ -29,60 +30,50 @@ func Init(app *application.App) {
 	if cd, err := paths.GetConfigDir(); err == nil {
 		configDir = cd
 	}
-	machineId, _ := security.GetMachineID()
 	globalInfoOnce.Do(func() {
+		env := app.Env.Info()
 		globalInfo = &Info{
-			OS:         app.Env.Info().OS,
-			OSArch:     app.Env.Info().Arch,
-			OSVersion:  app.Env.Info().OSInfo.Version,
-			MachineId:  machineId,
+			OS:         env.OS,
+			OSArch:     env.Arch,
+			OSVersion:  env.OSInfo.Version,
 			AppVersion: "unknown",
 			Settings:   defaultSettings(),
 		}
 		loadSettings()
-		applyLoggerContext(globalInfo)
 	})
 }
 
+// SetAppVersion records the version and tags every log with the app and
+// device details.
 func SetAppVersion(version string) {
 	if globalInfo == nil {
 		return
 	}
 	globalInfo.mu.Lock()
 	globalInfo.AppVersion = version
-	info := &Info{
-		OS:         globalInfo.OS,
-		OSArch:     globalInfo.OSArch,
-		OSVersion:  globalInfo.OSVersion,
-		AppVersion: globalInfo.AppVersion,
-		MachineId:  globalInfo.MachineId,
-	}
+	info := getSanitized()
 	globalInfo.mu.Unlock()
-	applyLoggerContext(info)
-}
 
-func applyLoggerContext(info *Info) {
-	if info == nil {
-		return
+	var deviceID string
+	if ctx, err := security.GetSecurityContext(); err == nil {
+		deviceID = ctx.DeviceID()
 	}
 	logger.SetGlobalAttrs(
 		attribute.String("os", info.OS),
 		attribute.String("arch", info.OSArch),
 		attribute.String("os_version", info.OSVersion),
 		attribute.String("app_version", info.AppVersion),
-		attribute.String("hardware", info.MachineId),
+		attribute.String("hardware", deviceID),
 	)
 }
 
 func Get() *Info {
-	machineId, _ := security.GetMachineID()
 	if globalInfo == nil {
 		return &Info{
-			OS:         runtime.GOOS,
-			OSArch:     runtime.GOARCH,
-			AppVersion: "",
-			Settings:   Settings{Theme: ThemeSystem},
-			MachineId:  machineId,
+			OS:       runtime.GOOS,
+			OSArch:   runtime.GOARCH,
+			Settings: defaultSettings(),
+			Defaults: defaultSettings(),
 		}
 	}
 	globalInfo.mu.RLock()
@@ -104,15 +95,11 @@ func GetSettingsRaw() Settings {
 func getSanitized() *Info {
 	s := globalInfo.Settings
 	return &Info{
-		OS:                      globalInfo.OS,
-		OSVersion:               globalInfo.OSVersion,
-		OSArch:                  globalInfo.OSArch,
-		AppVersion:              globalInfo.AppVersion,
-		MachineId:               globalInfo.MachineId,
-		Appearance:              globalInfo.Appearance,
-		ActiveTokenColors:       globalInfo.ActiveTokenColors,
-		DefaultTokenColorsLight: defaultTokenColorsLight(),
-		DefaultTokenColorsDark:  defaultTokenColorsDark(),
+		OS:         globalInfo.OS,
+		OSVersion:  globalInfo.OSVersion,
+		OSArch:     globalInfo.OSArch,
+		AppVersion: globalInfo.AppVersion,
+		Defaults:   defaultSettings(),
 		Settings: Settings{
 			Theme:   s.Theme,
 			Editor:  s.Editor,
@@ -188,25 +175,29 @@ func withKeys(keys, changes map[string]string) (map[string]string, error) {
 	return out, nil
 }
 
-// commit applies change to the settings, saves them and notifies every window.
-// The caller must hold commitMu.
+// commit applies change to a copy of the settings, saves it and only then
+// makes it current and notifies every window, so a failed save changes
+// nothing. change must replace maps rather than modify them in place. The
+// caller must hold commitMu.
 func commit(change func(*Settings)) (*Info, error) {
+	next := GetSettingsRaw()
+	change(&next)
+	if err := saveSettings(next); err != nil {
+		logger.Error("Failed to save settings", "error", err.Error())
+		return nil, fmt.Errorf("Couldn't save the settings: %w", err)
+	}
+
 	globalInfo.mu.Lock()
-	change(&globalInfo.Settings)
-	next := globalInfo.Settings
+	globalInfo.Settings = next
 	info := getSanitized()
 	globalInfo.mu.Unlock()
 
 	applyPrivacy(next)
-	err := saveSettings()
-	if err != nil {
-		logger.Error("Failed to save settings", "error", err.Error())
-	}
 	if appInstance != nil {
 		// Send the sanitized settings: the event reaches every window.
 		appInstance.Event.Emit("app:settings-changed", info.Settings)
 	}
-	return info, err
+	return info, nil
 }
 
 type Service struct {
@@ -229,9 +220,7 @@ func (s *Service) UpdateSettings(settings Settings, keys map[string]string) (*In
 		return nil, errors.New("settings are not loaded")
 	}
 	next := settings
-	next.Editor.Light = fillTokenColorsDefaults(next.Editor.Light, defaultTokenColorsLight())
-	next.Editor.Dark = fillTokenColorsDefaults(next.Editor.Dark, defaultTokenColorsDark())
-	fillAIDefaults(&next)
+	fillDefaults(&next)
 
 	commitMu.Lock()
 	defer commitMu.Unlock()

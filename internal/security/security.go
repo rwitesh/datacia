@@ -10,7 +10,6 @@ import (
 
 	"datacia/internal/constants"
 
-	deviceid "github.com/microsoft/go-deviceid"
 	"golang.org/x/crypto/pbkdf2"
 )
 
@@ -114,23 +113,11 @@ func DecryptString(ciphertext string) (string, error) {
 	return string(plaintext), nil
 }
 
-// GetMachineID retrieves the machine identifier (SHA-256 hash of device ID).
-// If SecurityContext is initialized, it returns the cached value.
-// Otherwise, it computes it on-the-fly.
-func GetMachineID() (string, error) {
-	ctx, err := GetSecurityContext()
-	if err == nil {
-		return ctx.GetMachineID(), nil
-	}
-
-	id, err := deviceid.Get()
-	if err != nil {
-		return "", fmt.Errorf("failed to retrieve machine ID: %w", err)
-	}
-	if id == "" {
-		return "", fmt.Errorf("machine ID is empty - hardware identification unavailable")
-	}
-	return Sha256Hex(id), nil
+// anonymousDeviceID identifies a device in error reports. The machine ID is
+// the only secret input to deriveEncryptionKey (the salt is public), so it
+// must never leave the machine; this one-way hash of it can.
+func anonymousDeviceID(machineID string) string {
+	return Sha256Hex("datacia-device-id:" + machineID)
 }
 
 // deriveEncryptionKey derives the 32-byte AES-256 key from the hashed machine
