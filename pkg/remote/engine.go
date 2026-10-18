@@ -150,15 +150,22 @@ func (e *Engine) confirmHostKey(host, fingerprint string) bool {
 	if e.wailsApp == nil {
 		return false
 	}
-	trusted := false
+	// Show blocks on macOS but returns immediately on Linux, and Windows only
+	// runs callbacks for buttons labelled Yes/No, so wait on the answer.
+	answer := make(chan bool, 2)
 	dialog := e.wailsApp.Dialog.Question().SetTitle("Trust SSH host?")
 	dialog.SetMessage(fmt.Sprintf(
 		"DataCia has not connected to %s before.\n\nHost key fingerprint:\n%s\n\n"+
-			"Only continue if this matches the fingerprint of your server.", host, fingerprint))
-	dialog.AddButton("Cancel").SetAsCancel().SetAsDefault()
-	dialog.AddButton("Trust and Connect").OnClick(func() { trusted = true })
+			"Only trust it if it matches your server's fingerprint.", host, fingerprint))
+	dialog.AddButton("No").SetAsCancel().SetAsDefault().OnClick(func() { answer <- false })
+	dialog.AddButton("Yes").OnClick(func() { answer <- true })
 	dialog.Show()
-	return trusted
+	select {
+	case trusted := <-answer:
+		return trusted
+	case <-time.After(2 * time.Minute):
+		return false
+	}
 }
 
 func connectClient(engine, host, port, username, password, database string) (DatabaseClient, error) {
