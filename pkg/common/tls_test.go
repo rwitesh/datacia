@@ -22,6 +22,7 @@ func TestNewTLSSettings(t *testing.T) {
 	}{
 		{"empty remote requires TLS", "", "db.example.com", SSLModeRequire, false},
 		{"empty localhost", "", "localhost", SSLModeDisable, false},
+		{"empty localhost mixed case", "", "LocalHost.", SSLModeDisable, false},
 		{"empty loopback v4", "", "127.0.0.1", SSLModeDisable, false},
 		{"empty loopback v6", "", "::1", SSLModeDisable, false},
 		{"empty unix socket", "", "/var/run/pg", SSLModeDisable, false},
@@ -85,6 +86,7 @@ func TestTLSConfig(t *testing.T) {
 		{"require ignores CA", TLSSettings{Mode: SSLModeRequire, CAPath: "/missing"}, false, true, false, false},
 		{"verify-full system roots", TLSSettings{Mode: SSLModeVerifyFull, ServerName: "db"}, false, false, false, false},
 		{"verify-full custom CA", TLSSettings{Mode: SSLModeVerifyFull, ServerName: "db", CAPath: ca}, false, false, true, false},
+		{"zero value is an error", TLSSettings{}, true, false, false, true},
 		{"verify-full missing CA", TLSSettings{Mode: SSLModeVerifyFull, CAPath: "/missing"}, true, false, false, true},
 		{"verify-full invalid CA", TLSSettings{Mode: SSLModeVerifyFull, CAPath: notPEM}, true, false, false, true},
 	}

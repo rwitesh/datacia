@@ -47,7 +47,7 @@ func NewTLSSettings(mode, caPath, host string) (TLSSettings, error) {
 }
 
 func isLocalHost(host string) bool {
-	if host == "" || host == "localhost" || strings.HasPrefix(host, "/") {
+	if host == "" || strings.EqualFold(strings.TrimSuffix(host, "."), "localhost") || strings.HasPrefix(host, "/") {
 		return true
 	}
 	ip := net.ParseIP(host)
@@ -73,7 +73,11 @@ func (t TLSSettings) Config() (*tls.Config, error) {
 			cfg.RootCAs = pool
 		}
 		return cfg, nil
-	default:
+	case SSLModeDisable:
 		return nil, nil
+	default:
+		// Never fall back to plaintext for a mode that wasn't resolved by
+		// NewTLSSettings, such as the zero value of a closed connection.
+		return nil, fmt.Errorf("unknown SSL mode %q", t.Mode)
 	}
 }
