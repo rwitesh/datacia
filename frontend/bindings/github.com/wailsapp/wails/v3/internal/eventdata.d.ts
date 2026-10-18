@@ -8,12 +8,18 @@ import type { Events } from "@wailsio/runtime";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import type * as ai$0 from "../../../../../datacia/internal/ai/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import type * as settings$0 from "../../../../../datacia/internal/settings/models.js";
 
 declare module "@wailsio/runtime" {
     namespace Events {
         interface CustomEvents {
             "ai:delta": ai$0.ChatDelta;
             "ai:tool": ai$0.ChatTool;
+            "app:settings-changed": settings$0.Settings;
+            "connection-changed": void;
+            "settings:show-tab": string;
         }
     }
 }
