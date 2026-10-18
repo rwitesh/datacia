@@ -8,9 +8,7 @@ import { useTrustHostKey } from "@/shared/HostKey/HostKeyContext";
 import { toConnectionConfig } from "../utils/config";
 import type { FormValues, Status } from "../utils/types";
 
-type ConnectByIdArgs = { id: string };
-type ConnectByValuesArgs = { values: FormValues };
-export type ConnectArgs = ConnectByIdArgs | ConnectByValuesArgs;
+type ConnectArgs = { id: string } | { values: FormValues };
 
 export const useConnectDatabase = (opts?: {
   setStatus?: (s: Status) => void;

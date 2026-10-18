@@ -182,7 +182,7 @@ func TestTunnelForwardsAndClosesCleanly(t *testing.T) {
 	select {
 	case <-closed:
 	case <-time.After(5 * time.Second):
-		t.Fatal("Close did not wait for forwarding to end")
+		t.Fatal("Close hung with a forwarded connection open")
 	}
 }
 

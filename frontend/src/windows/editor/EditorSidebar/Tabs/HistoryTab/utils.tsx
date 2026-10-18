@@ -1,15 +1,13 @@
 import { SQL_KEYWORDS } from "./constants";
 
-export interface KeywordInfo {
+interface KeywordInfo {
     keyword: string;
     rest: string;
     colorClass: string;
 }
 
-/**
- * Extract the first SQL keyword from a query string.
- * Returns keyword details if found, null otherwise.
- */
+// getFirstKeyword splits off the query's leading keyword if it is one of
+// SQL_KEYWORDS.
 export function getFirstKeyword(query: string): KeywordInfo | null {
     const trimmed = query.trimStart();
     const upperQuery = trimmed.toUpperCase();
@@ -30,10 +28,7 @@ export function getFirstKeyword(query: string): KeywordInfo | null {
     return null;
 }
 
-/**
- * Highlight all occurrences of a search term within text.
- * Returns React nodes with highlighted matches.
- */
+// highlightSearchMatch marks every case-insensitive occurrence of search.
 export function highlightSearchMatch(text: string, search: string): React.ReactNode {
     if (!search.trim()) return text;
 
@@ -44,11 +39,9 @@ export function highlightSearchMatch(text: string, search: string): React.ReactN
     let index = lowerText.indexOf(lowerSearch);
 
     while (index !== -1) {
-        // Add text before match
         if (index > lastIndex) {
             parts.push(text.slice(lastIndex, index));
         }
-        // Add highlighted match
         parts.push(
             <span key={index} className="bg-yellow-400/40 text-yellow-200 rounded px-0.5">
                 {text.slice(index, index + search.length)}
@@ -58,7 +51,6 @@ export function highlightSearchMatch(text: string, search: string): React.ReactN
         index = lowerText.indexOf(lowerSearch, lastIndex);
     }
 
-    // Add remaining text
     if (lastIndex < text.length) {
         parts.push(text.slice(lastIndex));
     }

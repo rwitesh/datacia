@@ -13,7 +13,7 @@ import type { SelectedData } from "@/context/editor/Context";
 
 interface TableContextMenuProps {
   children: React.ReactNode;
-  // The selected rows, holding only the selected columns. A right-click
+  // Reads the selected rows, holding only the selected columns. A right-click
   // selects the cell, row or column it lands on first, so this is what was clicked.
   getSelected: () => SelectedData;
   onOpenDataView: () => void;

@@ -1,9 +1,4 @@
-import { DATABASE_ENGINES, type DatabaseEngine } from "@/shared/utils/engines";
 import type { FormValues } from "./types";
-
-export const DEFAULT_PORTS: Record<DatabaseEngine, string> = Object.fromEntries(
-  Object.entries(DATABASE_ENGINES).map(([key, config]) => [key, config.defaultPort])
-) as Record<DatabaseEngine, string>;
 
 export const DEFAULT_SSL_MODE = "automatic";
 
@@ -16,7 +11,6 @@ export const SSL_MODES = [
   { value: "verify-full", label: "Verify" },
 ];
 
-// Field labels for form validation messages
 export const FIELD_LABELS: Record<keyof FormValues, string> = {
   connectionName: "Connection Name",
   engine: "Database Engine",

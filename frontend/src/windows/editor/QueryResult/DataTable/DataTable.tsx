@@ -27,7 +27,6 @@ interface DataTableProps {
   ref?: Ref<HTMLDivElement>;
   columns: string[];
   data: DataRow[];
-  // A reader of the selected rows, in the order shown; null once unmounted.
   // Called on unmount with where the selection is, to restore it on remount.
   // sorted: made under a client sort, whose order the grid loses on remount.
   onSelectionSave: (selection: CellSelection | null, sorted: boolean) => void;

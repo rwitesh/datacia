@@ -25,7 +25,6 @@ export const TabBar = () => {
     } else if (e.button === 1) {
       handleCloseTab(e, tabId);
     }
-    return;
   };
 
   const handleTabDoubleClick = (tabId: string, currentTitle: string) => {
@@ -50,20 +49,6 @@ export const TabBar = () => {
     }
   };
 
-  // Get icon based on tab mode
-  const getTabIcon = (mode: string) => {
-    switch (mode) {
-      case "query":
-        return <FileCode className="h-3.5 w-3.5 shrink-0 text-emerald-500" />;
-      case "table":
-        return <Table2 className="h-3.5 w-3.5 shrink-0 text-blue-500" />;
-      default:
-        return (
-          <FileCode className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-        );
-    }
-  };
-
   return (
     <div className="flex items-center overflow-hidden">
       <div className="flex items-center overflow-x-auto overflow-y-hidden flex-1 scrollbar-thin gap-0.5 px-1 h-full">
@@ -78,7 +63,6 @@ export const TabBar = () => {
                   : "bg-transparent hover:bg-background/50"
               }`}
             >
-              {/* Active indicator */}
               {isActive && (
                 <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-gradient-to-b from-emerald-500 to-teal-500 rounded-full" />
               )}
@@ -88,7 +72,11 @@ export const TabBar = () => {
                 onMouseDown={(e) => handleTabClick(e, tab.id)}
                 onDoubleClick={() => handleTabDoubleClick(tab.id, tab.title)}
               >
-                {getTabIcon(tab.type)}
+                {tab.type === "table" ? (
+                  <Table2 className="h-3.5 w-3.5 shrink-0 text-blue-500" />
+                ) : (
+                  <FileCode className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                )}
 
                 {editingTabId === tab.id ? (
                   <input

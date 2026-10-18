@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { GetAppInfo, UpdateSettings, type Info, type Settings } from "./bindings/settings";
 import { queryKeys } from "./queryKeys";
-export type { Info, Settings, EditorConfig, TokenColors, AIConfig, AIProviderConfig } from "./bindings/settings";
+export type { Info, Settings, EditorConfig, TokenColors, AIProviderConfig } from "./bindings/settings";
 export { ThemeConfig } from "./bindings/settings";
 
 export function useSettings() {
@@ -29,7 +29,6 @@ export function useUpdateSettings() {
         },
         onSuccess: (info) => {
             queryClient.setQueryData(queryKeys.settings, info);
-            queryClient.invalidateQueries({ queryKey: queryKeys.settings });
         },
     });
 }

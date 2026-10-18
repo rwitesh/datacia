@@ -19,13 +19,9 @@ export interface FormValues {
   sshKeyPath: string;
 }
 
-export type StatusKind = "success" | "error" | "info";
-
-export interface StatusMessage {
-  kind: StatusKind;
+export type Status = {
+  kind: "success" | "error" | "info";
   title: string;
   description?: string;
-}
-
-export type Status = StatusMessage | null;
+} | null;
 

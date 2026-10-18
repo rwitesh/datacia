@@ -15,7 +15,7 @@ interface ConnectionFormProps {
   setValue: UseFormSetValue<FormValues>;
   currentEngine: DatabaseEngine;
   loading: boolean;
-  onSelectSSHKey: () => Promise<string | null>;
+  onSelectSSHKey: () => Promise<void>;
   onSelectSQLiteFile: () => Promise<void>;
 }
 
@@ -37,21 +37,6 @@ export const ConnectionForm: React.FC<ConnectionFormProps> = ({
   const useSSHKey = watch("useSSHKey");
   const sshKeyPath = watch("sshKeyPath");
 
-  const handleSelectSSHKey = async () => {
-    try {
-      const path = await onSelectSSHKey();
-      if (path) {
-        setValue("sshKeyPath", path);
-      }
-    } catch (error) {
-      console.error("Failed to select SSH key:", error);
-    }
-  };
-
-  const handleRemoveSSHKey = () => {
-    setValue("sshKeyPath", "");
-  };
-
   const getKeyFileName = (path: string) => {
     if (!path) return "";
     const parts = path.split(/[/\\]/);
@@ -72,7 +57,7 @@ export const ConnectionForm: React.FC<ConnectionFormProps> = ({
       </div>
 
       <div className="space-y-1">
-        <Label htmlFor="engine-display" className="text-muted-foreground text-xs">
+        <Label className="text-muted-foreground text-xs">
           Database Engine
         </Label>
         <div className="h-6 px-2 text-sm bg-muted/30 rounded border flex items-center text-muted-foreground">
@@ -125,7 +110,7 @@ export const ConnectionForm: React.FC<ConnectionFormProps> = ({
                 inputMode="numeric"
                 pattern="[0-9]*"
                 {...register("port")}
-                className="h-6 px-2 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="h-6 px-2 text-sm"
               />
             </div>
           </div>
@@ -246,7 +231,7 @@ export const ConnectionForm: React.FC<ConnectionFormProps> = ({
                   pattern="[0-9]*"
                   {...register("sshPort")}
                   placeholder="22"
-                  className="h-6 px-2 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  className="h-6 px-2 text-sm"
                 />
               </div>
             </div>
@@ -284,7 +269,7 @@ export const ConnectionForm: React.FC<ConnectionFormProps> = ({
                       type="button"
                       variant="ghost"
                       size="sm"
-                      onClick={handleRemoveSSHKey}
+                      onClick={() => setValue("sshKeyPath", "")}
                       disabled={loading}
                       className="h-6 px-2"
                     >
@@ -296,7 +281,7 @@ export const ConnectionForm: React.FC<ConnectionFormProps> = ({
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={handleSelectSSHKey}
+                    onClick={onSelectSSHKey}
                     disabled={loading}
                     className="h-7 w-full text-xs"
                   >
@@ -309,7 +294,7 @@ export const ConnectionForm: React.FC<ConnectionFormProps> = ({
                     type="button"
                     variant="ghost"
                     size="sm"
-                    onClick={handleSelectSSHKey}
+                    onClick={onSelectSSHKey}
                     disabled={loading}
                     className="h-6 w-full text-xs"
                   >

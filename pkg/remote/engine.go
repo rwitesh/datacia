@@ -28,6 +28,7 @@ func init() {
 	application.RegisterEvent[application.Void](ConnectionChangedEvent)
 }
 
+// UIController opens and closes the app's windows.
 type UIController interface {
 	OpenEditor()
 	CloseEditor()
@@ -89,7 +90,6 @@ func (e *Engine) RestartApp() error {
 	return nil
 }
 
-// getDBClient creates a new database client instance based on the engine type
 func getDBClient(engineType string) (DatabaseClient, error) {
 	switch engineType {
 	case "clickhouse":
@@ -298,7 +298,6 @@ func (e *Engine) ChangeDatabaseByName(database string) error {
 	if database == connInfo["database"] {
 		return nil
 	}
-	// GetConnectionInfo doesn't expose the password, so take it from the client.
 	sslMode, sslCAPath, serverName := current.GetSSL()
 	dbClient, err := connectClient(common.ConnectionConfig{
 		Engine:        connInfo["engine"],
@@ -405,14 +404,11 @@ func (e *Engine) RunQuery(queryId, queryType, sql string) (common.QueryResult, e
 	if connInfo, connErr := client.GetConnectionInfo(); connErr == nil {
 		engine = connInfo["engine"]
 	}
-
-	// Save to history asynchronously ("" engine is stored so filter can skip when engine == "")
-	go func(engine, sql string, duration int64, status string, errorMessage string) {
-		saveErr := e.store.SaveQueryHistory(engine, sql, duration, status, errorMessage)
-		if saveErr != nil {
-			logger.Error("Failed to save query history", "error", saveErr.Error())
+	go func() {
+		if err := e.store.SaveQueryHistory(engine, sql, duration, status, errorMessage); err != nil {
+			logger.Error("Failed to save query history", "error", err.Error())
 		}
-	}(engine, sql, duration, status, errorMessage)
+	}()
 
 	return result, err
 }
@@ -477,62 +473,33 @@ func (e *Engine) GetDDL(table string) (string, error) {
 	return client.GetDDL(table)
 }
 
-// checks the health of the current database connection by pinging the database and measuring latency
+// CheckConnectionHealth pings the active connection and returns the round
+// trip in milliseconds.
 func (e *Engine) CheckConnectionHealth() (*float64, error) {
 	client, err := e.client()
 	if err != nil {
 		return nil, err
 	}
-
 	start := time.Now()
-	err = client.Ping()
-	duration := time.Since(start)
-
-	if err != nil {
+	if err := client.Ping(); err != nil {
 		return nil, err
 	}
-
-	// Convert to float64 and divide by time.Millisecond (1,000,000)
-	// This gives you the precise ms value as a decimal
-	latencyMS := float64(duration) / float64(time.Millisecond)
-
+	latencyMS := float64(time.Since(start)) / float64(time.Millisecond)
 	return &latencyMS, nil
 }
 
-// SelectSSHKeyFile opens a file dialog to select an SSH private key file
-// Returns the selected file path, or an error if cancelled or failed
+// SelectSSHKeyFile asks for an SSH private key and returns its path, or "" if cancelled.
 func (e *Engine) SelectSSHKeyFile() (string, error) {
-	if e.wailsApp == nil {
-		return "", errors.New("application instance not available")
-	}
-
-	dialog := e.wailsApp.Dialog.OpenFile()
-	dialog.SetTitle("Select SSH Private Key")
-
-	path, err := dialog.PromptForSingleSelection()
-	if err != nil {
-		return "", err
-	}
-
-	return path, nil
+	return e.wailsApp.Dialog.OpenFile().
+		SetTitle("Select SSH Private Key").
+		PromptForSingleSelection()
 }
 
-// SelectSQLiteFile opens a file dialog to select a SQLite database file
-// Returns the selected file path, or an error if cancelled or failed
+// SelectSQLiteFile asks for a SQLite database file and returns its path, or "" if cancelled.
 func (e *Engine) SelectSQLiteFile() (string, error) {
-	if e.wailsApp == nil {
-		return "", errors.New("application instance not available")
-	}
-
-	dialog := e.wailsApp.Dialog.OpenFile()
-	dialog.SetTitle("Select SQLite Database File")
-	dialog.AddFilter("SQLite Database", "*.sqlite;*.db;*.sqlite3")
-	dialog.AddFilter("All Files", "*.*")
-
-	path, err := dialog.PromptForSingleSelection()
-	if err != nil {
-		return "", err
-	}
-
-	return path, nil
+	return e.wailsApp.Dialog.OpenFile().
+		SetTitle("Select SQLite Database File").
+		AddFilter("SQLite Database", "*.sqlite;*.db;*.sqlite3").
+		AddFilter("All Files", "*.*").
+		PromptForSingleSelection()
 }

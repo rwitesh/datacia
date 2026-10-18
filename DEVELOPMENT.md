@@ -134,6 +134,7 @@ Open Anyway. Developer ID signing and notarization: `wails3 setup`, then
 | --- | --- |
 | `wails3: command not found` | Add `$(go env GOPATH)/bin` to `PATH` |
 | `Port 9245 is in use` | Stop the other dev server or set `WAILS_VITE_PORT` |
+| `make dev` exits and an installed DataCia comes to the front | Only one instance runs at a time; quit the installed app first |
 | `pattern all:frontend/dist: no matching files found` | Build the frontend or stub `frontend/dist` (see [Test](#test)) |
 | npm `EACCES` on the cache | Fix ownership of `~/.npm`, or set `npm_config_cache` |
 | `makensis` "Bad text encoding" or `bad_alloc` on macOS | Use a UTF-8 locale: `export LANG=en_US.UTF-8` |

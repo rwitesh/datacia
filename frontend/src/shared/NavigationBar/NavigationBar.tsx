@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { CloseCurrentConnection } from "@/services/bindings/connection";
 import { errorMessage } from "@/lib/utils";
+import { toast } from "sonner";
 import {
   Tooltip,
   TooltipContent,
@@ -47,14 +48,12 @@ export function NavigationBar({
 }: NavigationBarProps) {
   const queryClient = useQueryClient();
   const { reload } = useAppContext();
-  const DisconnectHandler = async () => {
+  const handleDisconnect = async () => {
     try {
       await CloseCurrentConnection();
-      // Invalidate current connection query so it refetches (will return null)
       queryClient.invalidateQueries({ queryKey: queryKeys.currentConnection });
-      // Window transition handled by backend
-    } catch (error: unknown) {
-      console.error("Error disconnecting:", errorMessage(error));
+    } catch (error) {
+      toast.error(errorMessage(error));
     }
   };
 
@@ -72,7 +71,7 @@ export function NavigationBar({
                 variant="ghost"
                 className={toggleButtonClass}
                 onClick={onToggleSidebar}
-                title="Toggle sidebar"
+                aria-label="Toggle sidebar"
                 data-state={sidebarCollapsed ? "off" : "on"}
               >
                 {sidebarCollapsed ? (
@@ -91,7 +90,7 @@ export function NavigationBar({
                 variant="ghost"
                 className={toggleButtonClass}
                 onClick={onToggleResult}
-                title="Toggle result panel"
+                aria-label="Toggle result panel"
                 data-state={resultCollapsed ? "off" : "on"}
               >
                 {resultCollapsed ? (
@@ -110,7 +109,7 @@ export function NavigationBar({
                 variant="ghost"
                 className={toggleButtonClass}
                 onClick={onToggleDataView}
-                title="Toggle DataView"
+                aria-label="Toggle DataView"
                 data-state={dataViewOpen ? "on" : "off"}
               >
                 {dataViewOpen ? (
@@ -128,13 +127,7 @@ export function NavigationBar({
             type="single"
             value={isScriptMode ? "script" : "sql"}
             onValueChange={(val) => {
-              if (!val) return;
-              if (
-                (val === "script" && !isScriptMode) ||
-                (val === "sql" && isScriptMode)
-              ) {
-                onToggleScriptMode();
-              }
+              if (val && (val === "script") !== isScriptMode) onToggleScriptMode();
             }}
             className="gap-1 bg-muted/50 p-0.5 rounded-lg border border-border"
           >
@@ -168,7 +161,7 @@ export function NavigationBar({
           size="icon"
           variant="ghost"
           className="cursor-pointer"
-          onClick={DisconnectHandler}
+          onClick={handleDisconnect}
           title="Disconnect"
         >
           <LogOut className="h-5 w-5" />

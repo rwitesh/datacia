@@ -12,12 +12,13 @@ export const AppUpdate = () => {
             <CheckCircle2 className="h-3 w-3 text-green-500" />
             <span className="text-green-500">v{version} ready</span>
             <span className="text-muted-foreground">•</span>
-            <span
+            <button
+                type="button"
                 className="text-blue-500 cursor-pointer hover:underline"
                 onClick={() => restartApp()}
             >
                 Restart
-            </span>
+            </button>
         </div>
     );
 };

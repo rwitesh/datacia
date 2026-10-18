@@ -9,9 +9,9 @@ import (
 )
 
 const (
-	// SSLModeAutomatic keeps each driver's default, as connections did before
-	// this setting: pgx tries TLS unverified and falls back to plaintext, which
-	// an attacker can force; MySQL and ClickHouse use plaintext.
+	// SSLModeAutomatic keeps each driver's default: pgx tries TLS unverified
+	// and falls back to plaintext, which an attacker can force; MySQL and
+	// ClickHouse use plaintext.
 	SSLModeAutomatic = "automatic"
 	// SSLModeDisable never uses TLS.
 	SSLModeDisable = "disable"
@@ -36,13 +36,6 @@ func (c ConnectionConfig) TLSSettings() (TLSSettings, error) {
 	if mode == "" {
 		mode = SSLModeAutomatic
 	}
-	// An SSH tunnel makes Host the local end, but the certificate belongs to
-	// the host the user typed.
-	serverName := c.TLSServerName
-	if serverName == "" {
-		serverName = c.Host
-	}
-
 	switch mode {
 	case SSLModeAutomatic, SSLModeDisable:
 		return TLSSettings{Mode: mode}, nil
@@ -50,7 +43,7 @@ func (c ConnectionConfig) TLSSettings() (TLSSettings, error) {
 		// The point of this mode is to skip verification.
 		return TLSSettings{Mode: mode, Config: &tls.Config{MinVersion: tls.VersionTLS12, InsecureSkipVerify: true}}, nil
 	case SSLModeVerifyFull:
-		cfg := &tls.Config{MinVersion: tls.VersionTLS12, ServerName: serverName}
+		cfg := &tls.Config{MinVersion: tls.VersionTLS12, ServerName: c.tlsServerName()}
 		if caPath := strings.TrimSpace(c.SSLCAPath); caPath != "" {
 			pem, err := os.ReadFile(caPath)
 			if err != nil {
@@ -66,4 +59,13 @@ func (c ConnectionConfig) TLSSettings() (TLSSettings, error) {
 	default:
 		return TLSSettings{}, fmt.Errorf("unknown SSL mode %q", mode)
 	}
+}
+
+// tlsServerName is the host the certificate must name. An SSH tunnel makes
+// Host the local end, but the certificate belongs to the host the user typed.
+func (c ConnectionConfig) tlsServerName() string {
+	if c.TLSServerName != "" {
+		return c.TLSServerName
+	}
+	return c.Host
 }

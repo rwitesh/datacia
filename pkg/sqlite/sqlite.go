@@ -82,7 +82,7 @@ func (s *SQLite) Close() error {
 	s.Mu.Lock()
 	db, roDB, lock := s.db, s.roDB, s.sessionLock
 	s.db, s.roDB = nil, nil
-	s.ClearAllStateUnsafe() // Calling unsafe method since it is already in lock
+	s.ClearAllStateUnsafe()
 	s.Mu.Unlock()
 
 	if db == nil {
@@ -153,10 +153,7 @@ func (s *SQLite) RunQuery(queryID, queryType, querySql string) (common.QueryResu
 
 func (s *SQLite) execute(ctx context.Context, db querier, sql string) (common.QueryResult, error) {
 	_, err := db.ExecContext(ctx, sql)
-	if err != nil {
-		return common.QueryResult{Type: common.QueryTypeCommand}, err
-	}
-	return common.QueryResult{Type: common.QueryTypeCommand}, nil
+	return common.QueryResult{Type: common.QueryTypeCommand}, err
 }
 
 // ReadOnlyQuery runs querySql on the read-only handle.
@@ -348,13 +345,7 @@ func (s *SQLite) GetDDL(table string) (string, error) {
 	ctx, cancel := common.NewTimeoutContext(common.META_TIMEOUT)
 	defer cancel()
 
-	// Query sqlite_master for the CREATE statement
-	sqlStr := "SELECT sql FROM sqlite_master WHERE type='table' AND name=?"
 	var ddl string
-	err := db.QueryRowContext(ctx, sqlStr, table).Scan(&ddl)
-	if err != nil {
-		return "", err
-	}
-
-	return ddl, nil
+	err := db.QueryRowContext(ctx, "SELECT sql FROM sqlite_master WHERE type='table' AND name=?", table).Scan(&ddl)
+	return ddl, err
 }

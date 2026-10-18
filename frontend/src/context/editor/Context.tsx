@@ -51,14 +51,12 @@ export type TableDataParams = {
 };
 
 export type EditorContextType = {
-  // List of tables
   tables: {
     data: string[];
     isLoading: boolean;
     error?: Error | null;
   };
 
-  // Tab management
   tabs: Tab[];
   activeTab: Tab | undefined;
   createTab: (title?: string, type?: "query" | "table") => Tab;
@@ -66,11 +64,7 @@ export type EditorContextType = {
   setActiveTab: (tabId: string) => void;
   updateTab: (tabId: string, updates: Partial<Tab>) => void;
 
-  // Query execution
-  runQuery: (
-    tabId?: string,
-    pagination?: boolean
-  ) => Promise<void>;
+  runQuery: (tabId?: string) => Promise<void>;
   stopQuery: (tabId?: string) => Promise<void>;
   // Loads a page of a table tab's data, honouring its sort order.
   loadTableData: (tabId: string, params: TableDataParams) => Promise<void>;

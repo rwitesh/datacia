@@ -1,5 +1,10 @@
-import { useFetchConnections, useCurrentConnection } from "@/services/connections";
-import { useSwitchConnection } from "./useSwitchConnection";
+import {
+  useFetchConnections,
+  useCurrentConnection,
+  useSwitchConnectionMutation,
+} from "@/services/connections";
+import { toast } from "sonner";
+import { errorMessage } from "@/lib/utils";
 import { DatabaseIcon } from "@/shared/utils/DatabaseIcon";
 import { ChevronDown, Check, Loader2, Plus } from "lucide-react";
 import { OpenConnectionWindow } from "@/services/bindings";
@@ -21,14 +26,20 @@ import {
 export function ConnectionSwitcher() {
   const { data: currentConnection } = useCurrentConnection();
   const { data: savedConnections = {}, isLoading } = useFetchConnections();
-  const { mutate: switchTo, isPending } = useSwitchConnection();
+  const { mutate: switchTo, isPending } = useSwitchConnectionMutation();
 
   const connectionEntries = Object.entries(savedConnections);
   const hasOtherConnections = connectionEntries.some(([id]) => id !== currentConnection?.id);
 
   const handleSwitch = (id: string, name: string) => {
     if (id === currentConnection?.id) return;
-    switchTo({ id, name });
+    switchTo(id, {
+      // The backend's connection-changed event refreshes connection queries.
+      onSuccess: () => toast.success(`Switched to ${name}`),
+      onError: (err) => {
+        toast.error("Failed to switch connection", { description: errorMessage(err) });
+      },
+    });
   };
 
   return (

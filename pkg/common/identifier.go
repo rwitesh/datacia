@@ -4,40 +4,28 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-
-	"github.com/google/uuid"
 )
 
-// Quote character constants for different databases
+// Quote characters for QuoteIdentifier.
 const (
-	QuoteBacktick    = "`" // Used by MySQL, ClickHouse
-	QuoteDoubleQuote = `"` // Used by PostgreSQL, SQLite
+	QuoteBacktick    = "`" // MySQL, ClickHouse
+	QuoteDoubleQuote = `"` // PostgreSQL, SQLite
 )
 
-// identifierRegex validates SQL identifiers
-// Allowed: must start with letter or underscore, followed by alphanumeric, underscore, period (for schema.table), or hyphen
+// identifierRegex allows letters, digits, '_', '.' and '-', starting with a
+// letter or '_'.
 var identifierRegex = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_.\-]*$`)
 
-// ensures an identifier contains only safe characters
-// Returns an error if the identifier is invalid or empty
-func ValidateIdentifier(name string) error {
+// QuoteIdentifier quotes a table or column name with quoteChar. Names with
+// any other character are rejected rather than escaped; doubling quoteChar
+// only guards against the pattern being loosened later.
+func QuoteIdentifier(name string, quoteChar string) (string, error) {
 	if name == "" {
-		return fmt.Errorf("identifier cannot be empty")
+		return "", fmt.Errorf("identifier cannot be empty")
 	}
 	if !identifierRegex.MatchString(name) {
-		return fmt.Errorf("invalid identifier: %q contains unsafe characters", name)
+		return "", fmt.Errorf("invalid identifier: %q contains unsafe characters", name)
 	}
-	return nil
-}
-
-// QuoteIdentifier safely quotes a SQL identifier (table/column name)
-// It validates the identifier and escapes the quote character by doubling it.
-// Use QuoteBacktick for MySQL/ClickHouse, QuoteDoubleQuote for PostgreSQL/SQLite.
-func QuoteIdentifier(name string, quoteChar string) (string, error) {
-	if err := ValidateIdentifier(name); err != nil {
-		return "", err
-	}
-	// Escape any quote characters by doubling them, then wrap in quotes
 	escaped := strings.ReplaceAll(name, quoteChar, quoteChar+quoteChar)
 	return quoteChar + escaped + quoteChar, nil
 }
@@ -62,16 +50,4 @@ func TableDataSQL(table, orderBy, orderDir string, limit, offset int, quoteChar 
 		sql += fmt.Sprintf(" ORDER BY %s %s", quotedCol, dir)
 	}
 	return sql + fmt.Sprintf(" LIMIT %d OFFSET %d", limit, offset), nil
-}
-
-// ensures a string is a valid UUID format
-// Returns an error if the string is not a valid UUID
-func ValidateUUID(id string) error {
-	if id == "" {
-		return fmt.Errorf("UUID cannot be empty")
-	}
-	if _, err := uuid.Parse(id); err != nil {
-		return fmt.Errorf("invalid UUID format: %q", id)
-	}
-	return nil
 }

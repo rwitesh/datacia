@@ -9,12 +9,12 @@ import (
 // the new file, never a partial one. The temp file is hidden so directory
 // listings (e.g. saved queries) skip it.
 func WriteFileAtomic(path string, data []byte, perm os.FileMode) error {
+	// A unique name keeps concurrent saves of one file from interleaving.
 	f, err := os.CreateTemp(filepath.Dir(path), "."+filepath.Base(path)+".*.tmp")
 	if err != nil {
 		return err
 	}
 	tmp := f.Name()
-	// A unique name keeps concurrent saves of one file from interleaving.
 	err = f.Chmod(perm)
 	if err == nil {
 		_, err = f.Write(data)

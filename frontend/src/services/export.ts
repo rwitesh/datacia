@@ -12,7 +12,7 @@ export function useExportData() {
             data,
             columns = [],
             suggestedFilename,
-            imageData // optional, used for png
+            imageData,
         }: {
             format: ExportFormat;
             data?: Record<string, unknown>[];

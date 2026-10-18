@@ -80,7 +80,7 @@ export class ConnectionConfig {
 }
 
 /**
- * ConnectionInfo represents a connection list item with name and engine
+ * ConnectionInfo is a saved connection as listed in the UI.
  */
 export class ConnectionInfo {
     "name": string;

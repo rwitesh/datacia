@@ -15,7 +15,7 @@ interface ScriptBlockProps {
     onUpdate: (id: string, sql: string) => void;
     onRemove: (id: string) => void;
     onExecute: (id: string) => void;
-    isScriptRunning: boolean; // Global running state
+    isScriptRunning: boolean;
 }
 
 export function ScriptBlock({
@@ -84,7 +84,7 @@ export function ScriptBlock({
                 />
             </div>
 
-            {block.status === 'error' && block.errorMessage && (
+            {block.status === "error" && block.errorMessage && (
                 <div className="bg-red-500/10 text-red-500 text-xs font-mono p-2 border-t border-red-500/20 whitespace-pre-wrap">
                     {block.errorMessage}
                 </div>

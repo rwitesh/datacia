@@ -40,8 +40,9 @@ func TestCSVValueNeutralizesFormulas(t *testing.T) {
 		want string
 	}{
 		{"=1+1", "'=1+1"},
-		{"+1", "'+1"},
-		{"-1", "'-1"},
+		{"-1+cmd", "'-1+cmd"},
+		{"-12.50", "-12.50"},
+		{"+1", "+1"},
 		{"@SUM(A1)", "'@SUM(A1)"},
 		{"\tcmd", "'\tcmd"},
 		{"\rcmd", "'\rcmd"},

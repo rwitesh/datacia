@@ -57,17 +57,14 @@ func (m *MySQL) Connect(config common.ConnectionConfig) error {
 		return err
 	}
 	// Automatic keeps the driver's default, plaintext: "preferred" would make
-	// servers with a broken TLS stack, which worked before, fail to connect.
-	if tlsSettings.Config != nil {
-		cfg.TLS = tlsSettings.Config
-	}
+	// servers with a broken TLS setup fail to connect.
+	cfg.TLS = tlsSettings.Config
 	connector, err := mysql.NewConnector(cfg)
 	if err != nil {
 		return err
 	}
 	db := sql.OpenDB(connector)
 
-	// Configure pool settings
 	db.SetMaxOpenConns(10)
 	db.SetMaxIdleConns(1)
 	db.SetConnMaxLifetime(time.Hour)
@@ -101,7 +98,7 @@ func (m *MySQL) Close() error {
 	m.Mu.Lock()
 	db, lock := m.db, m.sessionLock
 	m.db = nil
-	m.ClearAllStateUnsafe() // Calling unsafe method since it is already in lock
+	m.ClearAllStateUnsafe()
 	m.Mu.Unlock()
 
 	if db == nil {
@@ -253,10 +250,7 @@ func (m *MySQL) RunQuery(queryID, queryType, sqlStr string) (common.QueryResult,
 
 func (m *MySQL) execute(ctx context.Context, db querier, sqlStr string) (common.QueryResult, error) {
 	_, err := db.ExecContext(ctx, sqlStr)
-	if err != nil {
-		return common.QueryResult{Type: common.QueryTypeCommand}, err
-	}
-	return common.QueryResult{Type: common.QueryTypeCommand}, nil
+	return common.QueryResult{Type: common.QueryTypeCommand}, err
 }
 
 // ReadOnlyQuery runs sqlStr in a read-only transaction.
@@ -313,7 +307,6 @@ func scanRows(ctx context.Context, rows *sql.Rows, maxRows int) (common.QueryRes
 
 	var data []map[string]interface{}
 
-	// Prepare values for scanning
 	values := make([]interface{}, len(columns))
 	valuePtrs := make([]interface{}, len(columns))
 	for i := range columns {
@@ -505,20 +498,15 @@ func (m *MySQL) GetDDL(table string) (string, error) {
 		return "", err
 	}
 
-	sqlStr := fmt.Sprintf("SHOW CREATE TABLE %s", quotedTable)
-	rows, err := db.QueryContext(ctx, sqlStr)
+	// The statement is the second column: SHOW TABLES lists views too, and
+	// for a view this returns four columns instead of two.
+	res, err := m.query(ctx, db, "SHOW CREATE TABLE "+quotedTable, 1)
 	if err != nil {
 		return "", err
 	}
-	defer rows.Close()
-
-	if rows.Next() {
-		var tableName, ddl string
-		if err := rows.Scan(&tableName, &ddl); err != nil {
-			return "", err
-		}
-		return ddl, nil
+	if len(res.Data) == 0 || len(res.Columns) < 2 {
+		return "", errors.New("no DDL found for table")
 	}
-
-	return "", errors.New("no DDL found for table")
+	ddl, _ := res.Data[0][res.Columns[1]].(string)
+	return ddl, nil
 }

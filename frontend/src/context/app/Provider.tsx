@@ -22,10 +22,10 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     queryClient.invalidateQueries({ queryKey: queryKeys.currentConnection });
   }, [queryClient]);
 
-  const reload = () => {
+  const reload = useCallback(() => {
     invalidateConnectionQueries();
     queryClient.invalidateQueries({ queryKey: queryKeys.connections });
-  };
+  }, [invalidateConnectionQueries, queryClient]);
 
   useEffect(() => {
     const unsubscribe = Events.On("connection-changed", () => {
@@ -34,19 +34,16 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     return () => unsubscribe();
   }, [invalidateConnectionQueries]);
 
-  const dialect = useMemo(
-    () => getDialect(currentConnection?.engine),
-    [currentConnection?.engine]
+  const engine = currentConnection?.engine || "";
+  const value = useMemo(
+    () => ({
+      reload,
+      dialect: getDialect(engine),
+      engine,
+      settings,
+    }),
+    [reload, engine, settings]
   );
-
-  const value = {
-    reload,
-    invalidateConnectionQueries,
-    dialect,
-    engine: currentConnection?.engine || "",
-    settings,
-  };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };
-

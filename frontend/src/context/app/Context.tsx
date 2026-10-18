@@ -4,7 +4,6 @@ import type { Info } from "@/services/settings";
 
 export type AppContextType = {
   reload: () => void;
-  invalidateConnectionQueries: () => void;
   dialect: SQLDialect;
   engine: string;
   settings: Info | undefined;

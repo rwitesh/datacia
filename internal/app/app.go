@@ -53,8 +53,7 @@ type App struct {
 func NewApp(assets embed.FS, version string) *App {
 	a := &App{version: version}
 	a.instance = application.New(application.Options{
-		Name:        constants.APP_NAME,
-		Description: "",
+		Name: constants.APP_NAME,
 		Assets: application.AssetOptions{
 			Handler:        application.AssetFileServerFS(assets),
 			DisableLogging: true,
@@ -97,20 +96,18 @@ func logPanic(details *application.PanicDetails) {
 
 func (a *App) Initialize() error {
 	if err := security.InitSecurityContext(); err != nil {
-		logger.Error("Failed to initialize security context", "error", err.Error())
 		return err
 	}
 
 	settings.Init(a.instance, a.version)
 
 	if err := clip.Init(); err != nil {
-		// Only image copy needs it, so the app still starts without.
+		// Only the copy actions need it, so the app still starts without.
 		logger.Error("Failed to initialize clipboard", "error", err.Error())
 	}
 
 	store, err := db.Open()
 	if err != nil {
-		logger.Error("Failed to open the local database", "error", err.Error())
 		return err
 	}
 	a.engine = remote.New(a.instance, a, store)
@@ -126,31 +123,26 @@ func (a *App) Initialize() error {
 	return nil
 }
 
-func (a *App) createConnectionWindow() error {
-	window := a.instance.Window.NewWithOptions(application.WebviewWindowOptions{
-		Name:  constants.CONNECTION_WINDOW_NAME,
-		Title: constants.APP_TITLE,
-		URL:   "/",
-		Mac: application.MacWindow{
-			InvisibleTitleBarHeight: 50,
-			Backdrop:                application.MacBackdropTranslucent,
-			TitleBar:                application.MacTitleBarHidden,
-		},
-		Windows: application.WindowsWindow{
-			DisableFramelessWindowDecorations: true,
-		},
-		BackgroundColour: application.NewRGB(27, 38, 54),
-		Width:            constants.CONNECTION_WINDOW_WIDTH,
-		Height:           constants.CONNECTION_WINDOW_HEIGHT,
+// newWindow creates a window with the chrome all of the app's windows share.
+func (a *App) newWindow(options application.WebviewWindowOptions) *application.WebviewWindow {
+	options.Mac.InvisibleTitleBarHeight = 50
+	options.Mac.Backdrop = application.MacBackdropTranslucent
+	options.Windows.DisableFramelessWindowDecorations = true
+	options.BackgroundColour = application.NewRGB(27, 38, 54)
+	return a.instance.Window.NewWithOptions(options)
+}
+
+// createConnectionWindow must be called with windowMutex held.
+func (a *App) createConnectionWindow() {
+	window := a.newWindow(application.WebviewWindowOptions{
+		Name:   constants.CONNECTION_WINDOW_NAME,
+		Title:  constants.APP_TITLE,
+		URL:    "/",
+		Mac:    application.MacWindow{TitleBar: application.MacTitleBarHidden},
+		Width:  constants.CONNECTION_WINDOW_WIDTH,
+		Height: constants.CONNECTION_WINDOW_HEIGHT,
 	})
-
-	if window == nil {
-		logger.Error("Failed to create connection window")
-		return fmt.Errorf("failed to create connection window")
-	}
-
 	a.connectionWindow = window
-	window.Center()
 	window.RegisterHook(events.Common.WindowClosing, func(e *application.WindowEvent) {
 		a.windowMutex.Lock()
 		closedByUser := a.connectionWindow == window && !a.closingIntentional
@@ -165,37 +157,21 @@ func (a *App) createConnectionWindow() error {
 			a.instance.Quit()
 		}
 	})
-
-	return nil
 }
 
-func (a *App) createEditorWindow() error {
-	window := a.instance.Window.NewWithOptions(application.WebviewWindowOptions{
-		Name:  constants.EDITOR_WINDOW_NAME,
-		Title: constants.APP_TITLE,
-		URL:   "/#/editor",
-		Mac: application.MacWindow{
-			InvisibleTitleBarHeight: 50,
-			Backdrop:                application.MacBackdropTranslucent,
-			TitleBar:                application.MacTitleBarHiddenInset,
-		},
-		Windows: application.WindowsWindow{
-			DisableFramelessWindowDecorations: true,
-		},
-		BackgroundColour: application.NewRGB(27, 38, 54),
-		Width:            constants.EDITOR_WINDOW_WIDTH,
-		Height:           constants.EDITOR_WINDOW_HEIGHT,
-		MinWidth:         800,
-		MinHeight:        600,
+// createEditorWindow must be called with windowMutex held.
+func (a *App) createEditorWindow() {
+	window := a.newWindow(application.WebviewWindowOptions{
+		Name:      constants.EDITOR_WINDOW_NAME,
+		Title:     constants.APP_TITLE,
+		URL:       "/#/editor",
+		Mac:       application.MacWindow{TitleBar: application.MacTitleBarHiddenInset},
+		Width:     constants.EDITOR_WINDOW_WIDTH,
+		Height:    constants.EDITOR_WINDOW_HEIGHT,
+		MinWidth:  800,
+		MinHeight: 600,
 	})
-
-	if window == nil {
-		logger.Error("Failed to create editor window")
-		return fmt.Errorf("failed to create editor window")
-	}
-
 	a.editorWindow = window
-	window.Center()
 	window.RegisterHook(events.Common.WindowClosing, func(e *application.WindowEvent) {
 		a.windowMutex.Lock()
 		if a.editorWindow != window || a.closingIntentional {
@@ -205,30 +181,26 @@ func (a *App) createEditorWindow() error {
 		// The user closed the editor: disconnect and go back to the
 		// connection window.
 		a.editorWindow = nil
-		var err error
-		if a.connectionWindow != nil {
-			a.connectionWindow.Show()
-			a.connectionWindow.Focus()
-		} else {
-			err = a.createConnectionWindow()
-		}
+		a.showConnectionWindow()
 		a.windowMutex.Unlock()
 
-		if a.engine != nil {
-			_ = a.engine.CloseCurrentConnection(false)
-		}
-		if err != nil {
-			logger.Error("Failed to create connection window after editor close", "error", err.Error())
-			a.instance.Quit()
-		}
+		_ = a.engine.CloseCurrentConnection(false)
 	})
+}
 
-	return nil
+// showConnectionWindow brings the connection window to the front, creating it
+// if needed. It must be called with windowMutex held.
+func (a *App) showConnectionWindow() {
+	if a.connectionWindow == nil {
+		a.createConnectionWindow()
+		return
+	}
+	a.connectionWindow.Show()
+	a.connectionWindow.Focus()
 }
 
 // OpenEditor shows the editor and closes the connection window. The new window
-// exists before the old one closes, so a failure never leaves the app without
-// a window.
+// exists before the old one closes, so the app is never left without a window.
 func (a *App) OpenEditor() {
 	a.windowMutex.Lock()
 	defer a.windowMutex.Unlock()
@@ -236,9 +208,8 @@ func (a *App) OpenEditor() {
 	if a.editorWindow != nil {
 		a.editorWindow.Show()
 		a.editorWindow.Focus()
-	} else if err := a.createEditorWindow(); err != nil {
-		logger.Error("Failed to open editor window", "error", err.Error())
-		return
+	} else {
+		a.createEditorWindow()
 	}
 	if a.connectionWindow != nil {
 		a.connectionWindow.Close()
@@ -251,13 +222,7 @@ func (a *App) CloseEditor() {
 	a.windowMutex.Lock()
 	defer a.windowMutex.Unlock()
 
-	if a.connectionWindow != nil {
-		a.connectionWindow.Show()
-		a.connectionWindow.Focus()
-	} else if err := a.createConnectionWindow(); err != nil {
-		logger.Error("Failed to open connection window", "error", err.Error())
-		return
-	}
+	a.showConnectionWindow()
 	if a.editorWindow != nil {
 		a.editorWindow.Close()
 		a.editorWindow = nil
@@ -267,16 +232,7 @@ func (a *App) CloseEditor() {
 func (a *App) OpenConnectionWindow() {
 	a.windowMutex.Lock()
 	defer a.windowMutex.Unlock()
-
-	if a.connectionWindow != nil {
-		a.connectionWindow.Show()
-		a.connectionWindow.Focus()
-		return
-	}
-
-	if err := a.createConnectionWindow(); err != nil {
-		logger.Error("Failed to open connection window", "error", err.Error())
-	}
+	a.showConnectionWindow()
 }
 
 // RestartForUpdate hands over to the staged update: the updater spawns its
@@ -297,46 +253,6 @@ func (a *App) RestartForUpdate() error {
 	return nil
 }
 
-func (a *App) createSettingsWindow(tab string) error {
-	url := "/#/settings"
-	if tab == "ai" {
-		url = "/#/settings?tab=ai"
-	}
-	window := a.instance.Window.NewWithOptions(application.WebviewWindowOptions{
-		Name:  constants.SETTINGS_WINDOW_NAME,
-		Title: "Settings",
-		URL:   url,
-		Mac: application.MacWindow{
-			InvisibleTitleBarHeight: 50,
-			Backdrop:                application.MacBackdropTranslucent,
-			TitleBar:                application.MacTitleBarHidden,
-		},
-		Windows: application.WindowsWindow{
-			DisableFramelessWindowDecorations: true,
-		},
-		BackgroundColour: application.NewRGB(27, 38, 54),
-		Width:            constants.SETTINGS_WINDOW_WIDTH,
-		Height:           constants.SETTINGS_WINDOW_HEIGHT,
-	})
-
-	if window == nil {
-		logger.Error("Failed to create settings window")
-		return fmt.Errorf("failed to create settings window")
-	}
-
-	a.settingsWindow = window
-	window.Center()
-	window.RegisterHook(events.Common.WindowClosing, func(e *application.WindowEvent) {
-		a.windowMutex.Lock()
-		if a.settingsWindow == window {
-			a.settingsWindow = nil
-		}
-		a.windowMutex.Unlock()
-	})
-
-	return nil
-}
-
 func (a *App) OpenSettingsWindow(tab string) {
 	a.windowMutex.Lock()
 	defer a.windowMutex.Unlock()
@@ -352,17 +268,32 @@ func (a *App) OpenSettingsWindow(tab string) {
 		return
 	}
 
-	if err := a.createSettingsWindow(tab); err != nil {
-		logger.Error("Failed to open settings window", "error", err.Error())
-		return
+	url := "/#/settings"
+	if tab == "ai" {
+		url = "/#/settings?tab=ai"
 	}
+	window := a.newWindow(application.WebviewWindowOptions{
+		Name:   constants.SETTINGS_WINDOW_NAME,
+		Title:  "Settings",
+		URL:    url,
+		Mac:    application.MacWindow{TitleBar: application.MacTitleBarHidden},
+		Width:  constants.SETTINGS_WINDOW_WIDTH,
+		Height: constants.SETTINGS_WINDOW_HEIGHT,
+	})
+	a.settingsWindow = window
+	window.RegisterHook(events.Common.WindowClosing, func(e *application.WindowEvent) {
+		a.windowMutex.Lock()
+		if a.settingsWindow == window {
+			a.settingsWindow = nil
+		}
+		a.windowMutex.Unlock()
+	})
 }
 
 func (a *App) Run() error {
-	if err := a.createConnectionWindow(); err != nil {
-		logger.Error("Failed to create connection window", "error", err.Error())
-		return err
-	}
+	a.windowMutex.Lock()
+	a.createConnectionWindow()
+	a.windowMutex.Unlock()
 	logger.Info("app_launch")
 
 	if enabled, err := update.Setup(a.instance, a.version); err != nil {
@@ -371,9 +302,5 @@ func (a *App) Run() error {
 		update.CheckInBackground(a.instance, 5*time.Second)
 	}
 
-	err := a.instance.Run()
-	if err != nil {
-		logger.Error("Application run failed", "error", err.Error())
-	}
-	return err
+	return a.instance.Run()
 }

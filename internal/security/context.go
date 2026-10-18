@@ -1,6 +1,7 @@
 package security
 
 import (
+	"bytes"
 	"fmt"
 	"sync"
 
@@ -20,13 +21,10 @@ var (
 	initError         error
 )
 
-// initializes the global security context once at application startup.
-// This should be called early in the application lifecycle.
+// InitSecurityContext derives the global security context. It must run at
+// startup, before anything encrypts or decrypts.
 func InitSecurityContext() error {
 	globalContextOnce.Do(func() {
-		ctx := &SecurityContext{}
-
-		// Get machine ID
 		id, err := deviceid.Get()
 		if err != nil {
 			initError = fmt.Errorf("failed to retrieve machine ID: %w. This may be due to insufficient permissions or unsupported platform", err)
@@ -37,17 +35,17 @@ func InitSecurityContext() error {
 			return
 		}
 
-		machineID := Sha256Hex(id)
-		ctx.encryptionKey = deriveEncryptionKey(machineID)
-		ctx.deviceID = anonymousDeviceID(machineID)
-
-		globalContext = ctx
+		machineID := sha256Hex(id)
+		globalContext = &SecurityContext{
+			encryptionKey: deriveEncryptionKey(machineID),
+			deviceID:      anonymousDeviceID(machineID),
+		}
 	})
 
 	return initError
 }
 
-// returns the global security context.
+// GetSecurityContext returns the context set up by InitSecurityContext.
 func GetSecurityContext() (*SecurityContext, error) {
 	if globalContext == nil {
 		return nil, fmt.Errorf("security context not initialized - call InitSecurityContext first")
@@ -60,11 +58,8 @@ func (c *SecurityContext) DeviceID() string {
 	return c.deviceID
 }
 
-// returns a copy of the encryption key.
-// The caller should call Wipe() on the returned slice when done.
+// GetEncryptionKey returns a copy of the encryption key, which the caller may
+// Wipe when done.
 func (c *SecurityContext) GetEncryptionKey() []byte {
-	// Return a copy to prevent accidental modification
-	keyCopy := make([]byte, len(c.encryptionKey))
-	copy(keyCopy, c.encryptionKey)
-	return keyCopy
+	return bytes.Clone(c.encryptionKey)
 }

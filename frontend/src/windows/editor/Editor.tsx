@@ -12,7 +12,7 @@ import { useEditorContext } from "@/context/editor/Index";
 import { getTabSql, setTabSql } from "@/context/editor/store";
 import { EditorFooter } from "./EditorFooter/EditorFooter";
 import { NavigationBar } from "@/shared/NavigationBar/NavigationBar";
-import { DataView } from "./DataView";
+import { DataView, type DataViewTab } from "./DataView";
 import { useState, useEffect, useRef } from "react";
 import { FileUp } from "lucide-react";
 import { useWriteFile } from "@/services/queries";
@@ -28,12 +28,12 @@ export const Editor = () => {
     resultCollapsed: false,
     dataViewOpen: false,
   });
-  const [dataViewTab, setDataViewTab] = useState<"data" | "ai">("data");
+  const [dataViewTab, setDataViewTab] = useState<DataViewTab>("data");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isScriptMode, setIsScriptMode] = useState(false);
   const sidebarRef = useRef<PanelImperativeHandle>(null);
-  const writeFile = useWriteFile();
+  const { mutate: writeFile } = useWriteFile();
 
   const { resultCollapsed, dataViewOpen } = viewPanels;
   const togglePanel = (panel: keyof ViewPanels) =>
@@ -56,14 +56,13 @@ export const Editor = () => {
     }
   };
 
-  // Handle Save Shortcut
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "s") {
         e.preventDefault();
         if (activeTab && activeTab.type === "query") {
           if (activeTab.savedPath) {
-            writeFile.mutate({
+            writeFile({
               path: activeTab.savedPath,
               content: getTabSql(activeTab.id),
             });
@@ -87,6 +86,8 @@ export const Editor = () => {
 
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
+    // Moving onto a child (such as the overlay) also fires dragleave here.
+    if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
     setIsDragging(false);
   };
 
@@ -114,7 +115,6 @@ export const Editor = () => {
 
   return (
     <div className="h-full w-full flex flex-col bg-card font-display">
-      {/* Navigation Bar - Fixed, not resizable */}
       <div className="shrink-0">
         <NavigationBar
           sidebarCollapsed={sidebarCollapsed}
@@ -124,14 +124,12 @@ export const Editor = () => {
           dataViewOpen={dataViewOpen}
           onToggleDataView={() => togglePanel("dataViewOpen")}
           isScriptMode={isScriptMode}
-          onToggleScriptMode={() => setIsScriptMode(!isScriptMode)}
+          onToggleScriptMode={() => setIsScriptMode((prev) => !prev)}
         />
       </div>
 
-      {/* Main Content Area */}
       <div className="flex-1 min-h-0">
         <ResizablePanelGroup direction="horizontal" className="h-full">
-          {/* Left Sidebar - Resizable */}
           <ResizablePanel
             id="sidebar"
             panelRef={sidebarRef}
@@ -146,7 +144,6 @@ export const Editor = () => {
 
           <ResizableHandle />
 
-          {/* Right Content Area - Resizable */}
           <ResizablePanel className="min-w-0" defaultSize={80}>
             {/* Always mounted so its blocks survive toggling the mode. */}
             <div className={isScriptMode ? "h-full" : "hidden"}>
@@ -159,7 +156,6 @@ export const Editor = () => {
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
               >
-                {/* Drag & Drop Overlay */}
                 {isDragging && (
                   <div className="absolute inset-0 z-50 bg-background/90 backdrop-blur-sm flex flex-col items-center justify-center border-2 border-dashed border-primary m-4 rounded-lg animate-in fade-in duration-200">
                     <div className="bg-primary/10 p-6 rounded-full mb-4">
@@ -174,15 +170,12 @@ export const Editor = () => {
                   </div>
                 )}
 
-                {/* Tab Bar - Fixed, not resizable */}
                 <div className="shrink-0 border-b border-border">
                   <TabBar />
                 </div>
 
-                {/* Content Area with DataView */}
                 <div className="flex-1 min-h-0">
                   <ResizablePanelGroup direction="horizontal" className="h-full">
-                    {/* Main Editor Area (QueryInput + QueryResult) */}
                     <ResizablePanel
                       className="min-w-0"
                       defaultSize={dataViewOpen ? 58 : 100}
@@ -191,7 +184,6 @@ export const Editor = () => {
                         direction="vertical"
                         className="h-full"
                       >
-                        {/* Query Input - Resizable when activeTab is query */}
                         {showQueryInput && (
                           <>
                             <ResizablePanel
@@ -205,7 +197,6 @@ export const Editor = () => {
                           </>
                         )}
 
-                        {/* Query Result - Resizable */}
                         {isResultPanelVisible && (
                           <ResizablePanel
                             defaultSize={showQueryInput ? 50 : 100}
@@ -218,7 +209,6 @@ export const Editor = () => {
                       </ResizablePanelGroup>
                     </ResizablePanel>
 
-                    {/* Data View - Resizable when open */}
                     {dataViewOpen && (
                       <>
                         <ResizableHandle />
@@ -238,7 +228,6 @@ export const Editor = () => {
                   </ResizablePanelGroup>
                 </div>
 
-                {/* Result Bar - Fixed, not resizable */}
                 <div className="shrink-0">
                   <ResultBar />
                 </div>
@@ -248,7 +237,6 @@ export const Editor = () => {
         </ResizablePanelGroup>
       </div>
 
-      {/* Footer - Fixed, not resizable */}
       <div className="shrink-0 border-t border-border">
         <EditorFooter
           onToggleAI={toggleAIChat}

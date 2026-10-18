@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 
 	"datacia/internal/constants"
@@ -13,17 +14,10 @@ import (
 	"golang.org/x/crypto/pbkdf2"
 )
 
-// Wipe zeros out sensitive data in memory to reduce exposure.
-// This is a best-effort security measure - the Go runtime may
-// move or copy memory, so this doesn't guarantee complete erasure.
+// Wipe zeroes sensitive data. It is best effort: the Go runtime may already
+// have copied it elsewhere in memory.
 func Wipe(data []byte) {
-	if data == nil {
-		return
-	}
-	// Zero out the slice
-	for i := range data {
-		data[i] = 0
-	}
+	clear(data)
 }
 
 // Encrypt encrypts plaintext using the provided master key and returns the ciphertext.
@@ -113,11 +107,16 @@ func DecryptString(ciphertext string) (string, error) {
 	return string(plaintext), nil
 }
 
+func sha256Hex(s string) string {
+	sum := sha256.Sum256([]byte(s))
+	return hex.EncodeToString(sum[:])
+}
+
 // anonymousDeviceID identifies a device in error reports. The machine ID is
 // the only secret input to deriveEncryptionKey (the salt is public), so it
 // must never leave the machine; this one-way hash of it can.
 func anonymousDeviceID(machineID string) string {
-	return Sha256Hex("datacia-device-id:" + machineID)
+	return sha256Hex("datacia-device-id:" + machineID)
 }
 
 // deriveEncryptionKey derives the 32-byte AES-256 key from the hashed machine

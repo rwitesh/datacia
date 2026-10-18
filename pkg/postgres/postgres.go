@@ -42,7 +42,6 @@ func cancelOnServer(conn *pgconn.PgConn) ctxwatch.Handler {
 }
 
 func (p *Postgres) Connect(config common.ConnectionConfig) error {
-	// Construct DSN with proper URL encoding for username, password, and database
 	u := &url.URL{
 		Scheme: "postgres",
 		User:   url.UserPassword(config.Username, config.Password),
@@ -70,11 +69,10 @@ func (p *Postgres) Connect(config common.ConnectionConfig) error {
 		poolConfig.ConnConfig.Fallbacks = nil
 	}
 
-	// Configure pool settings
 	poolConfig.MaxConns = 10
 	poolConfig.MinConns = 1
 	poolConfig.MaxConnLifetime = time.Hour
-	poolConfig.MaxConnIdleTime = time.Minute * 1
+	poolConfig.MaxConnIdleTime = time.Minute
 	poolConfig.ConnConfig.BuildContextWatcherHandler = cancelOnServer
 
 	pool, err := pgxpool.NewWithConfig(ctx, poolConfig)
@@ -107,7 +105,7 @@ func (p *Postgres) Close() error {
 	p.Mu.Lock()
 	pool, lock := p.pool, p.sessionLock
 	p.pool = nil
-	p.ClearAllStateUnsafe() // Calling unsafe method since it is already in lock
+	p.ClearAllStateUnsafe()
 	p.Mu.Unlock()
 
 	if pool == nil {
@@ -208,7 +206,7 @@ func (p *Postgres) RunQuery(queryID, queryType, sql string) (common.QueryResult,
 	case common.QueryTypeCommand:
 		return p.execute(ctx, conn.Conn(), sql)
 	case common.QueryTypeRead:
-		return p.query(ctx, conn.Conn(), sql, common.MaxEditorRows)
+		return p.query(ctx, conn, sql, common.MaxEditorRows)
 	default:
 		return common.QueryResult{Type: common.QueryTypeUnknown}, fmt.Errorf("unsupported query type: %s", queryType)
 	}
@@ -216,10 +214,7 @@ func (p *Postgres) RunQuery(queryID, queryType, sql string) (common.QueryResult,
 
 func (p *Postgres) execute(ctx context.Context, conn *pgx.Conn, sql string) (common.QueryResult, error) {
 	_, err := conn.Exec(ctx, sql)
-	if err != nil {
-		return common.QueryResult{Type: common.QueryTypeCommand}, err
-	}
-	return common.QueryResult{Type: common.QueryTypeCommand}, nil
+	return common.QueryResult{Type: common.QueryTypeCommand}, err
 }
 
 // ReadOnlyQuery runs sql in a read-only transaction.
@@ -255,8 +250,13 @@ func (p *Postgres) ReadOnlyQuery(ctx context.Context, sql string, maxRows int) (
 	return scanRows(ctx, rows, maxRows)
 }
 
-func (p *Postgres) query(ctx context.Context, conn *pgx.Conn, sql string, maxRows int) (common.QueryResult, error) {
-	rows, err := conn.Query(ctx, sql)
+// querier is the pool or the session connection.
+type querier interface {
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+}
+
+func (p *Postgres) query(ctx context.Context, db querier, sql string, maxRows int, args ...any) (common.QueryResult, error) {
+	rows, err := db.Query(ctx, sql, args...)
 	if err != nil {
 		return common.QueryResult{Type: common.QueryTypeRead}, err
 	}
@@ -317,14 +317,7 @@ func (p *Postgres) ListDatabases() (common.DatabaseInfo, error) {
 	ctx, cancel := common.NewTimeoutContext(common.META_TIMEOUT)
 	defer cancel()
 
-	// Acquire a connection from the pool
-	conn, err := pool.Acquire(ctx)
-	if err != nil {
-		return common.DatabaseInfo{}, fmt.Errorf("failed to acquire connection: %w", err)
-	}
-	defer conn.Release()
-
-	rows, err := conn.Query(ctx, "SELECT datname FROM pg_database WHERE datistemplate = false")
+	rows, err := pool.Query(ctx, "SELECT datname FROM pg_database WHERE datistemplate = false")
 	if err != nil {
 		return common.DatabaseInfo{}, fmt.Errorf("failed to list databases: %w", err)
 	}
@@ -361,14 +354,7 @@ func (p *Postgres) ListTables() ([]string, error) {
 	ctx, cancel := common.NewTimeoutContext(common.META_TIMEOUT)
 	defer cancel()
 
-	// Acquire a connection from the pool
-	conn, err := pool.Acquire(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to acquire connection: %w", err)
-	}
-	defer conn.Release()
-
-	rows, err := conn.Query(ctx, "SELECT tablename FROM pg_tables WHERE schemaname = 'public'")
+	rows, err := pool.Query(ctx, "SELECT tablename FROM pg_tables WHERE schemaname = 'public'")
 	if err != nil {
 		return nil, fmt.Errorf("failed to list tables: %w", err)
 	}
@@ -420,18 +406,11 @@ func (p *Postgres) GetTableData(table string, limit, offset int, orderBy, orderD
 	ctx, cancel := common.NewTimeoutContext(common.QUERY_TIMEOUT)
 	defer cancel()
 
-	// Acquire a connection from the pool
-	conn, err := pool.Acquire(ctx)
-	if err != nil {
-		return common.QueryResult{}, fmt.Errorf("failed to acquire connection: %w", err)
-	}
-	defer conn.Release()
-
 	sql, err := common.TableDataSQL(table, orderBy, orderDir, limit, offset, common.QuoteDoubleQuote)
 	if err != nil {
 		return common.QueryResult{}, err
 	}
-	return p.query(ctx, conn.Conn(), sql, 0)
+	return p.query(ctx, pool, sql, 0)
 }
 
 func (p *Postgres) GetTableSchema(table string) (common.QueryResult, error) {
@@ -446,28 +425,12 @@ func (p *Postgres) GetTableSchema(table string) (common.QueryResult, error) {
 	ctx, cancel := common.NewTimeoutContext(common.META_TIMEOUT)
 	defer cancel()
 
-	// Acquire a connection from the pool
-	conn, err := pool.Acquire(ctx)
-	if err != nil {
-		return common.QueryResult{}, fmt.Errorf("failed to acquire connection: %w", err)
-	}
-	defer conn.Release()
-
-	// Query information_schema.columns for table schema
-	sql := `
-		SELECT 
-			*
+	return p.query(ctx, pool, `
+		SELECT *
 		FROM information_schema.columns
 		WHERE table_schema = 'public' AND table_name = $1
 		ORDER BY ordinal_position
-	`
-
-	rows, err := conn.Conn().Query(ctx, sql, table)
-	if err != nil {
-		return common.QueryResult{Type: common.QueryTypeRead}, err
-	}
-	defer rows.Close()
-	return scanRows(ctx, rows, 0)
+	`, 0, table)
 }
 
 func (p *Postgres) GetDDL(table string) (string, error) {
@@ -482,14 +445,8 @@ func (p *Postgres) GetDDL(table string) (string, error) {
 	ctx, cancel := common.NewTimeoutContext(common.META_TIMEOUT)
 	defer cancel()
 
-	conn, err := pool.Acquire(ctx)
-	if err != nil {
-		return "", fmt.Errorf("failed to acquire connection: %w", err)
-	}
-	defer conn.Release()
-
-	// Use pg_get_tabledef function or construct DDL manually
-	// Since pg_get_tabledef is not standard, we'll use a query that constructs the DDL
+	// Postgres has no function that returns a table's DDL, so this rebuilds
+	// the column list only (no keys, defaults or indexes).
 	sql := `
 		SELECT 
 			'CREATE TABLE ' || quote_ident(c.table_name) || ' (' || 
@@ -508,10 +465,6 @@ func (p *Postgres) GetDDL(table string) (string, error) {
 	`
 
 	var ddl string
-	err = conn.Conn().QueryRow(ctx, sql, table).Scan(&ddl)
-	if err != nil {
-		return "", err
-	}
-
-	return ddl, nil
+	err := pool.QueryRow(ctx, sql, table).Scan(&ddl)
+	return ddl, err
 }

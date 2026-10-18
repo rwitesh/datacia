@@ -90,12 +90,7 @@ export function useGetTableSchema() {
 export function useGetDDL(table: string | undefined, enabled: boolean) {
   return useQuery({
     queryKey: queryKeys.tableDdl(table),
-    queryFn: () => {
-      if (!table?.trim()) {
-        throw new Error("Table name cannot be empty");
-      }
-      return GetDDL(table);
-    },
+    queryFn: () => GetDDL(table ?? ""),
     enabled: enabled && !!table?.trim(),
     retry: false,
     staleTime: 5 * 60 * 1000,

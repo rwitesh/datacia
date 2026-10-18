@@ -26,7 +26,8 @@ export function ChangeDatabaseByName(database: string): $CancellablePromise<void
 }
 
 /**
- * checks the health of the current database connection by pinging the database and measuring latency
+ * CheckConnectionHealth pings the active connection and returns the round
+ * trip in milliseconds.
  */
 export function CheckConnectionHealth(): $CancellablePromise<number | null> {
     return $Call.ByID(1737579716);
@@ -160,16 +161,14 @@ export function SaveConnection(config: common$0.ConnectionConfig): $CancellableP
 }
 
 /**
- * SelectSQLiteFile opens a file dialog to select a SQLite database file
- * Returns the selected file path, or an error if cancelled or failed
+ * SelectSQLiteFile asks for a SQLite database file and returns its path, or "" if cancelled.
  */
 export function SelectSQLiteFile(): $CancellablePromise<string> {
     return $Call.ByID(195308604);
 }
 
 /**
- * SelectSSHKeyFile opens a file dialog to select an SSH private key file
- * Returns the selected file path, or an error if cancelled or failed
+ * SelectSSHKeyFile asks for an SSH private key and returns its path, or "" if cancelled.
  */
 export function SelectSSHKeyFile(): $CancellablePromise<string> {
     return $Call.ByID(2756786305);

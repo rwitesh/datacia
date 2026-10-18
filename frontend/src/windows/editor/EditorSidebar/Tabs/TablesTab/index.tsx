@@ -10,7 +10,6 @@ import { useGetTableSchema } from "@/services/database";
 import { errorMessage } from "@/lib/utils";
 
 export function TablesTab() {
-
     const {
         tables: { data, isLoading, error },
         createTab,
@@ -46,15 +45,9 @@ export function TablesTab() {
 
     const handleOpenTableSchema = async (table: string) => {
         const existingTab = tabs.find((t) => t.type === "table" && t.table === table);
-        const tab = existingTab || createTab(table, "table");
-
-        if (existingTab) {
-            setActiveTab(existingTab.id);
-        }
-
-        if (!tab.table) {
-            return;
-        }
+        const tab = existingTab ?? createTab(table, "table");
+        if (existingTab) setActiveTab(existingTab.id);
+        if (!tab.table) return;
 
         updateTab(tab.id, {
             isExecuting: true,
@@ -75,8 +68,7 @@ export function TablesTab() {
         }
     };
 
-    // Only show loading spinner on initial load, not during background refetch
-    // This way users see the current list while fresh data loads
+    // Background refetches keep showing the current list.
     const showLoading = isLoading && data.length === 0;
 
     return (

@@ -13,14 +13,8 @@ import type { FormValues } from "./utils/types";
 export const DatabaseConnection: React.FC = () => {
   const { connectionId, engineParam } = useConnectionParams();
 
-  const {
-    data: fetchedData,
-    isLoading: isFetchingConnection,
-    isFetching,
-    isError,
-  } = useFetchConnectionById(connectionId);
+  const { data: fetchedData, isFetching: loading, isError } = useFetchConnectionById(connectionId);
 
-  // Determine the actual engine to use: prioritize backend, fallback to URL param
   const resolvedEngine =
     connectionId && fetchedData?.engine && isValidEngine(fetchedData.engine)
       ? fetchedData.engine
@@ -49,17 +43,9 @@ export const DatabaseConnection: React.FC = () => {
     fetchedData,
   });
 
-  const loading = isFetchingConnection || isFetching;
-  const isUpdate = Boolean(connectionId);
-
-  // Process form errors for display
   const formErrorEntries = Object.entries(form.formState.errors).filter(
     ([, v]) => v !== undefined
   ) as [keyof FormValues, FieldError][];
-  const hasFormErrors = formErrorEntries.length > 0;
-
-  // Get display name for alert title
-  const displayName = currentConnectionName || "New Connection";
 
   return (
     <div className="h-full flex flex-col">
@@ -76,11 +62,10 @@ export const DatabaseConnection: React.FC = () => {
         <div className="mb-3 flex-shrink-0" aria-live="polite" role="status">
           <div className="min-h-24">
             <ConnectionAlert
-              hasFormErrors={hasFormErrors}
               formErrorEntries={formErrorEntries}
               isError={isError}
               status={status}
-              displayName={displayName}
+              displayName={currentConnectionName || "New Connection"}
               onDismissStatus={() => setStatus(null)}
             />
           </div>
@@ -100,13 +85,13 @@ export const DatabaseConnection: React.FC = () => {
 
         <div className="flex-shrink-0 mt-3">
           <ConnectionActions
-            isUpdate={isUpdate}
+            isUpdate={Boolean(connectionId)}
             loading={loading}
             onSave={handleSave}
             onTest={handleTest}
-            saveMutation={saveMutation}
-            testMutation={testMutation}
-            connectMutation={connectMutation}
+            isSaving={saveMutation.isPending}
+            isTesting={testMutation.isPending}
+            isConnecting={connectMutation.isPending}
           />
         </div>
       </form>
