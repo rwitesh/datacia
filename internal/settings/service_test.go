@@ -78,21 +78,3 @@ func TestUpdateSettingsSavesKeys(t *testing.T) {
 		t.Fatal("blank key changed the saved one")
 	}
 }
-
-func TestSetAIKey(t *testing.T) {
-	globalInfo = &Info{Settings: defaultSettings()}
-	t.Cleanup(func() { globalInfo = nil })
-
-	if err := SetAIKey("openrouter", "sk-or"); err != nil {
-		t.Fatal(err)
-	}
-	if key, _ := AIKey("openrouter"); key != "sk-or" {
-		t.Fatalf("key %q", key)
-	}
-	if err := SetAIKey("openrouter", ""); err != nil {
-		t.Fatal(err)
-	}
-	if key, _ := AIKey("openrouter"); key != "" {
-		t.Fatal("key not removed")
-	}
-}

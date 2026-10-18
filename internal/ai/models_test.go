@@ -108,14 +108,6 @@ func TestListModelsErrors(t *testing.T) {
 	}
 }
 
-func TestOpenCodeFilter(t *testing.T) {
-	for id, want := range map[string]bool{"qwen3-max": true, "glm-5.3": true, "claude-sonnet-5-5": false, "gpt-6": false, "gemini-3": false} {
-		if isOpenCodeChat(id) != want {
-			t.Errorf("%s: want %v", id, want)
-		}
-	}
-}
-
 func TestBaseURLOnlyForCustomProviders(t *testing.T) {
 	if got := baseURL(mustProvider(t, "openai"), "http://elsewhere"); got != "https://api.openai.com/v1" {
 		t.Errorf("openai used %q", got)

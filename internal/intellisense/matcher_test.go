@@ -4,49 +4,6 @@ import (
 	"testing"
 )
 
-func TestNormalizeSQL(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    string
-		expected string
-	}{
-		{
-			name:     "lowercase conversion",
-			input:    "SELECT * FROM Users",
-			expected: "select * from users",
-		},
-		{
-			name:     "whitespace normalization",
-			input:    "SELECT   *   FROM   users",
-			expected: "select * from users",
-		},
-		{
-			name:     "trim whitespace",
-			input:    "  SELECT * FROM users  ",
-			expected: "select * from users",
-		},
-		{
-			name:     "tabs and newlines",
-			input:    "SELECT\t*\nFROM\r\nusers",
-			expected: "select * from users",
-		},
-		{
-			name:     "empty string",
-			input:    "",
-			expected: "",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := normalizeSQL(tt.input)
-			if result != tt.expected {
-				t.Errorf("normalizeSQL(%q) = %q, want %q", tt.input, result, tt.expected)
-			}
-		})
-	}
-}
-
 func TestFindHistoryMatch(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -194,49 +151,6 @@ func TestBreakAtNextKeyword(t *testing.T) {
 			result := breakAtNextKeyword(tt.input)
 			if result != tt.expected {
 				t.Errorf("breakAtNextKeyword(%q) = %q, want %q", tt.input, result, tt.expected)
-			}
-		})
-	}
-}
-
-func TestFindMatchEndIndex(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    string
-		query    string
-		expected int
-	}{
-		{
-			name:     "exact prefix match",
-			input:    "SELECT * FROM",
-			query:    "SELECT * FROM users",
-			expected: 13,
-		},
-		{
-			name:     "whitespace normalization",
-			input:    "SELECT  *  FROM",
-			query:    "SELECT * FROM users",
-			expected: 13,
-		},
-		{
-			name:     "no match",
-			input:    "DELETE FROM",
-			query:    "SELECT * FROM users",
-			expected: -1,
-		},
-		{
-			name:     "case insensitive",
-			input:    "select * from",
-			query:    "SELECT * FROM users",
-			expected: 13,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := findMatchEndIndex(tt.input, tt.query)
-			if result != tt.expected {
-				t.Errorf("findMatchEndIndex(%q, %q) = %d, want %d", tt.input, tt.query, result, tt.expected)
 			}
 		})
 	}

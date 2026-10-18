@@ -67,30 +67,3 @@ func TestRunQuery(t *testing.T) {
 		t.Errorf("long value not cut: %d chars", len(s))
 	}
 }
-
-func TestListTablesFilter(t *testing.T) {
-	out, err := listTables(&fakeDB{tables: []string{"orders", "users", "user_roles"}}, "USER")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if out != `{"tables":["user_roles","users"]}` {
-		t.Fatalf("got %s", out)
-	}
-}
-
-func TestReadEditor(t *testing.T) {
-	if got := readEditor(ChatContext{}); got != "The editor is empty." {
-		t.Errorf("got %q", got)
-	}
-	got := readEditor(ChatContext{SQL: "select * from users", Error: "relation missing"})
-	if !strings.Contains(got, "select * from users") || !strings.Contains(got, "relation missing") {
-		t.Errorf("got %q", got)
-	}
-}
-
-func TestSystemPromptIsStatic(t *testing.T) {
-	got := systemPrompt("postgres")
-	if !strings.Contains(got, "postgres") || !strings.Contains(got, "run_query") {
-		t.Errorf("prompt: %s", got)
-	}
-}

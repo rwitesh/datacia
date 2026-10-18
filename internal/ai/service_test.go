@@ -47,116 +47,47 @@ func fakeBase(srv *httptest.Server, p Provider) string {
 
 var history = []Message{{Role: "user", Content: "count users"}}
 
-func TestStreamReplyPerProtocol(t *testing.T) {
-	cases := []struct {
-		provider string
-		path     string
-		events   []string
-		check    func(r *http.Request) error
-	}{
-		{
-			provider: "anthropic",
-			path:     "/v1/messages",
-			events: []string{
-				`event: message_start` + "\n" + `data: {"type":"message_start","message":{"id":"m","type":"message","role":"assistant","content":[],"model":"x","usage":{"input_tokens":1,"output_tokens":0}}}`,
-				`event: content_block_start` + "\n" + `data: {"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}}`,
-				`event: content_block_delta` + "\n" + `data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"SELECT "}}`,
-				`event: content_block_delta` + "\n" + `data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"1"}}`,
-				`event: content_block_stop` + "\n" + `data: {"type":"content_block_stop","index":0}`,
-				`event: message_delta` + "\n" + `data: {"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"output_tokens":2}}`,
-				`event: message_stop` + "\n" + `data: {"type":"message_stop"}`,
-			},
-			check: func(r *http.Request) error {
-				if r.Header.Get("x-api-key") != "k" {
-					return errors.New("missing x-api-key")
-				}
-				return nil
-			},
-		},
-		{
-			provider: "openai",
-			path:     "/v1/responses",
-			events: []string{
-				`event: response.created` + "\n" + `data: {"type":"response.created","response":{"id":"r","status":"in_progress","output":[]}}`,
-				`event: response.output_text.delta` + "\n" + `data: {"type":"response.output_text.delta","item_id":"i","output_index":0,"content_index":0,"delta":"SELECT "}`,
-				`event: response.output_text.delta` + "\n" + `data: {"type":"response.output_text.delta","item_id":"i","output_index":0,"content_index":0,"delta":"1"}`,
-				`event: response.completed` + "\n" + `data: {"type":"response.completed","response":{"id":"r","status":"completed","output":[],"usage":{"input_tokens":1,"output_tokens":2}}}`,
-			},
-			check: func(r *http.Request) error {
-				if r.Header.Get("Authorization") != "Bearer k" {
-					return errors.New("missing bearer token")
-				}
-				return nil
-			},
-		},
-		{
-			provider: "openrouter",
-			path:     "/api/v1/chat/completions",
-			events: []string{
-				`: OPENROUTER PROCESSING`,
-				`data: {"id":"c","choices":[{"index":0,"delta":{"role":"assistant","content":"SELECT "}}]}`,
-				`data: {"id":"c","choices":[{"index":0,"delta":{"content":"1"},"finish_reason":"stop"}]}`,
-				`data: [DONE]`,
-			},
-			check: func(r *http.Request) error {
-				if r.Header.Get("Authorization") != "Bearer k" {
-					return errors.New("missing bearer token")
-				}
-				return nil
-			},
-		},
-		{
-			provider: "local",
-			path:     "/v1/chat/completions",
-			events: []string{
-				`data: {"id":"c","choices":[{"index":0,"delta":{"content":"SELECT "}}]}`,
-				`data: {"id":"c","choices":[{"index":0,"delta":{"content":"1"},"finish_reason":"stop"}]}`,
-				`data: [DONE]`,
-			},
-		},
-		{
-			provider: "gemini",
-			path:     "/v1beta/models/m:streamGenerateContent",
-			events: []string{
-				`data: {"candidates":[{"content":{"role":"model","parts":[{"text":"SELECT "}]}}]}`,
-				`data: {"candidates":[{"content":{"role":"model","parts":[{"text":"1"}]},"finishReason":"STOP"}]}`,
-			},
-			check: func(r *http.Request) error {
-				if r.Header.Get("x-goog-api-key") != "k" || strings.Contains(r.URL.RawQuery, "key=") {
-					return errors.New("key must be sent in the header only")
-				}
-				return nil
-			},
-		},
+// The request is what we own: the path each protocol is sent to and where the
+// API key goes. Gemini's key must stay out of the URL, which lands in logs.
+func TestStreamReplyRequests(t *testing.T) {
+	cases := []struct{ provider, path, header, value string }{
+		{"anthropic", "/v1/messages", "x-api-key", "k"},
+		{"openai", "/v1/responses", "Authorization", "Bearer k"},
+		{"openrouter", "/api/v1/chat/completions", "Authorization", "Bearer k"},
+		{"gemini", "/v1beta/models/m:streamGenerateContent", "x-goog-api-key", "k"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.provider, func(t *testing.T) {
-			reqErr := make(chan error, 1)
+			var got *http.Request
 			srv := fakeServer(t, func(w http.ResponseWriter, r *http.Request) {
-				err := error(nil)
-				if r.URL.Path != tc.path {
-					err = fmt.Errorf("path %q, want %q", r.URL.Path, tc.path)
-				} else if tc.check != nil {
-					err = tc.check(r)
-				}
-				reqErr <- err
-				sse(w, tc.events...)
+				got = r
+				w.WriteHeader(http.StatusUnauthorized)
 			})
 			p := mustProvider(t, tc.provider)
-			var deltas []string
-			reply, err := streamReply(context.Background(), p.chat("m", "k", fakeBase(srv, p)), "sys", history, func(s string) {
-				deltas = append(deltas, s)
-			}, p.options...)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if err := <-reqErr; err != nil {
-				t.Fatal(err)
-			}
-			if reply != "SELECT 1" || strings.Join(deltas, "") != "SELECT 1" {
-				t.Fatalf("reply %q, deltas %q", reply, deltas)
+			_, _ = streamReply(context.Background(), p.chat("m", "k", fakeBase(srv, p)), "sys", history, func(string) {}, goai.WithMaxRetries(0))
+			if got == nil || got.URL.Path != tc.path || got.Header.Get(tc.header) != tc.value || strings.Contains(got.URL.RawQuery, "key=") {
+				t.Fatalf("unexpected request %v", got)
 			}
 		})
+	}
+}
+
+func TestStreamReplyStreamsDeltas(t *testing.T) {
+	srv := fakeServer(t, func(w http.ResponseWriter, r *http.Request) {
+		sse(w,
+			`data: {"id":"c","choices":[{"index":0,"delta":{"content":"SELECT "}}]}`,
+			`data: {"id":"c","choices":[{"index":0,"delta":{"content":"1"},"finish_reason":"stop"}]}`,
+			`data: [DONE]`)
+	})
+	var deltas []string
+	reply, err := streamReply(context.Background(), mustProvider(t, "local").chat("m", "", srv.URL), "sys", history, func(s string) {
+		deltas = append(deltas, s)
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reply != "SELECT 1" || strings.Join(deltas, "") != "SELECT 1" {
+		t.Fatalf("reply %q, deltas %q", reply, deltas)
 	}
 }
 

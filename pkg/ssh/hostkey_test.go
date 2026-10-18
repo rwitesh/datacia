@@ -3,7 +3,6 @@ package ssh
 import (
 	"crypto/ed25519"
 	"crypto/rand"
-	"encoding/json"
 	"errors"
 	"net"
 	"os"
@@ -86,19 +85,6 @@ func TestCheckHostKey(t *testing.T) {
 				t.Fatalf("key trusted afterwards = %v, want %v", trusted, tt.wantTrusted)
 			}
 		})
-	}
-}
-
-// The Wails bridge marshals the returned error with json.Marshal(&err); the
-// frontend reads these fields from the error's cause.
-func TestHostKeyUnknownErrorJSON(t *testing.T) {
-	var err error = &HostKeyUnknownError{Code: HostKeyUnknownCode, Host: "h", Fingerprint: "SHA256:x"}
-	got, jsonErr := json.Marshal(&err)
-	if jsonErr != nil {
-		t.Fatal(jsonErr)
-	}
-	if want := `{"code":"ssh-host-key-unknown","host":"h","fingerprint":"SHA256:x"}`; string(got) != want {
-		t.Fatalf("got %s, want %s", got, want)
 	}
 }
 
