@@ -26,8 +26,15 @@ func New() *ClickHouse {
 }
 
 func (ch *ClickHouse) Connect(config common.ConnectionConfig) error {
+	tlsSettings, err := config.TLSSettings()
+	if err != nil {
+		return err
+	}
+	// The native protocol can't negotiate, so TLS is on only when asked for
+	// (and the port must be the server's secure one, 9440 by default).
 	connection, err := clickhouse.Open(&clickhouse.Options{
 		Addr: []string{net.JoinHostPort(config.Host, config.Port)},
+		TLS:  tlsSettings.Config,
 		Auth: clickhouse.Auth{
 			Database: config.Database,
 			Username: config.Username,
@@ -61,6 +68,7 @@ func (ch *ClickHouse) Connect(config common.ConnectionConfig) error {
 	ch.Port = config.Port
 	ch.Username = config.Username
 	ch.Database = config.Database
+	ch.SetSSL(config)
 	ch.Password = common.NewSecureString(config.Password)
 	ch.Mu.Unlock()
 	return nil

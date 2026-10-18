@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Copy, Check } from "lucide-react";
-import { useEditorContext } from "@/context/editor/Index";
+import { useSelectedRows } from "@/context/editor/store";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { AIChat } from "./ai";
 import { DataTabContent } from "./data";
@@ -14,9 +14,7 @@ export interface DataViewProps {
 
 export function DataView({ activeTab: activeTabValue, onTabChange }: DataViewProps) {
   const [copied, setCopied] = useState(false);
-  const { readSelection } = useEditorContext();
-
-  const selectedData = useMemo(() => readSelection?.().rows ?? [], [readSelection]);
+  const selectedData = useSelectedRows();
 
   const lines = useMemo(() => {
     if (selectedData.length === 0) return [];

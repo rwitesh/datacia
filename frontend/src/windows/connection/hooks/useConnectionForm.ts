@@ -10,7 +10,7 @@ import {
   SelectSQLiteFile,
 } from "@/services/bindings/connection";
 import type { ConnectionConfig } from "@/services/bindings";
-import { DEFAULT_PORTS } from "../utils/constants";
+import { DEFAULT_PORTS, DEFAULT_SSL_MODE } from "../utils/constants";
 import { toConnectionConfig } from "../utils/config";
 import type { DatabaseEngine } from "@/shared/utils/engines";
 import type { FormValues, Status } from "../utils/types";
@@ -31,6 +31,8 @@ const emptyFormValues = (engine: DatabaseEngine): FormValues => ({
   username: "",
   password: "",
   database: "",
+  sslMode: DEFAULT_SSL_MODE,
+  sslCaPath: "",
   useSSH: false,
   sshHost: "",
   sshPort: "",
@@ -100,6 +102,8 @@ export const useConnectionForm = ({
         username: fetchedData.username || "",
         password: fetchedData.password || "",
         database: fetchedData.database || "",
+        sslMode: fetchedData.sslMode || DEFAULT_SSL_MODE,
+        sslCaPath: fetchedData.sslCaPath,
         useSSH: fetchedData.ssh.enabled,
         sshHost: fetchedData.ssh.host,
         sshPort: fetchedData.ssh.port,

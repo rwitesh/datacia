@@ -157,6 +157,7 @@ func (e *Engine) connect(config common.ConnectionConfig, test bool) error {
 			}
 			return fmt.Errorf("failed to establish SSH tunnel: %w", err)
 		}
+		config.TLSServerName = config.Host
 		config.Host = "127.0.0.1"
 		if _, config.Port, err = net.SplitHostPort(tunnel.LocalAddr()); err != nil {
 			tunnel.Close()
@@ -180,21 +181,6 @@ func (e *Engine) connect(config common.ConnectionConfig, test bool) error {
 	return nil
 }
 
-// connectErrorKind describes a connect error for logs without its text, which
-// driver errors fill with the host, user and database.
-func connectErrorKind(err error) string {
-	var netErr net.Error
-	switch {
-	case errors.Is(err, context.Canceled):
-		return "canceled"
-	case errors.Is(err, context.DeadlineExceeded):
-		return "timeout"
-	case errors.As(err, &netErr):
-		return "network"
-	}
-	return "other"
-}
-
 func connectClient(config common.ConnectionConfig) (DatabaseClient, error) {
 	dbClient, err := getDBClient(config.Engine)
 	if err != nil {
@@ -202,7 +188,8 @@ func connectClient(config common.ConnectionConfig) (DatabaseClient, error) {
 		return nil, err
 	}
 	if err := dbClient.Connect(config); err != nil {
-		logger.Warn("db_connection_failed", "engine", config.Engine, "kind", connectErrorKind(err))
+		// Driver errors embed the host, user and database, so they stay out of the log.
+		logger.Warn("db_connection_failed", "engine", config.Engine)
 		return nil, err
 	}
 	logger.Info("db_connection_success", "engine", config.Engine)
@@ -312,13 +299,17 @@ func (e *Engine) ChangeDatabaseByName(database string) error {
 		return nil
 	}
 	// GetConnectionInfo doesn't expose the password, so take it from the client.
+	sslMode, sslCAPath, serverName := current.GetSSL()
 	dbClient, err := connectClient(common.ConnectionConfig{
-		Engine:   connInfo["engine"],
-		Host:     connInfo["host"],
-		Port:     connInfo["port"],
-		Username: connInfo["username"],
-		Password: current.GetPassword(),
-		Database: database,
+		Engine:        connInfo["engine"],
+		Host:          connInfo["host"],
+		Port:          connInfo["port"],
+		Username:      connInfo["username"],
+		Password:      current.GetPassword(),
+		Database:      database,
+		SSLMode:       sslMode,
+		SSLCAPath:     sslCAPath,
+		TLSServerName: serverName,
 	})
 	if err != nil {
 		return err

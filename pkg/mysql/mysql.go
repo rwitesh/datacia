@@ -52,6 +52,15 @@ func (m *MySQL) Connect(config common.ConnectionConfig) error {
 	cfg.Addr = net.JoinHostPort(config.Host, config.Port)
 	cfg.DBName = config.Database
 	cfg.ParseTime = true
+	tlsSettings, err := config.TLSSettings()
+	if err != nil {
+		return err
+	}
+	// Automatic keeps the driver's default, plaintext: "preferred" would make
+	// servers with a broken TLS stack, which worked before, fail to connect.
+	if tlsSettings.Config != nil {
+		cfg.TLS = tlsSettings.Config
+	}
 	connector, err := mysql.NewConnector(cfg)
 	if err != nil {
 		return err
@@ -82,6 +91,7 @@ func (m *MySQL) Connect(config common.ConnectionConfig) error {
 	m.Port = config.Port
 	m.Username = config.Username
 	m.Database = config.Database
+	m.SetSSL(config)
 	m.Password = common.NewSecureString(config.Password)
 	m.Mu.Unlock()
 	return nil
@@ -310,34 +320,26 @@ func scanRows(ctx context.Context, rows *sql.Rows, maxRows int) (common.QueryRes
 		valuePtrs[i] = &values[i]
 	}
 
-	for (maxRows == 0 || len(data) < maxRows) && rows.Next() {
-		select {
-		case <-ctx.Done():
-			return common.QueryResult{Type: common.QueryTypeRead}, ctx.Err()
-		default:
-		}
-
+	truncated, err := common.ScanCapped(ctx, rows, maxRows, func() error {
 		if err := rows.Scan(valuePtrs...); err != nil {
-			return common.QueryResult{Type: common.QueryTypeRead}, err
+			return err
 		}
 
 		row := make(map[string]interface{})
 		for i, col := range columns {
-			val := values[i]
-
-			// Handle []byte to string conversion for text/varchar columns if needed
-			// MySQL driver returns []byte for text fields usually
-			if b, ok := val.([]byte); ok {
+			// The MySQL driver returns []byte for text columns.
+			if b, ok := values[i].([]byte); ok {
 				row[col] = string(b)
 			} else {
-				row[col] = val
+				row[col] = values[i]
 			}
 		}
 		data = append(data, row)
+		return nil
+	})
+	if err != nil {
+		return common.QueryResult{Type: common.QueryTypeRead}, err
 	}
-
-	// Peek one row past the cap so a result of exactly maxRows isn't flagged.
-	truncated := maxRows > 0 && len(data) == maxRows && rows.Next()
 
 	if err := rows.Err(); err != nil {
 		return common.QueryResult{Type: common.QueryTypeRead}, err

@@ -11,7 +11,8 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useTheme } from "@/components/theme";
 import { useExportActions } from "@/services/useExportActions";
 import type { DataRow } from "./types";
-import type { CellSelection, SelectedData } from "@/context/editor/Context";
+import type { CellSelection } from "@/context/editor/Context";
+import { setSelectionReader } from "@/context/editor/store";
 import { getSelectedData, getSelectionBounds } from "./utils/cellSelection";
 import { fillContainer, FONT_SIZE, HEADER_HEIGHT, measureColumnWidths, MIN_COLUMN_WIDTH, ROW_HEIGHT } from "./utils/layout";
 import { useTableDimensions } from "./hooks/useTableDimensions";
@@ -27,7 +28,6 @@ interface DataTableProps {
   columns: string[];
   data: DataRow[];
   // A reader of the selected rows, in the order shown; null once unmounted.
-  onSelectedDataChange: (read: (() => SelectedData) | null) => void;
   // Called on unmount with where the selection is, to restore it on remount.
   // sorted: made under a client sort, whose order the grid loses on remount.
   onSelectionSave: (selection: CellSelection | null, sorted: boolean) => void;
@@ -49,7 +49,6 @@ export function DataTable({
   ref,
   columns,
   data,
-  onSelectedDataChange,
   onSelectionSave,
   onServerSort,
   currentOrderBy,
@@ -172,12 +171,12 @@ export function DataTable({
     () => getSelectedData(selection, columns, viewRows),
     [selection, columns, viewRows]
   );
-  // Not while dragging: every cell the pointer crosses would re-render the
-  // editor context's consumers.
+  // Not while dragging: every cell the pointer crosses would rebuild the
+  // selected rows shown in the data view.
   useEffect(() => {
-    if (!isDragging) onSelectedDataChange(getSelected);
-  }, [isDragging, onSelectedDataChange, getSelected]);
-  useEffect(() => () => onSelectedDataChange(null), [onSelectedDataChange]);
+    if (!isDragging) setSelectionReader(getSelected);
+  }, [isDragging, getSelected]);
+  useEffect(() => () => setSelectionReader(null), []);
 
   const hasClientSort = clientSorting.length > 0;
   const lastSelectionRef = useRef({ selection, sorted: hasClientSort });

@@ -58,6 +58,17 @@ func (p *Postgres) Connect(config common.ConnectionConfig) error {
 	if err != nil {
 		return err
 	}
+	tlsSettings, err := config.TLSSettings()
+	if err != nil {
+		return err
+	}
+	// Without an sslmode pgx tries TLS and then falls back to plaintext, which
+	// is Automatic. Every other mode replaces that, and drops the plaintext
+	// fallback that would defeat it.
+	if tlsSettings.Mode != common.SSLModeAutomatic {
+		poolConfig.ConnConfig.TLSConfig = tlsSettings.Config
+		poolConfig.ConnConfig.Fallbacks = nil
+	}
 
 	// Configure pool settings
 	poolConfig.MaxConns = 10
@@ -86,6 +97,7 @@ func (p *Postgres) Connect(config common.ConnectionConfig) error {
 	p.Port = config.Port
 	p.Username = config.Username
 	p.Database = config.Database
+	p.SetSSL(config)
 	p.Password = common.NewSecureString(config.Password)
 	p.Mu.Unlock()
 	return nil
@@ -261,16 +273,10 @@ func scanRows(ctx context.Context, rows pgx.Rows, maxRows int) (common.QueryResu
 	columns = common.UniqueColumnNames(columns)
 
 	var data []map[string]interface{}
-	for (maxRows == 0 || len(data) < maxRows) && rows.Next() {
-		select {
-		case <-ctx.Done():
-			return common.QueryResult{Type: common.QueryTypeRead}, ctx.Err()
-		default:
-		}
-
+	truncated, err := common.ScanCapped(ctx, rows, maxRows, func() error {
 		values, err := rows.Values()
 		if err != nil {
-			return common.QueryResult{Type: common.QueryTypeRead}, err
+			return err
 		}
 
 		row := make(map[string]interface{})
@@ -280,10 +286,11 @@ func scanRows(ctx context.Context, rows pgx.Rows, maxRows int) (common.QueryResu
 			}
 		}
 		data = append(data, row)
+		return nil
+	})
+	if err != nil {
+		return common.QueryResult{Type: common.QueryTypeRead}, err
 	}
-
-	// Peek one row past the cap so a result of exactly maxRows isn't flagged.
-	truncated := maxRows > 0 && len(data) == maxRows && rows.Next()
 
 	if err := rows.Err(); err != nil {
 		return common.QueryResult{Type: common.QueryTypeRead}, err

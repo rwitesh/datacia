@@ -18,8 +18,9 @@ type DatabaseClient interface {
 	CancelQuery(queryId string) error
 	GetTableData(table string, limit, offset int, orderBy, orderDir string) (common.QueryResult, error)
 	GetTableSchema(table string) (common.QueryResult, error)
-	GetDDL(table string) (string, error) // Returns CREATE TABLE statement
-	GetPassword() string                 // Returns password for reconnection purposes (internal use)
+	GetDDL(table string) (string, error)       // Returns CREATE TABLE statement
+	GetPassword() string                       // Returns password for reconnection purposes (internal use)
+	GetSSL() (mode, caPath, serverName string) // SSL settings for reconnection (internal use)
 	// ReadOnlyQuery runs sql, which must pass common.CheckReadOnly, with writes
 	// blocked by the database, returning at most maxRows rows.
 	ReadOnlyQuery(ctx context.Context, sql string, maxRows int) (common.QueryResult, error)
