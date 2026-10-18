@@ -129,9 +129,10 @@ wails3 generate bindings -ts -clean=true  # after a service signature or model c
 
 Go tests are mostly table-driven `*_test.go` files next to the code. Add one when changing logic
 in `pkg/common`, an engine's query handling, `internal/ai`, `settings`, `update`, `intellisense`
-or `db`. Postgres/MySQL tests need a server (see DEVELOPMENT.md). There is no frontend test
-runner: use typecheck, lint and `make dev`. No frontend formatter: match the file (2 spaces,
-double quotes).
+or `db`. Postgres/MySQL tests need a server (see DEVELOPMENT.md). A test must earn its place:
+it guards risky logic and runs fast and offline. No Docker suites, and no tests that restate the
+implementation or exercise a library. There is no frontend test runner: use typecheck, lint and
+`make dev`. No frontend formatter: match the file (2 spaces, double quotes).
 
 ## Workflow
 

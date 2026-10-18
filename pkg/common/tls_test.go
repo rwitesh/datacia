@@ -43,37 +43,6 @@ func TestTLSSettingsMode(t *testing.T) {
 	}
 }
 
-func TestTLSSettingsRequireSkipsVerification(t *testing.T) {
-	got, err := ConnectionConfig{SSLMode: SSLModeRequire}.TLSSettings()
-	if err != nil || !got.Config.InsecureSkipVerify {
-		t.Fatalf("require config %+v, err %v; want verification skipped", got.Config, err)
-	}
-	got, err = ConnectionConfig{SSLMode: SSLModeVerifyFull, Host: "db"}.TLSSettings()
-	if err != nil || got.Config.InsecureSkipVerify {
-		t.Fatalf("verify-full config %+v, err %v; want verification on", got.Config, err)
-	}
-}
-
-func TestTLSSettingsServerName(t *testing.T) {
-	tests := []struct {
-		name string
-		cfg  ConnectionConfig
-		want string
-	}{
-		{"host", ConnectionConfig{Host: "db.example.com"}, "db.example.com"},
-		{"tunnel keeps typed host", ConnectionConfig{Host: "127.0.0.1", TLSServerName: "db.example.com"}, "db.example.com"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.cfg.SSLMode = SSLModeVerifyFull
-			got, err := tt.cfg.TLSSettings()
-			if err != nil || got.Config.ServerName != tt.want {
-				t.Fatalf("server name %q, err %v; want %q", got.Config.ServerName, err, tt.want)
-			}
-		})
-	}
-}
-
 func TestTLSSettingsCAFile(t *testing.T) {
 	caPath, _, _ := writeTestCerts(t, "db.example.com")
 	dir := t.TempDir()

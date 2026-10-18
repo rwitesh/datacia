@@ -1,6 +1,0 @@
-PasswordAuthentication yes
-PubkeyAuthentication yes
-AllowTcpForwarding yes
-PermitRootLogin no
-UsePAM no
-LogLevel VERBOSE

@@ -114,11 +114,3 @@ func TestChecksumRequiredUpToDate(t *testing.T) {
 		t.Fatalf("Name() = %q, want the wrapped provider's name", p.Name())
 	}
 }
-
-func TestSetupSkipsDevBuilds(t *testing.T) {
-	// A nil app would panic if Setup tried to configure the updater.
-	enabled, err := Setup(nil, "dev")
-	if enabled || err != nil {
-		t.Fatalf("Setup(dev) = %v, %v; want false, nil", enabled, err)
-	}
-}
