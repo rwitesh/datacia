@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { useForm, useWatch } from "react-hook-form";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 
@@ -10,9 +11,9 @@ import {
   SelectSQLiteFile,
 } from "@/services/bindings/connection";
 import type { ConnectionConfig } from "@/services/bindings";
-import { DEFAULT_PORTS, DEFAULT_SSL_MODE } from "../utils/constants";
+import { DEFAULT_SSL_MODE } from "../utils/constants";
 import { toConnectionConfig } from "../utils/config";
-import type { DatabaseEngine } from "@/shared/utils/engines";
+import { DATABASE_ENGINES, type DatabaseEngine } from "@/shared/utils/engines";
 import type { FormValues, Status } from "../utils/types";
 import {
   validateForSave,
@@ -27,7 +28,7 @@ const emptyFormValues = (engine: DatabaseEngine): FormValues => ({
   connectionName: "",
   engine,
   host: "",
-  port: DEFAULT_PORTS[engine],
+  port: DATABASE_ENGINES[engine].defaultPort,
   username: "",
   password: "",
   database: "",
@@ -58,8 +59,7 @@ export const useConnectionForm = ({
 
   const [status, setStatus] = useState<Status>(null);
 
-  // Clear the status message whenever a different connection or engine is loaded
-  // (React's "adjust state when props change" pattern instead of an effect).
+  // A different connection or engine starts without the old status message.
   const [statusSource, setStatusSource] = useState({ fetchedData, connectionId, resolvedEngine });
   if (
     statusSource.fetchedData !== fetchedData ||
@@ -75,30 +75,17 @@ export const useConnectionForm = ({
     defaultValues: emptyFormValues(resolvedEngine),
   });
 
-  const { register, getValues, reset, setError, clearErrors, setValue, watch } = form;
-  const control = form.control;
+  const { register, getValues, reset, setError, clearErrors, setValue, watch, control } = form;
   const currentEngine = useWatch({ control, name: "engine" });
-  const currentPort = useWatch({ control, name: "port" });
   const currentConnectionName = useWatch({ control, name: "connectionName" });
 
-  // Auto-update port when engine changes
-  useEffect(() => {
-    const defaultPort = DEFAULT_PORTS[currentEngine];
-    const isDefaultPort = Object.values(DEFAULT_PORTS).includes(currentPort);
-
-    if (!currentPort || isDefaultPort) {
-      setValue("port", defaultPort);
-    }
-  }, [currentEngine, setValue, currentPort]);
-
-  // Reset form when data changes
   useEffect(() => {
     if (connectionId && fetchedData) {
       reset({
         connectionName: fetchedData.name || "",
         engine: resolvedEngine,
         host: fetchedData.host || "",
-        port: fetchedData.port || DEFAULT_PORTS[resolvedEngine],
+        port: fetchedData.port || DATABASE_ENGINES[resolvedEngine].defaultPort,
         username: fetchedData.username || "",
         password: fetchedData.password || "",
         database: fetchedData.database || "",
@@ -117,7 +104,7 @@ export const useConnectionForm = ({
     }
   }, [fetchedData, reset, connectionId, resolvedEngine]);
 
-  // Clear status when form changes
+  // Editing the form clears the last result.
   useEffect(() => {
     if (!status) return;
     return form.subscribe({
@@ -126,13 +113,16 @@ export const useConnectionForm = ({
     });
   }, [form, status]);
 
-  const applyValidationErrors = (
-    validationErrors: Partial<Record<keyof FormValues, string>>
-  ) => {
+  // validValues returns the form values, or null after showing why they
+  // don't pass validate.
+  const validValues = (validate: (values: FormValues) => Partial<Record<keyof FormValues, string>>) => {
+    const values = getValues();
+    const errors = Object.entries(validate(values));
     clearErrors();
-    Object.entries(validationErrors).forEach(([field, message]) => {
+    errors.forEach(([field, message]) => {
       setError(field as keyof FormValues, { type: "required", message });
     });
+    return errors.length > 0 ? null : values;
   };
 
   const saveMutation = useMutation<void, Error, void, unknown>({
@@ -144,8 +134,6 @@ export const useConnectionForm = ({
       } else {
         await SaveConnection(config);
       }
-
-      queryClient.invalidateQueries({ queryKey: queryKeys.connections });
     },
     onMutate: () => {
       setStatus({
@@ -154,6 +142,7 @@ export const useConnectionForm = ({
       });
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.connections });
       setStatus({
         kind: "success",
         title: connectionId ? "Connection updated" : "Connection saved",
@@ -194,50 +183,28 @@ export const useConnectionForm = ({
   const connectMutation = useConnectDatabase({ setStatus });
 
   const handleSave = () => {
-    const values = getValues();
-    const validationErrors = validateForSave(values);
-    applyValidationErrors(validationErrors);
-    if (Object.keys(validationErrors).length > 0) return;
-
-    saveMutation.mutate();
+    if (validValues(validateForSave)) saveMutation.mutate();
   };
 
   const handleTest = () => {
-    const values = getValues();
-    const validationErrors = validateForTestConnect(values);
-    applyValidationErrors(validationErrors);
-    if (Object.keys(validationErrors).length > 0) return;
-    testMutation.mutate();
+    if (validValues(validateForTestConnect)) testMutation.mutate();
   };
 
   const handleConnect = () => {
-    const values = getValues();
-    const validationErrors = validateForTestConnect(values);
-    applyValidationErrors(validationErrors);
-    if (Object.keys(validationErrors).length > 0) return;
-    connectMutation.mutate({ values });
+    const values = validValues(validateForTestConnect);
+    if (values) connectMutation.mutate({ values });
   };
 
-  const handleSelectSSHKey = async (): Promise<string | null> => {
+  const selectFile = async (select: () => Promise<string>, field: "sshKeyPath" | "database") => {
     try {
-      const path = await SelectSSHKeyFile();
-      return path;
+      const path = await select();
+      if (path) setValue(field, path);
     } catch (error) {
-      console.error("Failed to select SSH key:", error);
-      return null;
+      toast.error(errorMessage(error));
     }
   };
-
-  const handleSelectSQLiteFile = async () => {
-    try {
-      const path = await SelectSQLiteFile();
-      if (path) {
-        setValue("database", path);
-      }
-    } catch (error) {
-      console.error("Failed to select SQLite file:", error);
-    }
-  };
+  const handleSelectSSHKey = () => selectFile(SelectSSHKeyFile, "sshKeyPath");
+  const handleSelectSQLiteFile = () => selectFile(SelectSQLiteFile, "database");
 
   return {
     form,

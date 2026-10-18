@@ -17,7 +17,6 @@ export const validateForTestConnect = (values: FormValues) => {
     if (!values.database?.trim()) errs.database = "Database is required";
   }
 
-  // Validate SSH fields if SSH is enabled
   if (values.useSSH) {
     if (!values.sshHost?.trim()) errs.sshHost = "SSH host is required";
     if (values.sshPort?.trim() && !isValidPort(values.sshPort)) errs.sshPort = "SSH port must be 1-65535";

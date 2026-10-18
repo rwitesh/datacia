@@ -46,10 +46,9 @@ func (ch *ClickHouse) Connect(config common.ConnectionConfig) error {
 		Compression: &clickhouse.Compression{
 			Method: clickhouse.CompressionZSTD,
 		},
-		DialTimeout:     common.CONNECT_TIMEOUT,
-		MaxOpenConns:    10,
-		MaxIdleConns:    5,
-		ConnMaxLifetime: 0,
+		DialTimeout:  common.CONNECT_TIMEOUT,
+		MaxOpenConns: 10,
+		MaxIdleConns: 5,
 	})
 	if err != nil {
 		return err
@@ -78,7 +77,7 @@ func (ch *ClickHouse) Close() error {
 	ch.Mu.Lock()
 	conn := ch.conn
 	ch.conn = nil
-	ch.ClearAllStateUnsafe() // Calling unsafe method since it is already in lock
+	ch.ClearAllStateUnsafe()
 	ch.Mu.Unlock()
 
 	if conn == nil {
@@ -108,7 +107,6 @@ func (ch *ClickHouse) RunQuery(queryID, queryType, sql string) (common.QueryResu
 		queryID = uuid.NewString()
 	}
 
-	// Grab connection under read lock
 	ch.Mu.RLock()
 	conn := ch.conn
 	ch.Mu.RUnlock()
@@ -156,12 +154,11 @@ func (ch *ClickHouse) query(ctx context.Context, conn driver.Conn, sql string, q
 		progress.bytesRead += p.Bytes
 		progress.mu.Unlock()
 	})
-	var queryCtx context.Context
+	options := []clickhouse.QueryOption{progressCB}
 	if queryID != "" {
-		queryCtx = clickhouse.Context(ctx, progressCB, clickhouse.WithQueryID(queryID))
-	} else {
-		queryCtx = clickhouse.Context(ctx, progressCB)
+		options = append(options, clickhouse.WithQueryID(queryID))
 	}
+	queryCtx := clickhouse.Context(ctx, options...)
 
 	rows, err := conn.Query(queryCtx, sql)
 	if err != nil {
@@ -227,26 +224,18 @@ func (ch *ClickHouse) ReadOnlyQuery(ctx context.Context, sql string, maxRows int
 	return common.QueryResult{Type: common.QueryTypeRead, Columns: columns, Data: data, Truncated: truncated}, nil
 }
 
+// CancelQuery cancels the query's context, which makes the driver send a
+// cancel packet, and also runs KILL QUERY in case that never reaches the server.
 func (ch *ClickHouse) CancelQuery(queryID string) error {
-	if queryID == "" {
-		return errors.New("queryID cannot be empty")
-	}
-
-	// First try context cancellation
 	if val, exists := ch.ActiveQueries.LoadAndDelete(queryID); exists {
 		if cancelFunc, ok := val.(context.CancelFunc); ok {
 			cancelFunc()
 		}
 	}
 
-	// Also try server-side kill as backup
-	return ch.killQueryOnServer(queryID)
-}
-
-func (ch *ClickHouse) killQueryOnServer(queryID string) error {
-	// Validate queryID is a valid UUID to prevent SQL injection
-	if err := common.ValidateUUID(queryID); err != nil {
-		return fmt.Errorf("invalid query ID: %w", err)
+	// Only a UUID is spliced into KILL QUERY, so it can't inject SQL.
+	if _, err := uuid.Parse(queryID); err != nil {
+		return fmt.Errorf("invalid query ID %q", queryID)
 	}
 
 	ch.Mu.RLock()
@@ -260,10 +249,8 @@ func (ch *ClickHouse) killQueryOnServer(queryID string) error {
 	ctx, cancel := common.NewTimeoutContext(3 * time.Second)
 	defer cancel()
 
-	// queryID is validated as UUID format, safe to use in query
-	killSQL := fmt.Sprintf("KILL QUERY WHERE query_id = '%s'", queryID)
-	// Ignore errors from KILL QUERY as it might already be completed
-	conn.Exec(ctx, killSQL)
+	// The query may have finished already.
+	_ = conn.Exec(ctx, fmt.Sprintf("KILL QUERY WHERE query_id = '%s'", queryID))
 	return nil
 }
 
@@ -402,10 +389,8 @@ func (ch *ClickHouse) GetTableSchema(table string) (common.QueryResult, error) {
 	ctx, cancel := common.NewTimeoutContext(common.META_TIMEOUT)
 	defer cancel()
 
-	// Query system.columns for table schema
 	sql := `
-		SELECT 
-			*
+		SELECT *
 		FROM system.columns
 		WHERE database = {db:String} AND table = {table:String}
 		ORDER BY position

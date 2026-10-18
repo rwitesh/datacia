@@ -28,9 +28,7 @@ export const Home = () => {
       .then((res: boolean) => {
         if (res) refetch();
       })
-      .catch((err) => {
-        console.error("failed to delete connection:", err);
-      });
+      .catch((err) => toast.error("Failed to delete connection", { description: errorMessage(err) }));
   };
 
   const handleConnect = (id: string) => {

@@ -1,4 +1,4 @@
-// SQL keywords to highlight with their accent colors
+// Leading SQL keywords highlighted in history entries, with their colors.
 export const SQL_KEYWORDS: Record<string, string> = {
     SELECT: "bg-blue-500/20 text-blue-400",
     UPDATE: "bg-amber-500/20 text-amber-400",

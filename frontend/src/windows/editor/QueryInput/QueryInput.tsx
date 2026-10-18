@@ -12,13 +12,10 @@ export function QueryInput() {
   const { activeTab, runQuery, stopQuery } = useEditorContext();
   const sql = useTabSql(activeTab?.id);
 
-  const handleFormat = () => {
-    if (activeTab && activeTab.type === "query") {
-      setTabSql(activeTab.id, formatSQL(getTabSql(activeTab.id), engine || "sql"));
-    }
-  };
-
   if (!activeTab || activeTab.type !== "query") return null;
+
+  const handleFormat = () =>
+    setTabSql(activeTab.id, formatSQL(getTabSql(activeTab.id), engine || "sql"));
 
   return (
     <div className="relative h-full w-full">
@@ -30,7 +27,6 @@ export function QueryInput() {
         className="h-full"
       />
 
-      {/* Floating Action Buttons */}
       <div className="absolute bottom-3 right-3 flex items-center gap-2 z-10">
         <Button
           variant="outline"
@@ -42,7 +38,7 @@ export function QueryInput() {
           Format
         </Button>
 
-        {!activeTab?.isExecuting ? (
+        {!activeTab.isExecuting ? (
           <Button
             size="sm"
             className="h-7 px-4 cursor-pointer select-none gap-1.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white shadow-lg shadow-emerald-500/25 border-0 font-medium"

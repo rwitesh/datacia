@@ -5,7 +5,6 @@ import { FIELD_LABELS } from "../utils/constants";
 import type { FormValues, Status } from "../utils/types";
 
 interface ConnectionAlertProps {
-  hasFormErrors: boolean;
   formErrorEntries: [keyof FormValues, FieldError][];
   isError: boolean;
   status: Status;
@@ -49,13 +48,13 @@ const CopyButton: React.FC<{ text: string }> = ({ text }) => {
 };
 
 export const ConnectionAlert: React.FC<ConnectionAlertProps> = ({
-  hasFormErrors,
   formErrorEntries,
   isError,
   status,
   displayName,
   onDismissStatus,
 }) => {
+  const hasFormErrors = formErrorEntries.length > 0;
   const isErrorStatus = status?.kind === "error";
   const isInfo = status?.kind === "info";
   const isSuccess = status?.kind === "success";
@@ -117,7 +116,7 @@ export const ConnectionAlert: React.FC<ConnectionAlertProps> = ({
 
       {showDescription && (
         <div className="flex-1 min-h-0 overflow-y-auto">
-          <div className="p-2 rounded text-red font-mono text-xs whitespace-pre-wrap break-all">
+          <div className="p-2 rounded font-mono text-xs whitespace-pre-wrap break-all">
             {description}
           </div>
         </div>

@@ -5,8 +5,7 @@ import {
   GetCurrentConnectionInfo,
 } from "./bindings";
 import type { ConnectionInfo } from "./bindings";
-import { EstablishConnection } from "./bindings/connection";
-import { CheckConnectionHealth } from "./bindings/connection";
+import { EstablishConnection, CheckConnectionHealth } from "./bindings/connection";
 import { useTrustHostKey } from "@/shared/HostKey/HostKeyContext";
 import { queryKeys } from "./queryKeys";
 
@@ -55,8 +54,8 @@ export function useSwitchConnectionMutation() {
   });
 }
 
-const HEALTH_CHECK_INTERVAL = 30000; // 30 seconds
-const RETRY_INTERVAL = 5000; // 5 seconds on failure
+const HEALTH_CHECK_INTERVAL = 30000;
+const RETRY_INTERVAL = 5000;
 
 export function useConnectionHealth(): UseQueryResult<ConnectionHealth, Error> {
   return useQuery<ConnectionHealth, Error>({
@@ -70,6 +69,6 @@ export function useConnectionHealth(): UseQueryResult<ConnectionHealth, Error> {
     retryOnMount: false,
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-    networkMode: 'always'
+    networkMode: "always",
   });
 }

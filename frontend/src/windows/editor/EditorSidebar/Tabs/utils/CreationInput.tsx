@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 
 interface CreationInputProps {
@@ -8,18 +8,9 @@ interface CreationInputProps {
 
 export function CreationInput({ onSubmit, onCancel }: CreationInputProps) {
     const [val, setVal] = useState("");
-    const mountedRef = useRef(false);
-
-    // Mark as mounted after first focus
-    const handleFocus = useCallback(() => {
-        mountedRef.current = true;
-    }, []);
-
-    const handleBlur = useCallback(() => {
-        // Only handle blur if the input has been focused at least once
-        if (!mountedRef.current) return;
+    const finish = () => {
         if (val.trim()) onSubmit(val); else onCancel();
-    }, [val, onSubmit, onCancel]);
+    };
 
     return (
         <Input
@@ -28,12 +19,11 @@ export function CreationInput({ onSubmit, onCancel }: CreationInputProps) {
             placeholder="name"
             value={val}
             onChange={(e) => setVal(e.target.value)}
-            onFocus={handleFocus}
-            onBlur={handleBlur}
+            onBlur={finish}
             onKeyDown={(e) => {
                 if (e.key === "Enter") {
                     e.preventDefault();
-                    if (val.trim()) onSubmit(val); else onCancel();
+                    finish();
                 }
                 if (e.key === "Escape") {
                     e.preventDefault();

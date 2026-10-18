@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
 import { Copy, Check } from "lucide-react";
+import { toast } from "sonner";
+import { errorMessage } from "@/lib/utils";
 import { useSelectedRows } from "@/context/editor/store";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { AIChat } from "./ai";
@@ -7,7 +9,7 @@ import { DataTabContent } from "./data";
 
 export type DataViewTab = "data" | "ai";
 
-export interface DataViewProps {
+interface DataViewProps {
   activeTab: DataViewTab;
   onTabChange: (tab: DataViewTab) => void;
 }
@@ -16,20 +18,19 @@ export function DataView({ activeTab: activeTabValue, onTabChange }: DataViewPro
   const [copied, setCopied] = useState(false);
   const selectedData = useSelectedRows();
 
-  const lines = useMemo(() => {
-    if (selectedData.length === 0) return [];
-    const jsonString = JSON.stringify(selectedData, null, 2);
-    const compacted = jsonString.replace(/\},\n\s*\{/g, "}, {");
-    return compacted.split("\n");
-  }, [selectedData]);
+  const json = useMemo(() => JSON.stringify(selectedData, null, 2), [selectedData]);
+  // Each object starts on the line where the previous one ends.
+  const lines = useMemo(
+    () => (selectedData.length === 0 ? [] : json.replace(/\},\n\s*\{/g, "}, {").split("\n")),
+    [selectedData, json]
+  );
 
   const handleCopy = async () => {
     try {
-      const jsonString = JSON.stringify(selectedData, null, 2);
-      await navigator.clipboard.writeText(jsonString);
+      await navigator.clipboard.writeText(json);
       setCopied(true);
-    } catch {
-      // Silently fail
+    } catch (err) {
+      toast.error("Failed to copy", { description: errorMessage(err) });
     }
   };
 
@@ -56,7 +57,7 @@ export function DataView({ activeTab: activeTabValue, onTabChange }: DataViewPro
           {activeTabValue === "data" && (
             <div className="flex items-center gap-1">
               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-primary/10 text-primary border border-primary/20">
-                {rowCount} {rowCount === 1 ? 'row' : 'rows'}
+                {rowCount} {rowCount === 1 ? "row" : "rows"}
               </span>
               <button
                 type="button"
@@ -88,7 +89,6 @@ export function DataView({ activeTab: activeTabValue, onTabChange }: DataViewPro
           <AIChat />
         </TabsContent>
       </Tabs>
-
     </div>
   );
 }

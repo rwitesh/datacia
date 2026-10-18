@@ -1,14 +1,14 @@
 import { useEffect, useSyncExternalStore } from "react";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CancelError, Events, type CancellablePromise } from "@wailsio/runtime";
+import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 import * as AI from "./bindings/ai";
 import { errorMessage } from "@/lib/utils";
-import { ChatContext, type ModelRef, type ProviderStatus, type ToolUse } from "./bindings/ai";
+import type { ChatContext, ModelRef, ProviderStatus, ToolUse } from "./bindings/ai";
 import { queryKeys } from "./queryKeys";
 
-export type { ModelRef, ProviderStatus, ToolUse };
-export { ChatContext };
+export type { ChatContext, ModelRef, ProviderStatus, ToolUse };
 export { SignIn } from "./bindings/ai";
 
 export interface ChatMessage {
@@ -61,7 +61,10 @@ export function useSetDefaultModel() {
     mutationFn: (model: ModelRef) => AI.SetDefaultModel(model),
     onMutate: (model) => queryClient.setQueryData(queryKeys.aiDefaultModel, model),
     // On success the settings-changed event refreshes it.
-    onError: () => queryClient.invalidateQueries({ queryKey: queryKeys.aiDefaultModel }),
+    onError: (err) => {
+      toast.error(errorMessage(err));
+      queryClient.invalidateQueries({ queryKey: queryKeys.aiDefaultModel });
+    },
   });
 }
 
@@ -92,10 +95,11 @@ function subscribe(listener: () => void) {
   return () => listeners.delete(listener);
 }
 
-let loading: Promise<void> | null = null;
+let loadStarted = false;
 function load() {
-  if (loading) return;
-  loading = AI.LoadChat()
+  if (loadStarted) return;
+  loadStarted = true;
+  AI.LoadChat()
     .then((chat) =>
       set({
         loaded: true,

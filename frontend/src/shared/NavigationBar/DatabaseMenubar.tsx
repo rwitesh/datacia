@@ -13,26 +13,20 @@ import { Database } from "lucide-react";
 import { errorMessage } from "@/lib/utils";
 import { useDatabase } from "@/services/database";
 import { toast } from "sonner";
-import { useQueryClient } from "@tanstack/react-query";
-import { queryKeys } from "@/services/queryKeys";
 
 export function DatabaseMenuBar() {
   const { data: databaseInfo } = useDatabase();
-  const queryClient = useQueryClient();
-  const databases: string[] = databaseInfo?.databases || [];
+  const databases = databaseInfo?.databases || [];
   const currentDatabase = databaseInfo?.currentDatabase || "";
 
-  const changeDatabaseHandler = (db: string) => async () => {
+  // The backend emits connection-changed on success, which refreshes the
+  // databases and tables.
+  const changeDatabase = async (db: string) => {
     if (db === currentDatabase) return;
     try {
       await ChangeDatabaseByName(db);
-      // Invalidate the databases query to refresh the current database
-      await queryClient.invalidateQueries({ queryKey: queryKeys.databases });
-      // Also invalidate tables query as it depends on the current database
-      await queryClient.invalidateQueries({ queryKey: queryKeys.tables });
     } catch (error) {
       toast.error(errorMessage(error));
-      console.error("Failed to change database:", error);
     }
   };
 
@@ -41,7 +35,7 @@ export function DatabaseMenuBar() {
       <MenubarMenu>
         <MenubarTrigger
           className="cursor-pointer"
-          disabled={databases.length == 0}
+          disabled={databases.length === 0}
           title="Open Database"
         >
           <Database
@@ -60,9 +54,9 @@ export function DatabaseMenuBar() {
           <MenubarSeparator />
           <MenubarRadioGroup
             value={currentDatabase}
-            onValueChange={(db) => changeDatabaseHandler(db)()}
+            onValueChange={changeDatabase}
           >
-            {databases.map((db: string) => (
+            {databases.map((db) => (
               <MenubarRadioItem
                 className="cursor-pointer text-xs"
                 key={db}

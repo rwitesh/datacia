@@ -159,8 +159,13 @@ func csvValue(value interface{}) string {
 // neutralizeFormula prefixes cells a spreadsheet would run as a formula, so
 // a hostile value in the database can't execute when the export is opened.
 func neutralizeFormula(s string) string {
-	if s != "" && strings.ContainsRune("=+-@\t\r", rune(s[0])) {
-		return "'" + s
+	if s == "" || !strings.ContainsRune("=+-@\t\r", rune(s[0])) {
+		return s
 	}
-	return s
+	// Numbers sent as strings (MySQL DECIMAL, ClickHouse Decimal) can't run
+	// as formulas, and quoting them would turn them into text.
+	if _, err := strconv.ParseFloat(s, 64); err == nil {
+		return s
+	}
+	return "'" + s
 }

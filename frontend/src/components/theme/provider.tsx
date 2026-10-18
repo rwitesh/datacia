@@ -1,11 +1,18 @@
-import { useEffect, useSyncExternalStore } from "react"
+import { useEffect, useMemo, useSyncExternalStore } from "react"
 import { useSettings, useUpdateSettings } from "@/services/settings"
 import { useQueryClient } from "@tanstack/react-query"
-import { ThemeProviderContext, themeConfigs, type Theme, EMPTY_TOKEN_COLORS, initialState } from "./context"
+import {
+  ThemeProviderContext,
+  themeConfigs,
+  type Theme,
+  EMPTY_TOKEN_COLORS,
+  DEFAULT_FONT_FAMILY,
+  DEFAULT_FONT_SIZE,
+} from "./context"
 import { Events } from "@wailsio/runtime"
 import { toast } from "sonner"
 import { errorMessage } from "@/lib/utils"
-import { queryKeys } from "@/services/queryKeys";
+import { queryKeys } from "@/services/queryKeys"
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const { data: settings } = useSettings()
@@ -19,19 +26,18 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const { font, editor } = settings?.settings ?? {}
   const tokenColors = (resolvedTheme === "dark" ? editor?.dark : editor?.light) ?? EMPTY_TOKEN_COLORS
 
-  const editorFontFamily = font?.editorFontFamily ?? initialState.editorFontFamily
-  const editorFontSize = font?.editorFontSize ?? initialState.editorFontSize
-  const uiFontFamily = font?.uiFontFamily ?? initialState.uiFontFamily
-  const uiFontSize = font?.uiFontSize ?? initialState.uiFontSize
+  const editorFontFamily = font?.editorFontFamily ?? DEFAULT_FONT_FAMILY
+  const editorFontSize = font?.editorFontSize ?? DEFAULT_FONT_SIZE
+  const uiFontFamily = font?.uiFontFamily ?? DEFAULT_FONT_FAMILY
+  const uiFontSize = font?.uiFontSize ?? DEFAULT_FONT_SIZE
 
-  // Apply the resolved theme class to <html>
   useEffect(() => {
     const root = window.document.documentElement
     root.classList.remove("light", "dark")
     root.classList.add(resolvedTheme)
   }, [resolvedTheme])
 
-  // Sync settings when changed from another window
+  // Another window may have saved new settings.
   useEffect(() => {
     const unsubscribe = Events.On("app:settings-changed", () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.settings })
@@ -39,7 +45,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     return () => unsubscribe()
   }, [queryClient])
 
-  // Apply font CSS variables
   useEffect(() => {
     const root = window.document.documentElement
     root.style.setProperty("--app-ui-font", `'${uiFontFamily}'`)
@@ -48,28 +53,25 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     root.style.setProperty("--app-editor-font-size", `${editorFontSize}px`)
   }, [uiFontFamily, uiFontSize, editorFontFamily, editorFontSize])
 
-  return (
-    <ThemeProviderContext.Provider
-      value={{
-        theme,
-        resolvedTheme,
-        tokenColors,
-        editorFontFamily,
-        editorFontSize,
-        uiFontFamily,
-        uiFontSize,
-        setTheme: (newTheme: Theme) => {
-          if (!settings) return
-          updateSettings(
-            { settings: { ...settings.settings, theme: themeConfigs[newTheme] } },
-            { onError: (error) => toast.error(errorMessage(error)) },
-          )
-        },
-      }}
-    >
-      {children}
-    </ThemeProviderContext.Provider>
+  const value = useMemo(
+    () => ({
+      theme,
+      resolvedTheme,
+      tokenColors,
+      editorFontFamily,
+      editorFontSize,
+      setTheme: (newTheme: Theme) => {
+        if (!settings) return
+        updateSettings(
+          { settings: { ...settings.settings, theme: themeConfigs[newTheme] } },
+          { onError: (error) => toast.error(errorMessage(error)) },
+        )
+      },
+    }),
+    [theme, resolvedTheme, tokenColors, editorFontFamily, editorFontSize, settings, updateSettings],
   )
+
+  return <ThemeProviderContext.Provider value={value}>{children}</ThemeProviderContext.Provider>
 }
 
 const darkSchemeQuery = "(prefers-color-scheme: dark)"

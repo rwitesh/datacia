@@ -20,20 +20,13 @@ import type { DateRange } from "react-day-picker";
 
 const DEBOUNCE_DELAY = 300;
 
-/**
- * Format timestamp for display: relative time ("2 hours ago"), or the full
- * date when a date filter is active and the entry is 24 hours old or more.
- */
+// formatTimestamp shows relative time ("2 hours ago"), or the full date when
+// a date filter is active and the entry is a day old or more.
 function formatTimestamp(timestamp: string, hasDateFilter: boolean): string {
-  const now = new Date();
   const ts = new Date(timestamp);
-  const hoursDiff = differenceInHours(now, ts);
-
-  // If date filter is active and timestamp is more than 24 hours ago, show actual date
-  if (hasDateFilter && hoursDiff >= 24) {
+  if (hasDateFilter && differenceInHours(new Date(), ts) >= 24) {
     return formatDateTime(ts);
   }
-
   return timeAgo(timestamp);
 }
 
@@ -45,7 +38,6 @@ export function HistoryTab() {
   const debouncedSearchQuery = useDebouncedValue(searchQuery, DEBOUNCE_DELAY);
   const debouncedDateRange = useDebouncedValue(dateRange, DEBOUNCE_DELAY);
 
-  // Build filter params for SQLite query
   const filters = useMemo(() => {
     const dateFrom = debouncedDateRange?.from
       ? startOfDay(debouncedDateRange.from).toISOString()
@@ -62,21 +54,16 @@ export function HistoryTab() {
     };
   }, [debouncedSearchQuery, debouncedDateRange]);
 
-  // Fetch history with filters applied on SQLite (server-side filtering)
-  const { data: historyData, isFetching } = useGetQueryHistory(filters);
+  const { data: historyData, isPending } = useGetQueryHistory(filters);
 
-  // Show loading when debounce is pending or data is fetching
-  const isSearchPending = searchQuery !== debouncedSearchQuery;
-  const isDatePending = dateRange !== debouncedDateRange;
-  const isLoading = isSearchPending || isDatePending || isFetching;
+  // Not on background refetches (after each query run or window focus),
+  // which would blank the list each time.
+  const isLoading =
+    isPending || searchQuery !== debouncedSearchQuery || dateRange !== debouncedDateRange;
 
   const handleHistoryClick = (sql: string) => {
     const tab = createTab("Query", "query");
     setTabSql(tab.id, sql);
-  };
-
-  const clearDateRange = () => {
-    setDateRange(undefined);
   };
 
   const isEmpty = !historyData || historyData.length === 0;
@@ -85,9 +72,7 @@ export function HistoryTab() {
 
   return (
     <div className="flex-1 min-h-0 flex flex-col">
-      {/* Filters */}
       <div className="px-2 py-2 border-b border-border/50 space-y-2">
-        {/* Search Input */}
         <div className="relative">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <input
@@ -99,7 +84,6 @@ export function HistoryTab() {
           />
         </div>
 
-        {/* Date Range Picker */}
         <div className="flex items-center gap-1">
           <Popover>
             <PopoverTrigger asChild>
@@ -144,7 +128,7 @@ export function HistoryTab() {
               variant="ghost"
               size="sm"
               className="h-7 w-7 p-0"
-              onClick={clearDateRange}
+              onClick={() => setDateRange(undefined)}
             >
               <X className="h-3.5 w-3.5" />
             </Button>
@@ -152,7 +136,6 @@ export function HistoryTab() {
         </div>
       </div>
 
-      {/* History List */}
       <div className="flex-1 min-h-0 overflow-y-auto">
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
@@ -175,7 +158,6 @@ export function HistoryTab() {
                   className="w-full text-left px-3 py-1.5 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group transition-colors duration-200 cursor-pointer m-0 rounded-none first:rounded-t-md last:rounded-b-md"
                   onClick={() => handleHistoryClick(item.query)}
                 >
-                  {/* Header: Status, Time, Count, Duration */}
                   <div className="flex items-start justify-between gap-2 mb-1">
                     <div className="flex items-center gap-1.5">
                       {item.status === "success" ? (
@@ -197,7 +179,6 @@ export function HistoryTab() {
                     </span>
                   </div>
 
-                  {/* Query Text with Keyword Highlighting */}
                   <div className="font-mono text-foreground/90 line-clamp-10 break-all group-hover:text-sidebar-accent-foreground transition-colors">
                     {keywordInfo ? (
                       <>
@@ -211,7 +192,6 @@ export function HistoryTab() {
                     )}
                   </div>
 
-                  {/* Error Message */}
                   {item.error_message && (
                     <div className="mt-1 text-[10px] text-red-400 line-clamp-1">
                       {item.error_message}

@@ -1,12 +1,11 @@
 import { useEffect, useRef } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { Browser, CancelError, type CancellablePromise } from "@wailsio/runtime";
 import { ExternalLink, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { errorMessage } from "@/lib/utils";
 import { SignIn, type ProviderStatus } from "@/services/ai";
-import { queryKeys } from "@/services/queryKeys";
 
 type Props = {
   status: ProviderStatus;
@@ -92,9 +91,9 @@ export function KeyField({ status, change, onChange }: Props) {
   );
 }
 
-// Sign-in stores the key itself, so it takes effect without saving.
+// Sign-in stores the key itself, so it takes effect without saving; the
+// resulting settings-changed event refreshes the provider list.
 function useSignIn(providerId: string) {
-  const queryClient = useQueryClient();
   const call = useRef<CancellablePromise<void> | null>(null);
   const cancel = () => {
     call.current?.cancel();
@@ -103,7 +102,6 @@ function useSignIn(providerId: string) {
 
   const { mutate, isPending, error } = useMutation({
     mutationFn: () => (call.current = SignIn(providerId)),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.ai }),
   });
 
   return {

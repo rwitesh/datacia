@@ -72,13 +72,13 @@ type ConnectionConfig struct {
 	SSH           SSHConfig `json:"ssh"`
 }
 
-// ConnectionInfo represents a connection list item with name and engine
+// ConnectionInfo is a saved connection as listed in the UI.
 type ConnectionInfo struct {
 	Name   string `json:"name"`
 	Engine string `json:"engine"`
 }
 
-// ConnectionState holds common connection state for database clients
+// ConnectionState is the state every engine's client keeps.
 type ConnectionState struct {
 	Host     string
 	Port     string
@@ -94,8 +94,7 @@ type ConnectionState struct {
 	Mu            sync.RWMutex
 }
 
-// GetPassword returns a copy of the password as a string.
-// Returns empty string if password is not set.
+// GetPassword returns the password, or "" if none is set.
 func (cs *ConnectionState) GetPassword() string {
 	cs.Mu.RLock()
 	defer cs.Mu.RUnlock()
@@ -108,10 +107,7 @@ func (cs *ConnectionState) GetPassword() string {
 // SetSSL remembers config's SSL settings. The caller must hold cs.Mu.
 func (cs *ConnectionState) SetSSL(config ConnectionConfig) {
 	cs.SSLMode, cs.SSLCAPath = config.SSLMode, config.SSLCAPath
-	cs.TLSServerName = config.TLSServerName
-	if cs.TLSServerName == "" {
-		cs.TLSServerName = config.Host
-	}
+	cs.TLSServerName = config.tlsServerName()
 }
 
 // GetSSL returns the SSL settings the connection was made with, for reconnecting.
@@ -122,8 +118,8 @@ func (cs *ConnectionState) GetSSL() (mode, caPath, serverName string) {
 }
 
 // CancelQuery cancels the context of a running query started with its ID.
-// ClickHouse overrides it to also run KILL QUERY, since it has no pinned
-// connection whose cancellation would stop the statement.
+// ClickHouse overrides it to also run KILL QUERY, in case the driver's cancel
+// packet doesn't stop the statement.
 func (cs *ConnectionState) CancelQuery(queryID string) error {
 	if cancelFunc, exists := cs.ActiveQueries.Load(queryID); exists {
 		if cancel, ok := cancelFunc.(context.CancelFunc); ok {
@@ -163,8 +159,7 @@ func LockSession(ctx context.Context, lock chan struct{}) error {
 	}
 }
 
-// ClearAllStateUnsafe clears all connection state fields without locking.
-// Caller must hold the lock (cs.Mu.Lock()).
+// ClearAllStateUnsafe clears the connection fields. The caller must hold cs.Mu.
 func (cs *ConnectionState) ClearAllStateUnsafe() {
 	cs.Host = ""
 	cs.Port = ""
@@ -189,6 +184,7 @@ const (
 	MaxEditorRows = 10000
 )
 
+// NewTimeoutContext returns a background context that expires after d.
 func NewTimeoutContext(d time.Duration) (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), d)
 }

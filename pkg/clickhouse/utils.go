@@ -19,22 +19,20 @@ func scanDynamicColumns(ctx context.Context, rows driver.Rows, maxRows int) ([]s
 	colTypes := rows.ColumnTypes()
 
 	truncated, err := common.ScanCapped(ctx, rows, maxRows, func() error {
-		scanTargets := prepareScanTargets(colTypes)
+		// Fresh targets per row: a scanned pointer may end up in the result.
+		scanTargets := make([]interface{}, len(colTypes))
+		for i, ct := range colTypes {
+			scanTargets[i] = reflect.New(ct.ScanType()).Interface()
+		}
 		if err := rows.Scan(scanTargets...); err != nil {
 			return err
 		}
 
-		rowsEntry := make(map[string]interface{})
+		row := make(map[string]interface{}, len(columns))
 		for i, col := range columns {
-			val := scanTargets[i]
-			rv := reflect.ValueOf(val)
-			if rv.Kind() == reflect.Ptr && !rv.IsNil() {
-				rowsEntry[col] = normalizeValue(rv.Elem().Interface())
-			} else {
-				rowsEntry[col] = nil
-			}
+			row[col] = normalizeValue(reflect.ValueOf(scanTargets[i]).Elem().Interface())
 		}
-		response = append(response, rowsEntry)
+		response = append(response, row)
 		return nil
 	})
 	if err != nil {
@@ -45,15 +43,6 @@ func scanDynamicColumns(ctx context.Context, rows driver.Rows, maxRows int) ([]s
 		return nil, nil, false, err
 	}
 	return columns, response, truncated, nil
-}
-
-func prepareScanTargets(columnTypes []driver.ColumnType) []interface{} {
-	scanTargets := make([]interface{}, len(columnTypes))
-	for i, ct := range columnTypes {
-		scanType := ct.ScanType()
-		scanTargets[i] = reflect.New(scanType).Interface()
-	}
-	return scanTargets
 }
 
 // normalizeValue converts a scanned value into one encoding/json can marshal

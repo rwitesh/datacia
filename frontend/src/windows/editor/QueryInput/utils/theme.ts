@@ -84,7 +84,6 @@ export const getTheme = (
       color: isDark ? "#60a5fa" : "#2563eb",
       fontWeight: "bold",
     },
-    // Ghost text styling - wraps naturally within the editor
     ".cm-ghost-text": {
       color: isDark ? "rgba(139, 148, 158, 0.7)" : "rgba(106, 115, 125, 0.7)",
       fontStyle: "italic",

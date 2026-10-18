@@ -39,7 +39,7 @@ export function SQLCodeEditor({ value, onChange, readOnly = false, className }: 
     [data, readOnly],
   );
 
-  // store mutable refs to avoid effect re-runs
+  // The editor is created once, so its callbacks read the latest props from refs.
   const latestOnChange = useRef(onChange);
   const latestEngine = useRef(engine);
 
@@ -51,12 +51,9 @@ export function SQLCodeEditor({ value, onChange, readOnly = false, className }: 
     latestEngine.current = engine;
   }, [engine]);
 
-  // SQL configuration compartment
   const sqlConfig = useMemo(() => new Compartment(), []);
-  // Theme configuration compartment
   const themeConfig = useMemo(() => new Compartment(), []);
 
-  // create editor ONCE
   useEffect(() => {
     if (!editorEl.current) return;
 
@@ -82,7 +79,6 @@ export function SQLCodeEditor({ value, onChange, readOnly = false, className }: 
         ...(readOnly
           ? [EditorState.readOnly.of(true), EditorView.editable.of(false)]
           : [
-              // Ghost/inline text suggestions from query history
               ghostText({
                 delay: 400,
                 minInputLength: 2,
@@ -110,7 +106,7 @@ export function SQLCodeEditor({ value, onChange, readOnly = false, className }: 
     viewRef.current = view;
 
     return () => view.destroy();
-    // run ONCE
+    // Later prop changes go through the effects below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -127,7 +123,6 @@ export function SQLCodeEditor({ value, onChange, readOnly = false, className }: 
     }
   }, [value]);
 
-  // dynamically update dialect + schema
   useEffect(() => {
     const view = viewRef.current;
     if (!view) return;
@@ -139,7 +134,6 @@ export function SQLCodeEditor({ value, onChange, readOnly = false, className }: 
     });
   }, [dialect, schema, sqlConfig]);
 
-  // dynamically update theme
   useEffect(() => {
     const view = viewRef.current;
     if (!view) return;

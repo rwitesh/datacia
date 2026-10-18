@@ -2,8 +2,10 @@ import { isValidElement, memo, useEffect, useState, type ReactNode } from "react
 import Markdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Browser } from "@wailsio/runtime";
+import { toast } from "sonner";
 import { Check, Copy, CornerDownLeft, SquarePlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { errorMessage } from "@/lib/utils";
 import { useEditorContext } from "@/context/editor/Index";
 import { getTabSql, setTabSql } from "@/context/editor/store";
 
@@ -32,7 +34,7 @@ function CodeBlock({ code, language }: { code: string; language: string }) {
     return () => clearTimeout(t);
   }, [copied]);
 
-  const copy = () => navigator.clipboard.writeText(code).then(() => setCopied(true), () => setCopied(false));
+  const copy = () => navigator.clipboard.writeText(code).then(() => setCopied(true), (err) => toast.error("Failed to copy", { description: errorMessage(err) }));
 
   const insert = () => {
     if (activeTab?.type !== "query") return;

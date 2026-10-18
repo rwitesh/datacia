@@ -1,11 +1,8 @@
-// Re-export all bindings from the generated bindings directory
-
 export { ConnectionConfig, ConnectionInfo, SSHConfig } from "../../../bindings/datacia/pkg/common";
 export type { QueryResult } from "../../../bindings/datacia/pkg/common/models";
 export type { FileNode } from "../../../bindings/datacia/internal/queries/models";
 export type { QueryHistoryItem } from "../../../bindings/datacia/internal/db/models";
 
-// Re-export all functions from remote engine
 export {
   RunQuery,
   GetTableData,
@@ -20,7 +17,6 @@ export {
   RestartApp,
   PendingUpdateVersion,
   GetCurrentConnectionInfo,
-  // Connection management functions
   SaveConnection,
   DeleteConnection,
   Connect,
@@ -36,7 +32,6 @@ export {
   OpenSettingsWindow,
 } from "../../../bindings/datacia/pkg/remote/engine";
 
-// Query service functions
 export {
   ListTree,
   CreateFolder,

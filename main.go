@@ -34,11 +34,7 @@ func main() {
 		logger.Error("Sentry init failed", "error", err.Error())
 	}
 	if reporting {
-		sentry.StartPeriodicFlush()
-		defer func() {
-			sentry.StopPeriodicFlush()
-			sentry.Flush()
-		}()
+		defer sentry.Flush()
 	}
 
 	appManager := app.NewApp(assets, version)
@@ -55,10 +51,11 @@ func main() {
 	}
 }
 
-// recoverAndReport logs the panic, flushes Sentry, then re-panics.
+// recoverAndReport logs the panic, flushes Sentry, then re-panics. Like
+// app.logPanic, it logs only the panic's type, as the value can quote query text.
 func recoverAndReport() {
 	if r := recover(); r != nil {
-		logger.Error("panic: " + fmt.Sprint(r))
+		logger.Error("panic", "type", fmt.Sprintf("%T", r))
 		sentry.Flush()
 		panic(r)
 	}

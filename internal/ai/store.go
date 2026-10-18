@@ -69,9 +69,5 @@ func (s *chatStore) save(chat Chat) error {
 	if err != nil {
 		return err
 	}
-	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, data, 0600); err != nil {
-		return err
-	}
-	return os.Rename(tmp, path)
+	return paths.WriteFileAtomic(path, data, 0600)
 }

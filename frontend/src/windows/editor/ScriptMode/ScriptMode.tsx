@@ -5,6 +5,7 @@ import { ScriptBlock, type ScriptBlockData } from "./ScriptBlock";
 import { v4 as uuidv4 } from "uuid";
 import { useCancelQuery, useRunQuery } from "@/services/database";
 import { errorMessage } from "@/lib/utils";
+import { toast } from "sonner";
 
 export function ScriptMode() {
     const [blocks, setBlocks] = useState<ScriptBlockData[]>([
@@ -86,7 +87,7 @@ export function ScriptMode() {
     };
 
     const executeAll = () => {
-        setBlocks(prev => prev.map(b => ({ ...b, status: 'idle', errorMessage: undefined, executionTime: undefined })));
+        setBlocks(prev => prev.map(b => ({ ...b, status: "idle", errorMessage: undefined, executionTime: undefined })));
         void runBlocks(blocks);
     };
 
@@ -100,7 +101,7 @@ export function ScriptMode() {
         const queryId = queryIdRef.current;
         if (queryId) {
             cancelQueryAsync(queryId).catch((err) => {
-                console.error("Error cancelling script query:", err);
+                toast.error("Failed to cancel query", { description: errorMessage(err) });
             });
         }
     };

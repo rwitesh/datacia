@@ -6,7 +6,7 @@ import (
 	"datacia/pkg/common"
 )
 
-// DatabaseClient defines the common interface that individual database engines must implement
+// DatabaseClient is one connection to a database server, implemented by each engine.
 type DatabaseClient interface {
 	Connect(config common.ConnectionConfig) error
 	Close() error
@@ -18,9 +18,11 @@ type DatabaseClient interface {
 	CancelQuery(queryId string) error
 	GetTableData(table string, limit, offset int, orderBy, orderDir string) (common.QueryResult, error)
 	GetTableSchema(table string) (common.QueryResult, error)
-	GetDDL(table string) (string, error)       // Returns CREATE TABLE statement
-	GetPassword() string                       // Returns password for reconnection purposes (internal use)
-	GetSSL() (mode, caPath, serverName string) // SSL settings for reconnection (internal use)
+	GetDDL(table string) (string, error)
+	// GetPassword and GetSSL let ChangeDatabaseByName reconnect, since
+	// GetConnectionInfo leaves them out.
+	GetPassword() string
+	GetSSL() (mode, caPath, serverName string)
 	// ReadOnlyQuery runs sql, which must pass common.CheckReadOnly, with writes
 	// blocked by the database, returning at most maxRows rows.
 	ReadOnlyQuery(ctx context.Context, sql string, maxRows int) (common.QueryResult, error)

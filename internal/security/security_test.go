@@ -10,7 +10,7 @@ import (
 // change to the salt or KDF would make existing users' saved credentials
 // unreadable.
 func TestDeriveEncryptionKeyIsStable(t *testing.T) {
-	got := hex.EncodeToString(deriveEncryptionKey(Sha256Hex("test-device")))
+	got := hex.EncodeToString(deriveEncryptionKey(sha256Hex("test-device")))
 	const want = "88dfb0476340eaff7a01368066d0a682f3fb4ebc3ee949175a080ee32c81aef5"
 	if got != want {
 		t.Errorf("deriveEncryptionKey changed: got %s, want %s", got, want)
@@ -18,7 +18,7 @@ func TestDeriveEncryptionKeyIsStable(t *testing.T) {
 }
 
 func TestEncryptDecryptRoundTrip(t *testing.T) {
-	key := deriveEncryptionKey(Sha256Hex("test-device"))
+	key := deriveEncryptionKey(sha256Hex("test-device"))
 	plaintext := []byte("s3cret password")
 
 	ciphertext, err := Encrypt(key, plaintext)
@@ -36,7 +36,7 @@ func TestEncryptDecryptRoundTrip(t *testing.T) {
 		t.Errorf("got %q, want %q", got, plaintext)
 	}
 
-	otherKey := deriveEncryptionKey(Sha256Hex("other-device"))
+	otherKey := deriveEncryptionKey(sha256Hex("other-device"))
 	if _, err := Decrypt(otherKey, ciphertext); err == nil {
 		t.Error("decrypting with another machine's key should fail")
 	}
@@ -45,7 +45,7 @@ func TestEncryptDecryptRoundTrip(t *testing.T) {
 // The device ID goes to error reports, so it must not be the machine ID the
 // encryption key is derived from.
 func TestAnonymousDeviceIDHidesMachineID(t *testing.T) {
-	machineID := Sha256Hex("test-device")
+	machineID := sha256Hex("test-device")
 	got := anonymousDeviceID(machineID)
 	if got == machineID || got == "" {
 		t.Fatalf("device ID %q exposes the machine ID", got)

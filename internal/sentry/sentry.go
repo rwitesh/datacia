@@ -21,8 +21,6 @@ const devVersion = "dev"
 // logs are dropped while it is off.
 var enabled atomic.Bool
 
-var stopFlush chan struct{}
-
 func init() {
 	enabled.Store(true)
 }
@@ -67,32 +65,9 @@ func Init(release string) (bool, error) {
 	return true, nil
 }
 
+// Flush waits up to two seconds for queued events and logs to be sent.
 func Flush() {
 	sentry.Flush(2 * time.Second)
-}
-
-// StartPeriodicFlush spawns a goroutine that flushes buffered events every 30s.
-// Call StopPeriodicFlush before final Flush to cleanly shut down.
-func StartPeriodicFlush() {
-	stopFlush = make(chan struct{})
-	go func() {
-		ticker := time.NewTicker(30 * time.Second)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ticker.C:
-				sentry.Flush(2 * time.Second)
-			case <-stopFlush:
-				return
-			}
-		}
-	}()
-}
-
-func StopPeriodicFlush() {
-	if stopFlush != nil {
-		close(stopFlush)
-	}
 }
 
 func envOrDefault(key, def string) string {

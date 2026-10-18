@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"os"
 	"sync"
 	"time"
 
@@ -19,7 +20,8 @@ const (
 // ErrTunnelLost is returned by Tunnel.Err once the SSH connection is gone.
 var ErrTunnelLost = errors.New("SSH tunnel lost; connect again")
 
-// Tunnel represents an SSH tunnel connection
+// Tunnel forwards connections on a local port to a remote address through
+// an SSH server.
 type Tunnel struct {
 	client     *ssh.Client
 	localAddr  string
@@ -32,7 +34,8 @@ type Tunnel struct {
 	lost chan struct{}
 }
 
-// Config holds SSH connection configuration
+// Config is the SSH server to tunnel through. A key file, when set, is used
+// instead of the password.
 type Config struct {
 	Host     string
 	Port     string
@@ -48,8 +51,8 @@ type Config struct {
 	KeepAliveInterval time.Duration
 }
 
-// NewTunnel creates a new SSH tunnel to forward local connections to a remote address
-// Returns the local address that should be used to connect to the remote service
+// NewTunnel connects to the SSH server and forwards connections on
+// LocalAddr to remoteHost:remotePort.
 func NewTunnel(sshConfig Config, remoteHost, remotePort string) (*Tunnel, error) {
 	config := &ssh.ClientConfig{
 		User:            sshConfig.Username,
@@ -57,20 +60,26 @@ func NewTunnel(sshConfig Config, remoteHost, remotePort string) (*Tunnel, error)
 		Timeout:         10 * time.Second,
 	}
 
-	// Use key-based auth if key path is provided, otherwise use password
 	if sshConfig.KeyPath != "" {
-		key, err := readPrivateKey(sshConfig.KeyPath)
+		keyBytes, err := os.ReadFile(sshConfig.KeyPath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read private key: %w", err)
+		}
+		key, err := ssh.ParsePrivateKey(keyBytes)
+		var missing *ssh.PassphraseMissingError
+		if errors.As(err, &missing) {
+			return nil, errors.New("passphrase-protected SSH keys aren't supported")
+		}
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse private key: %w", err)
 		}
 		config.Auth = []ssh.AuthMethod{ssh.PublicKeys(key)}
 	} else if sshConfig.Password != "" {
 		config.Auth = []ssh.AuthMethod{ssh.Password(sshConfig.Password)}
 	} else {
-		return nil, fmt.Errorf("either SSH key path or password must be provided")
+		return nil, errors.New("either SSH key path or password must be provided")
 	}
 
-	// Connect to SSH server
 	sshAddr := net.JoinHostPort(sshConfig.Host, sshConfig.Port)
 	client, err := ssh.Dial("tcp", sshAddr, config)
 	if err != nil {
@@ -82,7 +91,6 @@ func NewTunnel(sshConfig Config, remoteHost, remotePort string) (*Tunnel, error)
 		return nil, fmt.Errorf("failed to dial SSH server: %w", err)
 	}
 
-	// Create local listener on a random port
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		client.Close()
@@ -108,7 +116,7 @@ func NewTunnel(sshConfig Config, remoteHost, remotePort string) (*Tunnel, error)
 	return tunnel, nil
 }
 
-// LocalAddr returns the local address that should be used to connect through the tunnel
+// LocalAddr is the address to connect to instead of the remote one.
 func (t *Tunnel) LocalAddr() string {
 	return t.localAddr
 }
@@ -166,13 +174,12 @@ func (t *Tunnel) serverAnswers() bool {
 	}
 }
 
-// forward handles forwarding connections from local listener to remote address
+// forward accepts local connections until the listener closes.
 func (t *Tunnel) forward() {
 	defer t.background.Done()
 	for {
 		localConn, err := t.listener.Accept()
 		if err != nil {
-			// Listener closed, exit
 			return
 		}
 
@@ -181,7 +188,6 @@ func (t *Tunnel) forward() {
 			defer t.background.Done()
 			defer localConn.Close()
 
-			// Dial remote address through SSH connection
 			remoteConn, err := t.client.Dial("tcp", t.remoteAddr)
 			if err != nil {
 				return
@@ -217,8 +223,5 @@ func (t *Tunnel) Close() error {
 		errs = append(errs, err)
 	}
 	t.background.Wait()
-	if len(errs) > 0 {
-		return fmt.Errorf("errors closing tunnel: %v", errs)
-	}
-	return nil
+	return errors.Join(errs...)
 }

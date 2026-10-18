@@ -23,28 +23,28 @@ function App() {
       <AppProvider>
         <ThemeProvider>
           <HostKeyProvider>
-          <HashRouter basename="/">
-            <div className="h-screen w-screen flex flex-col overflow-hidden">
-              <Toaster position="top-center" richColors closeButton />
-              <Suspense fallback={null}>
-                <Routes>
-                  <Route path="/" element={<Home />}>
-                    <Route index element={<WelcomePanel />} />
-                    <Route path="connect" element={<DatabaseConnection />} />
-                  </Route>
-                  <Route
-                    path="/editor"
-                    element={
-                      <EditorProvider>
-                        <Editor />
-                      </EditorProvider>
-                    }
-                  />
-                  <Route path="/settings" element={<Settings />} />
-                </Routes>
-              </Suspense>
-            </div>
-          </HashRouter>
+            <HashRouter basename="/">
+              <div className="h-screen w-screen flex flex-col overflow-hidden">
+                <Toaster position="top-center" richColors closeButton />
+                <Suspense fallback={null}>
+                  <Routes>
+                    <Route path="/" element={<Home />}>
+                      <Route index element={<WelcomePanel />} />
+                      <Route path="connect" element={<DatabaseConnection />} />
+                    </Route>
+                    <Route
+                      path="/editor"
+                      element={
+                        <EditorProvider>
+                          <Editor />
+                        </EditorProvider>
+                      }
+                    />
+                    <Route path="/settings" element={<Settings />} />
+                  </Routes>
+                </Suspense>
+              </div>
+            </HashRouter>
           </HostKeyProvider>
         </ThemeProvider>
       </AppProvider>

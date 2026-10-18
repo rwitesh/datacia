@@ -9,7 +9,7 @@ export const themeConfigs: Record<Theme, ThemeConfig> = {
   system: ThemeConfig.ThemeSystem,
 }
 
-/** Placeholder so tokenColors is never undefined before settings load. No hex values defined in UI. */
+// Used until the settings load; the colors themselves come from the backend.
 export const EMPTY_TOKEN_COLORS: TokenColors = {
   keyword: "",
   string: "",
@@ -21,26 +21,23 @@ export const EMPTY_TOKEN_COLORS: TokenColors = {
   operator: "",
 }
 
+export const DEFAULT_FONT_FAMILY = "JetBrains Mono"
+export const DEFAULT_FONT_SIZE = 12
+
 export type ThemeProviderState = {
   theme: Theme
   resolvedTheme: "dark" | "light"
   tokenColors: TokenColors
   editorFontFamily: string
   editorFontSize: number
-  uiFontFamily: string
-  uiFontSize: number
   setTheme: (theme: Theme) => void
 }
 
-export const initialState: ThemeProviderState = {
+export const ThemeProviderContext = createContext<ThemeProviderState>({
   theme: "system",
   resolvedTheme: "dark",
   tokenColors: EMPTY_TOKEN_COLORS,
-  editorFontFamily: "JetBrains Mono",
-  editorFontSize: 12,
-  uiFontFamily: "JetBrains Mono",
-  uiFontSize: 12,
+  editorFontFamily: DEFAULT_FONT_FAMILY,
+  editorFontSize: DEFAULT_FONT_SIZE,
   setTheme: () => null,
-}
-
-export const ThemeProviderContext = createContext<ThemeProviderState>(initialState)
+})

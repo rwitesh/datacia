@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { Events, Updater } from "@wailsio/runtime";
+import { toast } from "sonner";
+import { errorMessage } from "@/lib/utils";
 import { PendingUpdateVersion, RestartApp } from "./bindings/updates";
 import { queryKeys } from "./queryKeys";
 
@@ -24,8 +26,7 @@ export function usePendingUpdate() {
 
 export function useRestartApp() {
   return useMutation({
-    mutationFn: async () => {
-      return RestartApp();
-    },
-  })
+    mutationFn: () => RestartApp(),
+    onError: (err) => toast.error(errorMessage(err)),
+  });
 }

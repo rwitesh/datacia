@@ -45,10 +45,8 @@ export function QueryResult({ onOpenDataView }: QueryResultProps) {
     );
   }
 
-  const { id, isExecuting, error, results, type, mode, orderBy, orderDir } = activeTab;
-  const isCommandQuery = results && results.type === "command";
+  const { id, isExecuting, error, results, type, orderBy, orderDir } = activeTab;
   const isTableViewMode = type === "table";
-  const viewMode = mode ?? "data";
 
   const handleServerSort = (column: string, direction: "asc" | "desc") => {
     if (!table || limit === undefined || offset === undefined) return;
@@ -68,7 +66,7 @@ export function QueryResult({ onOpenDataView }: QueryResultProps) {
   return (
     <div className="h-full flex flex-col overflow-hidden bg-card">
       <div className="flex-1 overflow-hidden relative min-h-0">
-        {isTableViewMode && viewMode === "ddl" ? (
+        {isDDLMode ? (
           <DDLView
             ddl={ddlQuery.data ?? ""}
             isLoading={ddlQuery.isLoading}
@@ -99,7 +97,7 @@ export function QueryResult({ onOpenDataView }: QueryResultProps) {
           <div className="flex justify-center items-center h-full">
             <div className="animate-spin h-8 w-8 border-b-2 border-primary rounded-full"></div>
           </div>
-        ) : isCommandQuery ? (
+        ) : results?.type === "command" ? (
           <div className="flex justify-center items-center h-full cursor-default select-none">
             <span className="text-green-600 text-sm">Query executed successfully</span>
           </div>

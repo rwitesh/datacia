@@ -19,11 +19,7 @@ import { useEditorContext } from "@/context/editor/Index";
 import { useExportActions } from "@/services/useExportActions";
 
 function formatExecutionTime(ms: number): string {
-  if (ms < 1000) {
-    return `${ms} ms`;
-  }
-  const seconds = (ms / 1000).toFixed(2);
-  return `${seconds} s`;
+  return ms < 1000 ? `${ms} ms` : `${(ms / 1000).toFixed(2)} s`;
 }
 
 function formatBytes(bytes: number): string {
@@ -31,8 +27,6 @@ function formatBytes(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }
-
-export type ViewMode = "data" | "ddl";
 
 export function ResultBar() {
   const { activeTab, updateTab, tableRef, loadTableData } = useEditorContext();
@@ -72,52 +66,30 @@ export function ResultBar() {
       logs.bytesRead != null);
   const isTableMode = type === "table";
 
-  // Pagination Logic
-  const fetchData = (newLimit: number, newOffset: number) => {
-    if (!table || newLimit === undefined) return;
+  // step is how many pages to move: -1, 0 (refresh) or 1.
+  const loadPage = (step: number) => {
+    if (!table || limit === undefined || offset === undefined) return;
     loadTableData(id, {
       table,
-      limit: newLimit,
-      offset: newOffset,
+      limit,
+      offset: Math.max(0, offset + step * limit),
       orderBy,
       orderDir,
     });
   };
 
-  const handlePrev = () => {
-    if (typeof limit === "number" && typeof offset === "number") {
-      const newOffset = Math.max(0, offset - limit);
-      fetchData(limit, newOffset);
-    }
-  };
-
-  const handleNext = () => {
-    if (typeof limit === "number" && typeof offset === "number") {
-      const newOffset = offset + limit;
-      fetchData(limit, newOffset);
-    }
-  };
-
-  const handleRefresh = () => {
-    if (typeof limit === "number" && typeof offset === "number") {
-      fetchData(limit, offset);
-    }
-  };
-
-  const hasData = data && data.length > 0;
+  const hasData = data.length > 0;
 
   return (
     <div className="flex items-center justify-between bg-card border-t border-border px-4 py-1.5 select-none h-10">
-      {/* Left Side: Pagination or Info */}
       <div className="flex items-center gap-4 flex-1">
         {isTableMode ? (
           <div className="flex items-center gap-3">
-            {/* Data/DDL Toggle */}
             <ToggleGroup
               type="single"
               value={viewMode}
               onValueChange={(value) =>
-                value && updateTab(id, { mode: value as ViewMode })
+                value && updateTab(id, { mode: value as "data" | "ddl" })
               }
               size="sm"
               variant="outline"
@@ -137,7 +109,7 @@ export function ResultBar() {
                   <Button
                     size="icon"
                     variant="ghost"
-                    onClick={handlePrev}
+                    onClick={() => loadPage(-1)}
                     disabled={isExecuting || offset === 0}
                     className="h-7 w-7"
                   >
@@ -146,7 +118,7 @@ export function ResultBar() {
                   <Button
                     size="icon"
                     variant="ghost"
-                    onClick={handleNext}
+                    onClick={() => loadPage(1)}
                     disabled={isExecuting}
                     className="h-7 w-7"
                   >
@@ -197,7 +169,7 @@ export function ResultBar() {
                   {formatExecutionTime(timeElapsed)}
                 </span>
               )}
-              {hasLogs && logs != null && (
+              {hasLogs && (
                 <>
                   {logs.rowsReturned != null && (
                     <span>
@@ -232,13 +204,12 @@ export function ResultBar() {
         )}
       </div>
 
-      {/* Right Side: Actions (Refresh, Export) */}
       <div className="flex items-center gap-2">
         {isTableMode && viewMode === "data" && (
           <Button
             size="icon"
             variant="ghost"
-            onClick={handleRefresh}
+            onClick={() => loadPage(0)}
             disabled={isExecuting}
             className="h-7 w-7 text-muted-foreground"
             title="Refresh Data"

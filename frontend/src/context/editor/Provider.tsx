@@ -22,9 +22,8 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
   // Numbers "Query N" titles; unlike tabs.length it never repeats after a close.
   const queryTabCount = useRef(0);
 
-  /* Each call below uses mutateAsync: a shared mutation only calls the
-     onSuccess/onError passed to its latest mutate(), so with mutate() a
-     query running in one tab never finished once another tab ran one. */
+  // mutateAsync per call: tabs run these concurrently, and mutate() only runs
+  // the callbacks of its latest call.
   const { mutateAsync: runQueryAsync } = useRunQuery();
   const { mutateAsync: cancelQueryAsync } = useCancelQuery();
   const { mutateAsync: getTableDataAsync } = useGetTableData();
@@ -115,12 +114,8 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
     [activeTabId, tabs, cancelQueryAsync]
   );
 
-  const setActiveTab = useCallback((tabId: string) => {
-    setActiveTabId(tabId);
-  }, []);
-
   const runQuery = useCallback(
-    async (tabId?: string, pagination: boolean = false) => {
+    async (tabId?: string) => {
       const targetTabId = tabId || activeTabId;
       if (!targetTabId) return;
 
@@ -151,7 +146,7 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
 
       try {
         const response = await runQueryAsync({ sql: querySQL, queryId });
-        finishRun({ results: response, pagination });
+        finishRun({ results: response, pagination: false });
       } catch (err) {
         finishRun({ error: errorMessage(err), results: null });
       }
@@ -193,7 +188,7 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
       activeTab,
       createTab,
       closeTab,
-      setActiveTab,
+      setActiveTab: setActiveTabId,
       updateTab,
       runQuery,
       stopQuery,
@@ -208,7 +203,6 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
       activeTab,
       createTab,
       closeTab,
-      setActiveTab,
       updateTab,
       runQuery,
       stopQuery,

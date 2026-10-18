@@ -13,9 +13,6 @@ import (
 	"github.com/zendev-sh/goai"
 )
 
-// The tools give the model the user's editor and read-only access to the
-// connected database, so it can answer from real data instead of guessing.
-
 const (
 	maxToolSteps     = 8
 	defaultQueryRows = 50
@@ -55,8 +52,10 @@ type (
 	}
 )
 
-// chatTools returns the tools for one chat request. editor is the editor as
-// it was when the message was sent; report is called as each tool starts.
+// chatTools returns the tools for one chat request: the user's editor and
+// read-only access to the connected database, so the model can answer from
+// real data instead of guessing. editor is the editor as it was when the
+// message was sent; report is called as each tool starts.
 func chatTools(db Database, editor ChatContext, report func(ToolUse)) []goai.Tool {
 	return []goai.Tool{
 		goai.NewTool("get_editor",
