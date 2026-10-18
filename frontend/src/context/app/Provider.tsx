@@ -5,6 +5,7 @@ import { AppContext } from "./Context";
 import { getDialect } from "@/shared/utils/engines";
 import { useCurrentConnection } from "@/services/connections";
 import { useSettings } from "@/services/settings";
+import { queryKeys } from "@/services/queryKeys";
 
 export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const queryClient = useQueryClient();
@@ -12,18 +13,18 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const { data: settings } = useSettings();
 
   const invalidateConnectionQueries = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ["tables"] });
-    queryClient.invalidateQueries({ queryKey: ["ddl"] });
-    queryClient.invalidateQueries({ queryKey: ["databases"] });
-    queryClient.invalidateQueries({ queryKey: ["queries-tree"] });
-    queryClient.invalidateQueries({ queryKey: ["query-history"] });
-    queryClient.invalidateQueries({ queryKey: ["connection-health"] });
-    queryClient.invalidateQueries({ queryKey: ["current-connection"] });
+    queryClient.invalidateQueries({ queryKey: queryKeys.tables });
+    queryClient.invalidateQueries({ queryKey: queryKeys.ddl });
+    queryClient.invalidateQueries({ queryKey: queryKeys.databases });
+    queryClient.invalidateQueries({ queryKey: queryKeys.queriesTree });
+    queryClient.invalidateQueries({ queryKey: queryKeys.queryHistory });
+    queryClient.invalidateQueries({ queryKey: queryKeys.connectionHealth });
+    queryClient.invalidateQueries({ queryKey: queryKeys.currentConnection });
   }, [queryClient]);
 
   const reload = () => {
     invalidateConnectionQueries();
-    queryClient.invalidateQueries({ queryKey: ["connections"] });
+    queryClient.invalidateQueries({ queryKey: queryKeys.connections });
   };
 
   useEffect(() => {

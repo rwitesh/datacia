@@ -18,6 +18,7 @@ import {
 } from "../utils/validation";
 import { useConnectDatabase } from "./useConnectDatabase";
 import { errorMessage } from "@/lib/utils";
+import { queryKeys } from "@/services/queryKeys";
 
 interface FetchedConnectionData {
   name?: string;
@@ -172,7 +173,7 @@ export const useConnectionForm = ({
         await SaveConnection(values.connectionName, config);
       }
 
-      queryClient.invalidateQueries({ queryKey: ["connections"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.connections });
     },
     onMutate: () => {
       setStatus({

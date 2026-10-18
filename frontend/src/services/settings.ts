@@ -1,11 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { GetAppInfo, UpdateSettings, type Info, type Settings } from "./bindings/settings";
+import { queryKeys } from "./queryKeys";
 export type { Info, Settings, EditorConfig, TokenColors, AIConfig, AIProviderConfig } from "./bindings/settings";
 export { ThemeConfig } from "./bindings/settings";
 
 export function useSettings() {
     return useQuery<Info>({
-        queryKey: ["settings"],
+        queryKey: queryKeys.settings,
         queryFn: async () => {
             const info = await GetAppInfo();
             if (!info) throw new Error("Failed to load settings");
@@ -27,8 +28,8 @@ export function useUpdateSettings() {
             return info;
         },
         onSuccess: (info) => {
-            queryClient.setQueryData(["settings"], info);
-            queryClient.invalidateQueries({ queryKey: ["settings"] });
+            queryClient.setQueryData(queryKeys.settings, info);
+            queryClient.invalidateQueries({ queryKey: queryKeys.settings });
         },
     });
 }
