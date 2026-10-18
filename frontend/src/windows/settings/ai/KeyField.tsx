@@ -5,7 +5,8 @@ import { ExternalLink, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { errorMessage } from "@/lib/utils";
-import { AI_QUERY_KEY, SignIn, type ProviderStatus } from "@/services/ai";
+import { SignIn, type ProviderStatus } from "@/services/ai";
+import { queryKeys } from "@/services/queryKeys";
 
 type Props = {
   status: ProviderStatus;
@@ -102,7 +103,7 @@ function useSignIn(providerId: string) {
 
   const { mutate, isPending, error } = useMutation({
     mutationFn: () => (call.current = SignIn(providerId)),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: [AI_QUERY_KEY] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.ai }),
   });
 
   return {
