@@ -48,7 +48,7 @@ var (
 // removeContainers removes every container started by these tests, including
 // ones left by a run that was killed before it could clean up.
 func removeContainers() {
-	out, _ := docker("ps", "-aq", "--filter", "label="+containerLabel)
+	out, _ := dockerOut("ps", "-aq", "--filter", "label="+containerLabel)
 	if ids := strings.Fields(out); len(ids) > 0 {
 		_ = exec.Command("docker", append([]string{"rm", "-f"}, ids...)...).Run()
 	}
@@ -129,13 +129,13 @@ const clickhouseTLS = `<clickhouse>
 </clickhouse>
 `
 
-func docker(args ...string) (string, error) {
+func dockerOut(args ...string) (string, error) {
 	out, err := exec.Command("docker", args...).CombinedOutput()
 	return strings.TrimSpace(string(out)), err
 }
 
 func publishedAddr(name, port string) (string, error) {
-	out, err := docker("port", name, port+"/tcp")
+	out, err := dockerOut("port", name, port+"/tcp")
 	if err != nil {
 		return "", fmt.Errorf("%s: %s", err, out)
 	}
@@ -166,7 +166,7 @@ func setup(t *testing.T, engine string) {
 }
 
 func writeCerts(t *testing.T) error {
-	if _, err := docker("info"); err != nil {
+	if _, err := dockerOut("info"); err != nil {
 		return fmt.Errorf("docker is not available: %w", err)
 	}
 	var err error
@@ -231,7 +231,7 @@ exec docker-entrypoint.sh postgres -c ssl=on -c ssl_cert_file=/tmp/server.crt -c
 		container := containerPrefix + s.name + "-" + fmt.Sprint(os.Getpid())
 		// The label lets the next run remove containers a killed run left behind.
 		args := append([]string{"run", "-d", "--rm", "--label", containerLabel, "--name", container, "-p", "127.0.0.1::" + s.port}, s.args...)
-		if out, err := docker(args...); err != nil {
+		if out, err := dockerOut(args...); err != nil {
 			return fmt.Errorf("docker run %s: %s", s.name, out)
 		}
 		wg.Add(1)
