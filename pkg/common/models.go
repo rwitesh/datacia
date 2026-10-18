@@ -51,15 +51,22 @@ type SSHConfig struct {
 // ConnectionConfig is everything needed to connect to a database. ID and Name
 // are set only for saved connections. For SQLite, Database is the file path.
 type ConnectionConfig struct {
-	ID       string    `json:"id"`
-	Name     string    `json:"name"`
-	Engine   string    `json:"engine"`
-	Host     string    `json:"host"`
-	Port     string    `json:"port"`
-	Username string    `json:"username"`
-	Password string    `json:"password"`
-	Database string    `json:"database"`
-	SSH      SSHConfig `json:"ssh"`
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Engine   string `json:"engine"`
+	Host     string `json:"host"`
+	Port     string `json:"port"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Database string `json:"database"`
+	// SSLMode is one of the SSLMode constants; empty means automatic. SSLCAPath
+	// is an optional CA file for verify-full, which otherwise uses the system roots.
+	SSLMode   string `json:"sslMode"`
+	SSLCAPath string `json:"sslCaPath"`
+	// TLSServerName is the host to verify the certificate against when it
+	// differs from Host, as with an SSH tunnel. Never sent by the UI.
+	TLSServerName string    `json:"-"`
+	SSH           SSHConfig `json:"ssh"`
 }
 
 // ConnectionInfo represents a connection list item with name and engine
@@ -70,11 +77,16 @@ type ConnectionInfo struct {
 
 // ConnectionState holds common connection state for database clients
 type ConnectionState struct {
-	Host          string
-	Port          string
-	Username      string
-	Password      *SecureString
-	Database      string
+	Host     string
+	Port     string
+	Username string
+	Password *SecureString
+	Database string
+	// SSLMode, SSLCAPath and TLSServerName are kept so that reconnecting to
+	// another database on the same server secures it the same way.
+	SSLMode       string
+	SSLCAPath     string
+	TLSServerName string
 	ActiveQueries sync.Map
 	Mu            sync.RWMutex
 }
@@ -88,6 +100,22 @@ func (cs *ConnectionState) GetPassword() string {
 		return ""
 	}
 	return cs.Password.String()
+}
+
+// SetSSL remembers config's SSL settings. The caller must hold cs.Mu.
+func (cs *ConnectionState) SetSSL(config ConnectionConfig) {
+	cs.SSLMode, cs.SSLCAPath = config.SSLMode, config.SSLCAPath
+	cs.TLSServerName = config.TLSServerName
+	if cs.TLSServerName == "" {
+		cs.TLSServerName = config.Host
+	}
+}
+
+// GetSSL returns the SSL settings the connection was made with, for reconnecting.
+func (cs *ConnectionState) GetSSL() (mode, caPath, serverName string) {
+	cs.Mu.RLock()
+	defer cs.Mu.RUnlock()
+	return cs.SSLMode, cs.SSLCAPath, cs.TLSServerName
 }
 
 // CancelQuery cancels the context of a running query started with its ID.
@@ -139,6 +167,7 @@ func (cs *ConnectionState) ClearAllStateUnsafe() {
 	cs.Port = ""
 	cs.Username = ""
 	cs.Database = ""
+	cs.SSLMode, cs.SSLCAPath, cs.TLSServerName = "", "", ""
 	if cs.Password != nil {
 		cs.Password.Clear()
 		cs.Password = nil

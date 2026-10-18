@@ -52,6 +52,18 @@ func (m *MySQL) Connect(config common.ConnectionConfig) error {
 	cfg.Addr = net.JoinHostPort(config.Host, config.Port)
 	cfg.DBName = config.Database
 	cfg.ParseTime = true
+	tlsSettings, err := config.TLSSettings()
+	if err != nil {
+		return err
+	}
+	switch tlsSettings.Mode {
+	case common.SSLModeAutomatic:
+		cfg.TLSConfig = "preferred"
+	case common.SSLModeDisable:
+		cfg.TLSConfig = "false"
+	default:
+		cfg.TLS = tlsSettings.Config
+	}
 	connector, err := mysql.NewConnector(cfg)
 	if err != nil {
 		return err
@@ -82,6 +94,7 @@ func (m *MySQL) Connect(config common.ConnectionConfig) error {
 	m.Port = config.Port
 	m.Username = config.Username
 	m.Database = config.Database
+	m.SetSSL(config)
 	m.Password = common.NewSecureString(config.Password)
 	m.Mu.Unlock()
 	return nil

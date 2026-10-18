@@ -2,6 +2,7 @@ package db
 
 import (
 	"bytes"
+	"database/sql"
 	"errors"
 	"path/filepath"
 	"testing"
@@ -57,6 +58,7 @@ func TestSaveAndUpdateConnection(t *testing.T) {
 
 	config := common.ConnectionConfig{
 		Name: "first", Engine: "mysql", Host: "db", Port: "3306", Username: "root", Password: "pw", Database: "app",
+		SSLMode: common.SSLModeVerifyFull, SSLCAPath: "/certs/ca.pem",
 		SSH: common.SSHConfig{Enabled: true, Host: "bastion", Port: "22", Username: "ops", Password: "sshpw"},
 	}
 	if err := store.SaveConnection(config); err != nil {
@@ -90,5 +92,55 @@ func TestSaveAndUpdateConnection(t *testing.T) {
 	}
 	if got != config {
 		t.Fatalf("updated %+v, want %+v", got, config)
+	}
+}
+
+// TestOpenOldDatabase opens a data.db whose connections table predates the
+// SSL columns: the saved connection must keep loading, as automatic.
+func TestOpenOldDatabase(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "data.db")
+	old, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = old.Exec(`
+		CREATE TABLE connections (
+			id TEXT PRIMARY KEY, name TEXT NOT NULL UNIQUE, engine TEXT NOT NULL,
+			host TEXT, port TEXT, username TEXT, password TEXT, database TEXT,
+			use_ssh INTEGER DEFAULT 0, ssh_host TEXT, ssh_port TEXT, ssh_username TEXT, ssh_password TEXT,
+			use_ssh_key INTEGER DEFAULT 0, ssh_key_path TEXT,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		);
+		INSERT INTO connections (id, name, engine, host, port, username, password, database, ssh_host, ssh_port, ssh_username, ssh_password, ssh_key_path)
+		VALUES ('old', 'legacy', 'mysql', 'db', '3306', 'root', '', 'app', '', '', '', '', '')`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	old.Close()
+
+	// Opening twice also checks that the columns are only added once.
+	for i := range 2 {
+		store, err := OpenFile(path, bytes.Repeat([]byte{1}, 32))
+		if err != nil {
+			t.Fatal(err)
+		}
+		config, err := store.LoadConnection("old")
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := common.SSLModeAutomatic
+		if i == 1 {
+			want = common.SSLModeRequire // saved on the first pass
+		}
+		if config.Host != "db" || config.SSLMode != want {
+			t.Fatalf("pass %d loaded %+v, want the old connection with SSL mode %q", i, config, want)
+		}
+		if i == 0 {
+			config.SSLMode = common.SSLModeRequire
+			if err := store.UpdateConnection(config); err != nil {
+				t.Fatal(err)
+			}
+		}
+		store.Close()
 	}
 }

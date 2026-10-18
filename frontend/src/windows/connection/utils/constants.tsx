@@ -5,6 +5,32 @@ export const DEFAULT_PORTS: Record<DatabaseEngine, string> = Object.fromEntries(
   Object.entries(DATABASE_ENGINES).map(([key, config]) => [key, config.defaultPort])
 ) as Record<DatabaseEngine, string>;
 
+export const DEFAULT_SSL_MODE = "automatic";
+
+// The values match the SSLMode constants in pkg/common/tls.go.
+export const SSL_MODES = [
+  {
+    value: DEFAULT_SSL_MODE,
+    label: "Automatic",
+    hint: "Uses TLS when the server offers it, but without checking its certificate, and falls back to unencrypted. ClickHouse stays unencrypted. Use another mode on untrusted networks.",
+  },
+  {
+    value: "disable",
+    label: "Disable",
+    hint: "Never encrypts the connection.",
+  },
+  {
+    value: "require",
+    label: "Require (no verification)",
+    hint: "Always encrypts, but doesn't check who the server is. This only protects against eavesdropping, not against someone impersonating the server.",
+  },
+  {
+    value: "verify-full",
+    label: "Verify certificate",
+    hint: "Always encrypts and checks the server's certificate and host name. Recommended for remote servers.",
+  },
+];
+
 // Field labels for form validation messages
 export const FIELD_LABELS: Record<keyof FormValues, string> = {
   connectionName: "Connection Name",
@@ -14,6 +40,8 @@ export const FIELD_LABELS: Record<keyof FormValues, string> = {
   username: "Username",
   password: "Password",
   database: "Database",
+  sslMode: "SSL Mode",
+  sslCaPath: "CA Certificate",
   useSSH: "Use SSH",
   sshHost: "SSH Host",
   sshPort: "SSH Port",

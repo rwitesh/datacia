@@ -18,6 +18,13 @@ export class ConnectionConfig {
     "username": string;
     "password": string;
     "database": string;
+
+    /**
+     * SSLMode is one of the SSLMode constants; empty means automatic. SSLCAPath
+     * is an optional CA file for verify-full, which otherwise uses the system roots.
+     */
+    "sslMode": string;
+    "sslCaPath": string;
     "ssh": SSHConfig;
 
     /** Creates a new ConnectionConfig instance. */
@@ -46,6 +53,12 @@ export class ConnectionConfig {
         if (!("database" in $$source)) {
             this["database"] = "";
         }
+        if (!("sslMode" in $$source)) {
+            this["sslMode"] = "";
+        }
+        if (!("sslCaPath" in $$source)) {
+            this["sslCaPath"] = "";
+        }
         if (!("ssh" in $$source)) {
             this["ssh"] = (new SSHConfig());
         }
@@ -57,10 +70,10 @@ export class ConnectionConfig {
      * Creates a new ConnectionConfig instance from a string or object.
      */
     static createFrom($$source: any = {}): ConnectionConfig {
-        const $$createField8_0 = $$createType0;
+        const $$createField10_0 = $$createType0;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("ssh" in $$parsedSource) {
-            $$parsedSource["ssh"] = $$createField8_0($$parsedSource["ssh"]);
+            $$parsedSource["ssh"] = $$createField10_0($$parsedSource["ssh"]);
         }
         return new ConnectionConfig($$parsedSource as Partial<ConnectionConfig>);
     }

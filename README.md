@@ -39,6 +39,26 @@ may say it can't verify the developer; open **System Settings → Privacy & Secu
 **Windows** – run the installer. It installs for the current user, so no administrator rights are
 needed. If SmartScreen appears, choose **More info → Run anyway**.
 
+## Encrypted connections (SSL/TLS)
+
+PostgreSQL, MySQL and ClickHouse connections have an **SSL Mode**:
+
+| Mode | What it does |
+| --- | --- |
+| **Automatic** (default) | PostgreSQL and MySQL use TLS when the server offers it, without checking its certificate, and otherwise connect unencrypted, as `psql` and `mysql` do. ClickHouse stays unencrypted. Anyone on the network can force the unencrypted fallback, so use another mode on untrusted networks. |
+| **Disable** | Never encrypts. |
+| **Require (no verification)** | Always encrypts, but doesn't check who the server is. It protects against eavesdropping only, not against someone impersonating the server. |
+| **Verify certificate** | Always encrypts and checks the server's certificate chain and host name. Uses your system's trusted certificates, or the CA file you choose for a private or self-signed CA. |
+
+Connections saved before this setting existed keep their old behaviour (Automatic). Nothing is
+refused unless you choose a stricter mode. If a connection fails after you choose **Require** or
+**Verify certificate**, the server may not have TLS enabled, or its certificate may not be trusted:
+turn TLS on in the server, choose the CA file, or pick a weaker mode if you accept the risk. For
+ClickHouse, use the server's secure native port (9440 by default) when you enable TLS.
+
+With an SSH tunnel the certificate is checked against the database host you typed, not the tunnel
+address.
+
 ## Privacy
 
 DataCia sends anonymous error reports (crashes, error messages, app version, OS and an anonymous
