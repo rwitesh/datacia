@@ -33,7 +33,8 @@ func CheckReadOnly(sql string) error {
 	if fileWrite.MatchString(sql) {
 		return errors.New("Queries can't write files.")
 	}
-	if writeKeyword.MatchString(sql) {
+	// SHOW only lists things, and SHOW CREATE TABLE is common.
+	if !strings.EqualFold(leadingWord(sql), "show") && writeKeyword.MatchString(sql) {
 		return errors.New("Queries can't change data or schema.")
 	}
 	return nil

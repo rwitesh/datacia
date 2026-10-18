@@ -32,6 +32,8 @@ func TestCheckReadOnly(t *testing.T) {
 		"WITH d AS (UPDATE t SET a = 1 RETURNING *) SELECT * FROM d":       false,
 		"EXPLAIN ANALYZE DELETE FROM users":                                false,
 		"SELECT * INTO newtable FROM t":                                    false,
+		"SHOW CREATE TABLE users":                                          true,
+		"select * from t where a = 'delete'":                               false,
 		"select updated_at, created_by from t":                             true,
 	} {
 		if got := CheckReadOnly(sql) == nil; got != ok {
