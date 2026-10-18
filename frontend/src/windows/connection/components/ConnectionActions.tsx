@@ -9,7 +9,6 @@ interface ConnectionActionsProps {
   loading: boolean;
   onSave: () => void;
   onTest: () => void;
-  onConnect: () => void;
   saveMutation: UseMutationResult<void, Error, void, unknown>;
   testMutation: UseMutationResult<void, Error, void, unknown>;
   connectMutation: UseMutationResult<void, Error, ConnectArgs, unknown>;
@@ -20,7 +19,6 @@ export const ConnectionActions: React.FC<ConnectionActionsProps> = ({
   loading,
   onSave,
   onTest,
-  onConnect,
   saveMutation,
   testMutation,
   connectMutation,
@@ -55,10 +53,9 @@ export const ConnectionActions: React.FC<ConnectionActionsProps> = ({
           {isTesting ? "Testing..." : "Test"}
         </Button>
         <Button
-          type="button"
+          type="submit"
           variant="secondary"
           className="h-6 text-sm"
-          onClick={onConnect}
           disabled={isDisabled}
         >
           {isConnecting ? "Connecting..." : "Connect"}

@@ -65,43 +65,51 @@ export const DatabaseConnection: React.FC = () => {
     <div className="h-full flex flex-col">
       <StatusBar />
 
-      <div className="mb-3 flex-shrink-0" aria-live="polite" role="status">
-        <div className="min-h-24">
-          <ConnectionAlert
-            hasFormErrors={hasFormErrors}
-            formErrorEntries={formErrorEntries}
-            isError={isError}
-            status={status}
-            displayName={displayName}
-            onDismissStatus={() => setStatus(null)}
+      <form
+        className="flex-1 min-h-0 flex flex-col"
+        noValidate
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleConnect();
+        }}
+      >
+        <div className="mb-3 flex-shrink-0" aria-live="polite" role="status">
+          <div className="min-h-24">
+            <ConnectionAlert
+              hasFormErrors={hasFormErrors}
+              formErrorEntries={formErrorEntries}
+              isError={isError}
+              status={status}
+              displayName={displayName}
+              onDismissStatus={() => setStatus(null)}
+            />
+          </div>
+        </div>
+
+        <div className="flex-1 px-2 overflow-y-auto min-h-0">
+          <ConnectionForm
+            register={register}
+            watch={watch}
+            setValue={setValue}
+            currentEngine={currentEngine}
+            loading={loading}
+            onSelectSSHKey={handleSelectSSHKey}
+            onSelectSQLiteFile={handleSelectSQLiteFile}
           />
         </div>
-      </div>
 
-      <div className="flex-1 px-2 overflow-y-auto min-h-0">
-        <ConnectionForm
-          register={register}
-          watch={watch}
-          setValue={setValue}
-          currentEngine={currentEngine}
-          loading={loading}
-          onSelectSSHKey={handleSelectSSHKey}
-          onSelectSQLiteFile={handleSelectSQLiteFile}
-        />
-      </div>
-
-      <div className="flex-shrink-0 mt-3">
-        <ConnectionActions
-          isUpdate={isUpdate}
-          loading={loading}
-          onSave={handleSave}
-          onTest={handleTest}
-          onConnect={handleConnect}
-          saveMutation={saveMutation}
-          testMutation={testMutation}
-          connectMutation={connectMutation}
-        />
-      </div>
+        <div className="flex-shrink-0 mt-3">
+          <ConnectionActions
+            isUpdate={isUpdate}
+            loading={loading}
+            onSave={handleSave}
+            onTest={handleTest}
+            saveMutation={saveMutation}
+            testMutation={testMutation}
+            connectMutation={connectMutation}
+          />
+        </div>
+      </form>
     </div>
   );
 };
