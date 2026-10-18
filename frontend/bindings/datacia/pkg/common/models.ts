@@ -89,6 +89,11 @@ export class QueryResult {
     "timeElapsed": number;
     "logs": QueryLogs;
 
+    /**
+     * Truncated is set when the result holds only the first rows of a larger one.
+     */
+    "truncated"?: boolean;
+
     /** Creates a new QueryResult instance. */
     constructor($$source: Partial<QueryResult> = {}) {
         if (!("type" in $$source)) {

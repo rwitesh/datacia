@@ -145,7 +145,7 @@ func (s *SQLite) RunQuery(queryID, queryType, querySql string) (common.QueryResu
 	case common.QueryTypeCommand:
 		return s.execute(ctx, s.session, querySql)
 	case common.QueryTypeRead:
-		return s.query(ctx, s.session, querySql)
+		return s.query(ctx, s.session, querySql, common.MaxEditorRows)
 	default:
 		return common.QueryResult{Type: common.QueryTypeUnknown}, fmt.Errorf("unsupported query type: %s", queryType)
 	}
@@ -190,13 +190,13 @@ func readOnlyDSN(path string) string {
 	return "file:" + (&url.URL{Path: p}).EscapedPath() + "?mode=ro&_busy_timeout=5000"
 }
 
-func (s *SQLite) query(ctx context.Context, db querier, sql string) (common.QueryResult, error) {
+func (s *SQLite) query(ctx context.Context, db querier, sql string, maxRows int) (common.QueryResult, error) {
 	rows, err := db.QueryContext(ctx, sql)
 	if err != nil {
 		return common.QueryResult{Type: common.QueryTypeRead}, err
 	}
 	defer rows.Close()
-	return scanRows(ctx, rows, 0)
+	return scanRows(ctx, rows, maxRows)
 }
 
 // scanRows reads up to maxRows rows, or all of them when maxRows is 0.
@@ -241,14 +241,18 @@ func scanRows(ctx context.Context, rows *sql.Rows, maxRows int) (common.QueryRes
 		data = append(data, row)
 	}
 
+	// Peek one row past the cap so a result of exactly maxRows isn't flagged.
+	truncated := maxRows > 0 && len(data) == maxRows && rows.Next()
+
 	if err := rows.Err(); err != nil {
 		return common.QueryResult{Type: common.QueryTypeRead}, err
 	}
 
 	return common.QueryResult{
-		Type:    common.QueryTypeRead,
-		Columns: columns,
-		Data:    data,
+		Type:      common.QueryTypeRead,
+		Columns:   columns,
+		Data:      data,
+		Truncated: truncated,
 	}, nil
 }
 
@@ -319,7 +323,7 @@ func (s *SQLite) GetTableData(table string, limit, offset int, orderBy, orderDir
 	if err != nil {
 		return common.QueryResult{}, err
 	}
-	return s.query(ctx, db, sqlStr)
+	return s.query(ctx, db, sqlStr, 0)
 }
 
 func (s *SQLite) GetTableSchema(table string) (common.QueryResult, error) {
