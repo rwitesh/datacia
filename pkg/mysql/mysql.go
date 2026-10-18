@@ -44,13 +44,13 @@ func New() *MySQL {
 	}
 }
 
-func (m *MySQL) Connect(host, port, username, password, database string) error {
+func (m *MySQL) Connect(config common.ConnectionConfig) error {
 	cfg := mysql.NewConfig()
-	cfg.User = username
-	cfg.Passwd = password
+	cfg.User = config.Username
+	cfg.Passwd = config.Password
 	cfg.Net = "tcp"
-	cfg.Addr = net.JoinHostPort(host, port)
-	cfg.DBName = database
+	cfg.Addr = net.JoinHostPort(config.Host, config.Port)
+	cfg.DBName = config.Database
 	cfg.ParseTime = true
 	connector, err := mysql.NewConnector(cfg)
 	if err != nil {
@@ -78,11 +78,11 @@ func (m *MySQL) Connect(host, port, username, password, database string) error {
 	m.db = db
 	m.session, m.sessionID = session, sessionID
 	m.sessionLock = make(chan struct{}, 1)
-	m.Host = host
-	m.Port = port
-	m.Username = username
-	m.Database = database
-	m.Password = common.NewSecureString(password)
+	m.Host = config.Host
+	m.Port = config.Port
+	m.Username = config.Username
+	m.Database = config.Database
+	m.Password = common.NewSecureString(config.Password)
 	m.Mu.Unlock()
 	return nil
 }

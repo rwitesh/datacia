@@ -5,6 +5,8 @@ import (
 	"errors"
 	"path/filepath"
 	"testing"
+
+	"datacia/pkg/common"
 )
 
 func TestLoadConnection(t *testing.T) {
@@ -13,7 +15,7 @@ func TestLoadConnection(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := store.SaveConnection("local", map[string]string{"engine": "postgres", "password": "secret"}); err != nil {
+	if err := store.SaveConnection(common.ConnectionConfig{Name: "local", Engine: "postgres", Password: "secret"}); err != nil {
 		t.Fatal(err)
 	}
 	conns, err := store.ListConnections()
@@ -23,8 +25,8 @@ func TestLoadConnection(t *testing.T) {
 	var id string
 	for id = range conns {
 	}
-	if config, err := store.LoadConnection(id); err != nil || config["password"] != "secret" {
-		t.Fatalf("password %q, err %v", config["password"], err)
+	if config, err := store.LoadConnection(id); err != nil || config.Password != "secret" {
+		t.Fatalf("password %q, err %v", config.Password, err)
 	}
 	if _, err := store.LoadConnection("missing"); err == nil {
 		t.Error("loading a missing connection didn't fail")
@@ -41,8 +43,8 @@ func TestLoadConnection(t *testing.T) {
 	if !errors.Is(err, ErrUnreadableSecret) {
 		t.Fatalf("err %v, want ErrUnreadableSecret", err)
 	}
-	if config["engine"] != "postgres" || config["password"] != "" {
-		t.Fatalf("config %v, want the connection with an empty password", config)
+	if config.Engine != "postgres" || config.Password != "" {
+		t.Fatalf("config %+v, want the connection with an empty password", config)
 	}
 }
 
@@ -53,12 +55,11 @@ func TestSaveAndUpdateConnection(t *testing.T) {
 	}
 	defer store.Close()
 
-	config := map[string]string{
-		"engine": "mysql", "host": "db", "port": "3306", "username": "root", "password": "pw", "database": "app",
-		"useSSH": "true", "sshHost": "bastion", "sshPort": "22", "sshUsername": "ops", "sshPassword": "sshpw",
-		"useSSHKey": "false", "sshKeyPath": "",
+	config := common.ConnectionConfig{
+		Name: "first", Engine: "mysql", Host: "db", Port: "3306", Username: "root", Password: "pw", Database: "app",
+		SSH: common.SSHConfig{Enabled: true, Host: "bastion", Port: "22", Username: "ops", Password: "sshpw"},
 	}
-	if err := store.SaveConnection("first", config); err != nil {
+	if err := store.SaveConnection(config); err != nil {
 		t.Fatal(err)
 	}
 	conns, err := store.ListConnections()
@@ -68,19 +69,26 @@ func TestSaveAndUpdateConnection(t *testing.T) {
 	var id string
 	for id = range conns {
 	}
+	config.ID = id
 
-	config["useSSH"], config["useSSHKey"], config["host"] = "false", "true", "db2"
-	if err := store.UpdateConnection(id, "renamed", config); err != nil {
-		t.Fatal(err)
-	}
 	got, err := store.LoadConnection(id)
 	if err != nil {
 		t.Fatal(err)
 	}
-	config["name"] = "renamed"
-	for key, want := range config {
-		if got[key] != want {
-			t.Errorf("%s = %q, want %q", key, got[key], want)
-		}
+	if got != config {
+		t.Fatalf("loaded %+v, want %+v", got, config)
+	}
+
+	config.Name, config.Host = "renamed", "db2"
+	config.SSH = common.SSHConfig{Host: "bastion", Port: "2222", Username: "ops", KeyPath: "/keys/id"}
+	if err := store.UpdateConnection(config); err != nil {
+		t.Fatal(err)
+	}
+	got, err = store.LoadConnection(id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != config {
+		t.Fatalf("updated %+v, want %+v", got, config)
 	}
 }

@@ -104,47 +104,56 @@ func getDBClient(engineType string) (DatabaseClient, error) {
 	}
 }
 
-// CreateNewConnectionWithSSH connects to a database, optionally through an
-// SSH tunnel. A test connection is closed straight away and never touches the
-// active connection, since the connection window can test while an editor is
-// open.
-func (e *Engine) CreateNewConnectionWithSSH(engine, host, port, username, password, database string, useSSH, sshHost, sshPort, sshUsername, sshPassword, sshKeyPath string, test bool) error {
+// Connect connects to a database, optionally through an SSH tunnel, makes it
+// the active connection and opens the editor.
+func (e *Engine) Connect(config common.ConnectionConfig) error {
+	return e.connect(config, false)
+}
+
+// TestConnection connects like Connect and closes the connection straight
+// away. It never touches the active connection, since the connection window
+// can test while an editor is open.
+func (e *Engine) TestConnection(config common.ConnectionConfig) error {
+	return e.connect(config, true)
+}
+
+func (e *Engine) connect(config common.ConnectionConfig, test bool) error {
 	logger.Info("db_connection_attempt",
-		"engine", engine,
-		"ssh", fmt.Sprint(useSSH == "true"),
+		"engine", config.Engine,
+		"ssh", fmt.Sprint(config.SSH.Enabled),
 		"test", fmt.Sprint(test),
 	)
 
 	var tunnel *ssh.Tunnel
-	if useSSH == "true" {
+	if config.SSH.Enabled {
 		// Without this check a missing SSH host would connect directly.
-		if sshHost == "" {
+		if config.SSH.Host == "" {
 			return errors.New("SSH host is required")
 		}
 		sshConfig := ssh.Config{
-			Host:     sshHost,
-			Port:     sshPort,
-			Username: sshUsername,
-			Password: sshPassword,
-			KeyPath:  sshKeyPath,
+			Host:     config.SSH.Host,
+			Port:     config.SSH.Port,
+			Username: config.SSH.Username,
+			Password: config.SSH.Password,
+			KeyPath:  config.SSH.KeyPath,
 		}
 		if sshConfig.Port == "" {
 			sshConfig.Port = "22"
 		}
 
 		var err error
-		tunnel, err = ssh.NewTunnel(sshConfig, host, port)
+		tunnel, err = ssh.NewTunnel(sshConfig, config.Host, config.Port)
 		if err != nil {
 			return fmt.Errorf("failed to establish SSH tunnel: %w", err)
 		}
-		host = "127.0.0.1"
-		if _, port, err = net.SplitHostPort(tunnel.LocalAddr()); err != nil {
+		config.Host = "127.0.0.1"
+		if _, config.Port, err = net.SplitHostPort(tunnel.LocalAddr()); err != nil {
 			tunnel.Close()
 			return fmt.Errorf("failed to parse local tunnel address: %w", err)
 		}
 	}
 
-	dbClient, err := connectClient(engine, host, port, username, password, database)
+	dbClient, err := connectClient(config)
 	if test && err == nil {
 		err = dbClient.Close()
 	}
@@ -175,17 +184,17 @@ func connectErrorKind(err error) string {
 	return "other"
 }
 
-func connectClient(engine, host, port, username, password, database string) (DatabaseClient, error) {
-	dbClient, err := getDBClient(engine)
+func connectClient(config common.ConnectionConfig) (DatabaseClient, error) {
+	dbClient, err := getDBClient(config.Engine)
 	if err != nil {
-		logger.Warn("db_connection_client_create_failed", "engine", engine, "error", err.Error())
+		logger.Warn("db_connection_client_create_failed", "engine", config.Engine, "error", err.Error())
 		return nil, err
 	}
-	if err := dbClient.Connect(host, port, username, password, database); err != nil {
-		logger.Warn("db_connection_failed", "engine", engine, "kind", connectErrorKind(err))
+	if err := dbClient.Connect(config); err != nil {
+		logger.Warn("db_connection_failed", "engine", config.Engine, "kind", connectErrorKind(err))
 		return nil, err
 	}
-	logger.Info("db_connection_success", "engine", engine)
+	logger.Info("db_connection_success", "engine", config.Engine)
 	return dbClient, nil
 }
 
@@ -237,8 +246,9 @@ func (e *Engine) OpenSettingsWindow(tab string) {
 	}
 }
 
-func (e *Engine) UpdateConnection(id, name string, config map[string]string) error {
-	return e.store.UpdateConnection(id, name, config)
+// UpdateConnection saves config over the saved connection with config.ID.
+func (e *Engine) UpdateConnection(config common.ConnectionConfig) error {
+	return e.store.UpdateConnection(config)
 }
 
 func (e *Engine) EstablishConnection(id string) error {
@@ -249,21 +259,7 @@ func (e *Engine) EstablishConnection(id string) error {
 	if err != nil {
 		return err
 	}
-	return e.CreateNewConnectionWithSSH(
-		config["engine"],
-		config["host"],
-		config["port"],
-		config["username"],
-		config["password"],
-		config["database"],
-		config["useSSH"],
-		config["sshHost"],
-		config["sshPort"],
-		config["sshUsername"],
-		config["sshPassword"],
-		config["sshKeyPath"],
-		false,
-	)
+	return e.Connect(config)
 }
 
 func (e *Engine) GetCurrentConnectionInfo() (map[string]string, error) {
@@ -296,7 +292,14 @@ func (e *Engine) ChangeDatabaseByName(database string) error {
 		return nil
 	}
 	// GetConnectionInfo doesn't expose the password, so take it from the client.
-	dbClient, err := connectClient(connInfo["engine"], connInfo["host"], connInfo["port"], connInfo["username"], current.GetPassword(), database)
+	dbClient, err := connectClient(common.ConnectionConfig{
+		Engine:   connInfo["engine"],
+		Host:     connInfo["host"],
+		Port:     connInfo["port"],
+		Username: connInfo["username"],
+		Password: current.GetPassword(),
+		Database: database,
+	})
 	if err != nil {
 		return err
 	}
@@ -338,13 +341,14 @@ func (e *Engine) CloseCurrentConnection(closeEditor bool) error {
 	return err
 }
 
-func (e *Engine) SaveConnection(name string, config map[string]string) error {
-	return e.store.SaveConnection(name, config)
+// SaveConnection saves config as a new connection named config.Name.
+func (e *Engine) SaveConnection(config common.ConnectionConfig) error {
+	return e.store.SaveConnection(config)
 }
 
 // LoadConnection returns a saved connection for editing. A password that
 // can't be decrypted comes back empty so the user can enter it again.
-func (e *Engine) LoadConnection(id string) (map[string]string, error) {
+func (e *Engine) LoadConnection(id string) (common.ConnectionConfig, error) {
 	config, err := e.store.LoadConnection(id)
 	if errors.Is(err, db.ErrUnreadableSecret) {
 		return config, nil
