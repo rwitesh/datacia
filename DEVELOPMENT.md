@@ -54,6 +54,17 @@ DATACIA_TEST_POSTGRES=postgres://postgres:test@127.0.0.1:55432/postgres \
 DATACIA_TEST_MYSQL=mysql://root:test@127.0.0.1:53306/test go test ./pkg/postgres ./pkg/mysql
 ```
 
+SSH tunnel tests (build tag `integration`, skipped by `make test` and CI) run the real connect
+path against an OpenSSH bastion with Postgres and MySQL reachable only from it, all in Docker
+(OrbStack or Docker Desktop, plus `ssh-keygen`). They cover host-key prompts and changes, password
+and key auth, queries through the tunnel, and a stopped or frozen bastion. Containers are named
+`datacia-ssh-*`, keys are generated per run, and known_hosts goes to a temp dir:
+
+```bash
+go test -tags integration -race -run TestSSHTunnel ./pkg/remote     # about 2 minutes
+go test -tags integration -race -short -run TestSSHTunnel ./pkg/remote   # skips the 45 s keepalive case
+```
+
 [CI](.github/workflows/ci.yml) runs on pushes to `main` and on pull requests: frontend typecheck,
 lint and build; `gofmt`, `go vet`, `go test` and a Windows cross-compile; and a check that
 `frontend/bindings` matches a fresh generation.
