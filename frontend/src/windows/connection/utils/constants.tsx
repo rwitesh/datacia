@@ -12,7 +12,7 @@ export const SSL_MODES = [
   {
     value: DEFAULT_SSL_MODE,
     label: "Automatic",
-    hint: "Uses TLS when the server offers it, but without checking its certificate, and falls back to unencrypted. ClickHouse stays unencrypted. Use another mode on untrusted networks.",
+    hint: "The driver's default: PostgreSQL tries TLS without checking the certificate and falls back to unencrypted; MySQL and ClickHouse are unencrypted. Use another mode on untrusted networks.",
   },
   {
     value: "disable",

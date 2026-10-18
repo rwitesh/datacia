@@ -56,12 +56,9 @@ func (m *MySQL) Connect(config common.ConnectionConfig) error {
 	if err != nil {
 		return err
 	}
-	switch tlsSettings.Mode {
-	case common.SSLModeAutomatic:
-		cfg.TLSConfig = "preferred"
-	case common.SSLModeDisable:
-		cfg.TLSConfig = "false"
-	default:
+	// Automatic keeps the driver's default, plaintext: "preferred" would make
+	// servers with a broken TLS stack, which worked before, fail to connect.
+	if tlsSettings.Config != nil {
 		cfg.TLS = tlsSettings.Config
 	}
 	connector, err := mysql.NewConnector(cfg)

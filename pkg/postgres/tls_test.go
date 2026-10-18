@@ -62,6 +62,7 @@ func TestConnectNeverFallsBackToPlaintext(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.mode, func(t *testing.T) {
+			t.Setenv("PGSSLMODE", "") // pgx would otherwise take it as the default mode
 			port, sentPlaintext := refuseTLS(t)
 			err := New().Connect(common.ConnectionConfig{
 				Host: "127.0.0.1", Port: port, Username: "u", Database: "d", SSLMode: tt.mode,

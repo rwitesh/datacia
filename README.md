@@ -45,7 +45,7 @@ PostgreSQL, MySQL and ClickHouse connections have an **SSL Mode**:
 
 | Mode | What it does |
 | --- | --- |
-| **Automatic** (default) | PostgreSQL and MySQL use TLS when the server offers it, without checking its certificate, and otherwise connect unencrypted, as `psql` and `mysql` do. ClickHouse stays unencrypted. Anyone on the network can force the unencrypted fallback, so use another mode on untrusted networks. |
+| **Automatic** (default) | Each database's driver default, as before this setting existed: PostgreSQL tries TLS without checking the certificate and otherwise connects unencrypted; MySQL and ClickHouse connect unencrypted. Anyone on the network can read or tamper with that traffic, so use another mode on untrusted networks. |
 | **Disable** | Never encrypts. |
 | **Require (no verification)** | Always encrypts, but doesn't check who the server is. It protects against eavesdropping only, not against someone impersonating the server. |
 | **Verify certificate** | Always encrypts and checks the server's certificate chain and host name. Uses your system's trusted certificates, or the CA file you choose for a private or self-signed CA. |
@@ -53,7 +53,7 @@ PostgreSQL, MySQL and ClickHouse connections have an **SSL Mode**:
 Connections saved before this setting existed keep their old behaviour (Automatic). Nothing is
 refused unless you choose a stricter mode. If a connection fails after you choose **Require** or
 **Verify certificate**, the server may not have TLS enabled, or its certificate may not be trusted:
-turn TLS on in the server, choose the CA file, or pick a weaker mode if you accept the risk. For
+turn TLS on in the server (TLS 1.2 or newer is required), choose the CA file, or pick a weaker mode if you accept the risk. For
 ClickHouse, use the server's secure native port (9440 by default) when you enable TLS.
 
 With an SSH tunnel the certificate is checked against the database host you typed, not the tunnel

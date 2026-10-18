@@ -4,8 +4,9 @@ import { DEFAULT_SSL_MODE } from "./constants";
 import type { FormValues } from "./types";
 
 // An SSH key replaces the password, so only the one in use is sent.
-export const toConnectionConfig = (values: FormValues): ConnectionConfig =>
-  new ConnectionConfig({
+export const toConnectionConfig = (values: FormValues): ConnectionConfig => {
+  const supportsSSL = DATABASE_ENGINES[values.engine].supportsSSL;
+  return new ConnectionConfig({
     name: values.connectionName,
     engine: values.engine,
     host: values.host,
@@ -14,8 +15,8 @@ export const toConnectionConfig = (values: FormValues): ConnectionConfig =>
     password: values.password,
     database: values.database,
     // Only the options of the selected mode apply, and SQLite has none.
-    sslMode: DATABASE_ENGINES[values.engine].supportsSSL ? values.sslMode : DEFAULT_SSL_MODE,
-    sslCaPath: values.sslMode === "verify-full" ? values.sslCaPath : "",
+    sslMode: supportsSSL ? values.sslMode : DEFAULT_SSL_MODE,
+    sslCaPath: supportsSSL && values.sslMode === "verify-full" ? values.sslCaPath : "",
     ssh: values.useSSH
       ? new SSHConfig({
           enabled: true,
@@ -27,3 +28,4 @@ export const toConnectionConfig = (values: FormValues): ConnectionConfig =>
         })
       : new SSHConfig(),
   });
+};

@@ -9,11 +9,11 @@ import (
 )
 
 const (
-	// SSLModeAutomatic is the zero-configuration behaviour of the database's
-	// own client: use TLS when the server offers it, without verifying the
-	// certificate, and fall back to plaintext when it doesn't. An attacker on
-	// the network can force the fallback, so it only suits trusted networks.
-	// ClickHouse can't negotiate, so there it stays plaintext.
+	// SSLModeAutomatic leaves each driver's default, which is what connections
+	// made before this setting did: PostgreSQL tries TLS without verifying the
+	// certificate and falls back to plaintext (an attacker on the network can
+	// force that), MySQL and ClickHouse use plaintext. It only suits trusted
+	// networks.
 	SSLModeAutomatic = "automatic"
 	// SSLModeDisable never uses TLS.
 	SSLModeDisable = "disable"
