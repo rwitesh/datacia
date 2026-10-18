@@ -8,9 +8,9 @@ export const DEFAULT_PORTS: Record<DatabaseEngine, string> = Object.fromEntries(
 export const DEFAULT_SSL_MODE = "automatic";
 
 // The values match the SSLMode constants in pkg/common/tls.go. A note shows
-// only for modes that leave the connection open to eavesdropping or spoofing.
+// only for modes that can leave the connection open to eavesdropping or spoofing.
 export const SSL_MODES = [
-  { value: DEFAULT_SSL_MODE, label: "Auto" },
+  { value: DEFAULT_SSL_MODE, label: "Auto", note: "Driver default; may be unencrypted." },
   { value: "disable", label: "Disable", note: "Traffic is not encrypted." },
   { value: "require", label: "Require", note: "Encrypted, but the server is not verified." },
   { value: "verify-full", label: "Verify" },

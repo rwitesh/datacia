@@ -47,10 +47,10 @@ PostgreSQL, MySQL and ClickHouse connections have an **SSL** setting:
 | --- | --- |
 | **Auto** (default) | The driver default: PostgreSQL tries TLS without checking the certificate and may fall back to plaintext; MySQL and ClickHouse use plaintext. |
 | **Disable** | Never encrypts. |
-| **Require** | Always encrypts, but doesn't check the server's certificate. |
-| **Verify** | Always encrypts and checks the certificate chain and host name, against the system roots or an optional CA file. |
+| **Require** | Always encrypts, but doesn't check the server's certificate, so it doesn't stop impersonation. |
+| **Verify** | Always encrypts and checks the certificate chain and host name, against the system roots, or a CA file for a private CA. |
 
-Saved connections keep Auto. If a connection fails after choosing Require or Verify, the server may
+Connections saved earlier keep Auto, which is unsafe on untrusted networks. If a connection fails after choosing Require or Verify, the server may
 lack TLS (1.2 or newer) or its certificate may not be trusted. ClickHouse needs its secure native
 port (9440 by default). With an SSH tunnel the certificate is checked against the host you typed.
 
