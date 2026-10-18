@@ -9,16 +9,21 @@ import { Create as $Create } from "@wailsio/runtime";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as ai$0 from "../../../../../datacia/internal/ai/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as settings$0 from "../../../../../datacia/internal/settings/models.js";
 
 function configure() {
     Object.freeze(Object.assign($Create.Events, {
         "ai:delta": $$createType0,
         "ai:tool": $$createType1,
+        "app:settings-changed": $$createType2,
     }));
 }
 
 // Private type creation functions
 const $$createType0 = ai$0.ChatDelta.createFrom;
 const $$createType1 = ai$0.ChatTool.createFrom;
+const $$createType2 = settings$0.Settings.createFrom;
 
 configure();

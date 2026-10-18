@@ -35,7 +35,7 @@ func NewQueriesService() *QueriesService {
 	rootDir, err := paths.GetQueriesDir()
 	if err != nil {
 		logger.Error("Failed to resolve queries root dir", "error", err.Error())
-	} else if err := os.MkdirAll(rootDir, 0755); err != nil {
+	} else if err := os.MkdirAll(rootDir, 0700); err != nil {
 		logger.Error("Failed to create queries root dir", "error", err.Error())
 	}
 
@@ -144,7 +144,7 @@ func (s *QueriesService) CreateFolder(relPath string) error {
 	if err != nil {
 		return err
 	}
-	return os.MkdirAll(absPath, 0755)
+	return os.MkdirAll(absPath, 0700)
 }
 
 func (s *QueriesService) CreateQueryFile(relPath string) error {
@@ -156,7 +156,7 @@ func (s *QueriesService) CreateQueryFile(relPath string) error {
 		return err
 	}
 
-	f, err := os.OpenFile(absPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0644)
+	f, err := os.OpenFile(absPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
 	if errors.Is(err, fs.ErrExist) {
 		return fmt.Errorf("%q already exists", filepath.Base(absPath))
 	}
@@ -215,5 +215,5 @@ func (s *QueriesService) WriteFile(relPath string, content string) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(absPath, []byte(content), 0644)
+	return paths.WriteFileAtomic(absPath, []byte(content), 0600)
 }

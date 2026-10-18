@@ -1,7 +1,13 @@
 import { createContext } from "react"
-import type { TokenColors } from "@/services/settings"
+import { ThemeConfig, type TokenColors } from "@/services/settings"
 
 export type Theme = "dark" | "light" | "system"
+
+export const themeConfigs: Record<Theme, ThemeConfig> = {
+  dark: ThemeConfig.ThemeDark,
+  light: ThemeConfig.ThemeLight,
+  system: ThemeConfig.ThemeSystem,
+}
 
 /** Placeholder so tokenColors is never undefined before settings load. No hex values defined in UI. */
 export const EMPTY_TOKEN_COLORS: TokenColors = {

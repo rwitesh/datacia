@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { omit } from "lodash";
 import { Check, ChevronRight } from "lucide-react";
+import { omitKey } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn, errorMessage } from "@/lib/utils";
@@ -22,12 +22,12 @@ export function AISection({ settings, onChange, keys, onKeysChange }: Props) {
   // Empty configs are dropped so undoing every edit leaves nothing to save.
   const update = (id: string, patch: Partial<AIProviderConfig>) => {
     const next = { baseUrl: "", ...configs[id], ...patch };
-    const providers = next.baseUrl ? { ...configs, [id]: next } : omit(configs, id);
+    const providers = next.baseUrl ? { ...configs, [id]: next } : omitKey(configs, id);
     onChange({ ...settings, ai: { ...settings.ai, providers } });
   };
 
   const setKey = (id: string, key: string | undefined) => {
-    onKeysChange(key === undefined ? omit(keys, id) : { ...keys, [id]: key });
+    onKeysChange(key === undefined ? omitKey(keys, id) : { ...keys, [id]: key });
   };
 
   return (

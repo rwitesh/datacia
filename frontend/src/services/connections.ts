@@ -7,12 +7,13 @@ import {
 import type { ConnectionInfo } from "./bindings";
 import { EstablishConnection } from "./bindings/connection";
 import { CheckConnectionHealth } from "./bindings/connection";
+import { queryKeys } from "./queryKeys";
 
 export type ConnectionHealth = number | null;
 
 export function useCurrentConnection() {
   return useQuery({
-    queryKey: ["current-connection"],
+    queryKey: queryKeys.currentConnection,
     queryFn: () => GetCurrentConnectionInfo(),
     retry: false,
     refetchOnWindowFocus: false,
@@ -21,7 +22,7 @@ export function useCurrentConnection() {
 
 export function useFetchConnections() {
   return useQuery<Record<string, ConnectionInfo>, Error>({
-    queryKey: ["connections"],
+    queryKey: queryKeys.connections,
     queryFn: async () => {
       const connections = await ListConnections();
       return Object.fromEntries(
@@ -36,7 +37,7 @@ export function useFetchConnections() {
 
 export function useFetchConnectionById(id: string) {
   return useQuery({
-    queryKey: ["connection", id],
+    queryKey: queryKeys.connection(id),
     queryFn: () => LoadConnection(id),
     enabled: !!id,
     retry: 3,
@@ -56,7 +57,7 @@ const RETRY_INTERVAL = 5000; // 5 seconds on failure
 
 export function useConnectionHealth(): UseQueryResult<ConnectionHealth, Error> {
   return useQuery<ConnectionHealth, Error>({
-    queryKey: ["connection-health"],
+    queryKey: queryKeys.connectionHealth,
     queryFn: () => CheckConnectionHealth(),
     refetchInterval: (query) => {
       if (query.state.error) return RETRY_INTERVAL;

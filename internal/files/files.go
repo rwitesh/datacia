@@ -141,7 +141,7 @@ func csvValue(value interface{}) string {
 	case nil:
 		return ""
 	case string:
-		return v
+		return neutralizeFormula(v)
 	case json.Number:
 		return v.String()
 	case bool:
@@ -154,4 +154,13 @@ func csvValue(value interface{}) string {
 		}
 		return string(encoded)
 	}
+}
+
+// neutralizeFormula prefixes cells a spreadsheet would run as a formula, so
+// a hostile value in the database can't execute when the export is opened.
+func neutralizeFormula(s string) string {
+	if s != "" && strings.ContainsRune("=+-@\t\r", rune(s[0])) {
+		return "'" + s
+	}
+	return s
 }

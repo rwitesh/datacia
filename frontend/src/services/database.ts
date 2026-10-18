@@ -5,10 +5,11 @@ import {
   CancelQuery,
 } from "./bindings";
 import { RunQuery, GetTableData, GetTableSchema, GetDDL, GetQueryHistory } from "./bindings/database";
+import { queryKeys } from "./queryKeys";
 
 export function useDatabase() {
   return useQuery({
-    queryKey: ["databases"],
+    queryKey: queryKeys.databases,
     queryFn: () => ListDatabases(),
     retry: 3,
   });
@@ -16,7 +17,7 @@ export function useDatabase() {
 
 export function useTables() {
   return useQuery<string[], Error>({
-    queryKey: ["tables"],
+    queryKey: queryKeys.tables,
     queryFn: () => ListTables(),
     refetchOnWindowFocus: false,
     retry: 3
@@ -33,11 +34,11 @@ export function useRunQuery() {
       return RunQuery(sql, queryId);
     },
     onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ["query-history"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.queryHistory });
       // Only a command can change the schema (CREATE, DROP, ALTER, etc.).
       if (result.type !== "read") {
-        queryClient.invalidateQueries({ queryKey: ["tables"] });
-        queryClient.invalidateQueries({ queryKey: ["ddl"] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.tables });
+        queryClient.invalidateQueries({ queryKey: queryKeys.ddl });
       }
     },
   });
@@ -88,7 +89,7 @@ export function useGetTableSchema() {
 
 export function useGetDDL(table: string | undefined, enabled: boolean) {
   return useQuery({
-    queryKey: ["ddl", table],
+    queryKey: queryKeys.tableDdl(table),
     queryFn: () => {
       if (!table?.trim()) {
         throw new Error("Table name cannot be empty");
@@ -112,7 +113,7 @@ export interface QueryHistoryFilters {
 export function useGetQueryHistory(filters: QueryHistoryFilters = {}) {
   const { search = "", dateFrom = "", dateTo = "", status = "", engine = "" } = filters;
   return useQuery({
-    queryKey: ["query-history", search, dateFrom, dateTo, status, engine],
+    queryKey: queryKeys.queryHistoryFiltered(search, dateFrom, dateTo, status, engine),
     queryFn: () => GetQueryHistory(50, search, dateFrom, dateTo, status, engine),
     retry: 3,
     refetchOnWindowFocus: true,

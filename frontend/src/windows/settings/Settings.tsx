@@ -4,8 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Settings as SettingsIcon } from "lucide-react";
 import { Events, Window } from "@wailsio/runtime";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { isEqual } from "lodash";
-import { errorMessage } from "@/lib/utils";
+import { errorMessage, jsonEqual } from "@/lib/utils";
 import { useSettings, useUpdateSettings, type KeyChanges, type Settings as AppSettings } from "@/services/settings";
 import { AppearanceSection } from "./appearance";
 import { AISection } from "./ai";
@@ -32,7 +31,7 @@ export function Settings() {
   const [keys, setKeys] = useState<KeyChanges>({});
   const [showSaved, setShowSaved] = useState(false);
   const formSettings = draft ?? settings?.settings ?? null;
-  const dirty = (draft !== null && !isEqual(plain(draft), plain(settings?.settings))) || Object.keys(keys).length > 0;
+  const dirty = (draft !== null && !jsonEqual(plain(draft), plain(settings?.settings))) || Object.keys(keys).length > 0;
 
   const edited = () => {
     setShowSaved(false);

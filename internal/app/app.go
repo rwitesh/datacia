@@ -11,6 +11,7 @@ import (
 	"datacia/internal/logger"
 	"datacia/internal/queries"
 	"datacia/internal/security"
+	"datacia/internal/sentry"
 	"datacia/internal/settings"
 	"datacia/internal/update"
 	"datacia/pkg/remote"
@@ -23,6 +24,13 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/events"
 	clip "golang.design/x/clipboard"
 )
+
+// SettingsTabEvent asks the open settings window to switch to the tab named in its data.
+const SettingsTabEvent = "settings:show-tab"
+
+func init() {
+	application.RegisterEvent[string](SettingsTabEvent)
+}
 
 type App struct {
 	instance *application.App
@@ -43,7 +51,8 @@ type App struct {
 }
 
 func NewApp(assets embed.FS, version string) *App {
-	app := application.New(application.Options{
+	a := &App{version: version}
+	a.instance = application.New(application.Options{
 		Name:        constants.APP_NAME,
 		Description: "",
 		Assets: application.AssetOptions{
@@ -53,9 +62,37 @@ func NewApp(assets embed.FS, version string) *App {
 		Mac: application.MacOptions{
 			ApplicationShouldTerminateAfterLastWindowClosed: false,
 		},
+		// A second launch would open the same data.db and settings.json.
+		SingleInstance: &application.SingleInstanceOptions{
+			UniqueID:               constants.APP_IDENTIFIER,
+			OnSecondInstanceLaunch: func(application.SecondInstanceData) { a.showCurrentWindow() },
+		},
+		PanicHandler: logPanic,
 	})
 
-	return &App{instance: app, version: version}
+	return a
+}
+
+// showCurrentWindow brings the editor, or else the connection window, to the front.
+func (a *App) showCurrentWindow() {
+	a.windowMutex.Lock()
+	defer a.windowMutex.Unlock()
+
+	window := a.editorWindow
+	if window == nil {
+		window = a.connectionWindow
+	}
+	if window != nil {
+		window.Show()
+		window.Focus()
+	}
+}
+
+// logPanic reports a recovered panic by its type and stack only. The panic
+// value is left out because errors from bound calls can quote query text.
+func logPanic(details *application.PanicDetails) {
+	logger.Error("panic", "type", fmt.Sprintf("%T", details.Error), "stack", details.StackTrace)
+	sentry.Flush()
 }
 
 func (a *App) Initialize() error {
@@ -67,8 +104,8 @@ func (a *App) Initialize() error {
 	settings.Init(a.instance, a.version)
 
 	if err := clip.Init(); err != nil {
+		// Only image copy needs it, so the app still starts without.
 		logger.Error("Failed to initialize clipboard", "error", err.Error())
-		return err
 	}
 
 	store, err := db.Open()
@@ -308,7 +345,7 @@ func (a *App) OpenSettingsWindow(tab string) {
 		// The open window keeps its unsaved edits, so switch its tab rather
 		// than reloading it with the new URL.
 		if tab != "" {
-			a.instance.Event.Emit("settings:show-tab", tab)
+			a.instance.Event.Emit(SettingsTabEvent, tab)
 		}
 		a.settingsWindow.Show()
 		a.settingsWindow.Focus()

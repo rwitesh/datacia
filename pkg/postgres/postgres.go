@@ -196,7 +196,7 @@ func (p *Postgres) RunQuery(queryID, queryType, sql string) (common.QueryResult,
 	case common.QueryTypeCommand:
 		return p.execute(ctx, conn.Conn(), sql)
 	case common.QueryTypeRead:
-		return p.query(ctx, conn.Conn(), sql)
+		return p.query(ctx, conn.Conn(), sql, common.MaxEditorRows)
 	default:
 		return common.QueryResult{Type: common.QueryTypeUnknown}, fmt.Errorf("unsupported query type: %s", queryType)
 	}
@@ -243,13 +243,13 @@ func (p *Postgres) ReadOnlyQuery(ctx context.Context, sql string, maxRows int) (
 	return scanRows(ctx, rows, maxRows)
 }
 
-func (p *Postgres) query(ctx context.Context, conn *pgx.Conn, sql string) (common.QueryResult, error) {
+func (p *Postgres) query(ctx context.Context, conn *pgx.Conn, sql string, maxRows int) (common.QueryResult, error) {
 	rows, err := conn.Query(ctx, sql)
 	if err != nil {
 		return common.QueryResult{Type: common.QueryTypeRead}, err
 	}
 	defer rows.Close()
-	return scanRows(ctx, rows, 0)
+	return scanRows(ctx, rows, maxRows)
 }
 
 // scanRows reads up to maxRows rows, or all of them when maxRows is 0.
@@ -282,14 +282,18 @@ func scanRows(ctx context.Context, rows pgx.Rows, maxRows int) (common.QueryResu
 		data = append(data, row)
 	}
 
+	// Peek one row past the cap so a result of exactly maxRows isn't flagged.
+	truncated := maxRows > 0 && len(data) == maxRows && rows.Next()
+
 	if err := rows.Err(); err != nil {
 		return common.QueryResult{Type: common.QueryTypeRead}, err
 	}
 
 	return common.QueryResult{
-		Type:    common.QueryTypeRead,
-		Columns: columns,
-		Data:    data,
+		Type:      common.QueryTypeRead,
+		Columns:   columns,
+		Data:      data,
+		Truncated: truncated,
 	}, nil
 }
 
@@ -420,7 +424,7 @@ func (p *Postgres) GetTableData(table string, limit, offset int, orderBy, orderD
 	if err != nil {
 		return common.QueryResult{}, err
 	}
-	return p.query(ctx, conn.Conn(), sql)
+	return p.query(ctx, conn.Conn(), sql, 0)
 }
 
 func (p *Postgres) GetTableSchema(table string) (common.QueryResult, error) {

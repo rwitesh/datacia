@@ -28,6 +28,8 @@ type QueryResult struct {
 	Data        []map[string]interface{} `json:"data"`
 	TimeElapsed int64                    `json:"timeElapsed"`
 	Logs        QueryLogs                `json:"logs"`
+	// Truncated is set when the result holds only the first rows of a larger one.
+	Truncated bool `json:"truncated,omitempty"`
 }
 
 type DatabaseInfo struct {
@@ -123,6 +125,11 @@ const (
 	CONNECT_TIMEOUT = 10 * time.Second
 	META_TIMEOUT    = 10 * time.Second
 	QUERY_TIMEOUT   = 30 * time.Second
+
+	// MaxEditorRows caps the rows one editor query returns. Every row becomes a
+	// map and crosses the Wails bridge as JSON, so an unbounded SELECT * would
+	// exhaust memory or freeze the UI.
+	MaxEditorRows = 10000
 )
 
 func NewTimeoutContext(d time.Duration) (context.Context, context.CancelFunc) {

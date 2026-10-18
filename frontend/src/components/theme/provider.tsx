@@ -1,11 +1,11 @@
 import { useEffect, useSyncExternalStore } from "react"
 import { useSettings, useUpdateSettings } from "@/services/settings"
-import { ThemeConfig } from "@/services/settings"
 import { useQueryClient } from "@tanstack/react-query"
-import { ThemeProviderContext, type Theme, EMPTY_TOKEN_COLORS, initialState } from "./context"
+import { ThemeProviderContext, themeConfigs, type Theme, EMPTY_TOKEN_COLORS, initialState } from "./context"
 import { Events } from "@wailsio/runtime"
 import { toast } from "sonner"
 import { errorMessage } from "@/lib/utils"
+import { queryKeys } from "@/services/queryKeys";
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const { data: settings } = useSettings()
@@ -34,7 +34,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // Sync settings when changed from another window
   useEffect(() => {
     const unsubscribe = Events.On("app:settings-changed", () => {
-      queryClient.invalidateQueries({ queryKey: ["settings"] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.settings })
     })
     return () => unsubscribe()
   }, [queryClient])
@@ -61,7 +61,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         setTheme: (newTheme: Theme) => {
           if (!settings) return
           updateSettings(
-            { settings: { ...settings.settings, theme: newTheme as unknown as ThemeConfig } },
+            { settings: { ...settings.settings, theme: themeConfigs[newTheme] } },
             { onError: (error) => toast.error(errorMessage(error)) },
           )
         },
