@@ -13,7 +13,7 @@ import (
 )
 
 // scanDynamicColumns reads up to maxRows rows, or all of them when maxRows is 0.
-func scanDynamicColumns(ctx context.Context, rows driver.Rows, maxRows int) ([]string, []map[string]interface{}, error) {
+func scanDynamicColumns(ctx context.Context, rows driver.Rows, maxRows int) ([]string, []map[string]interface{}, bool, error) {
 	var response []map[string]interface{}
 	columns := common.UniqueColumnNames(rows.Columns())
 	colTypes := rows.ColumnTypes()
@@ -21,13 +21,13 @@ func scanDynamicColumns(ctx context.Context, rows driver.Rows, maxRows int) ([]s
 	for (maxRows == 0 || len(response) < maxRows) && rows.Next() {
 		select {
 		case <-ctx.Done():
-			return nil, nil, ctx.Err()
+			return nil, nil, false, ctx.Err()
 		default:
 		}
 
 		scanTargets := prepareScanTargets(colTypes)
 		if err := rows.Scan(scanTargets...); err != nil {
-			return nil, nil, err
+			return nil, nil, false, err
 		}
 
 		rowsEntry := make(map[string]interface{})
@@ -43,10 +43,13 @@ func scanDynamicColumns(ctx context.Context, rows driver.Rows, maxRows int) ([]s
 		response = append(response, rowsEntry)
 	}
 
+	// Peek one row past the cap so a result of exactly maxRows isn't flagged.
+	truncated := maxRows > 0 && len(response) == maxRows && rows.Next()
+
 	if err := rows.Err(); err != nil {
-		return nil, nil, err
+		return nil, nil, false, err
 	}
-	return columns, response, nil
+	return columns, response, truncated, nil
 }
 
 func prepareScanTargets(columnTypes []driver.ColumnType) []interface{} {
