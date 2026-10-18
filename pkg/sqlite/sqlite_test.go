@@ -114,3 +114,34 @@ func TestSessionKeepsTransaction(t *testing.T) {
 		t.Fatalf("after rollback: %d rows, want 0", got)
 	}
 }
+
+func TestTableMetadata(t *testing.T) {
+	s := connectNew(t)
+	if _, err := s.RunQuery("", string(common.QueryTypeCommand), "CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT NOT NULL DEFAULT 'x'); INSERT INTO items (name) VALUES ('a'), ('b'), ('c')"); err != nil {
+		t.Fatal(err)
+	}
+
+	tables, err := s.ListTables()
+	if err != nil || !slices.Equal(tables, []string{"items"}) {
+		t.Fatalf("tables %v, err %v", tables, err)
+	}
+
+	schema, err := s.GetTableSchema("items")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(schema.Columns, []string{"cid", "name", "type", "notnull", "dflt_value", "pk"}) || len(schema.Data) != 2 {
+		t.Fatalf("schema %v %v", schema.Columns, schema.Data)
+	}
+	if schema.Data[1]["name"] != "name" || schema.Data[1]["dflt_value"] != "'x'" {
+		t.Errorf("second column %v", schema.Data[1])
+	}
+
+	page, err := s.GetTableData("items", 2, 1, "name", "desc")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(page.Data) != 2 || page.Data[0]["name"] != "b" || page.Data[1]["name"] != "a" {
+		t.Errorf("page %v", page.Data)
+	}
+}

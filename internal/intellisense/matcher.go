@@ -3,7 +3,6 @@ package intellisense
 
 import (
 	"regexp"
-	"sort"
 	"strings"
 	"unicode"
 )
@@ -166,10 +165,8 @@ func FindHistoryMatch(currentInput string, history []string) string {
 		return ""
 	}
 
-	// Build frequency map and collect unique suggestions
-	frequencyMap := make(map[string]int)
-	suggestionMap := make(map[string]suggestion)
-
+	// Keyed by normalized text, so the same continuation counts once per query.
+	suggestions := make(map[string]*suggestion)
 	for historyIdx, query := range history {
 		normalizedQuery := normalizeSQL(query)
 
@@ -187,46 +184,29 @@ func FindHistoryMatch(currentInput string, history []string) string {
 			continue
 		}
 
-		// Extract and truncate the suggestion
-		continuation := query[matchEndIndex:]
-		truncated := breakAtNextKeyword(continuation)
-
+		truncated := breakAtNextKeyword(query[matchEndIndex:])
 		if strings.TrimSpace(truncated) == "" {
 			continue
 		}
 
-		// Use normalized version as key for deduplication
 		key := normalizeSQL(truncated)
-		frequencyMap[key]++
-
-		// Keep the first occurrence (most recent) for each unique suggestion
-		if _, exists := suggestionMap[key]; !exists {
-			suggestionMap[key] = suggestion{
-				text:         truncated,
-				frequency:    0, // Will be set later
-				historyIndex: historyIdx,
-			}
+		if sug, ok := suggestions[key]; ok {
+			sug.frequency++
+		} else {
+			// History is newest first, so this is the most recent occurrence.
+			suggestions[key] = &suggestion{text: truncated, frequency: 1, historyIndex: historyIdx}
 		}
 	}
 
-	if len(suggestionMap) == 0 {
+	var best *suggestion
+	for _, sug := range suggestions {
+		if best == nil || sug.frequency > best.frequency ||
+			(sug.frequency == best.frequency && sug.historyIndex < best.historyIndex) {
+			best = sug
+		}
+	}
+	if best == nil {
 		return ""
 	}
-
-	// Convert to slice and set frequencies
-	suggestions := make([]suggestion, 0, len(suggestionMap))
-	for key, sug := range suggestionMap {
-		sug.frequency = frequencyMap[key]
-		suggestions = append(suggestions, sug)
-	}
-
-	// Sort by frequency (descending), then by recency (ascending index)
-	sort.Slice(suggestions, func(i, j int) bool {
-		if suggestions[i].frequency != suggestions[j].frequency {
-			return suggestions[i].frequency > suggestions[j].frequency
-		}
-		return suggestions[i].historyIndex < suggestions[j].historyIndex
-	})
-
-	return suggestions[0].text
+	return best.text
 }

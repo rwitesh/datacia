@@ -90,8 +90,6 @@ export const ENGINE_LIST = Object.entries(DATABASE_ENGINES).map(([id, config]) =
   ...config,
 }));
 
-export const ENGINE_IDS = Object.keys(DATABASE_ENGINES) as DatabaseEngine[];
-
 // Validation helper - Type guard to check if string is a valid engine
 export const isValidEngine = (engine: string | null | undefined): engine is DatabaseEngine => {
   return !!engine && engine in DATABASE_ENGINES;

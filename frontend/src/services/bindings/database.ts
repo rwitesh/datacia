@@ -8,15 +8,9 @@ import {
 import type { QueryResult, QueryHistoryItem } from "./index";
 import { detectQueryType } from "./utils";
 export type { QueryResult, QueryHistoryItem };
-import { v4 as uuidv4 } from "uuid";
 
-export async function RunQuery(
-  sql: string,
-  queryID?: string
-): Promise<QueryResult> {
-  const t = detectQueryType(sql);
-  const id = queryID ?? uuidv4();
-  return WRunQuery(id, t, sql);
+export async function RunQuery(sql: string, queryID: string): Promise<QueryResult> {
+  return WRunQuery(queryID, detectQueryType(sql), sql);
 }
 
 export async function GetTableData(

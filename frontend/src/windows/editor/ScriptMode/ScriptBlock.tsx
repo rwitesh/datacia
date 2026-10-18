@@ -27,7 +27,6 @@ export function ScriptBlock({
 }: ScriptBlockProps) {
     return (
         <div className="flex flex-col border rounded-md overflow-hidden bg-card transition-all">
-            {/* Header / Toolbar */}
             <div className="flex items-center justify-between px-3 py-2 bg-muted/30 border-b">
                 <div className="flex items-center gap-2">
                     <span className="text-xs font-mono text-muted-foreground uppercase opacity-70">
@@ -77,7 +76,6 @@ export function ScriptBlock({
                 </div>
             </div>
 
-            {/* Editor Area */}
             <div className="border-b relative overflow-hidden resize-y min-h-[100px]">
                 <SQLCodeEditor
                     value={block.sql}
@@ -86,7 +84,6 @@ export function ScriptBlock({
                 />
             </div>
 
-            {/* Error Output */}
             {block.status === 'error' && block.errorMessage && (
                 <div className="bg-red-500/10 text-red-500 text-xs font-mono p-2 border-t border-red-500/20 whitespace-pre-wrap">
                     {block.errorMessage}

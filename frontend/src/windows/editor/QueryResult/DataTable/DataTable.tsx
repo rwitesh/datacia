@@ -34,7 +34,7 @@ interface DataTableProps {
   currentOrderBy?: string;
   currentOrderDir?: "asc" | "desc";
   isLoading?: boolean;
-  onOpenDataView?: () => void;
+  onOpenDataView: () => void;
   scrollPosition?: { left: number; top: number };
   onScrollChange?: (scroll: { left: number; top: number }) => void;
   // Rows before this page, for row numbers.
@@ -84,7 +84,13 @@ export function DataTable({
   // loaded, so widths use the editor font only once it is ready.
   const [loadedFont, setLoadedFont] = useState<string | null>(null);
   useEffect(() => {
-    document.fonts.load(`${FONT_SIZE}px ${editorFontFamily}`).then(() => setLoadedFont(editorFontFamily));
+    let cancelled = false;
+    document.fonts.load(`${FONT_SIZE}px ${editorFontFamily}`).then(() => {
+      if (!cancelled) setLoadedFont(editorFontFamily);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [editorFontFamily]);
 
   const { containerWidth, containerHeight } = useTableDimensions(scrollRef);
@@ -163,9 +169,12 @@ export function DataTable({
     () => (isDragging ? null : getSelectedData(selection, columns, viewRows)),
     [isDragging, selection, columns, viewRows]
   );
+  // The selection is saved to the tab as view positions, but a client sort is
+  // lost when the grid remounts (tab switch), so a sorted selection isn't saved.
+  const hasClientSort = clientSorting.length > 0;
   useEffect(() => {
-    if (selected) onSelectionChange(selection, selected.rows);
-  }, [selected, selection, onSelectionChange]);
+    if (selected) onSelectionChange(hasClientSort ? null : selection, selected.rows);
+  }, [selected, selection, hasClientSort, onSelectionChange]);
 
   const { copyText } = useExportActions({
     data: selected?.rows ?? [],

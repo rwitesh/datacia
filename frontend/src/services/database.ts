@@ -26,7 +26,7 @@ export function useTables() {
 export function useRunQuery() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ sql, queryId }: { sql: string; queryId?: string }) => {
+    mutationFn: async ({ sql, queryId }: { sql: string; queryId: string }) => {
       if (!sql?.trim()) {
         throw new Error("SQL cannot be empty");
       }

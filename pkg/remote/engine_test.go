@@ -10,7 +10,7 @@ func TestConnectionLifecycle(t *testing.T) {
 	first, second := newSQLiteFile(t), newSQLiteFile(t)
 	e := &Engine{}
 
-	if err := e.CreateNewConnection("sqlite", "", "", "", "", first, false); err != nil {
+	if err := connectSQLite(e, first, false); err != nil {
 		t.Fatal(err)
 	}
 	active, _ := e.client()
@@ -19,7 +19,7 @@ func TestConnectionLifecycle(t *testing.T) {
 	}
 
 	// The connection window can test a connection while the editor is open.
-	if err := e.CreateNewConnection("sqlite", "", "", "", "", second, true); err != nil {
+	if err := connectSQLite(e, second, true); err != nil {
 		t.Fatal(err)
 	}
 	if client, _ := e.client(); client != active {
@@ -29,7 +29,7 @@ func TestConnectionLifecycle(t *testing.T) {
 		t.Fatalf("after test connection: tables %v, err %v", tables, err)
 	}
 
-	if err := e.CreateNewConnection("sqlite", "", "", "", "", second, false); err != nil {
+	if err := connectSQLite(e, second, false); err != nil {
 		t.Fatal(err)
 	}
 	if tables, err := e.ListTables(); err != nil || len(tables) != 0 {
@@ -51,7 +51,7 @@ func TestChangeDatabaseKeepsSQLiteFile(t *testing.T) {
 	t.Chdir(t.TempDir())
 	path := newSQLiteFile(t)
 	e := &Engine{}
-	if err := e.CreateNewConnection("sqlite", "", "", "", "", path, false); err != nil {
+	if err := connectSQLite(e, path, false); err != nil {
 		t.Fatal(err)
 	}
 	active, _ := e.client()
@@ -71,7 +71,7 @@ func TestChangeDatabaseKeepsSQLiteFile(t *testing.T) {
 func TestSQLiteMissingFile(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "typo.db")
 	e := &Engine{}
-	if err := e.CreateNewConnection("sqlite", "", "", "", "", path, true); err == nil {
+	if err := connectSQLite(e, path, true); err == nil {
 		t.Fatal("connected to a SQLite file that doesn't exist")
 	}
 	if _, err := os.Stat(path); err == nil {
@@ -95,4 +95,8 @@ func newSQLiteFile(t *testing.T) string {
 		t.Fatal(err)
 	}
 	return path
+}
+
+func connectSQLite(e *Engine, path string, test bool) error {
+	return e.CreateNewConnectionWithSSH("sqlite", "", "", "", "", path, "", "", "", "", "", "", test)
 }

@@ -1,12 +1,11 @@
 import { useAppContext } from "@/context/app/Index";
 import { useSwitchConnectionMutation } from "@/services/connections";
-import { type DatabaseEngine } from "@/shared/utils/engines";
 import { toast } from "sonner";
+import { errorMessage } from "@/lib/utils";
 
 type SwitchConnectionArgs = {
   id: string;
   name: string;
-  engine: DatabaseEngine;
 };
 
 export const useSwitchConnection = () => {
@@ -24,7 +23,7 @@ export const useSwitchConnection = () => {
         },
         onError: (err) => {
           toast.error("Failed to switch connection", {
-            description: err instanceof Error ? err.message : String(err),
+            description: errorMessage(err),
           });
         },
       });

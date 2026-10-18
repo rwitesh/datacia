@@ -172,12 +172,11 @@ func (p *Postgres) RunQuery(queryID, queryType, sql string) (common.QueryResult,
 		return common.QueryResult{}, errors.New("no active connection pool found")
 	}
 
-	if _, exists := p.ActiveQueries.Load(queryID); exists {
+	ctx, cancel := common.NewTimeoutContext(common.QUERY_TIMEOUT)
+	if _, exists := p.ActiveQueries.LoadOrStore(queryID, cancel); exists {
+		cancel()
 		return common.QueryResult{}, fmt.Errorf("query with ID %s is already running", queryID)
 	}
-
-	ctx, cancel := common.NewTimeoutContext(common.QUERY_TIMEOUT)
-	p.ActiveQueries.Store(queryID, cancel)
 	defer func() {
 		cancel()
 		p.ActiveQueries.Delete(queryID)
@@ -304,7 +303,7 @@ func (p *Postgres) ListDatabases() (common.DatabaseInfo, error) {
 		return common.DatabaseInfo{}, errors.New("no active connection pool found")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := common.NewTimeoutContext(common.META_TIMEOUT)
 	defer cancel()
 
 	// Acquire a connection from the pool
@@ -348,7 +347,7 @@ func (p *Postgres) ListTables() ([]string, error) {
 		return nil, errors.New("no active connection pool found")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := common.NewTimeoutContext(common.META_TIMEOUT)
 	defer cancel()
 
 	// Acquire a connection from the pool
@@ -417,24 +416,10 @@ func (p *Postgres) GetTableData(table string, limit, offset int, orderBy, orderD
 	}
 	defer conn.Release()
 
-	quotedTable, err := common.QuoteIdentifier(table, common.QuoteDoubleQuote)
+	sql, err := common.TableDataSQL(table, orderBy, orderDir, limit, offset, common.QuoteDoubleQuote)
 	if err != nil {
 		return common.QueryResult{}, err
 	}
-
-	sql := fmt.Sprintf(`SELECT * FROM %s`, quotedTable)
-	if orderBy != "" {
-		quotedCol, err := common.QuoteIdentifier(orderBy, common.QuoteDoubleQuote)
-		if err != nil {
-			return common.QueryResult{}, err
-		}
-		dir := "ASC"
-		if orderDir == "desc" {
-			dir = "DESC"
-		}
-		sql += fmt.Sprintf(` ORDER BY %s %s`, quotedCol, dir)
-	}
-	sql += fmt.Sprintf(` LIMIT %d OFFSET %d`, limit, offset)
 	return p.query(ctx, conn.Conn(), sql)
 }
 

@@ -63,8 +63,9 @@ func (cs *ConnectionState) GetPassword() string {
 	return cs.Password.String()
 }
 
-// CancelQuery cancels a running query started with its ID. ClickHouse
-// overrides it to also kill the query on the server.
+// CancelQuery cancels the context of a running query started with its ID.
+// ClickHouse overrides it to also run KILL QUERY, since it has no pinned
+// connection whose cancellation would stop the statement.
 func (cs *ConnectionState) CancelQuery(queryID string) error {
 	if cancelFunc, exists := cs.ActiveQueries.Load(queryID); exists {
 		if cancel, ok := cancelFunc.(context.CancelFunc); ok {

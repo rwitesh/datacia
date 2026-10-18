@@ -4,18 +4,13 @@ import (
 	"context"
 	"encoding/base64"
 
-	"github.com/wailsapp/wails/v3/pkg/application"
 	clip "golang.design/x/clipboard"
 )
 
-type ClipboardService struct {
-	app *application.App
-}
+type ClipboardService struct{}
 
-func NewClipboardService(app *application.App) *ClipboardService {
-	return &ClipboardService{
-		app: app,
-	}
+func NewClipboardService() *ClipboardService {
+	return &ClipboardService{}
 }
 
 // SetContent sets the system clipboard content to the given text or image.

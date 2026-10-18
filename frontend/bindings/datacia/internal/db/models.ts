@@ -49,20 +49,3 @@ export class QueryHistoryItem {
         return new QueryHistoryItem($$parsedSource as Partial<QueryHistoryItem>);
     }
 }
-
-export class Store {
-
-    /** Creates a new Store instance. */
-    constructor($$source: Partial<Store> = {}) {
-
-        Object.assign(this, $$source);
-    }
-
-    /**
-     * Creates a new Store instance from a string or object.
-     */
-    static createFrom($$source: any = {}): Store {
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        return new Store($$parsedSource as Partial<Store>);
-    }
-}

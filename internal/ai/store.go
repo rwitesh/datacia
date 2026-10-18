@@ -4,13 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
-	"path/filepath"
 	"sync"
 
-	"datacia/internal/constants"
 	"datacia/internal/logger"
-
-	"github.com/adrg/xdg"
+	"datacia/internal/paths"
 )
 
 const maxStoredMessages = 200
@@ -32,15 +29,11 @@ type chatStore struct {
 	mu sync.Mutex
 }
 
-func chatPath() (string, error) {
-	return xdg.DataFile(filepath.Join(constants.APP_NAME, "chat.json"))
-}
-
 func (s *chatStore) load() (Chat, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	empty := Chat{Messages: []StoredMessage{}}
-	path, err := chatPath()
+	path, err := paths.GetChatPath()
 	if err != nil {
 		return empty, err
 	}
@@ -68,7 +61,7 @@ func (s *chatStore) save(chat Chat) error {
 	if n := len(chat.Messages); n > maxStoredMessages {
 		chat.Messages = chat.Messages[n-maxStoredMessages:]
 	}
-	path, err := chatPath()
+	path, err := paths.GetChatPath()
 	if err != nil {
 		return err
 	}

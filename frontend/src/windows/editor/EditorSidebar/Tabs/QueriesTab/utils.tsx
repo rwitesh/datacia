@@ -3,7 +3,10 @@ import {
     FolderOpenIcon,
     FileCode,
 } from "lucide-react";
+import { toast } from "sonner";
 import type { FileNode } from "@/services/bindings";
+import type { useWriteFile } from "@/services/queries";
+import { errorMessage } from "@/lib/utils";
 
 /**
  * Get icon for a file tree node based on type
@@ -63,34 +66,6 @@ export function findAvailableFileName(
 }
 
 /**
- * Find the deepest expanded folder in the tree
- * If a folder is expanded and has expanded children, returns the deepest one
- */
-export function findFirstExpandedFolder(
-    nodes: FileNode[] | undefined,
-    expandedFolders: Set<string>
-): string {
-    if (!nodes) return "";
-    for (const node of nodes) {
-        if (node.type === "folder" && expandedFolders.has(node.path)) {
-            // First check if there's a deeper expanded folder in children
-            if (node.children) {
-                const deeperFolder = findFirstExpandedFolder(node.children, expandedFolders);
-                if (deeperFolder) return deeperFolder;
-            }
-            // No deeper folder found, return this one
-            return node.path;
-        }
-        // Also check non-expanded folders' children (in case a nested folder is expanded)
-        if (node.children) {
-            const found = findFirstExpandedFolder(node.children, expandedFolders);
-            if (found) return found;
-        }
-    }
-    return "";
-}
-
-/**
  * Get the parent folder path from a file path
  */
 export function getParentPath(path: string): string {
@@ -116,4 +91,23 @@ export function getDestinationFolder(targetNode: FileNode): string {
 export function getFileName(path: string): string {
     const parts = path.split('/');
     return parts[parts.length - 1];
+}
+
+/**
+ * Save a .sql file dropped from outside the app into folder ("" is the root),
+ * renaming it if the name is taken.
+ */
+export async function saveDroppedSqlFile(
+    file: File,
+    folder: string,
+    tree: FileNode[] | undefined,
+    writeFile: ReturnType<typeof useWriteFile>
+) {
+    try {
+        const content = await file.text();
+        const fileName = findAvailableFileName(file.name, folder, tree);
+        writeFile.mutate({ path: folder ? `${folder}/${fileName}` : fileName, content });
+    } catch (err) {
+        toast.error(errorMessage(err));
+    }
 }

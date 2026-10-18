@@ -7,7 +7,6 @@ import type { ConnectArgs } from "../hooks/useConnectDatabase";
 interface ConnectionActionsProps {
   isUpdate: boolean;
   loading: boolean;
-  isSubmitting: boolean;
   onSave: () => void;
   onTest: () => void;
   onConnect: () => void;
@@ -19,7 +18,6 @@ interface ConnectionActionsProps {
 export const ConnectionActions: React.FC<ConnectionActionsProps> = ({
   isUpdate,
   loading,
-  isSubmitting,
   onSave,
   onTest,
   onConnect,
@@ -31,7 +29,7 @@ export const ConnectionActions: React.FC<ConnectionActionsProps> = ({
   const isTesting = testMutation.isPending;
   const isConnecting = connectMutation.isPending;
   const isAnyMutationPending = isSaving || isTesting || isConnecting;
-  const isDisabled = loading || isSubmitting || isAnyMutationPending;
+  const isDisabled = loading || isAnyMutationPending;
 
   return (
     <div className="flex justify-between items-center gap-2 pt-4">

@@ -107,23 +107,13 @@ export function SQLCodeEditor({ value, onChange, className }: SQLCodeEditorProps
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // Update value from props if it changed externally (not by typing)
-    // This is tricky with CodeMirror loops.
-    // We generally assume the parent checks if value changed before passing it down,
-    // or we only update if it's significantly different.
-    // But for simple "controlled" component pattern:
+    // Typing echoes back through onChange with an equal value, so only an
+    // external change replaces the document (and resets the cursor).
     useEffect(() => {
         const view = viewRef.current;
         if (!view) return;
         const doc = view.state.doc.toString();
         if (doc !== value) {
-            // Only update if difference is external (e.g. from parent state update not initiated by this editor)
-            // But since we call onChange on every keystroke, parent updates state, passed back here.
-            // If we dispatch here, we might reset cursor.
-            // CodeMirror handles this usually if we are careful.
-            // However, `QueryInput` does:
-            // if (doc !== expected) { view.dispatch(...) }
-            // So let's do the same.
             view.dispatch({
                 changes: { from: 0, to: doc.length, insert: value },
             });

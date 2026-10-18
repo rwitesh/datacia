@@ -15,7 +15,7 @@ export interface CellSelection {
   focus: CellPosition;
 }
 
-export interface SelectionBounds {
+interface SelectionBounds {
   top: number;
   bottom: number;
   left: number;
@@ -38,7 +38,7 @@ export function isCellSelected(selection: CellSelection | null, { row, col }: Ce
 }
 
 // isSelectionInGrid rejects a saved selection that no longer fits the rows
-// and columns shown, or that has an older shape.
+// and columns shown.
 export function isSelectionInGrid(
   selection: CellSelection | null | undefined,
   rowCount: number,
@@ -47,7 +47,7 @@ export function isSelectionInGrid(
   return Boolean(
     selection &&
       [selection.anchor, selection.focus].every(
-        (cell) => cell && cell.row >= 0 && cell.row < rowCount && cell.col >= 0 && cell.col < colCount
+        (cell) => cell.row >= 0 && cell.row < rowCount && cell.col >= 0 && cell.col < colCount
       )
   );
 }

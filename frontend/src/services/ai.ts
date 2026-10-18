@@ -1,7 +1,7 @@
 import { useEffect, useSyncExternalStore } from "react";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CancelError, Events, type CancellablePromise } from "@wailsio/runtime";
-import { nanoid } from "nanoid";
+import { v4 as uuidv4 } from "uuid";
 import * as AI from "./bindings/ai";
 import { errorMessage } from "@/lib/utils";
 import { ChatContext, type ModelRef, type ProviderStatus, type ToolUse } from "./bindings/ai";
@@ -154,7 +154,7 @@ function history(messages: ChatMessage[]) {
 }
 
 async function run(context: ChatContext) {
-  const reply: ChatMessage = { id: nanoid(), role: "assistant", content: "", streaming: true };
+  const reply: ChatMessage = { id: uuidv4(), role: "assistant", content: "", streaming: true };
   const messages = history(state.messages);
   set({ messages: [...state.messages, reply] });
 
@@ -183,7 +183,7 @@ export const chat = {
   send(text: string, context: ChatContext) {
     const content = text.trim();
     if (!content || pending) return;
-    set({ messages: [...state.messages, { id: nanoid(), role: "user", content }] });
+    set({ messages: [...state.messages, { id: uuidv4(), role: "user", content }] });
     void run(context);
   },
   retry(context: ChatContext) {

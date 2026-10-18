@@ -59,10 +59,7 @@ export const DatabaseConnection: React.FC = () => {
   const hasFormErrors = formErrorEntries.length > 0;
 
   // Get display name for alert title
-  const displayName =
-    currentConnectionName ||
-    (connectionId && fetchedData?.connectionName) ||
-    "New Connection";
+  const displayName = currentConnectionName || "New Connection";
 
   return (
     <div className="h-full flex flex-col">
@@ -74,7 +71,6 @@ export const DatabaseConnection: React.FC = () => {
             hasFormErrors={hasFormErrors}
             formErrorEntries={formErrorEntries}
             isError={isError}
-            fetchedConnectionName={fetchedData?.connectionName}
             status={status}
             displayName={displayName}
             onDismissStatus={() => setStatus(null)}
@@ -98,7 +94,6 @@ export const DatabaseConnection: React.FC = () => {
         <ConnectionActions
           isUpdate={isUpdate}
           loading={loading}
-          isSubmitting={form.formState.isSubmitting}
           onSave={handleSave}
           onTest={handleTest}
           onConnect={handleConnect}

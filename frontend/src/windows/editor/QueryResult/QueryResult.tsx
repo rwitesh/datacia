@@ -13,7 +13,7 @@ const NO_COLUMNS: string[] = [];
 const NO_ROWS: DataRow[] = [];
 
 type QueryResultProps = {
-  onOpenDataView?: () => void;
+  onOpenDataView: () => void;
 };
 
 export function QueryResult({ onOpenDataView }: QueryResultProps) {
@@ -27,11 +27,7 @@ export function QueryResult({ onOpenDataView }: QueryResultProps) {
   const ddlQuery = useGetDDL(table, isDDLMode);
 
   const tabId = activeTab?.id;
-  const showDataTable = Boolean(
-    activeTab &&
-      (String(activeTab.results?.type) === "read" ||
-        (activeTab.isExecuting && String(activeTab.results?.type) === "read"))
-  );
+  const showDataTable = activeTab?.results?.type === "read";
 
   const handleSelectionChange = useCallback(
     (selection: CellSelection | null, selectedRows: DataRow[]) => {
@@ -42,7 +38,6 @@ export function QueryResult({ onOpenDataView }: QueryResultProps) {
     [tabId, updateTab]
   );
 
-  // Show empty state if no active tab instead of returning null
   if (!activeTab) {
     return (
       <div className="h-full flex flex-col overflow-hidden bg-card">

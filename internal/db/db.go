@@ -25,17 +25,22 @@ import (
 var ErrUnreadableSecret = errors.New("saved password can't be decrypted")
 
 type Store struct {
-	db           *sql.DB
-	encyptionKey []byte
+	db            *sql.DB
+	encryptionKey []byte
 }
 
-// Open initializes SQLite at $XDG_DATA_HOME/<appName>/data.db and returns a Store
-func Open(encryptionKey []byte) (*Store, error) {
+// Open opens the app's store at $XDG_DATA_HOME/<appName>/data.db, encrypting
+// secrets with the device-bound key.
+func Open() (*Store, error) {
+	ctx, err := security.GetSecurityContext()
+	if err != nil {
+		return nil, err
+	}
 	dbPath, err := paths.GetDBPath()
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve db path: %w", err)
 	}
-	return OpenFile(dbPath, encryptionKey)
+	return OpenFile(dbPath, ctx.GetEncryptionKey())
 }
 
 // OpenFile initializes SQLite at the given path and returns a Store
@@ -46,25 +51,17 @@ func OpenFile(dbPath string, encryptionKey []byte) (*Store, error) {
 		return nil, fmt.Errorf("failed to create database directory: %w", err)
 	}
 
-	// Create the database file if it doesn't exist
-	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
-		file, err := os.Create(dbPath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create database file: %w", err)
-		}
-		file.Close()
-	}
-
 	db, err := sql.Open("sqlite", dbPath+"?_journal_mode=WAL&_busy_timeout=5000")
 	if err != nil {
 		return nil, fmt.Errorf("failed to open db: %w", err)
 	}
 
 	if err = db.Ping(); err != nil {
+		db.Close()
 		return nil, fmt.Errorf("failed to ping db: %w", err)
 	}
 
-	s := &Store{db: db, encyptionKey: encryptionKey}
+	s := &Store{db: db, encryptionKey: encryptionKey}
 
 	if err := s.initSchema(); err != nil {
 		db.Close()
@@ -129,7 +126,7 @@ func (s *Store) encryptField(value string) (string, error) {
 	if value == "" {
 		return "", nil
 	}
-	encrypted, err := security.Encrypt(s.encyptionKey, []byte(value))
+	encrypted, err := security.Encrypt(s.encryptionKey, []byte(value))
 	if err != nil {
 		return "", err
 	}
@@ -144,48 +141,44 @@ func (s *Store) decryptField(value string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	decrypted, err := security.Decrypt(s.encyptionKey, decoded)
+	decrypted, err := security.Decrypt(s.encryptionKey, decoded)
 	if err != nil {
 		return "", err
 	}
 	return string(decrypted), nil
 }
 
-func (s *Store) SaveConnection(name string, config map[string]string) error {
-	id := uuid.New().String()
-
+// connectionColumns returns a saved connection's column values, from engine
+// to ssh_key_path, in table order, with the passwords encrypted.
+func (s *Store) connectionColumns(config map[string]string) ([]any, error) {
 	encPassword, err := s.encryptField(config["password"])
 	if err != nil {
-		return err
+		return nil, err
 	}
 	encSSHPassword, err := s.encryptField(config["sshPassword"])
 	if err != nil {
+		return nil, err
+	}
+	return []any{
+		config["engine"], config["host"], config["port"], config["username"], encPassword, config["database"],
+		config["useSSH"] == "true", config["sshHost"], config["sshPort"], config["sshUsername"], encSSHPassword,
+		config["useSSHKey"] == "true", config["sshKeyPath"],
+	}, nil
+}
+
+func (s *Store) SaveConnection(name string, config map[string]string) error {
+	columns, err := s.connectionColumns(config)
+	if err != nil {
 		return err
 	}
-
-	useSSH := 0
-	if config["useSSH"] == "true" {
-		useSSH = 1
-	}
-	useSSHKey := 0
-	if config["useSSHKey"] == "true" {
-		useSSHKey = 1
-	}
-
-	query := `
+	_, err = s.db.Exec(`
 		INSERT INTO connections (
-			id, name, engine, host, port, username, password, database, 
-			use_ssh, ssh_host, ssh_port, ssh_username, ssh_password, 
+			id, name, engine, host, port, username, password, database,
+			use_ssh, ssh_host, ssh_port, ssh_username, ssh_password,
 			use_ssh_key, ssh_key_path, created_at, updated_at
 		)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-	`
-
-	_, err = s.db.Exec(query,
-		id, name, config["engine"], config["host"], config["port"], config["username"], encPassword, config["database"],
-		useSSH, config["sshHost"], config["sshPort"], config["sshUsername"], encSSHPassword,
-		useSSHKey, config["sshKeyPath"],
-	)
+	`, append([]any{uuid.New().String(), name}, columns...)...)
 	if err != nil {
 		logger.Error("Failed to save connection", "error", err.Error())
 	}
@@ -193,26 +186,12 @@ func (s *Store) SaveConnection(name string, config map[string]string) error {
 }
 
 func (s *Store) UpdateConnection(id, name string, config map[string]string) error {
-	encPassword, err := s.encryptField(config["password"])
+	columns, err := s.connectionColumns(config)
 	if err != nil {
 		return err
 	}
-	encSSHPassword, err := s.encryptField(config["sshPassword"])
-	if err != nil {
-		return err
-	}
-
-	useSSH := 0
-	if config["useSSH"] == "true" {
-		useSSH = 1
-	}
-	useSSHKey := 0
-	if config["useSSHKey"] == "true" {
-		useSSHKey = 1
-	}
-
-	// Update columns
-	query := `
+	args := append([]any{name}, columns...)
+	_, err = s.db.Exec(`
 		UPDATE connections
 		SET name = ?,
 			engine = ?, host = ?, port = ?, username = ?, password = ?, database = ?,
@@ -220,15 +199,7 @@ func (s *Store) UpdateConnection(id, name string, config map[string]string) erro
 			use_ssh_key = ?, ssh_key_path = ?,
 			updated_at = CURRENT_TIMESTAMP
 		WHERE id = ?
-	`
-
-	_, err = s.db.Exec(query,
-		name,
-		config["engine"], config["host"], config["port"], config["username"], encPassword, config["database"],
-		useSSH, config["sshHost"], config["sshPort"], config["sshUsername"], encSSHPassword,
-		useSSHKey, config["sshKeyPath"],
-		id,
-	)
+	`, append(args, id)...)
 	if err != nil {
 		logger.Error("Failed to update connection", "error", err.Error())
 	}

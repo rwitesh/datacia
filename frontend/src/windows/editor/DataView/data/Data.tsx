@@ -1,24 +1,13 @@
 import { useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
-function getColorClass(value: string): string {
-  if (value === "null") {
-    return "text-red-500 dark:text-red-400";
-  }
+// Literals outside strings: numbers (with exponents), booleans and null.
+const LITERAL = /(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?|\btrue\b|\bfalse\b|\bnull\b)/;
 
-  if (value === "true" || value === "false") {
-    return "text-amber-600 dark:text-amber-400";
-  }
-
-  if (/^-?\d+\.?\d*$/.test(value.trim())) {
-    return "text-blue-600 dark:text-blue-400";
-  }
-
-  if (value.startsWith('"') && value.endsWith('"')) {
-    return "text-emerald-600 dark:text-emerald-400";
-  }
-
-  return "text-muted-foreground";
+function getLiteralClass(literal: string): string {
+  if (literal === "null") return "text-red-500 dark:text-red-400";
+  if (literal === "true" || literal === "false") return "text-amber-600 dark:text-amber-400";
+  return "text-blue-600 dark:text-blue-400";
 }
 
 function HighlightedLine({ line }: { line: string }) {
@@ -29,20 +18,30 @@ function HighlightedLine({ line }: { line: string }) {
       {parts.map((part, index) => {
         if (!part) return null;
 
-        const nextPart = parts[index + 1] || "";
-        const isKey = part.startsWith('"') && nextPart.trim().startsWith(":");
-
-        if (isKey) {
+        if (part.startsWith('"')) {
+          const isKey = (parts[index + 1] || "").trim().startsWith(":");
           return (
-            <span key={index} className="text-purple-600 dark:text-purple-400">
+            <span
+              key={index}
+              className={isKey ? "text-purple-600 dark:text-purple-400" : "text-emerald-600 dark:text-emerald-400"}
+            >
               {part}
             </span>
           );
         }
 
+        // split with a capture group puts the literals at odd indices.
         return (
-          <span key={index} className={getColorClass(part)}>
-            {part}
+          <span key={index} className="text-muted-foreground">
+            {part.split(LITERAL).map((piece, pieceIndex) =>
+              pieceIndex % 2 === 1 ? (
+                <span key={pieceIndex} className={getLiteralClass(piece)}>
+                  {piece}
+                </span>
+              ) : (
+                piece
+              )
+            )}
           </span>
         );
       })}
@@ -50,7 +49,7 @@ function HighlightedLine({ line }: { line: string }) {
   );
 }
 
-export interface DataTabContentProps {
+interface DataTabContentProps {
   lines: string[];
 }
 

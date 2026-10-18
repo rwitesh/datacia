@@ -7,7 +7,7 @@ import { Events } from "@wailsio/runtime"
 import { toast } from "sonner"
 import { errorMessage } from "@/lib/utils"
 
-export function ThemeProvider({ children, ...props }: { children: React.ReactNode }) {
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const { data: settings } = useSettings()
   const { mutate: updateSettings } = useUpdateSettings()
   const queryClient = useQueryClient()
@@ -50,7 +50,6 @@ export function ThemeProvider({ children, ...props }: { children: React.ReactNod
 
   return (
     <ThemeProviderContext.Provider
-      {...props}
       value={{
         theme,
         resolvedTheme,

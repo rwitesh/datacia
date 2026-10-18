@@ -1,8 +1,8 @@
-import { useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { useSearchParams } from "react-router";
 import { Button } from "@/components/ui/button";
 import { Loader2, Settings as SettingsIcon } from "lucide-react";
-import { Window } from "@wailsio/runtime";
+import { Events, Window } from "@wailsio/runtime";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { isEqual } from "lodash";
 import { errorMessage } from "@/lib/utils";
@@ -17,6 +17,13 @@ const plain = (value: unknown) => JSON.parse(JSON.stringify(value ?? null));
 export function Settings() {
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState(searchParams.get("tab") === "ai" ? "ai" : "settings");
+  // Sent when the already-open window is asked for a tab (e.g. "Set up AI").
+  useEffect(() => {
+    const unsubscribe = Events.On("settings:show-tab", (event) => {
+      setActiveTab(event.data === "ai" ? "ai" : "settings");
+    });
+    return () => unsubscribe();
+  }, []);
 
   const { data: settings } = useSettings();
   const { mutate: updateSettings, isPending, error, reset } = useUpdateSettings();

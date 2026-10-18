@@ -8,7 +8,6 @@ interface ConnectionAlertProps {
   hasFormErrors: boolean;
   formErrorEntries: [keyof FormValues, FieldError][];
   isError: boolean;
-  fetchedConnectionName?: string;
   status: Status;
   displayName: string;
   onDismissStatus: () => void;
@@ -48,7 +47,6 @@ export const ConnectionAlert: React.FC<ConnectionAlertProps> = ({
   hasFormErrors,
   formErrorEntries,
   isError,
-  fetchedConnectionName,
   status,
   displayName,
   onDismissStatus,
@@ -71,7 +69,7 @@ export const ConnectionAlert: React.FC<ConnectionAlertProps> = ({
   } else if (isError) {
     variant = "destructive";
     title = "Failed to load saved connection";
-    description = `Unable to fetch saved connection${fetchedConnectionName ? ` "${fetchedConnectionName}"` : ""}.`;
+    description = "Unable to fetch saved connection.";
   } else if (status) {
     title = status.title;
     description = status.description || null;

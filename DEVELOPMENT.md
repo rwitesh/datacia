@@ -1,68 +1,51 @@
 # Developing DataCia
 
-DataCia is a [Wails v3](https://v3.wails.io) app: a Go backend with a React + Vite frontend.
+DataCia is a [Wails v3](https://v3.wails.io) app: a Go backend and a React + Vite frontend in
+`frontend/`. Code layout and conventions are in [AGENTS.md](AGENTS.md).
 
 ## Prerequisites
 
-- Go (the version in `go.mod`)
-- Node.js 24 and npm
-- Wails 3 CLI, the same version as in `go.mod`. Make sure `$(go env GOPATH)/bin` is on your `PATH`:
+- Go (version in `go.mod`) and Node.js 24
+- Wails CLI matching `go.mod`, with `$(go env GOPATH)/bin` on your `PATH`:
 
   ```bash
   go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.30
-  wails3 version   # v3.0.0-beta.30
   ```
 
-- macOS: Xcode command-line tools (`xcode-select --install`) for `lipo`, `codesign` and `hdiutil`
-- Windows installers only: [NSIS](https://nsis.sourceforge.io) (`brew install nsis` / `apt install nsis`)
+- macOS: Xcode command-line tools (`xcode-select --install`)
+- Windows installers: [NSIS](https://nsis.sourceforge.io) (`brew install nsis` / `apt install nsis`)
 
-`make` is a thin wrapper around the Wails Taskfiles; every target below can also be run as the
-`wails3 …` command shown in the [Makefile](Makefile) (useful on Windows without `make`).
+`make` wraps the Wails Taskfiles; the [Makefile](Makefile) shows the `wails3` command behind each
+target (useful on Windows without `make`).
 
-## Running in development
-
-```bash
-make dev        # = wails3 dev
-```
-
-The first run installs frontend dependencies (`npm ci`), then:
-
-1. builds a development binary with `wails3 build DEV=true` (frontend bindings are regenerated),
-2. starts the Vite dev server on port 9245 (override with `WAILS_VITE_PORT`),
-3. launches the app (on macOS as `bin/DataCia.dev.app`).
-
-Frontend edits hot-reload in the running window. Go edits rebuild and restart the app.
-Stop with `Ctrl+C`.
-
-To run a production build instead:
+## Run
 
 ```bash
-make package-darwin && open bin/DataCia.app      # macOS app bundle
-make build                                        # bare binary: bin/DataCia (bin/DataCia.exe on Windows)
+make dev
 ```
 
-## Testing
+Installs frontend dependencies, builds a dev binary (regenerating bindings), starts Vite on port
+9245 (`WAILS_VITE_PORT` to change it) and launches the app. Frontend edits hot-reload; Go edits
+rebuild and restart the app.
+
+## Test
 
 ```bash
-make test       # = wails3 task test
+make test       # go test ./internal/... ./pkg/..., then frontend typecheck and lint
 ```
 
-This runs, stopping at the first failure:
-
-- `go test ./internal/... ./pkg/...` – Go unit tests
-- `npm run typecheck` – `tsc -b` over `frontend/src` and the generated bindings
-- `npm run lint` – ESLint (React Compiler rules from `eslint-plugin-react-hooks` included)
-
-Individual checks:
+Other checks:
 
 ```bash
-go test ./internal/update/            # one Go package
-cd frontend && npm run typecheck      # frontend types only
-cd frontend && npm run build          # production frontend bundle
+cd frontend && npm run build                  # production bundle
+gofmt -l $(git ls-files '*.go')               # must print nothing
+wails3 generate bindings -ts -clean=true      # after changing a service method or model
 ```
 
-The Postgres and MySQL tests need a server and skip without one. To run them against throwaway
-containers:
+`go build`, `go vet` and `go test ./...` on the root package embed `frontend/dist`. Build the
+frontend first, or stub it: `mkdir -p frontend/dist && touch frontend/dist/.keep`.
+
+Postgres and MySQL tests skip without a server. To run them against throwaway containers:
 
 ```bash
 docker run -d --rm --name datacia-pg -e POSTGRES_PASSWORD=test -p 127.0.0.1:55432:5432 postgres:17-alpine
@@ -71,90 +54,63 @@ DATACIA_TEST_POSTGRES=postgres://postgres:test@127.0.0.1:55432/postgres \
 DATACIA_TEST_MYSQL=mysql://root:test@127.0.0.1:53306/test go test ./pkg/postgres ./pkg/mysql
 ```
 
-[CI](.github/workflows/ci.yml) runs on every push to `main` and every pull request:
+[CI](.github/workflows/ci.yml) runs on pushes to `main` and on pull requests: frontend typecheck,
+lint and build; `gofmt`, `go vet`, `go test` and a Windows cross-compile; and a check that
+`frontend/bindings` matches a fresh generation.
 
-- frontend: `npm ci`, `typecheck`, `lint`, `build`
-- Go (macOS runner): `go vet ./...`, `go test ./...`, and a Windows cross-compile
-- bindings: fails if `frontend/bindings` differs from a fresh `wails3 generate bindings -ts -clean=true`
-  (run that command and commit the result after changing any service method or model)
-
-## Building and packaging
+## Build
 
 | Command | Output |
 | --- | --- |
-| `make build` | Production binary `bin/DataCia` for the host OS (`wails3 build DEV=true` for a debug build) |
+| `make build` | `bin/DataCia` (`.exe` on Windows) for the host OS |
 | `make package-darwin` | `bin/DataCia.app` for the host architecture |
 | `make package-darwin-universal` | Universal (arm64 + amd64) `bin/DataCia.app` |
 | `make dmg` | Universal app in a styled `bin/DataCia.dmg` |
-| `make release-darwin` | `bin/DataCia.dmg` plus `bin/DataCia.zip` (the app bundle for in-app updates) |
-| `make package-windows` | `bin/DataCia-amd64_arm64-installer.exe`, plus `bin/DataCia-amd64.exe` and `bin/DataCia-arm64.exe` (cross-compiles from any OS) |
+| `make release-darwin` | `bin/DataCia.dmg` plus `bin/DataCia.zip` (for in-app updates) |
+| `make package-windows` | `bin/DataCia-amd64_arm64-installer.exe`, `bin/DataCia-amd64.exe`, `bin/DataCia-arm64.exe` |
 | `make package-windows-amd64` / `-arm64` | Single-architecture Windows installer |
 
-The Windows build is pure Go (SQLite via `modernc.org/sqlite`), so it can be cross-compiled
-from macOS or Linux without Docker. Windows installs per user into `%LOCALAPPDATA%\DataCia`,
-which the auto-updater relies on.
+Windows builds are pure Go (SQLite via `modernc.org/sqlite`) and cross-compile from any OS.
+Windows installs per user into `%LOCALAPPDATA%\DataCia`, which the updater relies on.
 
-### Versioning
+**Version.** Taken from `VERSION=x.y.z` if passed, else a `vX.Y.Z` tag on `HEAD`, else `dev`. It
+is injected with `-ldflags -X main.version=…`, and the platform metadata (Info.plist, Windows
+version info, NSIS) is generated from it at build time and not committed. `dev` builds never
+auto-update and never send error reports.
 
-The version comes from the git tag; it is not written anywhere in the code. Every build
-resolves `VERSION` in this order:
+**Error reporting.** Release builds send crashes, errors and logs to Sentry (DSN in
+`internal/sentry/sentry.go`; send-only, rate-limited). Users can turn it off in
+**Settings → Privacy**. `dev` builds log to stderr.
 
-1. `VERSION=x.y.z` passed to the build (`make dmg VERSION=2.0.0`); the release workflow passes the tag,
-2. a `vX.Y.Z` tag on the checked-out commit,
-3. otherwise `dev`.
+## Release
 
-It is injected into the Go binary (`-ldflags -X main.version=…`), and `Info.plist`, the Windows
-version info and the NSIS metadata are generated from it and from `info` in `build/config.yml`
-at build time (`common:generate:assets`; these files are not committed). `dev` builds never
-auto-update.
+Releases are GitHub Releases on [rwitesh/datacia](https://github.com/rwitesh/datacia/releases);
+the in-app updater reads the latest one, so the repository must stay public.
 
-### Error reporting (Sentry)
-
-Release builds report crashes, errors and logs to the DataCia Sentry project (the DSN is in
-`internal/sentry/sentry.go`; it can only send events, and abuse is limited with Sentry rate
-limits). `dev` builds report nothing and write logs to stderr. Users can turn reports off in
-**Settings → Privacy**.
-
-## Releasing (uploading a new version)
-
-Releases are GitHub Releases on [rwitesh/datacia](https://github.com/rwitesh/datacia/releases).
-Installed apps check the latest release with the Wails updater (GitHub provider), so the
-repository must be public. Tags with a pre-release suffix (e.g. `v2.1.0-rc.1`) are published as
-pre-releases and never become the latest release.
-
-1. Run `make test`, then merge to `main`.
-2. Tag the commit with the new version (higher than the latest release) and push the tag:
+1. Run `make test` and merge to `main`.
+2. Tag a version higher than the latest release and push it:
 
    ```bash
-   git tag v2.0.0
-   git push origin v2.0.0
+   git tag v2.0.0 && git push origin v2.0.0
    ```
 
-3. The [Release workflow](.github/workflows/release.yml) reads the version from the tag, builds
-   the macOS assets on macOS and the Windows assets on Linux, writes `SHA256SUMS`, and publishes
-   everything to a new GitHub Release with generated notes. Follow it under the repository's
-   **Actions** tab.
+The [Release workflow](.github/workflows/release.yml) builds macOS assets on macOS and Windows
+assets on Linux, writes `SHA256SUMS` and publishes the release. Tags with a suffix
+(`v2.1.0-rc.1`) become pre-releases and never "latest".
 
-Each release has these assets (`<version>` is the tag without the `v`):
-
-| Asset | Used for |
+| Asset (`<v>` = tag without `v`) | Used for |
 | --- | --- |
-| `DataCia-<version>-darwin-universal.dmg` | Download and first install on macOS |
-| `DataCia-<version>-windows-universal-installer.exe` | Download and first install on Windows |
-| `DataCia-<version>-darwin-universal.zip` | In-app update on macOS: contains only `DataCia.app/`, which replaces the installed app |
-| `DataCia-<version>-windows-amd64.exe`, `DataCia-<version>-windows-arm64.exe` | In-app update on Windows: replaces the running `DataCia.exe` for that architecture |
-| `SHA256SUMS` | Checksums of all the above, verified by the updater |
+| `DataCia-<v>-darwin-universal.dmg` | First install on macOS |
+| `DataCia-<v>-windows-universal-installer.exe` | First install on Windows |
+| `DataCia-<v>-darwin-universal.zip` | macOS update: replaces `DataCia.app` |
+| `DataCia-<v>-windows-amd64.exe`, `-arm64.exe` | Windows update: replaces `DataCia.exe` |
+| `SHA256SUMS` | Checked by the updater; a file missing from it is never installed |
 
-The updater refuses an update whose file is missing from `SHA256SUMS` or does not match it, so a
-release without that file cannot be installed automatically.
+Release builds check for updates about 5 seconds after launch, download in the background and
+show a **Restart** prompt in the status bar. On macOS, updates are skipped when the app runs from
+a read-only location such as the mounted DMG.
 
-Release builds check for an update about 5 seconds after launch (retrying a few times if the
-network is unavailable), download it in the background, and show a **Restart** prompt in the status
-bar. `dev` builds never update, and on macOS updates are skipped when the app runs from a
-read-only location such as the mounted DMG.
-
-To upload a build by hand instead (for example, if the workflow is unavailable), produce the same
-names and checksums (`make release-darwin` needs a Mac):
+To publish by hand (needs a Mac for the macOS assets):
 
 ```bash
 make release-darwin package-windows VERSION=2.0.0
@@ -165,32 +121,20 @@ mv bin/DataCia-amd64_arm64-installer.exe release/DataCia-2.0.0-windows-universal
 mv bin/DataCia-amd64.exe release/DataCia-2.0.0-windows-amd64.exe
 mv bin/DataCia-arm64.exe release/DataCia-2.0.0-windows-arm64.exe
 (cd release && shasum -a 256 -- * > SHA256SUMS)
-gh release create v2.0.0 release/* --title "DataCia v2.0.0" --generate-notes
+gh release create v2.0.0 release/* --title "DataCia v2.0.0" --generate-notes   # add --prerelease for rc tags
 ```
 
-Add `--prerelease` to `gh release create` for a pre-release tag.
-
-macOS builds are ad-hoc signed only, so Gatekeeper blocks the first launch; allow it under
-System Settings → Privacy & Security → Open Anyway. Developer ID
-signing and notarization can be added with `wails3 setup` and `wails3 task darwin:sign:notarize`.
+macOS builds are ad-hoc signed, so the first launch needs System Settings → Privacy & Security →
+Open Anyway. Developer ID signing and notarization: `wails3 setup`, then
+`wails3 task darwin:sign:notarize`.
 
 ## Troubleshooting
 
-- `wails3: command not found`: add `$(go env GOPATH)/bin` to `PATH`.
-- `Port 9245 is in use`: another dev server is running; stop it or set `WAILS_VITE_PORT`.
-- `pattern all:frontend/dist: no matching files found` from `go build`/`go vet`: build the
-  frontend first (`cd frontend && npm run build`) or use `make build`.
-- npm `EACCES` errors on the cache: fix ownership of `~/.npm` as npm suggests, or set
-  `npm_config_cache` to a writable directory.
-- `makensis` fails with "Bad text encoding" or crashes with `bad_alloc` on macOS: run it with a
-  UTF-8 locale, e.g. `export LANG=en_US.UTF-8`.
-- `make dmg` arranges the DMG window through Finder; the first run asks to let your terminal
-  control Finder. Allow it (System Settings → Privacy & Security → Automation).
-
-## Project layout
-
-- `main.go`, `internal/` – application wiring, services exposed to the UI, settings,
-  auto-updater
-- `pkg/` – database engines (PostgreSQL, MySQL, SQLite, ClickHouse) and SSH tunnelling
-- `frontend/` – React + Vite UI; `frontend/bindings/` is generated by `wails3 generate bindings`
-- `build/` – Wails Taskfiles and platform packaging assets
+| Problem | Fix |
+| --- | --- |
+| `wails3: command not found` | Add `$(go env GOPATH)/bin` to `PATH` |
+| `Port 9245 is in use` | Stop the other dev server or set `WAILS_VITE_PORT` |
+| `pattern all:frontend/dist: no matching files found` | Build the frontend or stub `frontend/dist` (see [Test](#test)) |
+| npm `EACCES` on the cache | Fix ownership of `~/.npm`, or set `npm_config_cache` |
+| `makensis` "Bad text encoding" or `bad_alloc` on macOS | Use a UTF-8 locale: `export LANG=en_US.UTF-8` |
+| `make dmg` asks to control Finder | Allow it under System Settings → Privacy & Security → Automation |

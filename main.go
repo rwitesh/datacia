@@ -41,12 +41,7 @@ func main() {
 		}()
 	}
 
-	appManager, err := app.NewApp(assets, version)
-	if err != nil {
-		logger.Error("Failed to create app", "error", err.Error())
-		panic(err)
-	}
-
+	appManager := app.NewApp(assets, version)
 	err = appManager.Initialize()
 	if err != nil {
 		logger.Error("Failed to initialize app", "error", err.Error())
@@ -63,19 +58,8 @@ func main() {
 // recoverAndReport logs the panic, flushes Sentry, then re-panics.
 func recoverAndReport() {
 	if r := recover(); r != nil {
-		logger.Error("panic: " + fmtString(r))
+		logger.Error("panic: " + fmt.Sprint(r))
 		sentry.Flush()
 		panic(r)
-	}
-}
-
-func fmtString(r interface{}) string {
-	switch v := r.(type) {
-	case string:
-		return v
-	case error:
-		return v.Error()
-	default:
-		return fmt.Sprintf("%v", r)
 	}
 }

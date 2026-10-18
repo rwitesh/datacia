@@ -17,6 +17,8 @@ import {
   validateForTestConnect,
 } from "../utils/validation";
 import { useConnectDatabase } from "./useConnectDatabase";
+import { errorMessage } from "@/lib/utils";
+
 interface FetchedConnectionData {
   name?: string;
   engine?: string;
@@ -25,7 +27,6 @@ interface FetchedConnectionData {
   username?: string;
   password?: string;
   database?: string;
-  connectionName?: string;
   useSSH?: string;
   sshHost?: string;
   sshPort?: string;
@@ -33,6 +34,23 @@ interface FetchedConnectionData {
   sshPassword?: string;
   sshKeyPath?: string;
 }
+
+const emptyFormValues = (engine: DatabaseEngine): FormValues => ({
+  connectionName: "",
+  engine,
+  host: "",
+  port: DEFAULT_PORTS[engine],
+  username: "",
+  password: "",
+  database: "",
+  useSSH: false,
+  sshHost: "",
+  sshPort: "",
+  sshUsername: "",
+  sshPassword: "",
+  useSSHKey: false,
+  sshKeyPath: "",
+});
 
 interface UseConnectionFormProps {
   resolvedEngine: DatabaseEngine;
@@ -63,22 +81,7 @@ export const useConnectionForm = ({
 
   const form = useForm<FormValues>({
     mode: "onChange",
-    defaultValues: {
-      connectionName: "",
-      engine: resolvedEngine,
-      host: "",
-      port: "",
-      username: "",
-      password: "",
-      database: "",
-      useSSH: false,
-      sshHost: "",
-      sshPort: "",
-      sshUsername: "",
-      sshPassword: "",
-      useSSHKey: false,
-      sshKeyPath: "",
-    },
+    defaultValues: emptyFormValues(resolvedEngine),
   });
 
   const { register, getValues, reset, setError, clearErrors, setValue, watch } = form;
@@ -117,22 +120,7 @@ export const useConnectionForm = ({
         sshKeyPath: fetchedData.sshKeyPath || "",
       });
     } else if (!connectionId) {
-      reset({
-        connectionName: "",
-        engine: resolvedEngine,
-        host: "",
-        port: DEFAULT_PORTS[resolvedEngine],
-        username: "",
-        password: "",
-        database: "",
-        useSSH: false,
-        sshHost: "",
-        sshPort: "",
-        sshUsername: "",
-        sshPassword: "",
-        useSSHKey: false,
-        sshKeyPath: "",
-      });
+      reset(emptyFormValues(resolvedEngine));
     }
   }, [fetchedData, reset, connectionId, resolvedEngine]);
 
@@ -202,7 +190,7 @@ export const useConnectionForm = ({
       setStatus({
         kind: "error",
         title: "Save failed",
-        description: err instanceof Error ? err.message : String(err),
+        description: errorMessage(err),
       });
     },
   });
@@ -238,7 +226,7 @@ export const useConnectionForm = ({
       setStatus({
         kind: "error",
         title: "Connection test failed",
-        description: err instanceof Error ? err.message : String(err),
+        description: errorMessage(err),
       });
     },
   });

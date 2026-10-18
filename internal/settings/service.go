@@ -18,51 +18,37 @@ import (
 )
 
 var (
-	commitMu       sync.Mutex
-	globalInfo     *Info
-	globalInfoOnce sync.Once
-	configDir      string
-	appInstance    *application.App
+	commitMu    sync.Mutex
+	globalInfo  *Info
+	configDir   string
+	appInstance *application.App
 )
 
-func Init(app *application.App) {
+// Init loads the settings and tags every log with the app and device details.
+func Init(app *application.App, version string) {
 	appInstance = app
 	if cd, err := paths.GetConfigDir(); err == nil {
 		configDir = cd
 	}
-	globalInfoOnce.Do(func() {
-		env := app.Env.Info()
-		globalInfo = &Info{
-			OS:         env.OS,
-			OSArch:     env.Arch,
-			OSVersion:  env.OSInfo.Version,
-			AppVersion: "unknown",
-			Settings:   defaultSettings(),
-		}
-		loadSettings()
-	})
-}
-
-// SetAppVersion records the version and tags every log with the app and
-// device details.
-func SetAppVersion(version string) {
-	if globalInfo == nil {
-		return
+	env := app.Env.Info()
+	globalInfo = &Info{
+		OS:         env.OS,
+		OSArch:     env.Arch,
+		OSVersion:  env.OSInfo.Version,
+		AppVersion: version,
+		Settings:   defaultSettings(),
 	}
-	globalInfo.mu.Lock()
-	globalInfo.AppVersion = version
-	info := getSanitized()
-	globalInfo.mu.Unlock()
+	loadSettings()
 
 	var deviceID string
 	if ctx, err := security.GetSecurityContext(); err == nil {
 		deviceID = ctx.DeviceID()
 	}
 	logger.SetGlobalAttrs(
-		attribute.String("os", info.OS),
-		attribute.String("arch", info.OSArch),
-		attribute.String("os_version", info.OSVersion),
-		attribute.String("app_version", info.AppVersion),
+		attribute.String("os", env.OS),
+		attribute.String("arch", env.Arch),
+		attribute.String("os_version", env.OSInfo.Version),
+		attribute.String("app_version", version),
 		attribute.String("hardware", deviceID),
 	)
 }
@@ -200,12 +186,10 @@ func commit(change func(*Settings)) (*Info, error) {
 	return info, nil
 }
 
-type Service struct {
-	app *application.App
-}
+type Service struct{}
 
-func NewService(app *application.App) *Service {
-	return &Service{app: app}
+func NewService() *Service {
+	return &Service{}
 }
 
 func (s *Service) GetAppInfo() *Info {

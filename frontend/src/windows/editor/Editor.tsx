@@ -103,7 +103,6 @@ export const Editor = () => {
         updateTab(activeTab.id, { sql: text });
       } else {
         const newTab = createTab(sqlFile.name, "query");
-        if (!newTab) return;
         updateTab(newTab.id, { sql: text });
       }
     }

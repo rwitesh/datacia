@@ -4,7 +4,6 @@ import (
 	"context"
 	"datacia/internal/db"
 	"datacia/internal/logger"
-	"datacia/internal/security"
 	"datacia/internal/update"
 	"datacia/pkg/clickhouse"
 	"datacia/pkg/common"
@@ -41,32 +40,12 @@ type Engine struct {
 	sshTunnel    *ssh.Tunnel
 }
 
-func New(uiController UIController) (*Engine, error) {
-	// Get encryption key from security context (cached at startup)
-	ctx, err := security.GetSecurityContext()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get security context: %w", err)
-	}
-
-	encryptionKey := ctx.GetEncryptionKey()
-	store, err := db.Open(encryptionKey)
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize database: %w", err)
-	}
-
+func New(wailsApp *application.App, uiController UIController, store *db.Store) *Engine {
 	return &Engine{
 		store:        store,
 		uiController: uiController,
-	}, nil
-}
-
-// SetApplication sets the Wails application instance for file dialogs
-func (e *Engine) SetApplication(app *application.App) {
-	e.wailsApp = app
-}
-
-func (e *Engine) GetStore() *db.Store {
-	return e.store
+		wailsApp:     wailsApp,
+	}
 }
 
 // PendingUpdateVersion returns the version of the update downloaded in the
@@ -99,10 +78,6 @@ func getDBClient(engineType string) (DatabaseClient, error) {
 	default:
 		return nil, fmt.Errorf("unsupported engine type: %s", engineType)
 	}
-}
-
-func (e *Engine) CreateNewConnection(engine, host, port, username, password, database string, test bool) error {
-	return e.CreateNewConnectionWithSSH(engine, host, port, username, password, database, "", "", "", "", "", "", test)
 }
 
 // CreateNewConnectionWithSSH connects to a database, optionally through an

@@ -11,8 +11,6 @@ import (
 
 	"datacia/internal/logger"
 	"datacia/internal/paths"
-
-	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 type FileType string
@@ -30,12 +28,10 @@ type FileNode struct {
 }
 
 type QueriesService struct {
-	app     *application.App
 	rootDir string
 }
 
-func NewQueriesService(app *application.App) *QueriesService {
-	// Use centralized queries path
+func NewQueriesService() *QueriesService {
 	rootDir, err := paths.GetQueriesDir()
 	if err != nil {
 		logger.Error("Failed to resolve queries root dir", "error", err.Error())
@@ -43,10 +39,7 @@ func NewQueriesService(app *application.App) *QueriesService {
 		logger.Error("Failed to create queries root dir", "error", err.Error())
 	}
 
-	return &QueriesService{
-		app:     app,
-		rootDir: rootDir,
-	}
+	return &QueriesService{rootDir: rootDir}
 }
 
 // resolvePath resolves a path relative to rootDir and rejects any that

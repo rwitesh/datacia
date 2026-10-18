@@ -3,9 +3,10 @@ import {
   CreateNewConnection as Connect,
   EstablishConnection,
 } from "@/services/bindings/connection";
+import { errorMessage } from "@/lib/utils";
 import type { FormValues, Status } from "../utils/types";
 
-type ConnectByIdArgs = { id: string; name: string; engine: string };
+type ConnectByIdArgs = { id: string };
 type ConnectByValuesArgs = { values: FormValues };
 export type ConnectArgs = ConnectByIdArgs | ConnectByValuesArgs;
 
@@ -50,7 +51,7 @@ export const useConnectDatabase = (opts?: {
       opts?.setStatus?.({
         kind: "error",
         title: "Connection failed",
-        description: err instanceof Error ? err.message : String(err),
+        description: errorMessage(err),
       });
     },
   });

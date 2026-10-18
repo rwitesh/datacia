@@ -10,15 +10,14 @@ import {
   useWriteFile,
 } from "@/services/queries";
 import { useEditorContext } from "@/context/editor/Index";
-import { toast } from "sonner";
 import { CreationInput } from "../utils/CreationInput";
 import { FileTree } from "./FileTree";
 import type { FileNode } from "@/services/bindings";
 import {
   getNodeIcon,
-  findAvailableFileName,
   getFileName,
   getParentPath,
+  saveDroppedSqlFile,
 } from "./utils";
 
 export function QueriesTab() {
@@ -143,24 +142,7 @@ export function QueriesTab() {
     const sqlFile = files.find((file) => file.name.endsWith(".sql"));
 
     if (sqlFile) {
-      try {
-        const content = await sqlFile.text();
-        const fileName = sqlFile.name;
-        const availableFileName = findAvailableFileName(fileName, "", tree);
-
-        writeFile.mutate(
-          { path: availableFileName, content },
-          {
-            onSuccess: () => {
-              toast.success(`File saved as ${availableFileName}`);
-            },
-          },
-        );
-      } catch (err: unknown) {
-        const message =
-          err instanceof Error ? err.message : "Failed to read file";
-        toast.error(message);
-      }
+      await saveDroppedSqlFile(sqlFile, "", tree, writeFile);
       return;
     }
 
@@ -259,12 +241,13 @@ export function QueriesTab() {
             selectedPath={selectedPath}
             onSelect={handleSelect}
             onOpenFile={async (path, name) => {
-              readFile.mutate(path, {
-                onSuccess: (content: string) => {
-                  const tab = createTab(name, "query");
-                  updateTab(tab.id, { sql: content, savedPath: path });
-                },
-              });
+              try {
+                const content = await readFile.mutateAsync(path);
+                const tab = createTab(name, "query");
+                updateTab(tab.id, { sql: content, savedPath: path });
+              } catch {
+                // useReadFile already shows the error.
+              }
             }}
             creatingState={creatingState}
             onCreateRequest={(type, parentPath) => {
