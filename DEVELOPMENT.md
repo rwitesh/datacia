@@ -57,7 +57,7 @@ DATACIA_TEST_MYSQL=mysql://root:test@127.0.0.1:53306/test go test ./pkg/postgres
 SSL modes can be checked against real servers. The opt-in `integration` build tag starts
 PostgreSQL, MySQL and ClickHouse containers (TLS-only, expired certificate and plaintext) with a
 throwaway CA generated at test time, and runs every mode against them through `remote.Engine`.
-It needs a running Docker daemon, pulls the images on first use and takes about a minute. `make test` and CI skip it.
+It needs a running Docker daemon and pulls the images on first use. Containers are labelled `datacia-tls=1`; a killed run's leftovers are removed by the next run. `make test` and CI skip it.
 
 ```bash
 go test -tags integration -run 'TestSSLModes|TestChangeDatabaseKeepsSSL' -v ./pkg/remote

@@ -8,6 +8,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"math/big"
 	"net"
@@ -29,21 +30,34 @@ import (
 //
 // Containers use random host ports and are removed when the tests end.
 
-const containerPrefix = "datacia-tls-"
-
-var (
-	setupOnce   sync.Once
-	setupErr    error
-	certDir     string
-	endpoints   map[string]string // target name -> published host:port
-	containerID []string
+const (
+	containerPrefix = "datacia-tls-"
+	containerLabel  = "datacia-tls=1"
+	// Pinned: the expected errors come from the server and driver versions.
+	clickhouseImage = "clickhouse/clickhouse-server:26.7"
 )
 
-func TestMain(m *testing.M) {
-	code := m.Run()
-	for _, name := range containerID {
-		_ = exec.Command("docker", "rm", "-f", name).Run()
+var (
+	setupMu     sync.Mutex
+	setupResult = map[string]error{}
+	certDir     string
+	endpointMu  sync.Mutex
+	endpoints   = map[string]string{} // target name -> published host:port
+)
+
+// removeContainers removes every container started by these tests, including
+// ones left by a run that was killed before it could clean up.
+func removeContainers() {
+	out, _ := docker("ps", "-aq", "--filter", "label="+containerLabel)
+	if ids := strings.Fields(out); len(ids) > 0 {
+		_ = exec.Command("docker", append([]string{"rm", "-f"}, ids...)...).Run()
 	}
+}
+
+func TestMain(m *testing.M) {
+	removeContainers()
+	code := m.Run()
+	removeContainers()
 	if certDir != "" {
 		os.RemoveAll(certDir)
 	}
@@ -129,15 +143,29 @@ func publishedAddr(name, port string) (string, error) {
 	return "127.0.0.1:" + p, err
 }
 
-func setup(t *testing.T) {
+var serverPrefix = map[string]string{"postgres": "pg-", "mysql": "mysql-", "clickhouse": "clickhouse-"}
+
+// setup starts the servers of one engine, once.
+func setup(t *testing.T, engine string) {
 	t.Helper()
-	setupOnce.Do(func() { setupErr = startServers(t) })
-	if setupErr != nil {
-		t.Fatal(setupErr)
+	setupMu.Lock()
+	defer setupMu.Unlock()
+	if err, done := setupResult[engine]; done {
+		if err != nil {
+			t.Fatal(err)
+		}
+		return
+	}
+	// t.Fatal inside startServers exits this goroutine, so assume failure
+	// until it returns and later tests report it instead of running blind.
+	setupResult[engine] = errors.New("setup did not finish")
+	setupResult[engine] = startServers(t, engine)
+	if err := setupResult[engine]; err != nil {
+		t.Fatal(err)
 	}
 }
 
-func startServers(t *testing.T) error {
+func writeCerts(t *testing.T) error {
 	if _, err := docker("info"); err != nil {
 		return fmt.Errorf("docker is not available: %w", err)
 	}
@@ -145,19 +173,28 @@ func startServers(t *testing.T) error {
 	if certDir, err = os.MkdirTemp("", "datacia-tls-"); err != nil {
 		return err
 	}
-	farFuture := time.Now().Add(24 * time.Hour)
-	ca, caKey, caSet := newCert(t, nil, nil, true, "datacia test CA", farFuture)
-	_, _, otherCA := newCert(t, nil, nil, true, "other CA", farFuture)
+	valid := time.Now().Add(24 * time.Hour)
+	ca, caKey, caSet := newCert(t, nil, nil, true, "datacia test CA", valid)
+	_, _, otherCA := newCert(t, nil, nil, true, "other CA", valid)
 	writeFile(t, filepath.Join(certDir, "other-ca.crt"), otherCA.crt)
 	writeFile(t, filepath.Join(certDir, "ca.crt"), caSet.crt)
 	// The certificates name localhost only, so 127.0.0.1 is a host name mismatch.
-	for dir, notAfter := range map[string]time.Time{"good": farFuture, "expired": time.Now().Add(-time.Hour)} {
+	for dir, notAfter := range map[string]time.Time{"good": valid, "expired": time.Now().Add(-time.Hour)} {
 		_, _, srv := newCert(t, ca, caKey, false, "localhost", notAfter, "localhost")
 		writeFile(t, filepath.Join(certDir, dir, "server.crt"), srv.crt)
 		writeFile(t, filepath.Join(certDir, dir, "server.key"), srv.key)
 		writeFile(t, filepath.Join(certDir, dir, "ca.crt"), caSet.crt)
 		writeFile(t, filepath.Join(certDir, dir, "pg_hba.conf"), []byte(pgHBA))
 		writeFile(t, filepath.Join(certDir, dir, "tls.xml"), []byte(clickhouseTLS))
+	}
+	return nil
+}
+
+func startServers(t *testing.T, engine string) error {
+	if certDir == "" {
+		if err := writeCerts(t); err != nil {
+			return err
+		}
 	}
 
 	pgWrapper := `cp /certs/server.crt /certs/server.key /certs/pg_hba.conf /tmp/ &&
@@ -168,11 +205,10 @@ exec docker-entrypoint.sh postgres -c ssl=on -c ssl_cert_file=/tmp/server.crt -c
 		name, port string
 		args       []string
 	}
-	suffix := fmt.Sprint(os.Getpid())
 	servers := []server{
 		{"pg-plain", "5432", []string{"-e", "POSTGRES_PASSWORD=test", "postgres:17-alpine"}},
 		{"mysql-plain", "3306", []string{"-e", "MYSQL_ROOT_PASSWORD=test", "mysql:8.0", "--skip-ssl"}},
-		{"clickhouse-plain", "9000", []string{"-e", "CLICKHOUSE_PASSWORD=test", "clickhouse/clickhouse-server:latest"}},
+		{"clickhouse-plain", "9000", []string{"-e", "CLICKHOUSE_PASSWORD=test", clickhouseImage}},
 	}
 	for _, dir := range []string{"good", "expired"} {
 		mount := []string{"-v", filepath.Join(certDir, dir) + ":/certs:ro"}
@@ -180,24 +216,24 @@ exec docker-entrypoint.sh postgres -c ssl=on -c ssl_cert_file=/tmp/server.crt -c
 			server{"pg-tls-" + dir, "5432", append(append([]string{"-e", "POSTGRES_PASSWORD=test"}, mount...), "--entrypoint", "sh", "postgres:17-alpine", "-c", pgWrapper)},
 			server{"mysql-tls-" + dir, "3306", append(append([]string{"-e", "MYSQL_ROOT_PASSWORD=test"}, mount...), "mysql:8.0",
 				"--require_secure_transport=ON", "--ssl-ca=/certs/ca.crt", "--ssl-cert=/certs/server.crt", "--ssl-key=/certs/server.key")},
-			// One container serves plaintext on 9000 and TLS on 9440.
-			server{"clickhouse-tls-" + dir, "9440", []string{"-p", "127.0.0.1::9000", "-e", "CLICKHOUSE_PASSWORD=test",
+			server{"clickhouse-tls-" + dir, "9440", []string{"-e", "CLICKHOUSE_PASSWORD=test",
 				"-v", filepath.Join(certDir, dir, "tls.xml") + ":/etc/clickhouse-server/config.d/tls.xml:ro",
-				"-v", filepath.Join(certDir, dir) + ":/certs:ro", "clickhouse/clickhouse-server:latest"}},
+				"-v", filepath.Join(certDir, dir) + ":/certs:ro", clickhouseImage}},
 		)
 	}
 
-	endpoints = map[string]string{}
-	var mu sync.Mutex
 	var wg sync.WaitGroup
 	errs := make(chan error, len(servers))
 	for _, s := range servers {
-		container := containerPrefix + s.name + "-" + suffix
-		args := append([]string{"run", "-d", "--rm", "--name", container, "-p", "127.0.0.1::" + s.port}, s.args...)
+		if !strings.HasPrefix(s.name, serverPrefix[engine]) {
+			continue
+		}
+		container := containerPrefix + s.name + "-" + fmt.Sprint(os.Getpid())
+		// The label lets the next run remove containers a killed run left behind.
+		args := append([]string{"run", "-d", "--rm", "--label", containerLabel, "--name", container, "-p", "127.0.0.1::" + s.port}, s.args...)
 		if out, err := docker(args...); err != nil {
 			return fmt.Errorf("docker run %s: %s", s.name, out)
 		}
-		containerID = append(containerID, container)
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -206,25 +242,14 @@ exec docker-entrypoint.sh postgres -c ssl=on -c ssl_cert_file=/tmp/server.crt -c
 				errs <- err
 				return
 			}
-			mu.Lock()
+			endpointMu.Lock()
 			endpoints[s.name] = addr
-			mu.Unlock()
+			endpointMu.Unlock()
 		}()
 	}
 	wg.Wait()
 	close(errs)
-	for err := range errs {
-		return err
-	}
-	// The TLS ClickHouse containers also serve plaintext on 9000.
-	for _, dir := range []string{"good", "expired"} {
-		addr, err := publishedAddr(containerPrefix+"clickhouse-tls-"+dir+"-"+suffix, "9000")
-		if err != nil {
-			return err
-		}
-		endpoints["clickhouse-tls-"+dir+"-plain"] = addr
-	}
-	return nil
+	return <-errs
 }
 
 type sslCase struct {
@@ -263,7 +288,7 @@ func (c sslCase) config(engine string) common.ConnectionConfig {
 func waitReady(t *testing.T, engine, target string) {
 	t.Helper()
 	c := sslCase{target: target, mode: common.SSLModeRequire}
-	if target == "pg-plain" || target == "mysql-plain" || strings.HasSuffix(target, "-plain") {
+	if strings.HasSuffix(target, "-plain") {
 		c.mode = common.SSLModeDisable
 	}
 	var err error
@@ -276,7 +301,7 @@ func waitReady(t *testing.T, engine, target string) {
 }
 
 func runCases(t *testing.T, engine string, targets []string, cases []sslCase) {
-	setup(t)
+	setup(t, engine)
 	for _, target := range targets {
 		waitReady(t, engine, target)
 	}
@@ -349,7 +374,6 @@ func TestSSLModesClickHouse(t *testing.T) {
 // A TLS-only server refuses plaintext, so a successful switch shows the new
 // connection kept the SSL mode (and the CA, for verify-full).
 func TestChangeDatabaseKeepsSSL(t *testing.T) {
-	setup(t)
 	tests := []struct {
 		engine, target, database, sslQuery string
 	}{
@@ -360,6 +384,7 @@ func TestChangeDatabaseKeepsSSL(t *testing.T) {
 	for _, tt := range tests {
 		for _, mode := range []string{common.SSLModeRequire, common.SSLModeVerifyFull} {
 			t.Run(tt.engine+"/"+mode, func(t *testing.T) {
+				setup(t, tt.engine)
 				waitReady(t, tt.engine, tt.target)
 				c := sslCase{target: tt.target, mode: mode, ca: "good"}
 				e := &Engine{}
@@ -375,9 +400,14 @@ func TestChangeDatabaseKeepsSSL(t *testing.T) {
 					t.Fatal(err)
 				}
 				t.Logf("%s on %s: %v", tt.sslQuery, tt.database, res.Data)
+				if len(res.Data) != 1 {
+					t.Fatalf("unexpected result %v", res.Data)
+				}
+				// ClickHouse has no session TLS check; its secure port refusing
+				// plaintext is the proof.
 				if tt.engine != "clickhouse" {
 					for _, v := range res.Data[0] {
-						if v == false || v == "" {
+						if v != true && (v == nil || v == "" || v == false) {
 							t.Errorf("new connection is not encrypted: %v", res.Data)
 						}
 					}
