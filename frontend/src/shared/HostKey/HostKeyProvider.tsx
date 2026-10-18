@@ -1,4 +1,4 @@
-import { useCallback, useState, type ReactNode } from "react";
+import { useCallback, useRef, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -17,16 +17,20 @@ type Pending = UnknownHostKey & { settle: (trusted: boolean) => void };
 export const HostKeyProvider = ({ children }: { children: ReactNode }) => {
   const [pending, setPending] = useState<Pending | null>(null);
 
+  const settleRef = useRef<((trusted: boolean) => void) | null>(null);
+
   const confirm = useCallback(
     (key: UnknownHostKey) =>
       new Promise<boolean>((resolve) => {
-        setPending({
-          ...key,
-          settle: (trusted) => {
-            setPending(null);
-            resolve(trusted);
-          },
-        });
+        // A second prompt replaces the first, which must not stay waiting.
+        settleRef.current?.(false);
+        const settle = (trusted: boolean) => {
+          settleRef.current = null;
+          setPending(null);
+          resolve(trusted);
+        };
+        settleRef.current = settle;
+        setPending({ ...key, settle });
       }),
     []
   );

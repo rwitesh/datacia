@@ -101,3 +101,21 @@ func TestHostKeyUnknownErrorJSON(t *testing.T) {
 		t.Fatalf("got %s, want %s", got, want)
 	}
 }
+
+func TestAppendKnownHostKeepsExistingEntry(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "known_hosts")
+	first, second := newPublicKey(t), newPublicKey(t)
+	// No trailing newline, as after a hand edit.
+	if err := os.WriteFile(path, []byte(knownhosts.Line([]string{"a.example.com:22"}, first)), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := appendKnownHost(path, "b.example.com:22", second); err != nil {
+		t.Fatal(err)
+	}
+	remote := &net.TCPAddr{IP: net.ParseIP("203.0.113.5"), Port: 22}
+	for host, key := range map[string]ssh.PublicKey{"a.example.com:22": first, "b.example.com:22": second} {
+		if err := hostKeyCallback(path, "")(host, remote, key); err != nil {
+			t.Errorf("%s not trusted: %v", host, err)
+		}
+	}
+}

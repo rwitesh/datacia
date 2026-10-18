@@ -79,7 +79,13 @@ func appendKnownHost(path, hostname string, key ssh.PublicKey) error {
 		return fmt.Errorf("failed to save the host key: %w", err)
 	}
 	defer f.Close()
-	if _, err := fmt.Fprintln(f, knownhosts.Line([]string{hostname}, key)); err != nil {
+	// A hand-edited file may lack a final newline, which would glue the new
+	// line onto the last entry.
+	line := knownhosts.Line([]string{hostname}, key) + "\n"
+	if data, err := os.ReadFile(path); err == nil && len(data) > 0 && data[len(data)-1] != '\n' {
+		line = "\n" + line
+	}
+	if _, err := f.WriteString(line); err != nil {
 		return fmt.Errorf("failed to save the host key: %w", err)
 	}
 	return nil
