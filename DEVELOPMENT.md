@@ -54,13 +54,23 @@ DATACIA_TEST_POSTGRES=postgres://postgres:test@127.0.0.1:55432/postgres \
 DATACIA_TEST_MYSQL=mysql://root:test@127.0.0.1:53306/test go test ./pkg/postgres ./pkg/mysql
 ```
 
-SSL modes can be checked against real servers. The opt-in `integration` build tag starts
-PostgreSQL, MySQL and ClickHouse containers (TLS-only, expired certificate and plaintext) with a
-throwaway CA generated at test time, and runs every mode against them through `remote.Engine`.
-It needs a running Docker daemon and pulls the images on first use. Containers are labelled `datacia-tls=1`; a killed run's leftovers are removed by the next run. `make test` and CI skip it.
+Opt-in `integration` tests (build tag, skipped by `make test` and CI) need a running Docker daemon (OrbStack or Docker Desktop) and pull images on first use.
+
+**SSL modes** run against PostgreSQL, MySQL and ClickHouse containers (TLS-only, expired
+certificate and plaintext) with a throwaway CA generated at test time, through `remote.Engine`.
+Containers are labelled `datacia-tls=1`; a killed run's leftovers are removed by the next run.
+
+**SSH tunnel** tests run the real connect
+path against an OpenSSH bastion with Postgres and MySQL reachable only from it, all in Docker
+(OrbStack or Docker Desktop, plus `ssh-keygen`). They cover host-key prompts and changes, password
+and key auth, queries through the tunnel, and a stopped or frozen bastion. Containers are named
+`datacia-ssh-*` (one run at a time), keys are generated per run, and known_hosts goes to a temp dir.
+It pulls `alpine`, `postgres:17-alpine` and `mysql:8.0` on first use, and skips itself without Docker.
 
 ```bash
-go test -tags integration -run 'TestSSLModes|TestChangeDatabaseKeepsSSL' -v ./pkg/remote
+go test -tags integration -run 'TestSSLModes|TestChangeDatabaseKeepsSSL' -v ./pkg/remote   # SSL modes
+go test -tags integration -race -run TestSSHTunnel ./pkg/remote          # about 2 minutes
+go test -tags integration -race -short -run TestSSHTunnel ./pkg/remote   # skips the frozen-bastion case (up to 45 s)
 ```
 
 [CI](.github/workflows/ci.yml) runs on pushes to `main` and on pull requests: frontend typecheck,
