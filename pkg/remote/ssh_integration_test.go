@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/adrg/xdg"
+	gossh "golang.org/x/crypto/ssh"
 )
 
 // These tests run the real connect path against an OpenSSH bastion and a
@@ -104,17 +105,7 @@ func startLab(t *testing.T) *sshLab {
 		"-e", "TUNNEL_PASSWORD="+lab.password, "-e", "TUNNEL_AUTHORIZED_KEYS="+keys, labBastion+":test")
 	lab.port = publishedPort(t)
 
-	waitFor(t, "sshd", func() bool {
-		c, err := net.DialTimeout("tcp", "127.0.0.1:"+lab.port, time.Second)
-		if err != nil {
-			return false
-		}
-		defer c.Close()
-		c.SetReadDeadline(time.Now().Add(time.Second))
-		buf := make([]byte, 4)
-		_, err = c.Read(buf)
-		return err == nil && string(buf) == "SSH-"
-	})
+	waitFor(t, "sshd", func() bool { return sshdUp(lab.port) })
 	waitFor(t, "postgres", func() bool {
 		return exec.Command("docker", "exec", labPG, "pg_isready", "-h", "127.0.0.1").Run() == nil
 	})
@@ -123,6 +114,40 @@ func startLab(t *testing.T) *sshLab {
 		return exec.Command("docker", "exec", labMySQL, "mysqladmin", "-h127.0.0.1", "-uroot", "-p"+labDBPass, "ping").Run() == nil
 	})
 	return lab
+}
+
+func sshdUp(port string) bool {
+	c, err := net.DialTimeout("tcp", "127.0.0.1:"+port, time.Second)
+	if err != nil {
+		return false
+	}
+	defer c.Close()
+	c.SetReadDeadline(time.Now().Add(time.Second))
+	buf := make([]byte, 4)
+	_, err = c.Read(buf)
+	return err == nil && string(buf) == "SSH-"
+}
+
+// servedFingerprints returns the fingerprint sshd presents for each host key
+// type, which only changes once it has re-read its keys.
+func servedFingerprints(port string) []string {
+	var fps []string
+	for _, alg := range []string{gossh.KeyAlgoED25519, gossh.KeyAlgoRSASHA256, gossh.KeyAlgoECDSA256} {
+		cfg := &gossh.ClientConfig{
+			User:              "probe",
+			HostKeyAlgorithms: []string{alg},
+			HostKeyCallback: func(_ string, _ net.Addr, key gossh.PublicKey) error {
+				fps = append(fps, gossh.FingerprintSHA256(key))
+				return nil
+			},
+			Timeout: 2 * time.Second,
+		}
+		// The handshake fails at authentication; only the host key matters.
+		if c, err := gossh.Dial("tcp", "127.0.0.1:"+port, cfg); err == nil {
+			c.Close()
+		}
+	}
+	return fps
 }
 
 func publishedPort(t *testing.T) string {
@@ -319,14 +344,14 @@ func TestSSHTunnel(t *testing.T) {
 		}
 
 		bad.SSH.KeyPath = filepath.Join(t.TempDir(), "missing")
-		if err := e.TestConnection(bad); err == nil {
-			t.Fatal("missing key file connected")
+		if err := e.TestConnection(bad); err == nil || !strings.Contains(err.Error(), "failed to read private key") {
+			t.Fatalf("missing key file: %v", err)
 		}
 
 		// Wrong database password: the tunnel works, the database refuses.
 		bad = cfg
 		bad.Password = "nope"
-		if err := e.TestConnection(bad); err == nil || !strings.Contains(err.Error(), "password") {
+		if err := e.TestConnection(bad); err == nil || !strings.Contains(err.Error(), "28P01") {
 			t.Fatalf("wrong database password: %v", err)
 		}
 	})
@@ -377,10 +402,6 @@ func TestSSHTunnel(t *testing.T) {
 		}
 	})
 
-	t.Run("tunnel with TLS verify-full uses the typed host", func(t *testing.T) {
-		t.Skip("needs a TLS-enabled Postgres; covered by the TLS tests")
-	})
-
 	t.Run("close is prompt and leaks no goroutines", func(t *testing.T) {
 		e, _ := isolatedEngine(t)
 		cfg := lab.config("postgres")
@@ -429,10 +450,13 @@ func TestSSHTunnel(t *testing.T) {
 
 		// New host keys, same address; sshd re-reads them on SIGHUP.
 		docker(t, "exec", labBastion, "sh", "-c", "rm /etc/ssh/ssh_host_*; ssh-keygen -A >/dev/null; kill -HUP 1")
-		waitFor(t, "sshd restart", func() bool { return len(hostFingerprints(t)) > 0 && !contains(fps, hostFingerprints(t)[0]) })
-		time.Sleep(time.Second)
+		newFps := hostFingerprints(t)
+		waitFor(t, "sshd to serve the new keys", func() bool {
+			served := servedFingerprints(lab.port)
+			return len(served) == 3 && contains(newFps, served[0]) && contains(newFps, served[1]) && contains(newFps, served[2])
+		})
 
-		for _, accepted := range []string{"", cfg.SSH.AcceptedFingerprint, hostFingerprints(t)[0], hostFingerprints(t)[1], hostFingerprints(t)[2]} {
+		for _, accepted := range []string{"", cfg.SSH.AcceptedFingerprint, newFps[0], newFps[1], newFps[2]} {
 			cfg.SSH.AcceptedFingerprint = accepted
 			err := e.TestConnection(cfg)
 			if err == nil || !strings.Contains(err.Error(), "has changed") {
@@ -451,14 +475,13 @@ func TestSSHTunnel(t *testing.T) {
 	t.Run("bastion stopped mid-session", func(t *testing.T) {
 		e, _ := isolatedEngine(t)
 		cfg := lab.config("postgres")
-		// The previous subtest changed the key: forget it.
-		os.Remove(knownHostsOf(t))
 		cfg.SSH.AcceptedFingerprint = asUnknown(t, e.TestConnection(cfg)).Fingerprint
+		time.Sleep(500 * time.Millisecond)
+		before := goroutines()
 		if err := e.Connect(cfg); err != nil {
 			t.Fatal(err)
 		}
 		selectOne(t, e)
-		before := goroutines()
 
 		docker(t, "stop", "-t", "0", labBastion)
 		start := time.Now()
@@ -484,8 +507,14 @@ func TestSSHTunnel(t *testing.T) {
 		if d := time.Since(start); d > 3*time.Second {
 			t.Fatalf("close took %v", d)
 		}
-		time.Sleep(time.Second)
-		if after := goroutines(); after > before {
+		var after int
+		for range 20 {
+			if after = goroutines(); after <= before {
+				break
+			}
+			time.Sleep(250 * time.Millisecond)
+		}
+		if after > before {
 			buf := make([]byte, 1<<16)
 			t.Fatalf("goroutines grew from %d to %d\n%s", before, after, buf[:runtime.Stack(buf, true)])
 		}
@@ -504,13 +533,9 @@ func TestSSHTunnel(t *testing.T) {
 			t.Skip("takes about a minute")
 		}
 		docker(t, "start", labBastion)
-		waitFor(t, "sshd", func() bool {
-			out, _ := exec.Command("docker", "port", labBastion, "22/tcp").Output()
-			return len(out) > 0
-		})
 		// The published port may change on restart.
 		lab.port = publishedPort(t)
-		time.Sleep(2 * time.Second)
+		waitFor(t, "sshd", func() bool { return sshdUp(lab.port) })
 
 		e, _ := isolatedEngine(t)
 		cfg := lab.config("postgres")
@@ -540,13 +565,4 @@ func TestSSHTunnel(t *testing.T) {
 			t.Fatalf("want ErrTunnelLost, got %v", err)
 		}
 	})
-}
-
-func knownHostsOf(t *testing.T) string {
-	t.Helper()
-	p, err := paths.GetKnownHostsPath()
-	if err != nil {
-		t.Fatal(err)
-	}
-	return p
 }
