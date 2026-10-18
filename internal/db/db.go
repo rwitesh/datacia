@@ -52,10 +52,9 @@ func OpenFile(dbPath string, encryptionKey []byte) (*Store, error) {
 	}
 	// The directory mode protects data.db and its WAL files, so the files need
 	// no chmod of their own. MkdirAll leaves an existing directory from an older
-	// install as it was, so tighten it here. Windows ignores these bits.
-	if err := os.Chmod(dir, 0700); err != nil {
-		return nil, fmt.Errorf("failed to restrict database directory: %w", err)
-	}
+	// install as it was, so tighten it here. Best effort: the database works
+	// either way (the directory may not be ours), and Windows ignores these bits.
+	_ = os.Chmod(dir, 0700)
 
 	db, err := sql.Open("sqlite", dbPath+"?_journal_mode=WAL&_busy_timeout=5000")
 	if err != nil {

@@ -69,7 +69,6 @@ export type EditorContextType = {
   // Query execution
   runQuery: (
     tabId?: string,
-    sql?: string,
     pagination?: boolean
   ) => Promise<void>;
   stopQuery: (tabId?: string) => Promise<void>;

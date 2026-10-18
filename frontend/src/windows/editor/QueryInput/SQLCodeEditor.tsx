@@ -17,13 +17,12 @@ import { cn } from "@/lib/utils";
 interface SQLCodeEditorProps {
   value: string;
   onChange?: (value: string) => void;
-  onBlur?: () => void;
   /** A viewer: no editing, ghost text, autocomplete or history. */
   readOnly?: boolean;
   className?: string;
 }
 
-export function SQLCodeEditor({ value, onChange, onBlur, readOnly = false, className }: SQLCodeEditorProps) {
+export function SQLCodeEditor({ value, onChange, readOnly = false, className }: SQLCodeEditorProps) {
   const editorEl = useRef<HTMLDivElement | null>(null);
   const viewRef = useRef<EditorView | null>(null);
 
@@ -42,16 +41,11 @@ export function SQLCodeEditor({ value, onChange, onBlur, readOnly = false, class
 
   // store mutable refs to avoid effect re-runs
   const latestOnChange = useRef(onChange);
-  const latestOnBlur = useRef(onBlur);
   const latestEngine = useRef(engine);
 
   useEffect(() => {
     latestOnChange.current = onChange;
   }, [onChange]);
-
-  useEffect(() => {
-    latestOnBlur.current = onBlur;
-  }, [onBlur]);
 
   useEffect(() => {
     latestEngine.current = engine;
@@ -100,10 +94,6 @@ export function SQLCodeEditor({ value, onChange, onBlur, readOnly = false, class
               history(),
               keymap.of([...historyKeymap, ...defaultKeymap]),
             ]),
-
-        EditorView.domEventHandlers({
-          blur: () => latestOnBlur.current?.(),
-        }),
 
         EditorView.updateListener.of((v) => {
           if (!v.docChanged) return;

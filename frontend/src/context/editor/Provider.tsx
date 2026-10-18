@@ -12,7 +12,7 @@ import {
   type Tab,
   type TableDataParams,
 } from "./Context";
-import { clearTabSql, getTabSql, setTabSql } from "./store";
+import { clearTabSql, getTabSql } from "./store";
 
 export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
   const { data = [], isLoading, error } = useTables();
@@ -119,11 +119,10 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const runQuery = useCallback(
-    async (tabId?: string, sql?: string, pagination: boolean = false) => {
+    async (tabId?: string, pagination: boolean = false) => {
       const targetTabId = tabId || activeTabId;
       if (!targetTabId) return;
 
-      if (sql) setTabSql(targetTabId, sql);
       const querySQL = getTabSql(targetTabId);
       if (!querySQL.trim()) return;
 
