@@ -100,7 +100,6 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
           console.error("Error cancelling query for closed tab:", err);
         });
       }
-      clearTabSql(tabId);
       latestTableLoad.current.delete(tabId);
 
       if (activeTabId === tabId) {
@@ -110,6 +109,8 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
         setActiveTabId(next?.id ?? null);
       }
       setTabs((prev) => prev.filter((tab) => tab.id !== tabId));
+      // After the tab is removed, so a still-mounted editor can't write it back.
+      clearTabSql(tabId);
     },
     [activeTabId, tabs, cancelQueryAsync]
   );

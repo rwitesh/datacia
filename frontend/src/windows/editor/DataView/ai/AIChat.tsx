@@ -1,9 +1,9 @@
-import { useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AlertTriangle, ArrowUp, Database, Loader2, RotateCcw, Settings2, Sparkles, Square, SquarePen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAppContext } from "@/context/app/Index";
 import { useEditorContext } from "@/context/editor/Index";
-import { useTabSql } from "@/context/editor/store";
+import { getTabSql, useTabSql } from "@/context/editor/store";
 import { cn } from "@/lib/utils";
 import { OpenSettingsWindow } from "@/services/bindings";
 import {
@@ -20,22 +20,23 @@ import {
 import { MarkdownMessage } from "./MarkdownMessage";
 import { ModelPicker } from "./ModelPicker";
 
-function useChatContext(): ChatContext {
+/** Reads the SQL when called, so typing doesn't re-render the chat. */
+function useChatContext(): () => ChatContext {
   const { engine } = useAppContext();
   const { activeTab } = useEditorContext();
-  const sql = useTabSql(activeTab?.id);
-  return {
-    engine,
-    sql: activeTab?.type === "query" ? sql : "",
-    error: activeTab?.error ?? "",
-  };
+  const queryTabId = activeTab?.type === "query" ? activeTab.id : undefined;
+  const error = activeTab?.error ?? "";
+  return useCallback(
+    () => ({ engine, sql: queryTabId ? getTabSql(queryTabId) : "", error }),
+    [engine, queryTabId, error],
+  );
 }
 
 export function AIChat() {
   const providers = useAIProviders();
   const defaultModel = useDefaultModel();
   const state = useChat();
-  const context = useChatContext();
+  const getContext = useChatContext();
   const usable = useMemo(() => (providers.data ?? []).filter((p) => p.ready), [providers.data]);
 
   const saved = defaultModel.data;
@@ -60,9 +61,9 @@ export function AIChat() {
   const streaming = state.messages.some((m) => m.streaming);
   return (
     <div className="flex flex-col h-full min-h-0">
-      <MessageList messages={state.messages} context={context} streaming={streaming} hasModel={model !== undefined} />
+      <MessageList messages={state.messages} getContext={getContext} streaming={streaming} hasModel={model !== undefined} />
       <Composer
-        context={context}
+        getContext={getContext}
         streaming={streaming}
         providers={usable}
         model={model}
@@ -99,12 +100,12 @@ function Intro({
 
 function MessageList({
   messages,
-  context,
+  getContext,
   streaming,
   hasModel,
 }: {
   messages: ChatMessage[];
-  context: ChatContext;
+  getContext: () => ChatContext;
   streaming: boolean;
   hasModel: boolean;
 }) {
@@ -140,22 +141,25 @@ function MessageList({
       className="flex-1 min-h-0 overflow-y-scroll overflow-x-hidden px-3 py-3 space-y-4 text-xs leading-relaxed select-text"
     >
       {messages.length === 0 ? (
-        <EmptyState context={context} hasModel={hasModel} />
+        <EmptyState getContext={getContext} hasModel={hasModel} />
       ) : (
         messages.map((m, i) => (
-          <Message key={m.id} message={m} last={i === messages.length - 1} context={context} />
+          <Message key={m.id} message={m} last={i === messages.length - 1} getContext={getContext} />
         ))
       )}
     </div>
   );
 }
 
-function EmptyState({ context, hasModel }: { context: ChatContext; hasModel: boolean }) {
+function EmptyState({ getContext, hasModel }: { getContext: () => ChatContext; hasModel: boolean }) {
+  const { activeTab } = useEditorContext();
+  const sql = useTabSql(activeTab?.type === "query" ? activeTab.id : undefined);
+  const error = activeTab?.error;
   if (!hasModel) return <Intro title="Choose a model" text="Pick one below to start." className="py-8" />;
   const suggestions = [
-    context.error && "Fix my query error",
-    context.sql.trim() && "Explain my query",
-    context.sql.trim() && "Make my query faster",
+    error && "Fix my query error",
+    sql.trim() && "Explain my query",
+    sql.trim() && "Make my query faster",
     "What's in this database?",
   ].filter((s): s is string => Boolean(s));
 
@@ -166,7 +170,7 @@ function EmptyState({ context, hasModel }: { context: ChatContext; hasModel: boo
           <button
             key={s}
             type="button"
-            onClick={() => chat.send(s, context)}
+            onClick={() => chat.send(s, getContext())}
             className="rounded-md border border-border/60 px-2.5 py-1.5 text-[11px] text-left text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer"
           >
             {s}
@@ -177,7 +181,7 @@ function EmptyState({ context, hasModel }: { context: ChatContext; hasModel: boo
   );
 }
 
-function Message({ message, last, context }: { message: ChatMessage; last: boolean; context: ChatContext }) {
+function Message({ message, last, getContext }: { message: ChatMessage; last: boolean; getContext: () => ChatContext }) {
   if (message.role === "user") {
     return (
       <div className="flex justify-end">
@@ -204,7 +208,7 @@ function Message({ message, last, context }: { message: ChatMessage; last: boole
           {last && (
             <button
               type="button"
-              onClick={() => chat.retry(context)}
+              onClick={() => chat.retry(getContext())}
               className="shrink-0 inline-flex items-center gap-1 text-[11px] font-medium hover:underline cursor-pointer"
             >
               <RotateCcw className="size-3" />
@@ -249,13 +253,13 @@ function ToolCalls({ tools }: { tools: ToolUse[] }) {
 }
 
 function Composer({
-  context,
+  getContext,
   streaming,
   providers,
   model,
   canClear,
 }: {
-  context: ChatContext;
+  getContext: () => ChatContext;
   streaming: boolean;
   providers: ProviderStatus[];
   model?: ModelRef;
@@ -274,7 +278,7 @@ function Composer({
 
   const send = () => {
     if (!canSend) return;
-    chat.send(input, context);
+    chat.send(input, getContext());
     setInput("");
   };
 
