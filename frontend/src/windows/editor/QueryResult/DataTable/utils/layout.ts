@@ -30,8 +30,11 @@ export function measureColumnWidths(
   const sample = rows.slice(0, SAMPLE_SIZE);
   const rowNumberWidth = Math.ceil(measure(String(lastRowNumber)) + CELL_PADDING);
 
+  // Every width is at least MIN_COLUMN_WIDTH, the grid's own minimum. A
+  // narrower width here would be widened when drawn, so fillContainer would
+  // overshoot the container and toggle the scrollbars in a resize loop.
   return [
-    Math.max(rowNumberWidth, 32),
+    Math.max(rowNumberWidth, MIN_COLUMN_WIDTH),
     ...columns.map((column) => {
       let width = measure(column) + HEADER_PADDING;
       for (const row of sample) {
