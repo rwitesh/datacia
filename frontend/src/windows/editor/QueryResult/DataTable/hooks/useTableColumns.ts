@@ -4,7 +4,7 @@ import { formatCellValue } from "@/lib/utils";
 import type { DataRow } from "../types";
 import { MIN_COLUMN_WIDTH } from "../utils/layout";
 
-export const ROW_NUMBER_COLUMN_ID = "#";
+const ROW_NUMBER_COLUMN_ID = "#";
 
 // useTableColumns builds the row-number column plus one column per result
 // column. widths are the initial sizes (row-number column first); user

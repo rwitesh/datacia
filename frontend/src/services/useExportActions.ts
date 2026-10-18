@@ -3,7 +3,8 @@ import html2canvaspro from "html2canvas-pro";
 import { useTheme } from "@/components/theme";
 import { useExportData, type ExportFormat } from "./export";
 import { useCopyToClipboard } from "./clipboard";
-import { formatCellValue } from "@/lib/utils";
+import { toast } from "sonner";
+import { errorMessage, formatCellValue } from "@/lib/utils";
 
 type UseExportActionsOptions = {
   tableRef?: RefObject<HTMLDivElement | null>;
@@ -52,24 +53,29 @@ export function useExportActions({
     });
   };
 
-  const exportPNG = async () => {
-    if (!data.length || !tableRef?.current) return;
-
+  // capturePNG renders the table to base64 PNG data, or null if there is nothing to capture.
+  const capturePNG = async () => {
+    if (!data.length || !tableRef?.current) return null;
     try {
       const canvas = await html2canvaspro(tableRef.current, {
         backgroundColor: pngBackgroundColor,
         scale: 2,
       });
-      const dataUrl = canvas.toDataURL("image/png");
-      const base64Data = dataUrl.replace(/^data:image\/png;base64,/, "");
-      exportMutation.mutate({
-        format: "png",
-        suggestedFilename: getFilename("png"),
-        imageData: base64Data,
-      });
+      return canvas.toDataURL("image/png").replace(/^data:image\/png;base64,/, "");
     } catch (err) {
-      console.error("Export PNG failed:", err);
+      toast.error(errorMessage(err));
+      return null;
     }
+  };
+
+  const exportPNG = async () => {
+    const imageData = await capturePNG();
+    if (!imageData) return;
+    exportMutation.mutate({
+      format: "png",
+      suggestedFilename: getFilename("png"),
+      imageData,
+    });
   };
 
   const copyText = () => {
@@ -77,37 +83,17 @@ export function useExportActions({
     const text = data
       .map((row) => columns.map((column) => tsvField(formatCellValue(row[column]))).join("\t"))
       .join("\n");
-    copyMutation.mutate(
-      { content: text, type: "text" },
-      { onError: (err) => console.error("Failed to copy text", err) }
-    );
+    copyMutation.mutate({ content: text, type: "text" });
   };
 
   const copyJSON = () => {
     if (!data.length) return;
-    copyMutation.mutate(
-      { content: JSON.stringify(data, null, 2), type: "text" },
-      { onError: (err) => console.error("Failed to copy JSON", err) }
-    );
+    copyMutation.mutate({ content: JSON.stringify(data, null, 2), type: "text" });
   };
 
   const copyPNG = async () => {
-    if (!data.length || !tableRef?.current) return;
-
-    try {
-      const canvas = await html2canvaspro(tableRef.current, {
-        backgroundColor: pngBackgroundColor,
-        scale: 2,
-      });
-      const dataUrl = canvas.toDataURL("image/png");
-      const base64Data = dataUrl.replace(/^data:image\/png;base64,/, "");
-      copyMutation.mutate(
-        { content: base64Data, type: "image" },
-        { onError: (err) => console.error("Failed to copy PNG", err) }
-      );
-    } catch (err) {
-      console.error("Copy PNG failed:", err);
-    }
+    const imageData = await capturePNG();
+    if (imageData) copyMutation.mutate({ content: imageData, type: "image" });
   };
 
   return {
@@ -118,7 +104,6 @@ export function useExportActions({
     copyJSON,
     copyPNG,
     isExporting: exportMutation.isPending,
-    isCopying: copyMutation.isPending,
   };
 }
 

@@ -1,6 +1,5 @@
 import { useFetchConnections, useCurrentConnection } from "@/services/connections";
 import { useSwitchConnection } from "./useSwitchConnection";
-import { type DatabaseEngine } from "@/shared/utils/engines";
 import { DatabaseIcon } from "@/shared/utils/DatabaseIcon";
 import { ChevronDown, Check, Loader2, Plus } from "lucide-react";
 import { OpenConnectionWindow } from "@/services/bindings";
@@ -27,9 +26,9 @@ export function ConnectionSwitcher() {
   const connectionEntries = Object.entries(savedConnections);
   const hasOtherConnections = connectionEntries.some(([id]) => id !== currentConnection?.id);
 
-  const handleSwitch = (id: string, name: string, engine: string) => {
+  const handleSwitch = (id: string, name: string) => {
     if (id === currentConnection?.id) return;
-    switchTo({ id, name, engine: engine as DatabaseEngine });
+    switchTo({ id, name });
   };
 
   return (
@@ -83,7 +82,7 @@ export function ConnectionSwitcher() {
             <DropdownMenuItem
               key={id}
               className="flex items-center gap-2 cursor-pointer text-xs"
-              onClick={() => handleSwitch(id, conn.name, conn.engine)}
+              onClick={() => handleSwitch(id, conn.name)}
               disabled={id === currentConnection?.id || isPending}
             >
               <DatabaseIcon engine={conn.engine} size={12} />

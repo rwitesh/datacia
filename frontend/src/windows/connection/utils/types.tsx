@@ -1,5 +1,3 @@
-// All engine types and constants are in @/shared/utils/engines
-// Import from there directly - no need for re-exports
 import type { DatabaseEngine } from "@/shared/utils/engines";
 
 export interface FormValues {

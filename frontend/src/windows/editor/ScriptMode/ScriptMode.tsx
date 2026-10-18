@@ -2,14 +2,13 @@ import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Play, Plus, StopCircle } from "lucide-react";
 import { ScriptBlock, type ScriptBlockData } from "./ScriptBlock";
-import { nanoid } from "nanoid";
 import { v4 as uuidv4 } from "uuid";
 import { useCancelQuery, useRunQuery } from "@/services/database";
 import { errorMessage } from "@/lib/utils";
 
 export function ScriptMode() {
     const [blocks, setBlocks] = useState<ScriptBlockData[]>([
-        { id: nanoid(), sql: "", status: "idle" },
+        { id: uuidv4(), sql: "", status: "idle" },
     ]);
     const [isRunning, setIsRunning] = useState(false);
 
@@ -22,7 +21,7 @@ export function ScriptMode() {
     const addBlock = () => {
         setBlocks((prev) => [
             ...prev,
-            { id: nanoid(), sql: "", status: "idle" },
+            { id: uuidv4(), sql: "", status: "idle" },
         ]);
     };
 
@@ -87,7 +86,6 @@ export function ScriptMode() {
     };
 
     const executeAll = () => {
-        if (isRunning) return;
         setBlocks(prev => prev.map(b => ({ ...b, status: 'idle', errorMessage: undefined, executionTime: undefined })));
         void runBlocks(blocks);
     };
@@ -109,7 +107,6 @@ export function ScriptMode() {
 
     return (
         <div className="flex flex-col h-full bg-background animate-in fade-in duration-300">
-            {/* Toolbar */}
             <div className="flex items-center justify-between p-4 border-b shrink-0">
                 <div className="flex items-center gap-4">
                     <h2 className="text-lg font-semibold flex items-center gap-2">
@@ -144,8 +141,6 @@ export function ScriptMode() {
                     </Button>
                 </div>
             </div>
-
-            {/* Blocks List */}
 
             <div className="flex-1 overflow-y-auto">
                 <div className="p-4 space-y-4 max-w-4xl mx-auto pb-10">

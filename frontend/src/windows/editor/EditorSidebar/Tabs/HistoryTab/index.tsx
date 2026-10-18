@@ -3,11 +3,9 @@ import { Loader2, CheckCircle2, XCircle, Search, CalendarIcon, X } from "lucide-
 import { debounce } from "lodash";
 import { useEditorContext } from "@/context/editor/Index";
 import { useGetQueryHistory } from "@/services/database";
+import { startOfDay, endOfDay, differenceInHours } from "date-fns";
 import {
     timeAgo,
-    startOfDay,
-    endOfDay,
-    differenceInHours,
     formatDateTime,
     formatDateShort,
     formatDateLong
@@ -22,14 +20,10 @@ import type { DateRange } from "react-day-picker";
 const DEBOUNCE_DELAY = 300;
 
 /**
- * Format timestamp for display.
- * Shows relative time ("2 hours ago") within 24 hours, otherwise shows full date.
+ * Format timestamp for display: relative time ("2 hours ago"), or the full
+ * date when a date filter is active and the entry is 24 hours old or more.
  */
-function formatTimestamp(
-    timestamp: string,
-    hasDateFilter: boolean,
-    timeAgoFn: (ts: string) => string
-): string {
+function formatTimestamp(timestamp: string, hasDateFilter: boolean): string {
     const now = new Date();
     const ts = new Date(timestamp);
     const hoursDiff = differenceInHours(now, ts);
@@ -39,7 +33,7 @@ function formatTimestamp(
         return formatDateTime(ts);
     }
 
-    return timeAgoFn(timestamp);
+    return timeAgo(timestamp);
 }
 
 export function HistoryTab() {
@@ -227,7 +221,7 @@ export function HistoryTab() {
                                                 <XCircle className="h-3 w-3 text-red-500 shrink-0" />
                                             )}
                                             <span className="text-[10px] text-muted-foreground font-medium group-hover:text-sidebar-accent-foreground/70 transition-colors">
-                                                {formatTimestamp(item.timestamp, !!dateRange?.from, timeAgo)}
+                                                {formatTimestamp(item.timestamp, !!dateRange?.from)}
                                             </span>
                                             {item.count > 1 && (
                                                 <span className="ml-1 px-1.5 py-0.5 rounded-full bg-sidebar-accent text-[9px] font-bold text-sidebar-accent-foreground">

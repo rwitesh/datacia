@@ -15,13 +15,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { useRenameNode, useDeleteNode, useWriteFile } from "@/services/queries";
 import type { FileNode } from "@/services/bindings";
-import { toast } from "sonner";
 import { CreationInput } from "../utils/CreationInput";
 import {
     getNodeIcon,
-    findAvailableFileName,
     getDestinationFolder,
     getFileName,
+    saveDroppedSqlFile,
 } from "./utils";
 
 interface FileTreeItemProps {
@@ -90,25 +89,7 @@ export function FileTreeItem({
         const sqlFile = files.find((file) => file.name.endsWith(".sql"));
 
         if (sqlFile) {
-            try {
-                const content = await sqlFile.text();
-                const fileName = sqlFile.name;
-                const destFolder = getDestinationFolder(node);
-                const availableFileName = findAvailableFileName(fileName, destFolder, tree);
-                const targetPath = destFolder ? `${destFolder}/${availableFileName}` : availableFileName;
-
-                writeFile.mutate(
-                    { path: targetPath, content },
-                    {
-                        onSuccess: () => {
-                            toast.success(`File saved as ${availableFileName}`);
-                        },
-                    }
-                );
-            } catch (err: unknown) {
-                const message = err instanceof Error ? err.message : "Failed to read file";
-                toast.error(message);
-            }
+            await saveDroppedSqlFile(sqlFile, getDestinationFolder(node), tree, writeFile);
             return;
         }
 
@@ -171,7 +152,7 @@ export function FileTreeItem({
                     </div>
                 </ContextMenuTrigger>
                 <ContextMenuContent className="w-48 p-1">
-                    <ContextMenuItem onSelect={() => onCreateRequest("file", isFolder ? node.path : (node.path.split('/').slice(0, -1).join('/')))} className="gap-2 text-xs py-1">
+                    <ContextMenuItem onSelect={() => onCreateRequest("file", getDestinationFolder(node))} className="gap-2 text-xs py-1">
                         <FilePlus className="h-3 w-3" />
                         New Query
                     </ContextMenuItem>
@@ -205,10 +186,8 @@ export function FileTreeItem({
                 </ContextMenuContent>
             </ContextMenu>
 
-            {/* Rendering children and creation input if this folder is expanded */}
             {isFolder && isExpanded && (
                 <>
-                    {/* Inline input if creating inside this folder */}
                     {isCreatingHere && (
                         <div
                             className="flex items-center gap-1.5 px-2 py-1"

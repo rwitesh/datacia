@@ -9,14 +9,9 @@ export const TabBar = () => {
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
 
-  const handleCreateTab = () => {
-    const newTab = createTab();
-    setActiveTab(newTab.id);
-  };
-
-  const handleCloseTab = async (e: React.MouseEvent, tabId: string) => {
+  const handleCloseTab = (e: React.MouseEvent, tabId: string) => {
     e.stopPropagation();
-    await closeTab(tabId);
+    closeTab(tabId);
   };
 
   const handleTabClick = (e: React.MouseEvent, tabId: string) => {
@@ -133,7 +128,7 @@ export const TabBar = () => {
           variant="ghost"
           size="sm"
           className="h-7 px-3 hover:bg-background cursor-pointer text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors rounded-md select-none"
-          onClick={handleCreateTab}
+          onClick={() => createTab()}
           title="New SQL tab"
         >
           + SQL

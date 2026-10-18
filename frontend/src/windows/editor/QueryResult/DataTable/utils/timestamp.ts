@@ -1,7 +1,4 @@
-/**
- * Timestamp detection and formatting for DataTable cell tooltips.
- * Value-based: no schema; we detect dates from the raw cell value.
- */
+// Timestamp tooltips for DataTable cells, detected from the raw value (no schema).
 
 import { format, isValid } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
@@ -18,15 +15,9 @@ const ISO_DATE_PREFIX = /^\s*\d{4}-\d{2}-\d{2}/;
 
 /**
  * Parses a cell value into a Date if it looks like a timestamp.
- * Returns null for null, undefined, non-date strings, and numbers outside Unix ranges.
+ * Returns null for non-date strings, numbers outside Unix ranges and other values.
  */
 export function parseTimestamp(value: unknown): Date | null {
-  if (value === null || value === undefined) return null;
-
-  if (value instanceof Date) {
-    return isValid(value) ? value : null;
-  }
-
   if (typeof value === "number") {
     if (!Number.isFinite(value)) return null;
     let ms: number;

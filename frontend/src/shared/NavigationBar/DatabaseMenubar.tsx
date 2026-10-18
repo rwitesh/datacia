@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/menubar";
 import { ChangeDatabaseByName } from "@/services/bindings/connection";
 import { Database } from "lucide-react";
+import { errorMessage } from "@/lib/utils";
 import { useDatabase } from "@/services/database";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -29,7 +30,7 @@ export function DatabaseMenuBar() {
       // Also invalidate tables query as it depends on the current database
       await queryClient.invalidateQueries({ queryKey: ["tables"] });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : String(error));
+      toast.error(errorMessage(error));
       console.error("Failed to change database:", error);
     }
   };

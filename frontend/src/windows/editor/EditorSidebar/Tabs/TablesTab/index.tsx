@@ -26,10 +26,11 @@ export function TablesTab() {
         const existingTab = tabs.find((t) => t.type === "table" && t.table === table);
         if (existingTab) {
             setActiveTab(existingTab.id);
-            return;
+            // Only loaded data sets pagination; otherwise the tab shows its schema or an error.
+            if (existingTab.pagination) return;
         }
 
-        const tab = createTab(table, "table");
+        const tab = existingTab ?? createTab(table, "table");
         if (!tab.table || tab.limit === undefined || tab.offset === undefined) {
             return;
         }
@@ -38,6 +39,8 @@ export function TablesTab() {
             table: tab.table,
             limit: tab.limit,
             offset: tab.offset,
+            orderBy: tab.orderBy,
+            orderDir: tab.orderDir,
         });
     };
 

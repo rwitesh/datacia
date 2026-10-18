@@ -1,27 +1,20 @@
-import { useMemo } from "react";
-import { useNavigate, Outlet, useLocation } from "react-router";
+import { useNavigate, Outlet, useSearchParams } from "react-router";
+import { toast } from "sonner";
 import { DeleteConnection } from "@/services/bindings/connection";
 import { useFetchConnections } from "@/services/connections";
 import { useConnectDatabase } from "@/windows/connection/hooks/useConnectDatabase";
 import { ConnectionList } from "./ConnectionList/ConnectionList";
 import { useAppContext } from "@/context/app/Index";
+import { errorMessage } from "@/lib/utils";
 
 export const Home = () => {
   const navigate = useNavigate();
-  const location = useLocation();
+  const [searchParams] = useSearchParams();
 
   const connectMutation = useConnectDatabase();
   const { settings } = useAppContext();
 
-  // Get the current connection ID from URL query params
-  const currentConnectionId = useMemo(() => {
-    try {
-      const params = new URLSearchParams(location.search);
-      return params.get("id") ?? "";
-    } catch {
-      return "";
-    }
-  }, [location.search]);
+  const currentConnectionId = searchParams.get("id") ?? "";
 
   const {
     data: savedConnections = {},
@@ -40,10 +33,8 @@ export const Home = () => {
       });
   };
 
-  const handleConnect = (id: string, engine: string) => {
-    const connection = savedConnections[id];
-    const name = connection?.name || "Unknown Connection";
-    connectMutation.mutate({ id, name, engine });
+  const handleConnect = (id: string) => {
+    connectMutation.mutateAsync({ id }).catch((err) => toast.error(errorMessage(err)));
   };
 
   const handleEdit = (id: string) => {

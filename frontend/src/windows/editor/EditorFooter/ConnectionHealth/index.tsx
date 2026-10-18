@@ -1,37 +1,23 @@
-import { useLocation } from "react-router";
 import { useConnectionHealth } from "@/services/connections";
 import { Circle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { RTT_RANGES, STATUS_COLORS, STATUS_NAMES, type ConnectionStatus } from "./constants";
+import { DISCONNECTED_STATUS, RTT_STATUSES } from "./constants";
 
 export const ConnectionHealthIndicator = () => {
-  const location = useLocation();
-  const isEditorPage = location.pathname === "/editor";
-  const { data: rtt, error, isError } = useConnectionHealth(isEditorPage);
+  const { data: rtt, error, isError } = useConnectionHealth();
 
-  if (!isEditorPage) {
+  const status = isError
+    ? DISCONNECTED_STATUS
+    : rtt != null && rtt > 0
+      ? RTT_STATUSES.find((range) => rtt < range.upperBound)
+      : undefined;
+
+  if (!status) {
     return null;
   }
 
-  // Determine status based on RTT
-  let status: ConnectionStatus = "unknown";
-  if (isError) {
-    status = "disconnected";
-  } else if (rtt != null && rtt > 0) {
-    for (const range of RTT_RANGES) {
-      if (rtt < range.upperBound) {
-        status = range.name.toLowerCase() as ConnectionStatus;
-        break;
-      }
-    }
-  }
-
-  if (status === "unknown") {
-    return null;
-  }
-
-  const statusColor = STATUS_COLORS[status];
-  const statusName = STATUS_NAMES[status];
+  const statusColor = status.color;
+  const statusName = status.name;
 
   const formatRTT = (ms: number) => {
     if (ms < 1) return "<1ms";

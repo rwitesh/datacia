@@ -1,14 +1,4 @@
-import {
-  startOfDay as startOfDayFns,
-  endOfDay as endOfDayFns,
-  differenceInHours as differenceInHoursFns,
-  format as formatFns,
-  formatDistanceToNow,
-} from "date-fns";
-
-export const startOfDay = startOfDayFns;
-export const endOfDay = endOfDayFns;
-export const differenceInHours = differenceInHoursFns;
+import { format as formatFns, formatDistanceToNow } from "date-fns";
 
 export function formatDateShort(d: Date): string {
   return formatFns(d, "MMM d");

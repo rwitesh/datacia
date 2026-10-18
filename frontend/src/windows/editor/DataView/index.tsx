@@ -8,11 +8,11 @@ import { DataTabContent } from "./data";
 export type DataViewTab = "data" | "ai";
 
 export interface DataViewProps {
-  activeTab?: DataViewTab;
-  onTabChange?: (tab: DataViewTab) => void;
+  activeTab: DataViewTab;
+  onTabChange: (tab: DataViewTab) => void;
 }
 
-export function DataView({ activeTab: controlledTab, onTabChange }: DataViewProps) {
+export function DataView({ activeTab: activeTabValue, onTabChange }: DataViewProps) {
   const [copied, setCopied] = useState(false);
   const { activeTab } = useEditorContext();
 
@@ -37,9 +37,7 @@ export function DataView({ activeTab: controlledTab, onTabChange }: DataViewProp
 
   const rowCount = selectedData.length;
 
-  const handleTabChange = (v: string) => onTabChange?.(v as DataViewTab);
-
-  const activeTabValue = controlledTab ?? "data";
+  const handleTabChange = (v: string) => onTabChange(v as DataViewTab);
 
   return (
     <div className="h-full w-full flex flex-col relative">

@@ -17,7 +17,7 @@ interface TableContextMenuProps {
   // selects the cell, row or column it lands on first, so this is what was clicked.
   rows: DataRow[];
   columns: string[];
-  onOpenDataView?: () => void;
+  onOpenDataView: () => void;
 }
 
 export function TableContextMenu({ children, rows, columns, onOpenDataView }: TableContextMenuProps) {

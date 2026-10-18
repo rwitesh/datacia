@@ -1,1 +1,1 @@
-export { DataTabContent, type DataTabContentProps } from "./Data";
+export { DataTabContent } from "./Data";
