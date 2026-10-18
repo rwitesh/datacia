@@ -41,32 +41,32 @@ func cancelOnServer(conn *pgconn.PgConn) ctxwatch.Handler {
 	return &pgconn.CancelRequestContextWatcherHandler{Conn: conn, DeadlineDelay: 5 * time.Second}
 }
 
-func (p *Postgres) Connect(host, port, username, password, database string) error {
+func (p *Postgres) Connect(config common.ConnectionConfig) error {
 	// Construct DSN with proper URL encoding for username, password, and database
 	u := &url.URL{
 		Scheme: "postgres",
-		User:   url.UserPassword(username, password),
-		Host:   net.JoinHostPort(host, port),
-		Path:   "/" + database,
+		User:   url.UserPassword(config.Username, config.Password),
+		Host:   net.JoinHostPort(config.Host, config.Port),
+		Path:   "/" + config.Database,
 	}
 	dsn := u.String()
 
 	ctx, cancel := common.NewTimeoutContext(common.CONNECT_TIMEOUT)
 	defer cancel()
 
-	config, err := pgxpool.ParseConfig(dsn)
+	poolConfig, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
 		return err
 	}
 
 	// Configure pool settings
-	config.MaxConns = 10
-	config.MinConns = 1
-	config.MaxConnLifetime = time.Hour
-	config.MaxConnIdleTime = time.Minute * 1
-	config.ConnConfig.BuildContextWatcherHandler = cancelOnServer
+	poolConfig.MaxConns = 10
+	poolConfig.MinConns = 1
+	poolConfig.MaxConnLifetime = time.Hour
+	poolConfig.MaxConnIdleTime = time.Minute * 1
+	poolConfig.ConnConfig.BuildContextWatcherHandler = cancelOnServer
 
-	pool, err := pgxpool.NewWithConfig(ctx, config)
+	pool, err := pgxpool.NewWithConfig(ctx, poolConfig)
 	if err != nil {
 		return err
 	}
@@ -82,11 +82,11 @@ func (p *Postgres) Connect(host, port, username, password, database string) erro
 	p.pool = pool
 	p.session = session
 	p.sessionLock = make(chan struct{}, 1)
-	p.Host = host
-	p.Port = port
-	p.Username = username
-	p.Database = database
-	p.Password = common.NewSecureString(password)
+	p.Host = config.Host
+	p.Port = config.Port
+	p.Username = config.Username
+	p.Database = config.Database
+	p.Password = common.NewSecureString(config.Password)
 	p.Mu.Unlock()
 	return nil
 }

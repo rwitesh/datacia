@@ -8,7 +8,7 @@ import (
 
 // DatabaseClient defines the common interface that individual database engines must implement
 type DatabaseClient interface {
-	Connect(host, port, username, password, database string) error
+	Connect(config common.ConnectionConfig) error
 	Close() error
 	Ping() error
 	GetConnectionInfo() (map[string]string, error)

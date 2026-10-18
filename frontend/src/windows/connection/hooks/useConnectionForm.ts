@@ -3,13 +3,15 @@ import { useForm, useWatch } from "react-hook-form";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 
 import {
-  TestNewConnection as Test,
+  TestConnection,
   SaveConnection,
   UpdateConnection,
   SelectSSHKeyFile,
   SelectSQLiteFile,
 } from "@/services/bindings/connection";
+import type { ConnectionConfig } from "@/services/bindings";
 import { DEFAULT_PORTS } from "../utils/constants";
+import { toConnectionConfig } from "../utils/config";
 import type { DatabaseEngine } from "@/shared/utils/engines";
 import type { FormValues, Status } from "../utils/types";
 import {
@@ -19,22 +21,6 @@ import {
 import { useConnectDatabase } from "./useConnectDatabase";
 import { errorMessage } from "@/lib/utils";
 import { queryKeys } from "@/services/queryKeys";
-
-interface FetchedConnectionData {
-  name?: string;
-  engine?: string;
-  host?: string;
-  port?: string;
-  username?: string;
-  password?: string;
-  database?: string;
-  useSSH?: string;
-  sshHost?: string;
-  sshPort?: string;
-  sshUsername?: string;
-  sshPassword?: string;
-  sshKeyPath?: string;
-}
 
 const emptyFormValues = (engine: DatabaseEngine): FormValues => ({
   connectionName: "",
@@ -56,7 +42,7 @@ const emptyFormValues = (engine: DatabaseEngine): FormValues => ({
 interface UseConnectionFormProps {
   resolvedEngine: DatabaseEngine;
   connectionId: string;
-  fetchedData?: FetchedConnectionData;
+  fetchedData?: ConnectionConfig;
 }
 
 export const useConnectionForm = ({
@@ -112,13 +98,13 @@ export const useConnectionForm = ({
         username: fetchedData.username || "",
         password: fetchedData.password || "",
         database: fetchedData.database || "",
-        useSSH: fetchedData.useSSH === "true" || false,
-        sshHost: fetchedData.sshHost || "",
-        sshPort: fetchedData.sshPort || "",
-        sshUsername: fetchedData.sshUsername || "",
-        sshPassword: fetchedData.sshPassword || "",
-        useSSHKey: !!fetchedData.sshKeyPath,
-        sshKeyPath: fetchedData.sshKeyPath || "",
+        useSSH: fetchedData.ssh.enabled,
+        sshHost: fetchedData.ssh.host,
+        sshPort: fetchedData.ssh.port,
+        sshUsername: fetchedData.ssh.username,
+        sshPassword: fetchedData.ssh.password,
+        useSSHKey: !!fetchedData.ssh.keyPath,
+        sshKeyPath: fetchedData.ssh.keyPath,
       });
     } else if (!connectionId) {
       reset(emptyFormValues(resolvedEngine));
@@ -145,32 +131,12 @@ export const useConnectionForm = ({
 
   const saveMutation = useMutation<void, Error, void, unknown>({
     mutationFn: async () => {
-      const values = getValues();
-      const config: Record<string, string> = {
-        engine: values.engine,
-        host: values.host,
-        port: values.port,
-        username: values.username,
-        password: values.password,
-        database: values.database,
-      };
-
-      if (values.useSSH) {
-        config.useSSH = "true";
-        config.sshHost = values.sshHost;
-        config.sshPort = values.sshPort || "22";
-        config.sshUsername = values.sshUsername;
-        if (values.useSSHKey) {
-          config.sshKeyPath = values.sshKeyPath;
-        } else {
-          config.sshPassword = values.sshPassword;
-        }
-      }
+      const config = toConnectionConfig(getValues());
 
       if (connectionId) {
-        await UpdateConnection(connectionId, values.connectionName, config);
+        await UpdateConnection({ ...config, id: connectionId });
       } else {
-        await SaveConnection(values.connectionName, config);
+        await SaveConnection(config);
       }
 
       queryClient.invalidateQueries({ queryKey: queryKeys.connections });
@@ -198,21 +164,7 @@ export const useConnectionForm = ({
 
   const testMutation = useMutation<void, Error, void, unknown>({
     mutationFn: async () => {
-      const values = getValues();
-      await Test(
-        values.engine,
-        values.host,
-        values.port,
-        values.username,
-        values.password,
-        values.database,
-        values.useSSH ? "true" : "",
-        values.sshHost,
-        values.sshPort,
-        values.sshUsername,
-        values.sshPassword,
-        values.useSSHKey ? values.sshKeyPath : ""
-      );
+      await TestConnection(toConnectionConfig(getValues()));
     },
     onMutate: () => {
       setStatus({
