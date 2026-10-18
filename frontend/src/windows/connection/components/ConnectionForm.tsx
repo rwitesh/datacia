@@ -182,12 +182,12 @@ export const ConnectionForm: React.FC<ConnectionFormProps> = ({
         <div className="pt-2 border-t space-y-1">
           <Label htmlFor="sslMode">SSL</Label>
           <Select value={sslMode} onValueChange={(value) => setValue("sslMode", value)} disabled={loading}>
-            <SelectTrigger id="sslMode" className="h-6 w-full px-2 text-sm">
+            <SelectTrigger id="sslMode" className="w-full px-2 py-1 data-[size=default]:h-6">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {SSL_MODES.map((mode) => (
-                <SelectItem key={mode.value} value={mode.value} className="text-sm">
+                <SelectItem key={mode.value} value={mode.value}>
                   {mode.label}
                 </SelectItem>
               ))}
