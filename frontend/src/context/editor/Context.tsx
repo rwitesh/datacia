@@ -23,7 +23,6 @@ export interface Tab {
   id: string;
   title: string;
   table?: string;
-  sql: string;
   results: QueryResult | null;
   error?: string;
   isExecuting: boolean;
@@ -38,7 +37,7 @@ export interface Tab {
   savedPath?: string;
   scroll?: { left: number; top: number };
   // Positions only, saved when the grid unmounts; the selected data is read
-  // from the grid through readSelection. A client sort is lost when the grid
+  // from the grid (see store.ts). A client sort is lost when the grid
   // remounts, so a selection made under one is not restored.
   selection?: { range: CellSelection; sorted: boolean };
 }
@@ -67,16 +66,9 @@ export type EditorContextType = {
   setActiveTab: (tabId: string) => void;
   updateTab: (tabId: string, updates: Partial<Tab>) => void;
 
-  // The editor keeps typed SQL as a draft instead of writing it to the tab on
-  // every keystroke. getSql returns the latest text; blur and unmount commit it.
-  getSql: (tabId: string) => string;
-  setDraftSql: (tabId: string, sql: string) => void;
-  commitDraftSql: (tabId: string) => void;
-
   // Query execution
   runQuery: (
     tabId?: string,
-    sql?: string,
     pagination?: boolean
   ) => Promise<void>;
   stopQuery: (tabId?: string) => Promise<void>;
@@ -85,10 +77,6 @@ export type EditorContextType = {
 
   // Result table ref for PNG export
   tableRef: RefObject<HTMLDivElement | null>;
-  // Set by the mounted grid: reads the current selection's data on demand,
-  // so the data is built only where it is shown, copied or exported.
-  readSelection: (() => SelectedData) | null;
-  setReadSelection: (read: (() => SelectedData) | null) => void;
 };
 
 export const EditorContext = createContext<EditorContextType | undefined>(

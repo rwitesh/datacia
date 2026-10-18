@@ -5,6 +5,7 @@ import { Browser } from "@wailsio/runtime";
 import { Check, Copy, CornerDownLeft, SquarePlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEditorContext } from "@/context/editor/Index";
+import { getTabSql, setTabSql } from "@/context/editor/store";
 
 // Model output is untrusted: raw HTML stays escaped and images aren't loaded.
 const DISALLOWED = ["img"];
@@ -20,7 +21,7 @@ function openLink(href = "") {
 }
 
 function CodeBlock({ code, language }: { code: string; language: string }) {
-  const { activeTab, createTab, updateTab, getSql } = useEditorContext();
+  const { activeTab, createTab } = useEditorContext();
   const [copied, setCopied] = useState(false);
   const isSQL = language === "" || language.toLowerCase() === "sql";
   const canInsert = activeTab?.type === "query";
@@ -35,13 +36,13 @@ function CodeBlock({ code, language }: { code: string; language: string }) {
 
   const insert = () => {
     if (activeTab?.type !== "query") return;
-    const current = getSql(activeTab.id).trimEnd();
-    updateTab(activeTab.id, { sql: current ? `${current}\n\n${code}` : code });
+    const current = getTabSql(activeTab.id).trimEnd();
+    setTabSql(activeTab.id, current ? `${current}\n\n${code}` : code);
   };
 
   const openInNewTab = () => {
     const tab = createTab(undefined, "query");
-    updateTab(tab.id, { sql: code });
+    setTabSql(tab.id, code);
   };
 
   return (

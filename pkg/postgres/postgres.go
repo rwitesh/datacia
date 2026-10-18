@@ -261,16 +261,10 @@ func scanRows(ctx context.Context, rows pgx.Rows, maxRows int) (common.QueryResu
 	columns = common.UniqueColumnNames(columns)
 
 	var data []map[string]interface{}
-	for (maxRows == 0 || len(data) < maxRows) && rows.Next() {
-		select {
-		case <-ctx.Done():
-			return common.QueryResult{Type: common.QueryTypeRead}, ctx.Err()
-		default:
-		}
-
+	truncated, err := common.ScanCapped(ctx, rows, maxRows, func() error {
 		values, err := rows.Values()
 		if err != nil {
-			return common.QueryResult{Type: common.QueryTypeRead}, err
+			return err
 		}
 
 		row := make(map[string]interface{})
@@ -280,10 +274,11 @@ func scanRows(ctx context.Context, rows pgx.Rows, maxRows int) (common.QueryResu
 			}
 		}
 		data = append(data, row)
+		return nil
+	})
+	if err != nil {
+		return common.QueryResult{Type: common.QueryTypeRead}, err
 	}
-
-	// Peek one row past the cap so a result of exactly maxRows isn't flagged.
-	truncated := maxRows > 0 && len(data) == maxRows && rows.Next()
 
 	if err := rows.Err(); err != nil {
 		return common.QueryResult{Type: common.QueryTypeRead}, err

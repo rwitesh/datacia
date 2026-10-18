@@ -18,16 +18,10 @@ func scanDynamicColumns(ctx context.Context, rows driver.Rows, maxRows int) ([]s
 	columns := common.UniqueColumnNames(rows.Columns())
 	colTypes := rows.ColumnTypes()
 
-	for (maxRows == 0 || len(response) < maxRows) && rows.Next() {
-		select {
-		case <-ctx.Done():
-			return nil, nil, false, ctx.Err()
-		default:
-		}
-
+	truncated, err := common.ScanCapped(ctx, rows, maxRows, func() error {
 		scanTargets := prepareScanTargets(colTypes)
 		if err := rows.Scan(scanTargets...); err != nil {
-			return nil, nil, false, err
+			return err
 		}
 
 		rowsEntry := make(map[string]interface{})
@@ -41,10 +35,11 @@ func scanDynamicColumns(ctx context.Context, rows driver.Rows, maxRows int) ([]s
 			}
 		}
 		response = append(response, rowsEntry)
+		return nil
+	})
+	if err != nil {
+		return nil, nil, false, err
 	}
-
-	// Peek one row past the cap so a result of exactly maxRows isn't flagged.
-	truncated := maxRows > 0 && len(response) == maxRows && rows.Next()
 
 	if err := rows.Err(); err != nil {
 		return nil, nil, false, err

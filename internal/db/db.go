@@ -50,13 +50,9 @@ func OpenFile(dbPath string, encryptionKey []byte) (*Store, error) {
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return nil, fmt.Errorf("failed to create database directory: %w", err)
 	}
-	// Installs from before 0700 have looser modes. Best effort: the database
-	// works either way, and Windows ignores these bits.
+	// The directory mode protects data.db and its WAL files. MkdirAll keeps an
+	// older install's looser mode, so tighten it; best effort, as it may not be ours.
 	_ = os.Chmod(dir, 0700)
-	if f, err := os.OpenFile(dbPath, os.O_RDWR|os.O_CREATE, 0600); err == nil {
-		_ = f.Chmod(0600)
-		f.Close()
-	}
 
 	db, err := sql.Open("sqlite", dbPath+"?_journal_mode=WAL&_busy_timeout=5000")
 	if err != nil {
