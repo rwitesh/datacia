@@ -4,6 +4,7 @@ import { Eye, EyeOff, X, FileKey } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DATABASE_ENGINES, SQLITE, type DatabaseEngine } from "@/shared/utils/engines";
 import type { FormValues } from "../utils/types";
 
@@ -32,6 +33,7 @@ export const ConnectionForm: React.FC<ConnectionFormProps> = ({
   const useSSH = watch("useSSH");
   const useSSHKey = watch("useSSHKey");
   const sshKeyPath = watch("sshKeyPath");
+  const sslMode = watch("sslMode");
 
   const handleSelectSSHKey = async () => {
     try {
@@ -171,6 +173,36 @@ export const ConnectionForm: React.FC<ConnectionFormProps> = ({
               className="h-6 px-2 text-sm"
             />
           </div>
+
+          {DATABASE_ENGINES[currentEngine].supportsSSL && (
+            <div className="space-y-1">
+              <Label htmlFor="sslMode">SSL Mode</Label>
+              <Select
+                value={sslMode || "auto"}
+                onValueChange={(value) => setValue("sslMode", value === "auto" ? "" : value)}
+                disabled={loading}
+              >
+                <SelectTrigger id="sslMode" className="h-6 px-2 text-sm w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="auto">Automatic (TLS unless local host)</SelectItem>
+                  <SelectItem value="disable">Disable (no encryption)</SelectItem>
+                  <SelectItem value="require">Require (encrypted, certificate not checked)</SelectItem>
+                  <SelectItem value="verify-full">Verify full (check certificate and host)</SelectItem>
+                </SelectContent>
+              </Select>
+              {sslMode === "verify-full" && (
+                <Input
+                  disabled={loading}
+                  {...register("sslCAPath")}
+                  placeholder="CA certificate file (optional, defaults to system roots)"
+                  aria-label="CA certificate file"
+                  className="h-6 px-2 text-sm"
+                />
+              )}
+            </div>
+          )}
         </>
       )}
 

@@ -25,7 +25,12 @@ func New() *ClickHouse {
 	}
 }
 
-func (ch *ClickHouse) Connect(host, port, username, password, database string) error {
+func (ch *ClickHouse) Connect(host, port, username, password, database string, tlsSettings common.TLSSettings) error {
+	tlsConfig, err := tlsSettings.Config()
+	if err != nil {
+		return err
+	}
+
 	connection, err := clickhouse.Open(&clickhouse.Options{
 		Addr: []string{net.JoinHostPort(host, port)},
 		Auth: clickhouse.Auth{
@@ -39,6 +44,7 @@ func (ch *ClickHouse) Connect(host, port, username, password, database string) e
 		Compression: &clickhouse.Compression{
 			Method: clickhouse.CompressionZSTD,
 		},
+		TLS:             tlsConfig,
 		DialTimeout:     common.CONNECT_TIMEOUT,
 		MaxOpenConns:    10,
 		MaxIdleConns:    5,
@@ -61,6 +67,7 @@ func (ch *ClickHouse) Connect(host, port, username, password, database string) e
 	ch.Port = port
 	ch.Username = username
 	ch.Database = database
+	ch.TLS = tlsSettings
 	ch.Password = common.NewSecureString(password)
 	ch.Mu.Unlock()
 	return nil

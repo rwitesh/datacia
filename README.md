@@ -6,6 +6,12 @@ A fast, free desktop SQL client for PostgreSQL, MySQL, SQLite and ClickHouse, fo
 
 - **Connect anywhere** – PostgreSQL, MySQL, SQLite and ClickHouse, with optional SSH tunnelling
   (password or key). Saved credentials are encrypted on your machine.
+- **Encrypted connections** – per-connection SSL mode for PostgreSQL, MySQL and ClickHouse:
+  Automatic, Disable, Require or Verify full (optionally with your own CA certificate file).
+  Automatic uses TLS for every host except this machine, so a saved connection to a remote server
+  that has no TLS now needs its SSL mode set to Disable. Require encrypts without checking the
+  server's certificate; use Verify full to also rule out a man-in-the-middle. ClickHouse uses
+  the secure native port (usually 9440) when TLS is on.
 - **SQL editor** – syntax highlighting, autocomplete for your tables, formatting, and inline
   suggestions drawn from the queries you have run before.
 - **Results** – a fast table with sorting, column resizing and cell selection, plus a JSON view of

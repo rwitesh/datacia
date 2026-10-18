@@ -42,8 +42,8 @@ export function CloseCurrentConnection(closeEditor: boolean): $CancellablePromis
  * active connection, since the connection window can test while an editor is
  * open.
  */
-export function CreateNewConnectionWithSSH(engine: string, host: string, port: string, username: string, password: string, database: string, useSSH: string, sshHost: string, sshPort: string, sshUsername: string, sshPassword: string, sshKeyPath: string, test: boolean): $CancellablePromise<void> {
-    return $Call.ByID(3942865490, engine, host, port, username, password, database, useSSH, sshHost, sshPort, sshUsername, sshPassword, sshKeyPath, test);
+export function CreateNewConnectionWithSSH(engine: string, host: string, port: string, username: string, password: string, database: string, useSSH: string, sshHost: string, sshPort: string, sshUsername: string, sshPassword: string, sshKeyPath: string, sslMode: string, sslCAPath: string, test: boolean): $CancellablePromise<void> {
+    return $Call.ByID(3942865490, engine, host, port, username, password, database, useSSH, sshHost, sshPort, sshUsername, sshPassword, sshKeyPath, sslMode, sslCAPath, test);
 }
 
 export function DeleteConnection(id: string): $CancellablePromise<boolean> {

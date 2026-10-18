@@ -81,7 +81,7 @@ func TestSQLiteMissingFile(t *testing.T) {
 
 func TestSSHWithoutHost(t *testing.T) {
 	e := &Engine{}
-	err := e.CreateNewConnectionWithSSH("sqlite", "", "", "", "", newSQLiteFile(t), "true", "", "", "", "", "", true)
+	err := e.CreateNewConnectionWithSSH("sqlite", "", "", "", "", newSQLiteFile(t), "true", "", "", "", "", "", "", "", true)
 	if err == nil {
 		t.Fatal("connected without the SSH tunnel that was asked for")
 	}
@@ -98,5 +98,5 @@ func newSQLiteFile(t *testing.T) string {
 }
 
 func connectSQLite(e *Engine, path string, test bool) error {
-	return e.CreateNewConnectionWithSSH("sqlite", "", "", "", "", path, "", "", "", "", "", "", test)
+	return e.CreateNewConnectionWithSSH("sqlite", "", "", "", "", path, "", "", "", "", "", "", "", "", test)
 }

@@ -18,7 +18,7 @@ func connectNew(t *testing.T) *SQLite {
 		t.Fatal(err)
 	}
 	s := New()
-	if err := s.Connect("", "", "", "", path); err != nil {
+	if err := s.Connect("", "", "", "", path, common.TLSSettings{}); err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { s.Close() })
@@ -27,7 +27,7 @@ func connectNew(t *testing.T) *SQLite {
 
 func TestMissingFile(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "missing.db")
-	if err := New().Connect("", "", "", "", path); err == nil {
+	if err := New().Connect("", "", "", "", path, common.TLSSettings{}); err == nil {
 		t.Fatal("connected to a file that doesn't exist")
 	}
 	if _, err := os.Stat(path); err == nil {

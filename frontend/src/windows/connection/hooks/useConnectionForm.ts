@@ -10,7 +10,7 @@ import {
   SelectSQLiteFile,
 } from "@/services/bindings/connection";
 import { DEFAULT_PORTS } from "../utils/constants";
-import type { DatabaseEngine } from "@/shared/utils/engines";
+import { getEngineConfig, type DatabaseEngine } from "@/shared/utils/engines";
 import type { FormValues, Status } from "../utils/types";
 import {
   validateForSave,
@@ -33,6 +33,8 @@ interface FetchedConnectionData {
   sshUsername?: string;
   sshPassword?: string;
   sshKeyPath?: string;
+  sslMode?: string;
+  sslCAPath?: string;
 }
 
 const emptyFormValues = (engine: DatabaseEngine): FormValues => ({
@@ -50,6 +52,8 @@ const emptyFormValues = (engine: DatabaseEngine): FormValues => ({
   sshPassword: "",
   useSSHKey: false,
   sshKeyPath: "",
+  sslMode: "",
+  sslCAPath: "",
 });
 
 interface UseConnectionFormProps {
@@ -118,6 +122,8 @@ export const useConnectionForm = ({
         sshPassword: fetchedData.sshPassword || "",
         useSSHKey: !!fetchedData.sshKeyPath,
         sshKeyPath: fetchedData.sshKeyPath || "",
+        sslMode: fetchedData.sslMode || "",
+        sslCAPath: fetchedData.sslCAPath || "",
       });
     } else if (!connectionId) {
       reset(emptyFormValues(resolvedEngine));
@@ -153,6 +159,11 @@ export const useConnectionForm = ({
         password: values.password,
         database: values.database,
       };
+
+      if (getEngineConfig(values.engine).supportsSSL) {
+        config.sslMode = values.sslMode;
+        if (values.sslMode === "verify-full") config.sslCAPath = values.sslCAPath;
+      }
 
       if (values.useSSH) {
         config.useSSH = "true";
@@ -210,7 +221,9 @@ export const useConnectionForm = ({
         values.sshPort,
         values.sshUsername,
         values.sshPassword,
-        values.useSSHKey ? values.sshKeyPath : ""
+        values.useSSHKey ? values.sshKeyPath : "",
+        values.sslMode,
+        values.sslMode === "verify-full" ? values.sslCAPath : ""
       );
     },
     onMutate: () => {

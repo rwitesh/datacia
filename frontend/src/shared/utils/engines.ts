@@ -19,6 +19,7 @@ interface EngineConfig {
   defaultPort: string;        // Default connection port
   formatterLanguage: string;  // sql-formatter language identifier
   dialect: SQLDialect;        // CodeMirror SQL dialect for syntax highlighting
+  supportsSSL: boolean;       // Network engine whose connection can use TLS
 }
 
 export const DATABASE_ENGINES: Record<DatabaseEngine, EngineConfig> = {
@@ -28,6 +29,7 @@ export const DATABASE_ENGINES: Record<DatabaseEngine, EngineConfig> = {
     defaultPort: "5432",
     formatterLanguage: "postgresql",
     dialect: PostgreSQL,
+    supportsSSL: true,
   },
   [CLICKHOUSE]: {
     label: "ClickHouse",
@@ -35,6 +37,7 @@ export const DATABASE_ENGINES: Record<DatabaseEngine, EngineConfig> = {
     defaultPort: "9000",
     formatterLanguage: "clickhouse",
     dialect: ClickhouseDialect,
+    supportsSSL: true,
   },
   [MYSQL]: {
     label: "MySQL",
@@ -42,6 +45,7 @@ export const DATABASE_ENGINES: Record<DatabaseEngine, EngineConfig> = {
     defaultPort: "3306",
     formatterLanguage: "mysql",
     dialect: MySQL,
+    supportsSSL: true,
   },
   [SQLITE]: {
     label: "SQLite",
@@ -49,6 +53,7 @@ export const DATABASE_ENGINES: Record<DatabaseEngine, EngineConfig> = {
     defaultPort: "",
     formatterLanguage: "sqlite",
     dialect: SQLite,
+    supportsSSL: false,
   },
 };
 
@@ -67,6 +72,7 @@ export const getEngineConfig = (engine: string | null | undefined): EngineConfig
     defaultPort: "",
     formatterLanguage: "sql",
     dialect: StandardSQL,
+    supportsSSL: false,
   };
 };
 

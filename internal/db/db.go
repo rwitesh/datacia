@@ -114,12 +114,43 @@ func (s *Store) initSchema() error {
 		}
 	}
 
+	// Columns added after the first release; the table has no migrations.
+	for _, column := range []string{"ssl_mode", "ssl_ca_path"} {
+		if err := s.ensureConnectionColumn(column); err != nil {
+			return err
+		}
+	}
+
 	cutoff := time.Now().UTC().Add(-365 * 24 * time.Hour).Format(time.RFC3339)
 	if _, err := s.db.Exec(`DELETE FROM query_history WHERE timestamp < ?`, cutoff); err != nil {
 		logger.Error("Failed to prune query history", "error", err.Error())
 	}
 
 	return nil
+}
+
+func (s *Store) ensureConnectionColumn(name string) error {
+	rows, err := s.db.Query(`SELECT name FROM pragma_table_info('connections')`)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var existing string
+		if err := rows.Scan(&existing); err != nil {
+			return err
+		}
+		if existing == name {
+			return nil
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	rows.Close()
+	// An empty ssl_mode means "not chosen", which connects with the default.
+	_, err = s.db.Exec(`ALTER TABLE connections ADD COLUMN ` + name + ` TEXT NOT NULL DEFAULT ''`)
+	return err
 }
 
 func (s *Store) encryptField(value string) (string, error) {
@@ -149,7 +180,7 @@ func (s *Store) decryptField(value string) (string, error) {
 }
 
 // connectionColumns returns a saved connection's column values, from engine
-// to ssh_key_path, in table order, with the passwords encrypted.
+// to ssl_ca_path, in table order, with the passwords encrypted.
 func (s *Store) connectionColumns(config map[string]string) ([]any, error) {
 	encPassword, err := s.encryptField(config["password"])
 	if err != nil {
@@ -162,7 +193,7 @@ func (s *Store) connectionColumns(config map[string]string) ([]any, error) {
 	return []any{
 		config["engine"], config["host"], config["port"], config["username"], encPassword, config["database"],
 		config["useSSH"] == "true", config["sshHost"], config["sshPort"], config["sshUsername"], encSSHPassword,
-		config["useSSHKey"] == "true", config["sshKeyPath"],
+		config["useSSHKey"] == "true", config["sshKeyPath"], config["sslMode"], config["sslCAPath"],
 	}, nil
 }
 
@@ -175,9 +206,9 @@ func (s *Store) SaveConnection(name string, config map[string]string) error {
 		INSERT INTO connections (
 			id, name, engine, host, port, username, password, database,
 			use_ssh, ssh_host, ssh_port, ssh_username, ssh_password,
-			use_ssh_key, ssh_key_path, created_at, updated_at
+			use_ssh_key, ssh_key_path, ssl_mode, ssl_ca_path, created_at, updated_at
 		)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 	`, append([]any{uuid.New().String(), name}, columns...)...)
 	if err != nil {
 		logger.Error("Failed to save connection", "error", err.Error())
@@ -196,7 +227,7 @@ func (s *Store) UpdateConnection(id, name string, config map[string]string) erro
 		SET name = ?,
 			engine = ?, host = ?, port = ?, username = ?, password = ?, database = ?,
 			use_ssh = ?, ssh_host = ?, ssh_port = ?, ssh_username = ?, ssh_password = ?,
-			use_ssh_key = ?, ssh_key_path = ?,
+			use_ssh_key = ?, ssh_key_path = ?, ssl_mode = ?, ssl_ca_path = ?,
 			updated_at = CURRENT_TIMESTAMP
 		WHERE id = ?
 	`, append(args, id)...)
@@ -211,7 +242,7 @@ func (s *Store) LoadConnection(id string) (map[string]string, error) {
 		SELECT 
 			name, engine, host, port, username, password, database,
 			use_ssh, ssh_host, ssh_port, ssh_username, ssh_password,
-			use_ssh_key, ssh_key_path
+			use_ssh_key, ssh_key_path, ssl_mode, ssl_ca_path
 		FROM connections WHERE id = ?
 	`
 	row := s.db.QueryRow(query, id)
@@ -220,12 +251,12 @@ func (s *Store) LoadConnection(id string) (map[string]string, error) {
 	var useSSH int
 	var sshHost, sshPort, sshUsername, encSSHPassword string
 	var useSSHKey int
-	var sshKeyPath string
+	var sshKeyPath, sslMode, sslCAPath string
 
 	if err := row.Scan(
 		&name, &engine, &host, &port, &username, &encPassword, &database,
 		&useSSH, &sshHost, &sshPort, &sshUsername, &encSSHPassword,
-		&useSSHKey, &sshKeyPath,
+		&useSSHKey, &sshKeyPath, &sslMode, &sslCAPath,
 	); err != nil {
 		if err == sql.ErrNoRows {
 			return map[string]string{}, errors.New("connection not found")
@@ -259,6 +290,8 @@ func (s *Store) LoadConnection(id string) (map[string]string, error) {
 		"sshUsername": sshUsername,
 		"sshPassword": sshPassword,
 		"sshKeyPath":  sshKeyPath,
+		"sslMode":     sslMode,
+		"sslCAPath":   sslCAPath,
 	}
 
 	if useSSH == 1 {

@@ -37,7 +37,7 @@ func New() *SQLite {
 	}
 }
 
-func (s *SQLite) Connect(host, port, username, password, database string) error {
+func (s *SQLite) Connect(host, port, username, password, database string, _ common.TLSSettings) error {
 	// For SQLite, 'database' is the file path. Host, port, username, password are ignored.
 	if database == "" {
 		return errors.New("database file path is required")

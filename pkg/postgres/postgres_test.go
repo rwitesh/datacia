@@ -25,7 +25,7 @@ func connectTest(t *testing.T) *Postgres {
 	}
 	password, _ := u.User.Password()
 	p := New()
-	if err := p.Connect(u.Hostname(), u.Port(), u.User.Username(), password, u.Path[1:]); err != nil {
+	if err := p.Connect(u.Hostname(), u.Port(), u.User.Username(), password, u.Path[1:], common.TLSSettings{Mode: common.SSLModeDisable}); err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { p.Close() })

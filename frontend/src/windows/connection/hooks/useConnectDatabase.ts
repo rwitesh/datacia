@@ -33,7 +33,9 @@ export const useConnectDatabase = (opts?: {
           v.sshPort,
           v.sshUsername,
           v.sshPassword,
-          v.useSSHKey ? v.sshKeyPath : ""
+          v.useSSHKey ? v.sshKeyPath : "",
+          v.sslMode,
+          v.sslMode === "verify-full" ? v.sslCAPath : ""
         );
       }
     },

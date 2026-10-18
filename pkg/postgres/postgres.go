@@ -41,13 +41,16 @@ func cancelOnServer(conn *pgconn.PgConn) ctxwatch.Handler {
 	return &pgconn.CancelRequestContextWatcherHandler{Conn: conn, DeadlineDelay: 5 * time.Second}
 }
 
-func (p *Postgres) Connect(host, port, username, password, database string) error {
+func (p *Postgres) Connect(host, port, username, password, database string, tlsSettings common.TLSSettings) error {
 	// Construct DSN with proper URL encoding for username, password, and database
 	u := &url.URL{
 		Scheme: "postgres",
 		User:   url.UserPassword(username, password),
 		Host:   net.JoinHostPort(host, port),
 		Path:   "/" + database,
+		// pgx would try TLS and quietly fall back to plaintext; the TLS
+		// config is set explicitly below instead.
+		RawQuery: "sslmode=disable",
 	}
 	dsn := u.String()
 
@@ -58,6 +61,12 @@ func (p *Postgres) Connect(host, port, username, password, database string) erro
 	if err != nil {
 		return err
 	}
+
+	tlsConfig, err := tlsSettings.Config()
+	if err != nil {
+		return err
+	}
+	config.ConnConfig.TLSConfig = tlsConfig
 
 	// Configure pool settings
 	config.MaxConns = 10
@@ -86,6 +95,7 @@ func (p *Postgres) Connect(host, port, username, password, database string) erro
 	p.Port = port
 	p.Username = username
 	p.Database = database
+	p.TLS = tlsSettings
 	p.Password = common.NewSecureString(password)
 	p.Mu.Unlock()
 	return nil

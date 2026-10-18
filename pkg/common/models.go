@@ -48,6 +48,7 @@ type ConnectionState struct {
 	Username      string
 	Password      *SecureString
 	Database      string
+	TLS           TLSSettings
 	ActiveQueries sync.Map
 	Mu            sync.RWMutex
 }
@@ -61,6 +62,14 @@ func (cs *ConnectionState) GetPassword() string {
 		return ""
 	}
 	return cs.Password.String()
+}
+
+// GetTLS returns the TLS settings the connection was opened with, so a
+// reconnect to another database keeps them.
+func (cs *ConnectionState) GetTLS() TLSSettings {
+	cs.Mu.RLock()
+	defer cs.Mu.RUnlock()
+	return cs.TLS
 }
 
 // CancelQuery cancels the context of a running query started with its ID.
@@ -112,6 +121,7 @@ func (cs *ConnectionState) ClearAllStateUnsafe() {
 	cs.Port = ""
 	cs.Username = ""
 	cs.Database = ""
+	cs.TLS = TLSSettings{}
 	if cs.Password != nil {
 		cs.Password.Clear()
 		cs.Password = nil

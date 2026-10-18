@@ -84,13 +84,20 @@ func getDBClient(engineType string) (DatabaseClient, error) {
 // SSH tunnel. A test connection is closed straight away and never touches the
 // active connection, since the connection window can test while an editor is
 // open.
-func (e *Engine) CreateNewConnectionWithSSH(engine, host, port, username, password, database string, useSSH, sshHost, sshPort, sshUsername, sshPassword, sshKeyPath string, test bool) error {
+func (e *Engine) CreateNewConnectionWithSSH(engine, host, port, username, password, database string, useSSH, sshHost, sshPort, sshUsername, sshPassword, sshKeyPath, sslMode, sslCAPath string, test bool) error {
 	logger.Info("db_connection_attempt",
 		"engine", engine,
 		"database", database,
 		"ssh", fmt.Sprint(useSSH == "true"),
 		"test", fmt.Sprint(test),
 	)
+
+	// Resolved against the host the user typed: through a tunnel the client
+	// dials 127.0.0.1, but the server behind it is still remote.
+	tlsSettings, err := common.NewTLSSettings(sslMode, sslCAPath, host)
+	if err != nil {
+		return err
+	}
 
 	var tunnel *ssh.Tunnel
 	if useSSH == "true" {
@@ -109,7 +116,6 @@ func (e *Engine) CreateNewConnectionWithSSH(engine, host, port, username, passwo
 			sshConfig.Port = "22"
 		}
 
-		var err error
 		tunnel, err = ssh.NewTunnel(sshConfig, host, port)
 		if err != nil {
 			return fmt.Errorf("failed to establish SSH tunnel: %w", err)
@@ -121,7 +127,7 @@ func (e *Engine) CreateNewConnectionWithSSH(engine, host, port, username, passwo
 		}
 	}
 
-	dbClient, err := connectClient(engine, host, port, username, password, database)
+	dbClient, err := connectClient(engine, host, port, username, password, database, tlsSettings)
 	if test && err == nil {
 		err = dbClient.Close()
 	}
@@ -137,13 +143,13 @@ func (e *Engine) CreateNewConnectionWithSSH(engine, host, port, username, passwo
 	return nil
 }
 
-func connectClient(engine, host, port, username, password, database string) (DatabaseClient, error) {
+func connectClient(engine, host, port, username, password, database string, tlsSettings common.TLSSettings) (DatabaseClient, error) {
 	dbClient, err := getDBClient(engine)
 	if err != nil {
 		logger.Warn("db_connection_client_create_failed", "engine", engine, "error", err.Error())
 		return nil, err
 	}
-	if err := dbClient.Connect(host, port, username, password, database); err != nil {
+	if err := dbClient.Connect(host, port, username, password, database, tlsSettings); err != nil {
 		logger.Warn("db_connection_failed", "engine", engine, "database", database, "error", err.Error())
 		return nil, err
 	}
@@ -224,6 +230,8 @@ func (e *Engine) EstablishConnection(id string) error {
 		config["sshUsername"],
 		config["sshPassword"],
 		config["sshKeyPath"],
+		config["sslMode"],
+		config["sslCAPath"],
 		false,
 	)
 }
@@ -258,7 +266,7 @@ func (e *Engine) ChangeDatabaseByName(database string) error {
 		return nil
 	}
 	// GetConnectionInfo doesn't expose the password, so take it from the client.
-	dbClient, err := connectClient(connInfo["engine"], connInfo["host"], connInfo["port"], connInfo["username"], current.GetPassword(), database)
+	dbClient, err := connectClient(connInfo["engine"], connInfo["host"], connInfo["port"], connInfo["username"], current.GetPassword(), database, current.GetTLS())
 	if err != nil {
 		return err
 	}

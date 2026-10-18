@@ -15,6 +15,9 @@ export interface FormValues {
   sshPassword: string;
   useSSHKey: boolean;
   sshKeyPath: string;
+  // "" connects with the default: TLS unless the host is this machine.
+  sslMode: string;
+  sslCAPath: string;
 }
 
 export type StatusKind = "success" | "error" | "info";
