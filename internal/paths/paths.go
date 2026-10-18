@@ -13,6 +13,10 @@ func GetDBPath() (string, error) {
 	return xdg.DataFile(filepath.Join(constants.APP_NAME, "data.db"))
 }
 
+func GetSampleDBPath() (string, error) {
+	return xdg.DataFile(filepath.Join(constants.APP_NAME, "sample.db"))
+}
+
 func GetChatPath() (string, error) {
 	return xdg.DataFile(filepath.Join(constants.APP_NAME, "chat.json"))
 }

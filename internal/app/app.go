@@ -9,6 +9,7 @@ import (
 	"datacia/internal/files"
 	"datacia/internal/intellisense"
 	"datacia/internal/logger"
+	"datacia/internal/paths"
 	"datacia/internal/queries"
 	"datacia/internal/security"
 	"datacia/internal/settings"
@@ -77,6 +78,13 @@ func (a *App) Initialize() error {
 		return err
 	}
 	a.engine = remote.New(a.instance, a, store)
+
+	// Best effort: the app works fine without the sample database.
+	if samplePath, err := paths.GetSampleDBPath(); err != nil {
+		logger.Error("Failed to resolve the sample database path", "error", err.Error())
+	} else if err := db.SeedSampleData(store, samplePath); err != nil {
+		logger.Error("Failed to seed the sample database", "error", err.Error())
+	}
 
 	// Services exposed to the UI.
 	a.instance.RegisterService(application.NewService(a.engine))
