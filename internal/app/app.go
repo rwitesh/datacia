@@ -104,8 +104,8 @@ func (a *App) Initialize() error {
 	settings.Init(a.instance, a.version)
 
 	if err := clip.Init(); err != nil {
+		// Only image copy needs it, so the app still starts without.
 		logger.Error("Failed to initialize clipboard", "error", err.Error())
-		return err
 	}
 
 	store, err := db.Open()
