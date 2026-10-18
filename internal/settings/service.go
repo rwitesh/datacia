@@ -30,61 +30,50 @@ func Init(app *application.App) {
 	if cd, err := paths.GetConfigDir(); err == nil {
 		configDir = cd
 	}
-	machineId, _ := security.GetMachineID()
 	globalInfoOnce.Do(func() {
+		env := app.Env.Info()
 		globalInfo = &Info{
-			OS:         app.Env.Info().OS,
-			OSArch:     app.Env.Info().Arch,
-			OSVersion:  app.Env.Info().OSInfo.Version,
-			MachineId:  machineId,
+			OS:         env.OS,
+			OSArch:     env.Arch,
+			OSVersion:  env.OSInfo.Version,
 			AppVersion: "unknown",
 			Settings:   defaultSettings(),
 		}
 		loadSettings()
-		applyLoggerContext(globalInfo)
 	})
 }
 
+// SetAppVersion records the version and tags every log with the app and
+// device details.
 func SetAppVersion(version string) {
 	if globalInfo == nil {
 		return
 	}
 	globalInfo.mu.Lock()
 	globalInfo.AppVersion = version
-	info := &Info{
-		OS:         globalInfo.OS,
-		OSArch:     globalInfo.OSArch,
-		OSVersion:  globalInfo.OSVersion,
-		AppVersion: globalInfo.AppVersion,
-		MachineId:  globalInfo.MachineId,
-	}
+	info := getSanitized()
 	globalInfo.mu.Unlock()
-	applyLoggerContext(info)
-}
 
-func applyLoggerContext(info *Info) {
-	if info == nil {
-		return
+	var deviceID string
+	if ctx, err := security.GetSecurityContext(); err == nil {
+		deviceID = ctx.DeviceID()
 	}
 	logger.SetGlobalAttrs(
 		attribute.String("os", info.OS),
 		attribute.String("arch", info.OSArch),
 		attribute.String("os_version", info.OSVersion),
 		attribute.String("app_version", info.AppVersion),
-		attribute.String("hardware", info.MachineId),
+		attribute.String("hardware", deviceID),
 	)
 }
 
 func Get() *Info {
-	machineId, _ := security.GetMachineID()
 	if globalInfo == nil {
 		return &Info{
-			OS:         runtime.GOOS,
-			OSArch:     runtime.GOARCH,
-			AppVersion: "",
-			Settings:   defaultSettings(),
-			Defaults:   defaultSettings(),
-			MachineId:  machineId,
+			OS:       runtime.GOOS,
+			OSArch:   runtime.GOARCH,
+			Settings: defaultSettings(),
+			Defaults: defaultSettings(),
 		}
 	}
 	globalInfo.mu.RLock()
@@ -110,7 +99,6 @@ func getSanitized() *Info {
 		OSVersion:  globalInfo.OSVersion,
 		OSArch:     globalInfo.OSArch,
 		AppVersion: globalInfo.AppVersion,
-		MachineId:  globalInfo.MachineId,
 		Defaults:   defaultSettings(),
 		Settings: Settings{
 			Theme:   s.Theme,

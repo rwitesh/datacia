@@ -41,3 +41,16 @@ func TestEncryptDecryptRoundTrip(t *testing.T) {
 		t.Error("decrypting with another machine's key should fail")
 	}
 }
+
+// The device ID goes to error reports, so it must not be the machine ID the
+// encryption key is derived from.
+func TestAnonymousDeviceIDHidesMachineID(t *testing.T) {
+	machineID := Sha256Hex("test-device")
+	got := anonymousDeviceID(machineID)
+	if got == machineID || got == "" {
+		t.Fatalf("device ID %q exposes the machine ID", got)
+	}
+	if got != anonymousDeviceID(machineID) {
+		t.Fatal("device ID is not stable")
+	}
+}

@@ -151,7 +151,6 @@ export class Info {
     "os_version": string;
     "os_arch": string;
     "app_version": string;
-    "machineId": string;
     "settings": Settings;
     "defaults": Settings;
 
@@ -169,9 +168,6 @@ export class Info {
         if (!("app_version" in $$source)) {
             this["app_version"] = "";
         }
-        if (!("machineId" in $$source)) {
-            this["machineId"] = "";
-        }
         if (!("settings" in $$source)) {
             this["settings"] = (new Settings());
         }
@@ -186,14 +182,14 @@ export class Info {
      * Creates a new Info instance from a string or object.
      */
     static createFrom($$source: any = {}): Info {
+        const $$createField4_0 = $$createType4;
         const $$createField5_0 = $$createType4;
-        const $$createField6_0 = $$createType4;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("settings" in $$parsedSource) {
-            $$parsedSource["settings"] = $$createField5_0($$parsedSource["settings"]);
+            $$parsedSource["settings"] = $$createField4_0($$parsedSource["settings"]);
         }
         if ("defaults" in $$parsedSource) {
-            $$parsedSource["defaults"] = $$createField6_0($$parsedSource["defaults"]);
+            $$parsedSource["defaults"] = $$createField5_0($$parsedSource["defaults"]);
         }
         return new Info($$parsedSource as Partial<Info>);
     }

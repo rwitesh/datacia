@@ -7,12 +7,11 @@ import (
 	deviceid "github.com/microsoft/go-deviceid"
 )
 
-// SecurityContext holds machine-specific encryption keys and identifiers
-// that are computed once at startup and reused throughout the application.
-// Both fields are set once by InitSecurityContext and only read afterwards.
+// SecurityContext holds the machine-bound encryption key and the anonymous
+// device ID, computed once at startup and only read afterwards.
 type SecurityContext struct {
-	machineID     string // SHA-256 hash of device ID (used as machine identity everywhere)
-	encryptionKey []byte // Derived encryption key (machine ID + app salt)
+	encryptionKey []byte // derived from the machine ID and the app salt
+	deviceID      string // for error reports; can't be used to derive the key
 }
 
 var (
@@ -38,9 +37,9 @@ func InitSecurityContext() error {
 			return
 		}
 
-		ctx.machineID = Sha256Hex(id)
-
-		ctx.encryptionKey = deriveEncryptionKey(ctx.machineID)
+		machineID := Sha256Hex(id)
+		ctx.encryptionKey = deriveEncryptionKey(machineID)
+		ctx.deviceID = anonymousDeviceID(machineID)
 
 		globalContext = ctx
 	})
@@ -56,9 +55,9 @@ func GetSecurityContext() (*SecurityContext, error) {
 	return globalContext, nil
 }
 
-// returns the SHA-256 hash of the machine ID.
-func (c *SecurityContext) GetMachineID() string {
-	return c.machineID
+// DeviceID returns the anonymous device ID sent with error reports.
+func (c *SecurityContext) DeviceID() string {
+	return c.deviceID
 }
 
 // returns a copy of the encryption key.
