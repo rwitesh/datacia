@@ -4,12 +4,14 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
-	"path/filepath"
 
 	"datacia/internal/logger"
 	"datacia/internal/paths"
 )
 
+// loadSettings reads settings.json into globalInfo, which starts with the
+// defaults. A missing file is created with them; a corrupt one is moved to
+// settings.json.bak first so the API keys in it can still be recovered.
 func loadSettings() {
 	if configDir == "" {
 		return
@@ -19,52 +21,39 @@ func loadSettings() {
 		logger.Warn("Failed to resolve settings path", "error", err.Error())
 		return
 	}
+	s := defaultSettings()
 	data, err := os.ReadFile(settingsPath)
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
+	switch {
+	case errors.Is(err, os.ErrNotExist):
+	case err != nil:
 		logger.Warn("Failed to read settings file, using defaults for this session", "error", err.Error())
 		return
-	}
-	if err != nil {
-		if err := os.MkdirAll(filepath.Dir(settingsPath), 0755); err != nil {
-			logger.Warn("Failed to create settings directory", "error", err.Error())
-			return
+	default:
+		var loaded Settings
+		if err := json.Unmarshal(data, &loaded); err != nil {
+			logger.Warn("Failed to parse settings file, resetting to defaults", "error", err.Error())
+			if err := os.Rename(settingsPath, settingsPath+".bak"); err != nil {
+				// Don't overwrite the only copy of the user's settings.
+				logger.Warn("Failed to back up settings file, using defaults for this session", "error", err.Error())
+				return
+			}
+		} else {
+			s = loaded
+			fillDefaults(&s)
 		}
-		def := defaultSettings()
-		globalInfo.mu.Lock()
-		globalInfo.Settings = def
-		globalInfo.mu.Unlock()
-		if err := saveSettings(); err != nil {
-			logger.Warn("Failed to save default settings", "error", err.Error())
-		}
-		return
 	}
-	var s Settings
-	if err := json.Unmarshal(data, &s); err != nil {
-		logger.Warn("Failed to parse settings file, resetting to defaults", "error", err.Error())
-		_ = os.Rename(settingsPath, settingsPath+".bak")
-		def := defaultSettings()
-		globalInfo.mu.Lock()
-		globalInfo.Settings = def
-		globalInfo.mu.Unlock()
-		_ = os.MkdirAll(filepath.Dir(settingsPath), 0755)
-		if err := saveSettings(); err != nil {
-			logger.Warn("Failed to save reset settings", "error", err.Error())
-		}
-		return
-	}
-	s.Editor.Light = fillTokenColorsDefaults(s.Editor.Light, defaultTokenColorsLight())
-	s.Editor.Dark = fillTokenColorsDefaults(s.Editor.Dark, defaultTokenColorsDark())
-	fillAIDefaults(&s)
 	applyPrivacy(s)
 	globalInfo.mu.Lock()
 	globalInfo.Settings = s
 	globalInfo.mu.Unlock()
-	if err := saveSettings(); err != nil {
+	if err := saveSettings(s); err != nil {
 		logger.Warn("Failed to persist settings", "error", err.Error())
 	}
 }
 
-func saveSettings() error {
+// saveSettings writes s to settings.json atomically, so a crash leaves either
+// the old or the new file, never a partial one.
+func saveSettings(s Settings) error {
 	if configDir == "" {
 		return nil
 	}
@@ -72,16 +61,26 @@ func saveSettings() error {
 	if err != nil {
 		return err
 	}
-	globalInfo.mu.RLock()
-	s := globalInfo.Settings
-	globalInfo.mu.RUnlock()
 	data, err := json.MarshalIndent(s, "", "  ")
 	if err != nil {
 		return err
 	}
-	// Atomic, and 0600 because the file holds encrypted API keys.
+	// 0600 because the file holds encrypted API keys.
 	tmp := settingsPath + ".tmp"
-	if err := os.WriteFile(tmp, data, 0600); err != nil {
+	f, err := os.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		return err
+	}
+	_, err = f.Write(data)
+	if err == nil {
+		// Without it, a crash right after the rename can leave an empty file.
+		err = f.Sync()
+	}
+	if closeErr := f.Close(); err == nil {
+		err = closeErr
+	}
+	if err != nil {
+		_ = os.Remove(tmp)
 		return err
 	}
 	return os.Rename(tmp, settingsPath)

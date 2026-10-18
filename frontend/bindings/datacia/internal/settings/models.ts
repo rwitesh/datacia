@@ -143,7 +143,8 @@ export class FontConfig {
 }
 
 /**
- * Info is the app/settings info returned to the frontend (OS, version, settings, defaults).
+ * Info is the app/settings info returned to the frontend: OS, version, the
+ * current settings and the defaults the settings window resets to.
  */
 export class Info {
     "os": string;
@@ -152,10 +153,7 @@ export class Info {
     "app_version": string;
     "machineId": string;
     "settings": Settings;
-    "appearance": string;
-    "activeTokenColors": TokenColors;
-    "defaultTokenColorsLight": TokenColors;
-    "defaultTokenColorsDark": TokenColors;
+    "defaults": Settings;
 
     /** Creates a new Info instance. */
     constructor($$source: Partial<Info> = {}) {
@@ -177,17 +175,8 @@ export class Info {
         if (!("settings" in $$source)) {
             this["settings"] = (new Settings());
         }
-        if (!("appearance" in $$source)) {
-            this["appearance"] = "";
-        }
-        if (!("activeTokenColors" in $$source)) {
-            this["activeTokenColors"] = (new TokenColors());
-        }
-        if (!("defaultTokenColorsLight" in $$source)) {
-            this["defaultTokenColorsLight"] = (new TokenColors());
-        }
-        if (!("defaultTokenColorsDark" in $$source)) {
-            this["defaultTokenColorsDark"] = (new TokenColors());
+        if (!("defaults" in $$source)) {
+            this["defaults"] = (new Settings());
         }
 
         Object.assign(this, $$source);
@@ -198,21 +187,13 @@ export class Info {
      */
     static createFrom($$source: any = {}): Info {
         const $$createField5_0 = $$createType4;
-        const $$createField7_0 = $$createType3;
-        const $$createField8_0 = $$createType3;
-        const $$createField9_0 = $$createType3;
+        const $$createField6_0 = $$createType4;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("settings" in $$parsedSource) {
             $$parsedSource["settings"] = $$createField5_0($$parsedSource["settings"]);
         }
-        if ("activeTokenColors" in $$parsedSource) {
-            $$parsedSource["activeTokenColors"] = $$createField7_0($$parsedSource["activeTokenColors"]);
-        }
-        if ("defaultTokenColorsLight" in $$parsedSource) {
-            $$parsedSource["defaultTokenColorsLight"] = $$createField8_0($$parsedSource["defaultTokenColorsLight"]);
-        }
-        if ("defaultTokenColorsDark" in $$parsedSource) {
-            $$parsedSource["defaultTokenColorsDark"] = $$createField9_0($$parsedSource["defaultTokenColorsDark"]);
+        if ("defaults" in $$parsedSource) {
+            $$parsedSource["defaults"] = $$createField6_0($$parsedSource["defaults"]);
         }
         return new Info($$parsedSource as Partial<Info>);
     }

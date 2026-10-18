@@ -45,7 +45,36 @@ func defaultSettings() Settings {
 	}
 }
 
-func fillAIDefaults(s *Settings) {
+// Font sizes outside this range make the app unreadable; the UI offers 12-18.
+const (
+	minFontSize = 8
+	maxFontSize = 32
+)
+
+// fillDefaults replaces missing or unusable values, from an older, partial or
+// hand-edited file, with defaults. Zero values that are valid choices (privacy
+// opt-out false, no default model) are kept.
+func fillDefaults(s *Settings) {
+	def := defaultSettings()
+	switch s.Theme {
+	case ThemeSystem, ThemeLight, ThemeDark:
+	default:
+		s.Theme = def.Theme
+	}
+	if s.Font.UIFontFamily == "" {
+		s.Font.UIFontFamily = def.Font.UIFontFamily
+	}
+	if s.Font.EditorFontFamily == "" {
+		s.Font.EditorFontFamily = def.Font.EditorFontFamily
+	}
+	if s.Font.UIFontSize < minFontSize || s.Font.UIFontSize > maxFontSize {
+		s.Font.UIFontSize = def.Font.UIFontSize
+	}
+	if s.Font.EditorFontSize < minFontSize || s.Font.EditorFontSize > maxFontSize {
+		s.Font.EditorFontSize = def.Font.EditorFontSize
+	}
+	s.Editor.Light = fillTokenColorsDefaults(s.Editor.Light, def.Editor.Light)
+	s.Editor.Dark = fillTokenColorsDefaults(s.Editor.Dark, def.Editor.Dark)
 	if s.AI.Providers == nil {
 		s.AI.Providers = map[string]AIProviderConfig{}
 	}

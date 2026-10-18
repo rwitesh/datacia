@@ -129,7 +129,7 @@ is no HTTP API and no server.
   existing user's saved credentials unreadable. The local `data.db` schema has no migration
   system (`CREATE TABLE IF NOT EXISTS` only): adding or changing a column needs explicit
   `ALTER TABLE` handling for existing databases. `settings.json` and `chat.json` must keep loading
-  older files (see `fillAIDefaults`).
+  older files (see `fillDefaults`).
 - **Secrets and privacy.** Never log or report passwords, API keys, query text or results; Sentry
   must never receive them. What the AI provider receives is documented in README "Privacy": keep
   that section accurate when changing `internal/ai` (the `run_query` tool sends rows of the

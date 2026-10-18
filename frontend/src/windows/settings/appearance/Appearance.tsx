@@ -48,15 +48,10 @@ const TOKEN_LABELS: Record<string, string> = {
 export function AppearanceSection({ settings, onChange }: AppearanceSectionProps) {
   const { data: settingsData } = useSettings();
 
-  const font = settings.font;
   const editor = settings.editor;
-  const defaultTokenColorsLight = settingsData?.defaultTokenColorsLight;
-  const defaultTokenColorsDark = settingsData?.defaultTokenColorsDark;
-
-  const uiFont = font?.uiFontFamily ?? "JetBrains Mono";
-  const uiFontSize = font?.uiFontSize ?? 14;
-  const editorFont = font?.editorFontFamily ?? "JetBrains Mono";
-  const editorFontSize = font?.editorFontSize ?? 14;
+  // The backend fills missing or unusable values, so these are always set.
+  const { uiFontFamily: uiFont, uiFontSize, editorFontFamily: editorFont, editorFontSize } = settings.font;
+  const defaults = settingsData?.defaults;
 
   const emitFontChange = (nextFont: AppSettings["font"]) => {
     onChange({
@@ -66,13 +61,7 @@ export function AppearanceSection({ settings, onChange }: AppearanceSectionProps
   };
 
   const resetFontDefaults = () => {
-    const nextFont = {
-      uiFontFamily: "JetBrains Mono",
-      uiFontSize: 14,
-      editorFontFamily: "JetBrains Mono",
-      editorFontSize: 14,
-    };
-    emitFontChange(nextFont);
+    if (defaults) emitFontChange(defaults.font);
   };
 
   const handleEditorChange = (nextEditor: EditorConfig) => {
@@ -344,12 +333,7 @@ export function AppearanceSection({ settings, onChange }: AppearanceSectionProps
                   variant="ghost"
                   size="sm"
                   onClick={() => {
-                    const nextEditor: EditorConfig = {
-                      ...editor,
-                      light: defaultTokenColorsLight ?? ({} as TokenColors),
-                      dark: defaultTokenColorsDark ?? ({} as TokenColors),
-                    };
-                    handleEditorChange(nextEditor);
+                    if (defaults) handleEditorChange(defaults.editor);
                   }}
                   className="h-7 text-xs px-2 hover:bg-transparent hover:text-destructive"
                 >

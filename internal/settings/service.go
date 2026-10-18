@@ -2,6 +2,7 @@ package settings
 
 import (
 	"errors"
+	"fmt"
 	"maps"
 	"runtime"
 	"strings"
@@ -81,7 +82,8 @@ func Get() *Info {
 			OS:         runtime.GOOS,
 			OSArch:     runtime.GOARCH,
 			AppVersion: "",
-			Settings:   Settings{Theme: ThemeSystem},
+			Settings:   defaultSettings(),
+			Defaults:   defaultSettings(),
 			MachineId:  machineId,
 		}
 	}
@@ -104,15 +106,12 @@ func GetSettingsRaw() Settings {
 func getSanitized() *Info {
 	s := globalInfo.Settings
 	return &Info{
-		OS:                      globalInfo.OS,
-		OSVersion:               globalInfo.OSVersion,
-		OSArch:                  globalInfo.OSArch,
-		AppVersion:              globalInfo.AppVersion,
-		MachineId:               globalInfo.MachineId,
-		Appearance:              globalInfo.Appearance,
-		ActiveTokenColors:       globalInfo.ActiveTokenColors,
-		DefaultTokenColorsLight: defaultTokenColorsLight(),
-		DefaultTokenColorsDark:  defaultTokenColorsDark(),
+		OS:         globalInfo.OS,
+		OSVersion:  globalInfo.OSVersion,
+		OSArch:     globalInfo.OSArch,
+		AppVersion: globalInfo.AppVersion,
+		MachineId:  globalInfo.MachineId,
+		Defaults:   defaultSettings(),
 		Settings: Settings{
 			Theme:   s.Theme,
 			Editor:  s.Editor,
@@ -188,25 +187,29 @@ func withKeys(keys, changes map[string]string) (map[string]string, error) {
 	return out, nil
 }
 
-// commit applies change to the settings, saves them and notifies every window.
-// The caller must hold commitMu.
+// commit applies change to a copy of the settings, saves it and only then
+// makes it current and notifies every window, so a failed save changes
+// nothing. change must replace maps rather than modify them in place. The
+// caller must hold commitMu.
 func commit(change func(*Settings)) (*Info, error) {
+	next := GetSettingsRaw()
+	change(&next)
+	if err := saveSettings(next); err != nil {
+		logger.Error("Failed to save settings", "error", err.Error())
+		return nil, fmt.Errorf("Couldn't save the settings: %w", err)
+	}
+
 	globalInfo.mu.Lock()
-	change(&globalInfo.Settings)
-	next := globalInfo.Settings
+	globalInfo.Settings = next
 	info := getSanitized()
 	globalInfo.mu.Unlock()
 
 	applyPrivacy(next)
-	err := saveSettings()
-	if err != nil {
-		logger.Error("Failed to save settings", "error", err.Error())
-	}
 	if appInstance != nil {
 		// Send the sanitized settings: the event reaches every window.
 		appInstance.Event.Emit("app:settings-changed", info.Settings)
 	}
-	return info, err
+	return info, nil
 }
 
 type Service struct {
@@ -229,9 +232,7 @@ func (s *Service) UpdateSettings(settings Settings, keys map[string]string) (*In
 		return nil, errors.New("settings are not loaded")
 	}
 	next := settings
-	next.Editor.Light = fillTokenColorsDefaults(next.Editor.Light, defaultTokenColorsLight())
-	next.Editor.Dark = fillTokenColorsDefaults(next.Editor.Dark, defaultTokenColorsDark())
-	fillAIDefaults(&next)
+	fillDefaults(&next)
 
 	commitMu.Lock()
 	defer commitMu.Unlock()
