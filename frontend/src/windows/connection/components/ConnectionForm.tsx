@@ -33,6 +33,7 @@ export const ConnectionForm: React.FC<ConnectionFormProps> = ({
 
   const useSSH = watch("useSSH");
   const sslMode = watch("sslMode");
+  const sslNote = SSL_MODES.find((mode) => mode.value === sslMode)?.note;
   const useSSHKey = watch("useSSHKey");
   const sshKeyPath = watch("sshKeyPath");
 
@@ -179,9 +180,9 @@ export const ConnectionForm: React.FC<ConnectionFormProps> = ({
 
       {DATABASE_ENGINES[currentEngine].supportsSSL && (
         <div className="pt-2 border-t space-y-1">
-          <Label htmlFor="sslMode">SSL Mode</Label>
+          <Label htmlFor="sslMode">SSL</Label>
           <Select value={sslMode} onValueChange={(value) => setValue("sslMode", value)} disabled={loading}>
-            <SelectTrigger id="sslMode" className="h-6 px-2 text-sm">
+            <SelectTrigger id="sslMode" className="h-6 w-full px-2 text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -192,17 +193,15 @@ export const ConnectionForm: React.FC<ConnectionFormProps> = ({
               ))}
             </SelectContent>
           </Select>
-          <p className="text-xs text-muted-foreground">
-            {SSL_MODES.find((mode) => mode.value === sslMode)?.hint}
-          </p>
+          {sslNote && <p className="text-xs text-muted-foreground">{sslNote}</p>}
           {sslMode === "verify-full" && (
             <div className="space-y-1 pt-1">
-              <Label htmlFor="sslCaPath">CA Certificate (optional)</Label>
+              <Label htmlFor="sslCaPath">CA File</Label>
               <Input
                 id="sslCaPath"
                 disabled={loading}
                 {...register("sslCaPath")}
-                placeholder="/path/to/ca.pem (default: system certificates)"
+                placeholder="Optional, e.g. /path/to/ca.pem"
                 className="h-6 px-2 text-sm"
               />
             </div>

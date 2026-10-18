@@ -222,9 +222,9 @@ export function ResultBar() {
               {results?.truncated && (
                 <span
                   className="text-amber-600 dark:text-amber-500"
-                  title="The query returned more rows than the editor loads. Sorting and exports cover only the rows shown. Add a LIMIT or filter to narrow the result."
+                  title="Only these rows are loaded, sorted and exported. Add a LIMIT or filter to narrow the result."
                 >
-                  Showing first {data.length.toLocaleString()} rows
+                  First {data.length.toLocaleString()} rows
                 </span>
               )}
             </div>
@@ -270,12 +270,6 @@ export function ResultBar() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-44">
-                {results?.truncated && (
-                  <div className="px-2 py-1.5 text-xs text-muted-foreground">
-                    Only the {data.length.toLocaleString()} rows shown are
-                    exported.
-                  </div>
-                )}
                 <DropdownMenuItem
                   onSelect={exportJSON}
                   className="gap-2 text-xs"

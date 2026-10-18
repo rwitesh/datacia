@@ -58,21 +58,21 @@ export const HostKeyProvider = ({ children }: { children: ReactNode }) => {
       <AlertDialog open={pending !== null} onOpenChange={(open) => !open && pending?.settle(false)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Trust this SSH host?</AlertDialogTitle>
-            <AlertDialogDescription>
-              DataCia has not connected to {pending?.host} before. Check that this fingerprint matches
-              your server's before continuing.
-            </AlertDialogDescription>
+            <AlertDialogTitle>Trust SSH host?</AlertDialogTitle>
+            <AlertDialogDescription>Verify the fingerprint before connecting.</AlertDialogDescription>
           </AlertDialogHeader>
-          <code className="rounded bg-muted px-2 py-1 text-xs break-all select-text">
-            {pending?.fingerprint}
-          </code>
+          <div className="space-y-1 text-xs">
+            <div className="font-mono select-text break-all">{pending?.host}</div>
+            <code className="block rounded bg-muted px-2 py-1 break-all select-text">
+              {pending?.fingerprint}
+            </code>
+          </div>
           <AlertDialogFooter>
             <AlertDialogCancel asChild>
               <Button variant="secondary" className="h-6 text-sm">Cancel</Button>
             </AlertDialogCancel>
             <AlertDialogAction asChild>
-              <Button className="h-6 text-sm" onClick={() => pending?.settle(true)}>Trust and connect</Button>
+              <Button className="h-6 text-sm" onClick={() => pending?.settle(true)}>Trust</Button>
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
