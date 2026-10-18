@@ -223,7 +223,7 @@ export function ResultBar() {
               {results?.truncated && (
                 <span
                   className="text-amber-600 dark:text-amber-500"
-                  title="The query returned more rows than the editor loads. Exports contain only the rows shown. Add a LIMIT or filter to narrow the result."
+                  title="The query returned more rows than the editor loads. Sorting and exports cover only the rows shown. Add a LIMIT or filter to narrow the result."
                 >
                   Showing first {data.length.toLocaleString()} rows
                 </span>
