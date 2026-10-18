@@ -160,21 +160,6 @@ func (e *Engine) CreateNewConnectionWithSSH(engine, host, port, username, passwo
 	return nil
 }
 
-// connectErrorKind describes a connect error for logs without its text, which
-// driver errors fill with the host, user and database.
-func connectErrorKind(err error) string {
-	var netErr net.Error
-	switch {
-	case errors.Is(err, context.Canceled):
-		return "canceled"
-	case errors.Is(err, context.DeadlineExceeded):
-		return "timeout"
-	case errors.As(err, &netErr):
-		return "network"
-	}
-	return "other"
-}
-
 func connectClient(engine, host, port, username, password, database string) (DatabaseClient, error) {
 	dbClient, err := getDBClient(engine)
 	if err != nil {
@@ -182,7 +167,8 @@ func connectClient(engine, host, port, username, password, database string) (Dat
 		return nil, err
 	}
 	if err := dbClient.Connect(host, port, username, password, database); err != nil {
-		logger.Warn("db_connection_failed", "engine", engine, "kind", connectErrorKind(err))
+		// Driver errors embed the host, user and database, so they stay out of the log.
+		logger.Warn("db_connection_failed", "engine", engine)
 		return nil, err
 	}
 	logger.Info("db_connection_success", "engine", engine)

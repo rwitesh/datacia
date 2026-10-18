@@ -208,14 +208,7 @@ func scanRows(ctx context.Context, rows *sql.Rows, maxRows int) (common.QueryRes
 	columns = common.UniqueColumnNames(columns)
 
 	var data []map[string]interface{}
-	for (maxRows == 0 || len(data) < maxRows) && rows.Next() {
-		select {
-		case <-ctx.Done():
-			return common.QueryResult{Type: common.QueryTypeRead}, ctx.Err()
-		default:
-		}
-
-		// Create a slice of interface{} to hold the values
+	truncated, err := common.ScanCapped(ctx, rows, maxRows, func() error {
 		values := make([]interface{}, len(columns))
 		valuePtrs := make([]interface{}, len(columns))
 		for i := range columns {
@@ -223,26 +216,23 @@ func scanRows(ctx context.Context, rows *sql.Rows, maxRows int) (common.QueryRes
 		}
 
 		if err := rows.Scan(valuePtrs...); err != nil {
-			return common.QueryResult{Type: common.QueryTypeRead}, err
+			return err
 		}
 
 		row := make(map[string]interface{})
 		for i, col := range columns {
-			var v interface{}
-			val := values[i]
-			b, ok := val.([]byte)
-			if ok {
-				v = string(b)
+			if b, ok := values[i].([]byte); ok {
+				row[col] = string(b)
 			} else {
-				v = val
+				row[col] = values[i]
 			}
-			row[col] = v
 		}
 		data = append(data, row)
+		return nil
+	})
+	if err != nil {
+		return common.QueryResult{Type: common.QueryTypeRead}, err
 	}
-
-	// Peek one row past the cap so a result of exactly maxRows isn't flagged.
-	truncated := maxRows > 0 && len(data) == maxRows && rows.Next()
 
 	if err := rows.Err(); err != nil {
 		return common.QueryResult{Type: common.QueryTypeRead}, err
