@@ -17,6 +17,13 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
+// SettingsChangedEvent carries the sanitized Settings to every window.
+const SettingsChangedEvent = "app:settings-changed"
+
+func init() {
+	application.RegisterEvent[Settings](SettingsChangedEvent)
+}
+
 var (
 	commitMu    sync.Mutex
 	globalInfo  *Info
@@ -181,7 +188,7 @@ func commit(change func(*Settings)) (*Info, error) {
 	applyPrivacy(next)
 	if appInstance != nil {
 		// Send the sanitized settings: the event reaches every window.
-		appInstance.Event.Emit("app:settings-changed", info.Settings)
+		appInstance.Event.Emit(SettingsChangedEvent, info.Settings)
 	}
 	return info, nil
 }

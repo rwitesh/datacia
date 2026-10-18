@@ -11,12 +11,17 @@ import (
 var (
 	readStatements = []string{"select", "with", "show", "describe", "desc", "explain"}
 	fileWrite      = regexp.MustCompile(`(?i)\b(outfile|dumpfile)\b`)
+	// writeKeyword catches writes a read statement can carry: Postgres and
+	// MySQL run WITH ... DELETE, EXPLAIN ANALYZE executes its statement, and
+	// SELECT INTO creates a table. Like the other checks it ignores quoting,
+	// so a string containing one of these words is rejected too.
+	writeKeyword = regexp.MustCompile(`(?i)\b(insert|update|delete|merge|into|truncate|drop|alter|create)\b`)
 )
 
 // CheckReadOnly accepts a single read statement. It checks the raw text and
 // fails closed, because dialects disagree on quoting and comments (MySQL runs
 // /*! */ comments, SQLite quotes with []): a leading comment, a ';' or
-// OUTFILE anywhere, even inside a string, is rejected.
+// OUTFILE or write keyword anywhere, even inside a string, is rejected.
 func CheckReadOnly(sql string) error {
 	sql = strings.TrimRight(strings.TrimSpace(sql), "; \t\r\n")
 	if !slices.Contains(readStatements, strings.ToLower(leadingWord(sql))) {
@@ -27,6 +32,10 @@ func CheckReadOnly(sql string) error {
 	}
 	if fileWrite.MatchString(sql) {
 		return errors.New("Queries can't write files.")
+	}
+	// SHOW only lists things, and SHOW CREATE TABLE is common.
+	if !strings.EqualFold(leadingWord(sql), "show") && writeKeyword.MatchString(sql) {
+		return errors.New("Queries can't change data or schema.")
 	}
 	return nil
 }

@@ -1,6 +1,9 @@
 package files
 
-import "testing"
+import (
+	"encoding/json"
+	"testing"
+)
 
 func TestRowsToCSV(t *testing.T) {
 	data := `[
@@ -28,5 +31,30 @@ func TestRowsToCSVErrors(t *testing.T) {
 	}
 	if _, err := rowsToCSV(`not json`, []string{"a"}); err == nil {
 		t.Error("invalid JSON should fail")
+	}
+}
+
+func TestCSVValueNeutralizesFormulas(t *testing.T) {
+	for _, tc := range []struct {
+		in   interface{}
+		want string
+	}{
+		{"=1+1", "'=1+1"},
+		{"+1", "'+1"},
+		{"-1", "'-1"},
+		{"@SUM(A1)", "'@SUM(A1)"},
+		{"\tcmd", "'\tcmd"},
+		{"\rcmd", "'\rcmd"},
+		{"plain", "plain"},
+		{"a=b", "a=b"},
+		{"", ""},
+		{nil, ""},
+		{json.Number("-5"), "-5"},
+		{true, "true"},
+		{map[string]any{"a": "=1"}, `{"a":"=1"}`},
+	} {
+		if got := csvValue(tc.in); got != tc.want {
+			t.Errorf("csvValue(%#v) = %q, want %q", tc.in, got, tc.want)
+		}
 	}
 }

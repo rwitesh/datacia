@@ -1,8 +1,10 @@
 package constants
 
 const (
-	APP_TITLE                = "DataCia"
-	APP_NAME                 = "DataCia"
+	APP_TITLE = "DataCia"
+	APP_NAME  = "DataCia"
+	// APP_IDENTIFIER matches productIdentifier in build/config.yml.
+	APP_IDENTIFIER           = "app.datacia"
 	CONNECTION_WINDOW_WIDTH  = 720
 	CONNECTION_WINDOW_HEIGHT = 600
 	EDITOR_WINDOW_WIDTH      = 1280

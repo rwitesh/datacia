@@ -3,7 +3,7 @@ import { useAppContext } from "@/context/app/Index";
 import { formatSQL } from "./utils/formatter";
 import { Button } from "@/components/ui/button";
 import { Play, StopCircle, Paintbrush } from "lucide-react";
-import { SQLCodeEditor } from "../components/SQLEditor";
+import { SQLCodeEditor } from "./SQLCodeEditor";
 
 export function QueryInput() {
   const { engine } = useAppContext();

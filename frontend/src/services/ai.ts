@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from "uuid";
 import * as AI from "./bindings/ai";
 import { errorMessage } from "@/lib/utils";
 import { ChatContext, type ModelRef, type ProviderStatus, type ToolUse } from "./bindings/ai";
+import { queryKeys } from "./queryKeys";
 
 export type { ModelRef, ProviderStatus, ToolUse };
 export { ChatContext };
@@ -25,27 +26,23 @@ interface ChatState {
   messages: ChatMessage[];
 }
 
-/** Every AI query starts with this key, so a settings change refreshes them all. */
-export const AI_QUERY_KEY = "ai";
-const defaultModelKey = [AI_QUERY_KEY, "default-model"];
-
 export function useAIProviders() {
   const queryClient = useQueryClient();
   useEffect(
     () =>
       Events.On("app:settings-changed", () => {
-        queryClient.invalidateQueries({ queryKey: [AI_QUERY_KEY] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.ai });
       }),
     [queryClient],
   );
-  return useQuery({ queryKey: [AI_QUERY_KEY, "providers"], queryFn: () => AI.Providers() });
+  return useQuery({ queryKey: queryKeys.aiProviders, queryFn: () => AI.Providers() });
 }
 
 /** Model lists for the given providers. The backend caches them too. */
 export function useModelLists(providerIds: string[], enabled: (id: string) => boolean) {
   return useQueries({
     queries: providerIds.map((id) => ({
-      queryKey: [AI_QUERY_KEY, "models", id],
+      queryKey: queryKeys.aiModels(id),
       queryFn: () => AI.ListModels(id),
       enabled: enabled(id),
       staleTime: 10 * 60_000,
@@ -55,16 +52,16 @@ export function useModelLists(providerIds: string[], enabled: (id: string) => bo
 }
 
 export function useDefaultModel() {
-  return useQuery({ queryKey: defaultModelKey, queryFn: () => AI.DefaultModel() });
+  return useQuery({ queryKey: queryKeys.aiDefaultModel, queryFn: () => AI.DefaultModel() });
 }
 
 export function useSetDefaultModel() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (model: ModelRef) => AI.SetDefaultModel(model),
-    onMutate: (model) => queryClient.setQueryData(defaultModelKey, model),
+    onMutate: (model) => queryClient.setQueryData(queryKeys.aiDefaultModel, model),
     // On success the settings-changed event refreshes it.
-    onError: () => queryClient.invalidateQueries({ queryKey: defaultModelKey }),
+    onError: () => queryClient.invalidateQueries({ queryKey: queryKeys.aiDefaultModel }),
   });
 }
 

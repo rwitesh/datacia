@@ -14,6 +14,7 @@ import { errorMessage } from "@/lib/utils";
 import { useDatabase } from "@/services/database";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/services/queryKeys";
 
 export function DatabaseMenuBar() {
   const { data: databaseInfo } = useDatabase();
@@ -26,9 +27,9 @@ export function DatabaseMenuBar() {
     try {
       await ChangeDatabaseByName(db);
       // Invalidate the databases query to refresh the current database
-      await queryClient.invalidateQueries({ queryKey: ["databases"] });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.databases });
       // Also invalidate tables query as it depends on the current database
-      await queryClient.invalidateQueries({ queryKey: ["tables"] });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.tables });
     } catch (error) {
       toast.error(errorMessage(error));
       console.error("Failed to change database:", error);
