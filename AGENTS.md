@@ -110,7 +110,8 @@ Where to start:
   `ALTER TABLE` handling. `settings.json` and `chat.json` must keep loading older files
   (`fillDefaults`).
 - **Privacy.** Never log or report passwords, keys, query text or results. Keep README "Privacy"
-  accurate when changing what `internal/ai` sends (row caps are in `internal/ai/tools.go`).
+  accurate when changing what `internal/ai` sends (row caps are in `internal/ai/tools.go`). The
+  README is for users: plain language, no internals or exact limits.
 - **SQL safety.** Keep identifier quoting and the read-only path intact in all four engines.
 - **Releases.** The version comes from the git tag. The updater depends on release asset names
   and `SHA256SUMS` (`internal/update`, `.github/workflows/release.yml`).
