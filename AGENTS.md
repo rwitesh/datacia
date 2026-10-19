@@ -3,6 +3,29 @@
 Guide for AI agents changing this repository. User docs: [README.md](README.md). Build, test and
 release: [DEVELOPMENT.md](DEVELOPMENT.md).
 
+## Safety rules
+
+These come first and are not negotiable. The repository is public.
+
+1. **Never touch `main` directly.** Don't push or force-push to it, and don't merge, reset or
+   rewrite it unless the user asks for that exact action in chat. Work on a branch, open a PR, and
+   let the user decide on merging.
+2. **No sensitive or identifying data in anything committed or published:** code, comments,
+   tests, docs, commit messages, PR titles and bodies, issue comments. That covers hosts, IPs and
+   ports of real servers, usernames, passwords, API keys, tokens, connection strings, database
+   names, and query text or results from the user's systems. Use placeholders (`db.example.com`,
+   `203.0.113.10`, `user`/`password`). Check the diff and the PR text for such data before every
+   commit, push or PR. Editing a PR description later doesn't help: its edit history keeps the old
+   text.
+3. **Ask before anything hard to undo or outward-facing:** pushing, opening or merging a PR,
+   force-pushing, deleting branches, publishing, contacting external services or the user's real
+   servers. When unsure, ask.
+4. **README.md is the GitHub page for users:** plain language, no internals, ports, limits or
+   workarounds. Don't add to it for a fix or a new detail; change it only when the user asks or
+   when what it says becomes wrong. Developer notes go in DEVELOPMENT.md or here.
+5. **Report honestly.** Never claim a check passed unless you ran it. Say what you did not verify
+   (for example, an installed older build versus a fresh local build).
+
 ## What this is
 
 DataCia is a desktop SQL client for PostgreSQL, MySQL, SQLite and ClickHouse, built with
@@ -97,7 +120,6 @@ Where to start:
 7. **Installed APIs, no churn:** React 19, TanStack Query 5, react-router 8, Tailwind 4, Wails v3
    beta.30. React Compiler is only an ESLint rule set, not a build step, so `useMemo` and
    `useCallback` still do work.
-8. **Verify honestly.** Never claim a check passed unless you ran it.
 
 ## Handle with care
 
@@ -109,11 +131,9 @@ Where to start:
   `data.db` has no migrations (`CREATE TABLE IF NOT EXISTS`), so a column change needs explicit
   `ALTER TABLE` handling. `settings.json` and `chat.json` must keep loading older files
   (`fillDefaults`).
-- **Privacy.** Never log or report passwords, keys, query text or results. Keep README "Privacy"
-  accurate when changing what `internal/ai` sends (row caps are in `internal/ai/tools.go`).
-- **README.** It is the GitHub page for users: plain language, no internals, ports, limits or
-  workarounds. Don't add to it for a fix or a new detail; change it only when the user asks or
-  when what it says becomes wrong. Developer notes go in DEVELOPMENT.md or here.
+- **Privacy in the app.** Never log or report passwords, keys, query text or results. Keep the
+  README "Privacy" section accurate when changing what `internal/ai` sends (row caps are in
+  `internal/ai/tools.go`).
 - **SQL safety.** Keep identifier quoting and the read-only path intact in all four engines.
 - **Releases.** The version comes from the git tag. The updater depends on release asset names
   and `SHA256SUMS` (`internal/update`, `.github/workflows/release.yml`).
@@ -140,9 +160,9 @@ implementation or exercise a library. There is no frontend test runner: use type
 ## Workflow
 
 1. Read the code and its callers on both sides of the bindings before changing it.
-2. Make small, focused changes; no drive-by rewrites or reformatting.
+2. Make small, focused changes on a branch; no drive-by rewrites or reformatting.
 3. Run the relevant checks; regenerate bindings if a service changed.
-4. Review your diff for complexity, unrelated changes and leftover debug code.
+4. Review your diff for complexity, unrelated changes, leftover debug code and sensitive data.
 5. Report what changed, why, which checks ran (with results) and what is unverified.
 
 Commit messages are short imperative sentences about the user-visible change (e.g. "Let the AI
