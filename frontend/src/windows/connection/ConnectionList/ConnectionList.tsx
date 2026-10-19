@@ -1,4 +1,6 @@
 import { useNavigate } from "react-router";
+import { System } from "@wailsio/runtime";
+import { cn } from "@/lib/utils";
 import { ENGINE_LIST } from "@/shared/utils/engines";
 import { DatabaseIcon } from "@/shared/utils/DatabaseIcon";
 import { Plus, MoreHorizontal, Pencil, Plug, Trash2 } from "lucide-react";
@@ -38,8 +40,9 @@ export function ConnectionList({
   const navigate = useNavigate();
   const connectionEntries = Object.entries(savedConnections);
 
+  // Only macOS draws the traffic lights over the content; other platforms have a native title bar.
   return (
-    <div className="w-1/3 px-3 flex flex-col mt-10  h-content justify-between">
+    <div className={cn("w-1/3 px-3 flex flex-col h-content justify-between", System.IsMac() ? "mt-10" : "mt-3")}>
       <div>
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-sm font-semibold">Connections</h3>
