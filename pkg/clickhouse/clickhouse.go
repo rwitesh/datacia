@@ -2,10 +2,13 @@ package clickhouse
 
 import (
 	"context"
+	"crypto/tls"
 	"datacia/pkg/common"
 	"errors"
 	"fmt"
+	"io"
 	"net"
+	"strings"
 	"sync"
 	"time"
 
@@ -30,11 +33,40 @@ func (ch *ClickHouse) Connect(config common.ConnectionConfig) error {
 	if err != nil {
 		return err
 	}
-	// The native protocol can't negotiate, so TLS is on only when asked for
-	// (and the port must be the server's secure one, 9440 by default).
+	connection, err := open(config, tlsSettings.Config, clickhouse.Native)
+	// A port speaks either the native protocol (9000, 9440) or HTTP (8123,
+	// 8443). An HTTP port answers the native handshake with "HTTP/1.1 400",
+	// whose "H" the driver reports as packet 72, so retry over HTTP then.
+	if err != nil && strings.Contains(err.Error(), "unexpected packet [72]") {
+		connection, err = open(config, tlsSettings.Config, clickhouse.HTTP)
+	}
+	// A secure port closes a plaintext connection without a word.
+	if err != nil && tlsSettings.Config == nil && errors.Is(err, io.EOF) {
+		return fmt.Errorf("%w; if this is a secure port (9440, 8443), set SSL to Require or Verify", err)
+	}
+	if err != nil {
+		return err
+	}
+
+	ch.Mu.Lock()
+	ch.conn = connection
+	ch.Host = config.Host
+	ch.Port = config.Port
+	ch.Username = config.Username
+	ch.Database = config.Database
+	ch.SetSSL(config)
+	ch.Password = common.NewSecureString(config.Password)
+	ch.Mu.Unlock()
+	return nil
+}
+
+// open connects with protocol and pings the server. Neither protocol can
+// negotiate TLS, so it is on only when asked for, on the server's secure port.
+func open(config common.ConnectionConfig, tlsConfig *tls.Config, protocol clickhouse.Protocol) (driver.Conn, error) {
 	connection, err := clickhouse.Open(&clickhouse.Options{
-		Addr: []string{net.JoinHostPort(config.Host, config.Port)},
-		TLS:  tlsSettings.Config,
+		Protocol: protocol,
+		Addr:     []string{net.JoinHostPort(config.Host, config.Port)},
+		TLS:      tlsConfig,
 		Auth: clickhouse.Auth{
 			Database: config.Database,
 			Username: config.Username,
@@ -51,26 +83,16 @@ func (ch *ClickHouse) Connect(config common.ConnectionConfig) error {
 		MaxIdleConns: 5,
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	ctx, cancel := common.NewTimeoutContext(common.CONNECT_TIMEOUT)
 	defer cancel()
 	if err := connection.Ping(ctx); err != nil {
 		_ = connection.Close()
-		return err
+		return nil, err
 	}
-
-	ch.Mu.Lock()
-	ch.conn = connection
-	ch.Host = config.Host
-	ch.Port = config.Port
-	ch.Username = config.Username
-	ch.Database = config.Database
-	ch.SetSSL(config)
-	ch.Password = common.NewSecureString(config.Password)
-	ch.Mu.Unlock()
-	return nil
+	return connection, nil
 }
 
 func (ch *ClickHouse) Close() error {
@@ -140,8 +162,11 @@ func (ch *ClickHouse) execute(ctx context.Context, conn driver.Conn, sql string,
 	return common.QueryResult{Type: common.QueryTypeCommand}, err
 }
 
+// queryProgress sums the server's progress packets. Only the native protocol
+// sends them, so reported stays false over HTTP.
 type queryProgress struct {
 	mu        sync.Mutex
+	reported  bool
 	rowsRead  uint64
 	bytesRead uint64
 }
@@ -150,6 +175,7 @@ func (ch *ClickHouse) query(ctx context.Context, conn driver.Conn, sql string, q
 	progress := &queryProgress{}
 	progressCB := clickhouse.WithProgress(func(p *clickhouse.Progress) {
 		progress.mu.Lock()
+		progress.reported = true
 		progress.rowsRead += p.Rows
 		progress.bytesRead += p.Bytes
 		progress.mu.Unlock()
@@ -171,18 +197,15 @@ func (ch *ClickHouse) query(ctx context.Context, conn driver.Conn, sql string, q
 		return common.QueryResult{Type: common.QueryTypeRead}, err
 	}
 
-	progress.mu.Lock()
-	rowsRead := progress.rowsRead
-	bytesRead := progress.bytesRead
-	progress.mu.Unlock()
-
 	rowsReturned := uint64(len(data))
+	logs := common.QueryLogs{RowsReturned: &rowsReturned}
 
-	logs := common.QueryLogs{
-		RowsReturned: &rowsReturned,
-		RowsRead:     &rowsRead,
-		BytesRead:    &bytesRead,
+	progress.mu.Lock()
+	if progress.reported {
+		rowsRead, bytesRead := progress.rowsRead, progress.bytesRead
+		logs.RowsRead, logs.BytesRead = &rowsRead, &bytesRead
 	}
+	progress.mu.Unlock()
 
 	return common.QueryResult{
 		Type:      common.QueryTypeRead,
