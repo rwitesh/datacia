@@ -6,7 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DATABASE_ENGINES, SQLITE, type DatabaseEngine } from "@/shared/utils/engines";
-import { SSL_MODES } from "../utils/constants";
+import { DEFAULT_SSL_MODE, SSL_MODES } from "../utils/constants";
+import { parseHostAddress } from "../utils/config";
 import type { FormValues } from "../utils/types";
 
 interface ConnectionFormProps {
@@ -36,6 +37,23 @@ export const ConnectionForm: React.FC<ConnectionFormProps> = ({
   const sslNote = SSL_MODES.find((mode) => mode.value === sslMode)?.note;
   const useSSHKey = watch("useSSHKey");
   const sshKeyPath = watch("sshKeyPath");
+
+  // A pasted URL or host:port fills the fields it names, so "http://" and
+  // ports never reach the driver as part of the host.
+  const applyHostAddress = (input: string) => {
+    const address = parseHostAddress(input);
+    if (!address) return;
+    setValue("host", address.host);
+    if (address.port) setValue("port", address.port);
+    if (address.username) setValue("username", address.username);
+    if (address.password) setValue("password", address.password);
+    if (address.database) setValue("database", address.database);
+    // https means the server expects TLS, which Auto doesn't use for every engine.
+    const tlsOff = sslMode === DEFAULT_SSL_MODE || sslMode === "disable";
+    if (address.secure && tlsOff && DATABASE_ENGINES[currentEngine].supportsSSL) {
+      setValue("sslMode", "verify-full");
+    }
+  };
 
   const getKeyFileName = (path: string) => {
     if (!path) return "";
@@ -96,7 +114,7 @@ export const ConnectionForm: React.FC<ConnectionFormProps> = ({
               <Input
                 id="host"
                 disabled={loading}
-                {...register("host")}
+                {...register("host", { onBlur: (event) => applyHostAddress(event.target.value) })}
                 placeholder="localhost"
                 className="h-6 px-2 text-sm"
               />
