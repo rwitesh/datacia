@@ -28,8 +28,9 @@ dmg:
 	wails3 task darwin:package:dmg
 
 # macOS release assets: bin/DataCia.dmg plus bin/DataCia.zip for the in-app updater
+# (ARCH=universal | arm64 | amd64; default universal)
 release-darwin:
-	wails3 task darwin:package:release
+	wails3 task darwin:package:release ARCH=$(or $(ARCH),universal)
 
 # Windows: per-user NSIS installer with amd64 + arm64 binaries
 package-windows:

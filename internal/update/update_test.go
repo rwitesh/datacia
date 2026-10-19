@@ -13,8 +13,14 @@ import (
 // releaseAssets mirrors what .github/workflows/release.yml publishes.
 var releaseAssets = []github.ReleaseAsset{
 	{Name: "DataCia-1.4.0-darwin-universal.dmg"},
+	{Name: "DataCia-1.4.0-darwin-arm64.dmg"},
+	{Name: "DataCia-1.4.0-darwin-amd64.dmg"},
 	{Name: "DataCia-1.4.0-windows-universal-installer.exe"},
+	{Name: "DataCia-1.4.0-windows-amd64-installer.exe"},
+	{Name: "DataCia-1.4.0-windows-arm64-installer.exe"},
 	{Name: "DataCia-1.4.0-darwin-universal.zip"},
+	{Name: "DataCia-1.4.0-darwin-arm64.zip"},
+	{Name: "DataCia-1.4.0-darwin-amd64.zip"},
 	{Name: "DataCia-1.4.0-windows-amd64.exe"},
 	{Name: "DataCia-1.4.0-windows-arm64.exe"},
 	{Name: "SHA256SUMS"},
@@ -25,8 +31,8 @@ func TestMatchAsset(t *testing.T) {
 		platform, arch string
 		want           string
 	}{
-		{"darwin", "amd64", "DataCia-1.4.0-darwin-universal.zip"},
-		{"darwin", "arm64", "DataCia-1.4.0-darwin-universal.zip"},
+		{"darwin", "amd64", "DataCia-1.4.0-darwin-amd64.zip"},
+		{"darwin", "arm64", "DataCia-1.4.0-darwin-arm64.zip"},
 		{"windows", "amd64", "DataCia-1.4.0-windows-amd64.exe"},
 		{"windows", "arm64", "DataCia-1.4.0-windows-arm64.exe"},
 	}
@@ -40,6 +46,20 @@ func TestMatchAsset(t *testing.T) {
 				t.Fatalf("matched %s, want %s", got, tt.want)
 			}
 		})
+	}
+}
+
+// Releases before the per-architecture macOS zips only had the universal one.
+func TestMatchAssetUniversalFallback(t *testing.T) {
+	assets := []github.ReleaseAsset{
+		{Name: "DataCia-1.3.0-darwin-universal.dmg"},
+		{Name: "DataCia-1.3.0-darwin-universal.zip"},
+		{Name: "SHA256SUMS"},
+	}
+	for _, arch := range []string{"amd64", "arm64"} {
+		if idx := matchAsset(updater.CheckRequest{Platform: "darwin", Arch: arch}, assets); idx != 1 {
+			t.Errorf("%s: matched index %d, want the universal zip", arch, idx)
+		}
 	}
 }
 
