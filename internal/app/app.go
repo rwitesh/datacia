@@ -126,9 +126,8 @@ func (a *App) Initialize() error {
 // newWindow creates a window with the chrome all of the app's windows share.
 func (a *App) newWindow(options application.WebviewWindowOptions) *application.WebviewWindow {
 	options.Mac.InvisibleTitleBarHeight = 50
-	options.Mac.Backdrop = application.MacBackdropTranslucent
 	options.Windows.DisableFramelessWindowDecorations = true
-	options.BackgroundColour = application.NewRGB(27, 38, 54)
+	options.BackgroundColour = application.NewRGB(33, 34, 36)
 	return a.instance.Window.NewWithOptions(options)
 }
 
