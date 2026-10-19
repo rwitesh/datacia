@@ -5,12 +5,13 @@ name: Release
 # version: it is passed to the build as VERSION. Tags with a pre-release suffix
 # (e.g. v2.1.0-rc.1) are published as pre-releases, so they never become "latest".
 #
-# Assets (X.Y.Z = version):
-#   DataCia-X.Y.Z-darwin-universal.dmg             first installs (macOS)
-#   DataCia-X.Y.Z-windows-universal-installer.exe  first installs (Windows)
-#   DataCia-X.Y.Z-darwin-universal.zip             in-app update: replaces DataCia.app
-#   DataCia-X.Y.Z-windows-amd64.exe / -arm64.exe   in-app update: replaces DataCia.exe
-#   SHA256SUMS                                     checked by the in-app updater
+# Assets (X.Y.Z = version, ARCH = universal | arm64 | amd64):
+#   DataCia-X.Y.Z-darwin-ARCH.dmg                first installs (macOS)
+#   DataCia-X.Y.Z-windows-ARCH-installer.exe     first installs (Windows)
+#   DataCia-X.Y.Z-darwin-ARCH.zip                in-app update: replaces DataCia.app
+#   DataCia-X.Y.Z-windows-amd64.exe / -arm64.exe in-app update: replaces DataCia.exe
+#   SHA256SUMS                                   checked by the in-app updater
+# Older builds only update from -darwin-universal.zip, so keep publishing it.
 on:
   push:
     tags: ["v*"]
@@ -51,17 +52,19 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: go install github.com/wailsapp/wails/v3/cmd/wails3@${WAILS_VERSION}
-      - name: Build universal DMG and update zip
-        run: wails3 task darwin:package:release VERSION=${{ needs.verify.outputs.version }}
-      - run: |
-          mv bin/DataCia.dmg "bin/DataCia-${{ needs.verify.outputs.version }}-darwin-universal.dmg"
-          mv bin/DataCia.zip "bin/DataCia-${{ needs.verify.outputs.version }}-darwin-universal.zip"
+      - name: Build DMG and update zip per architecture
+        run: |
+          for arch in universal arm64 amd64; do
+            wails3 task darwin:package:release ARCH=$arch VERSION=${{ needs.verify.outputs.version }}
+            mv bin/DataCia.dmg "bin/DataCia-${{ needs.verify.outputs.version }}-darwin-$arch.dmg"
+            mv bin/DataCia.zip "bin/DataCia-${{ needs.verify.outputs.version }}-darwin-$arch.zip"
+          done
       - uses: actions/upload-artifact@v5
         with:
           name: macos
           path: |
-            bin/*-darwin-universal.dmg
-            bin/*-darwin-universal.zip
+            bin/*-darwin-*.dmg
+            bin/*-darwin-*.zip
 
   windows:
     needs: verify
@@ -80,12 +83,17 @@ jobs:
       # the wails3 CLI on Linux.
       - run: sudo apt-get update && sudo apt-get install -y nsis libgtk-4-dev libwebkitgtk-6.0-dev
       - run: go install github.com/wailsapp/wails/v3/cmd/wails3@${WAILS_VERSION}
-      - name: Build universal NSIS installer (cross-compiled, pure Go)
-        run: wails3 task windows:package ARCH=universal VERSION=${{ needs.verify.outputs.version }}
+      - name: Build NSIS installers (cross-compiled, pure Go)
+        run: |
+          for arch in universal amd64 arm64; do
+            wails3 task windows:package ARCH=$arch VERSION=${{ needs.verify.outputs.version }}
+          done
       # The universal build also leaves the per-architecture binaries, which the
       # in-app updater swaps in place of the running DataCia.exe.
       - run: |
           mv bin/DataCia-amd64_arm64-installer.exe "bin/DataCia-${{ needs.verify.outputs.version }}-windows-universal-installer.exe"
+          mv bin/DataCia-amd64-installer.exe "bin/DataCia-${{ needs.verify.outputs.version }}-windows-amd64-installer.exe"
+          mv bin/DataCia-arm64-installer.exe "bin/DataCia-${{ needs.verify.outputs.version }}-windows-arm64-installer.exe"
           mv bin/DataCia-amd64.exe "bin/DataCia-${{ needs.verify.outputs.version }}-windows-amd64.exe"
           mv bin/DataCia-arm64.exe "bin/DataCia-${{ needs.verify.outputs.version }}-windows-arm64.exe"
       - uses: actions/upload-artifact@v5

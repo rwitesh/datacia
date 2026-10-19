@@ -24,6 +24,9 @@ Get the latest version from [Releases](https://github.com/rwitesh/datacia/releas
 - **macOS** (Apple Silicon and Intel): `DataCia-<version>-darwin-universal.dmg`
 - **Windows** (x64 and ARM64): `DataCia-<version>-windows-universal-installer.exe`
 
+Smaller single-architecture downloads use `arm64` (Apple Silicon, Windows ARM64) or `amd64`
+(Intel Mac, Windows x64) in place of `universal`.
+
 You can ignore the other files in a release; the app uses them for updates.
 
 ## Install

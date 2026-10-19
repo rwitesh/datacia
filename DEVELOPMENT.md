@@ -66,7 +66,7 @@ lint and build; `gofmt`, `go vet`, `go test` and a Windows cross-compile; and a 
 | `make package-darwin` | `bin/DataCia.app` for the host architecture |
 | `make package-darwin-universal` | Universal (arm64 + amd64) `bin/DataCia.app` |
 | `make dmg` | Universal app in a styled `bin/DataCia.dmg` |
-| `make release-darwin` | `bin/DataCia.dmg` plus `bin/DataCia.zip` (for in-app updates) |
+| `make release-darwin` | `bin/DataCia.dmg` plus `bin/DataCia.zip` (for in-app updates); `ARCH=arm64`/`amd64` for one architecture |
 | `make package-windows` | `bin/DataCia-amd64_arm64-installer.exe`, `bin/DataCia-amd64.exe`, `bin/DataCia-arm64.exe` |
 | `make package-windows-amd64` / `-arm64` | Single-architecture Windows installer |
 
@@ -98,11 +98,11 @@ The [Release workflow](.github/workflows/release.yml) builds macOS assets on mac
 assets on Linux, writes `SHA256SUMS` and publishes the release. Tags with a suffix
 (`v2.1.0-rc.1`) become pre-releases and never "latest".
 
-| Asset (`<v>` = tag without `v`) | Used for |
+| Asset (`<v>` = tag without `v`, `<arch>` = `universal`, `arm64` or `amd64`) | Used for |
 | --- | --- |
-| `DataCia-<v>-darwin-universal.dmg` | First install on macOS |
-| `DataCia-<v>-windows-universal-installer.exe` | First install on Windows |
-| `DataCia-<v>-darwin-universal.zip` | macOS update: replaces `DataCia.app` |
+| `DataCia-<v>-darwin-<arch>.dmg` | First install on macOS |
+| `DataCia-<v>-windows-<arch>-installer.exe` | First install on Windows |
+| `DataCia-<v>-darwin-<arch>.zip` | macOS update: replaces `DataCia.app` (older builds only read `universal`) |
 | `DataCia-<v>-windows-amd64.exe`, `-arm64.exe` | Windows update: replaces `DataCia.exe` |
 | `SHA256SUMS` | Checked by the updater; a file missing from it is never installed |
 
@@ -113,11 +113,16 @@ a read-only location such as the mounted DMG.
 To publish by hand (needs a Mac for the macOS assets):
 
 ```bash
-make release-darwin package-windows VERSION=2.0.0
 mkdir -p release
-mv bin/DataCia.dmg release/DataCia-2.0.0-darwin-universal.dmg
-mv bin/DataCia.zip release/DataCia-2.0.0-darwin-universal.zip
+for arch in universal arm64 amd64; do
+  make release-darwin ARCH=$arch VERSION=2.0.0
+  mv bin/DataCia.dmg release/DataCia-2.0.0-darwin-$arch.dmg
+  mv bin/DataCia.zip release/DataCia-2.0.0-darwin-$arch.zip
+done
+make package-windows package-windows-amd64 package-windows-arm64 VERSION=2.0.0
 mv bin/DataCia-amd64_arm64-installer.exe release/DataCia-2.0.0-windows-universal-installer.exe
+mv bin/DataCia-amd64-installer.exe release/DataCia-2.0.0-windows-amd64-installer.exe
+mv bin/DataCia-arm64-installer.exe release/DataCia-2.0.0-windows-arm64-installer.exe
 mv bin/DataCia-amd64.exe release/DataCia-2.0.0-windows-amd64.exe
 mv bin/DataCia-arm64.exe release/DataCia-2.0.0-windows-arm64.exe
 (cd release && shasum -a 256 -- * > SHA256SUMS)

@@ -75,9 +75,11 @@ tasks:
       - rm "{{.BIN_DIR}}/{{.APP_NAME}}-amd64" "{{.BIN_DIR}}/{{.APP_NAME}}-arm64"
 
   package:
-    summary: Packages the application into a `.app` bundle
+    summary: Packages the application into a `.app` bundle (ARCH=arm64 | amd64; default host)
     deps:
       - task: build
+        vars:
+          ARCH: '{{.ARCH}}'
     cmds:
       - task: create:app:bundle
 
@@ -96,12 +98,15 @@ tasks:
       - task: create:dmg
 
   package:release:
-    summary: Packages a universal `.app` into bin/DataCia.dmg and bin/DataCia.zip (release assets)
-    deps:
-      - task: package:universal
+    summary: Packages bin/DataCia.dmg and bin/DataCia.zip (release assets) for ARCH=universal | arm64 | amd64 (default universal)
     cmds:
+      - task: '{{if eq .ARCH "universal"}}package:universal{{else}}package{{end}}'
+        vars:
+          ARCH: '{{.ARCH}}'
       - task: create:dmg
       - task: create:update:zip
+    vars:
+      ARCH: '{{.ARCH | default "universal"}}'
 
   create:update:zip:
     summary: Zips the `.app` bundle into bin/DataCia.zip for the in-app updater

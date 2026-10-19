@@ -120,20 +120,25 @@ func CheckInBackground(app *application.App, delay time.Duration) {
 }
 
 // matchAsset picks the release asset the updater downloads. macOS uses the
-// zipped universal .app (the .dmg is only for first installs); everything else
-// uses the per-architecture asset, which github.DefaultAssetMatcher finds
-// while skipping the installer and SHA256SUMS.
+// zipped .app for this architecture, else the universal one (older releases
+// have only that); everything else uses the per-architecture asset, which
+// github.DefaultAssetMatcher finds while skipping installers and SHA256SUMS.
 func matchAsset(req updater.CheckRequest, assets []github.ReleaseAsset) int {
 	if req.Platform != "darwin" {
 		return github.DefaultAssetMatcher(req, assets)
 	}
+	archZip := "-darwin-" + strings.ToLower(req.Arch) + ".zip"
+	universal := -1
 	for i, asset := range assets {
 		name := strings.ToLower(asset.Name)
-		if strings.Contains(name, "-darwin-universal") && strings.HasSuffix(name, ".zip") {
+		if strings.HasSuffix(name, archZip) {
 			return i
 		}
+		if strings.HasSuffix(name, "-darwin-universal.zip") {
+			universal = i
+		}
 	}
-	return -1
+	return universal
 }
 
 // checksumRequired fails closed when a release has no SHA-256 digest: the
