@@ -33,7 +33,7 @@ export const TableRow = memo(function TableRow({ row, index, top, rowNumber }: T
         role="rowheader"
         data-row={index}
         data-col={-1}
-        className="sticky left-0 flex items-center border-[0.5px] border-border/60 bg-muted px-2 font-medium text-muted-foreground hover:bg-accent"
+        className="sticky left-0 flex items-center border-r border-b border-border/60 bg-muted px-2 font-medium text-muted-foreground hover:bg-accent"
       >
         {rowNumber}
       </div>
@@ -44,7 +44,7 @@ export const TableRow = memo(function TableRow({ row, index, top, rowNumber }: T
           data-row={index}
           data-col={col}
           title={cellTitle(cell.getValue())}
-          className="truncate border-[0.5px] border-border/60 px-2 leading-[23px] hover:bg-blue-500/10"
+          className="truncate border-r border-b border-border/60 px-2 leading-[23px] hover:bg-blue-500/10"
         >
           {flexRender(cell.column.columnDef.cell, cell.getContext())}
         </div>

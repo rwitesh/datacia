@@ -286,8 +286,8 @@ export function DataTable({
                         key={index}
                         className={
                           index === 0
-                            ? "sticky left-0 border-r-[0.5px] border-border/60 bg-muted"
-                            : "border-r-[0.5px] border-border/60"
+                            ? "sticky left-0 border-r border-border/60 bg-muted"
+                            : "border-r border-border/60"
                         }
                       />
                     ))}

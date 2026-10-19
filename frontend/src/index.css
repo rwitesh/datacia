@@ -6,9 +6,7 @@
 
 :root {
   --radius: 0.625rem;
-  /* Same neutral hue as dark. Panels (card, sidebar) sit a shade below the
-     white data and editor surfaces so the layout has depth, and muted text
-     stays above 4.5:1 on every surface it is used on. */
+  /* Muted text stays above 4.5:1 contrast on every surface. */
   --background: oklch(1 0 0);
   --foreground: oklch(0.24 0.006 265);
   --card: oklch(0.982 0.002 265);
@@ -43,23 +41,20 @@
 }
 
 .dark {
-  /* Charcoal, not black: a pure-black canvas with near-white text blooms for
-     people with astigmatism. Surfaces step up in lightness (background < card
-     < popover < muted < accent) so depth reads without heavy borders, and the
-     text is off-white to cut glare. Hue 265 at tiny chroma keeps it neutral. */
-  --background: oklch(0.225 0.004 265);
+  /* Charcoal and off-white instead of black and white: less glare and halation. */
+  --background: oklch(0.195 0.004 265);
   --foreground: oklch(0.93 0.004 265);
-  --card: oklch(0.25 0.004 265);
+  --card: oklch(0.235 0.004 265);
   --card-foreground: oklch(0.93 0.004 265);
-  --popover: oklch(0.28 0.005 265);
+  --popover: oklch(0.27 0.005 265);
   --popover-foreground: oklch(0.93 0.004 265);
   --primary: oklch(0.93 0.004 265);
-  --primary-foreground: oklch(0.225 0.004 265);
-  --secondary: oklch(0.345 0.005 265);
+  --primary-foreground: oklch(0.195 0.004 265);
+  --secondary: oklch(0.33 0.005 265);
   --secondary-foreground: oklch(0.93 0.004 265);
-  --muted: oklch(0.29 0.005 265);
+  --muted: oklch(0.265 0.005 265);
   --muted-foreground: oklch(0.74 0.01 265);
-  --accent: oklch(0.325 0.006 265);
+  --accent: oklch(0.305 0.006 265);
   --accent-foreground: oklch(0.95 0.004 265);
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 11%);
@@ -70,11 +65,11 @@
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.25 0.004 265);
+  --sidebar: oklch(0.235 0.004 265);
   --sidebar-foreground: oklch(0.93 0.004 265);
   --sidebar-primary: oklch(0.488 0.243 264.376);
   --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.315 0.006 265);
+  --sidebar-accent: oklch(0.3 0.006 265);
   --sidebar-accent-foreground: oklch(0.95 0.004 265);
   --sidebar-border: oklch(1 0 0 / 11%);
   --sidebar-ring: oklch(0.58 0.012 265);
