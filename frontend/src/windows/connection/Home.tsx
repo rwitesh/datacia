@@ -4,7 +4,6 @@ import { DeleteConnection } from "@/services/bindings/connection";
 import { useFetchConnections } from "@/services/connections";
 import { useConnectDatabase } from "@/windows/connection/hooks/useConnectDatabase";
 import { ConnectionList } from "./ConnectionList/ConnectionList";
-import { useAppContext } from "@/context/app/Index";
 import { errorMessage } from "@/lib/utils";
 
 export const Home = () => {
@@ -12,7 +11,6 @@ export const Home = () => {
   const [searchParams] = useSearchParams();
 
   const connectMutation = useConnectDatabase();
-  const { settings } = useAppContext();
 
   const currentConnectionId = searchParams.get("id") ?? "";
 
@@ -40,7 +38,7 @@ export const Home = () => {
   };
 
   return (
-    <div className={`flex min-h-screen min-w-screen select-none cursor-default bg-background ${settings?.os === "darwin" ? "dark:bg-transparent" : "dark:bg-muted"}`}>
+    <div className={`flex min-h-screen min-w-screen select-none cursor-default bg-card`}>
       <ConnectionList
         savedConnections={savedConnections}
         currentConnectionId={currentConnectionId}
@@ -51,7 +49,7 @@ export const Home = () => {
         onEdit={handleEdit}
       />
 
-      <div className="flex-1 p-3 border-l border-muted dark:bg-muted">
+      <div className="flex-1 p-3 border-l bg-background">
         <Outlet />
       </div>
     </div>
