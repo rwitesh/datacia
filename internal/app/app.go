@@ -127,7 +127,7 @@ func (a *App) Initialize() error {
 func (a *App) newWindow(options application.WebviewWindowOptions) *application.WebviewWindow {
 	options.Mac.InvisibleTitleBarHeight = 50
 	options.Windows.DisableFramelessWindowDecorations = true
-	options.BackgroundColour = application.NewRGB(33, 34, 36)
+	options.BackgroundColour = application.NewRGB(29, 30, 32)
 	return a.instance.Window.NewWithOptions(options)
 }
 

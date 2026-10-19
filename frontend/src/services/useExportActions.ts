@@ -21,7 +21,7 @@ export function useExportActions({
   const exportMutation = useExportData();
   const copyMutation = useCopyToClipboard();
 
-  const pngBackgroundColor = resolvedTheme === "dark" ? "#1b1c1e" : "#ffffff";
+  const pngBackgroundColor = resolvedTheme === "dark" ? "#141517" : "#ffffff";
 
   const getFilename = (format: ExportFormat, count: number) => {
     const base = tableName || "export";

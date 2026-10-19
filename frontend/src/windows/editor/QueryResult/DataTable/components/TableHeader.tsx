@@ -37,7 +37,7 @@ export function TableHeader({ headers }: TableHeaderProps) {
             data-col={index - 1}
             title={index === 0 ? "Select all" : column.id}
             className={cn(
-              "relative flex items-center justify-center gap-1 border-[0.5px] border-border/60 bg-card px-2",
+              "relative flex items-center justify-center gap-1 border-r border-b border-border/60 bg-muted px-2",
               index === 0 && "sticky left-0 z-10"
             )}
           >
