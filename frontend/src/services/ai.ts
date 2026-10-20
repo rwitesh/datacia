@@ -7,7 +7,7 @@ import { errorMessage } from "@/lib/utils";
 import type { ModelRef } from "./bindings/ai";
 import { queryKeys } from "./queryKeys";
 
-export type { ChatContext, ChatSummary, ModelRef, ProviderStatus, QueryPreview, ToolUse } from "./bindings/ai";
+export type { ChatContext, ChatSummary, MessagePart, ModelRef, ProviderStatus, QueryPreview, ToolUse } from "./bindings/ai";
 export { SignIn } from "./bindings/ai";
 
 export function useAIProviders() {

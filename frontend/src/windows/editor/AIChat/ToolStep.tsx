@@ -1,32 +1,27 @@
 import { useState } from "react";
-import { AlertTriangle, ChevronRight, Database, Loader2 } from "lucide-react";
+import { AlertTriangle, ChevronRight, Database } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { QueryPreview, ToolUse } from "@/services/ai";
 import { CodeBlock } from "./MarkdownMessage";
 
-/** What the model read to answer, in call order. `streaming` is false once the reply ended. */
-export function ToolSteps({ tools, streaming, wide }: { tools: ToolUse[]; streaming: boolean; wide: boolean }) {
+/** One thing the model did while answering; queries also show what they returned. */
+export function ToolStep({ tool, running, wide }: { tool: ToolUse; running: boolean; wide: boolean }) {
+  if (tool.sql) return <QueryStep tool={tool} running={running} wide={wide} />;
   return (
-    <div className={cn("space-y-1.5", wide ? "mb-3 text-xs" : "mb-2 text-[11px]")}>
-      {tools.map((t, i) =>
-        t.sql ? (
-          <QueryStep key={t.id || i} tool={t} running={streaming && !t.done} wide={wide} />
-        ) : (
-          <div key={t.id || i} className="flex items-center gap-1.5 text-muted-foreground">
-            <StepIcon running={streaming && !t.done} error={t.error} />
-            <span className="truncate">{t.label}</span>
-            {t.error && <span className="truncate text-destructive">{t.error}</span>}
-          </div>
-        ),
-      )}
+    <div className={cn("flex items-center gap-1.5 text-muted-foreground", wide ? "text-xs" : "text-[11px]", running && "animate-pulse")}>
+      <StepIcon error={tool.error} />
+      <span className="truncate">{tool.label}</span>
+      {tool.error && <span className="truncate text-destructive">{tool.error}</span>}
     </div>
   );
 }
 
-function StepIcon({ running, error }: { running: boolean; error?: string }) {
-  if (running) return <Loader2 className="size-3 shrink-0 animate-spin" />;
-  if (error) return <AlertTriangle className="size-3 shrink-0 text-destructive" />;
-  return <Database className="size-3 shrink-0" />;
+function StepIcon({ error }: { error?: string }) {
+  return error ? (
+    <AlertTriangle className="size-3 shrink-0 text-destructive" />
+  ) : (
+    <Database className="size-3 shrink-0" />
+  );
 }
 
 /** A query the model ran, with the rows it got back. Open by default in AI mode. */
@@ -38,15 +33,18 @@ function QueryStep({ tool, running, wide }: { tool: ToolUse; running: boolean; w
     : undefined;
 
   return (
-    <div className="rounded-md border border-border/60 bg-card overflow-hidden">
+    <div className={cn("rounded-md border border-border/60 bg-card overflow-hidden", wide ? "text-xs" : "text-[11px]")}>
       <button
         type="button"
         onClick={() => setOpen(!open)}
         aria-expanded={open}
-        className="flex w-full items-center gap-1.5 px-2 py-1.5 text-left text-muted-foreground hover:text-foreground cursor-pointer"
+        className={cn(
+          "flex w-full items-center gap-1.5 px-2 py-1.5 text-left text-muted-foreground hover:text-foreground cursor-pointer",
+          running && "animate-pulse",
+        )}
       >
         <ChevronRight className={cn("size-3 shrink-0 transition-transform", open && "rotate-90")} />
-        <StepIcon running={running} error={tool.error} />
+        <StepIcon error={tool.error} />
         <span className="truncate">{tool.label}</span>
         {summary && <span className="ml-auto shrink-0 tabular-nums">{summary}</span>}
       </button>

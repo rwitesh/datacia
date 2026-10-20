@@ -4,16 +4,30 @@ import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 import * as AI from "./bindings/ai";
 import { errorMessage } from "@/lib/utils";
-import type { ChatContext, ToolUse } from "./bindings/ai";
+import type { ChatContext, MessagePart, ToolUse } from "./bindings/ai";
 
 export interface ChatMessage {
   id: string;
   role: "user" | "assistant";
-  content: string;
+  /** Text and tool calls in the order they happened. */
+  parts: MessagePart[];
   error?: string;
-  /** What the model read to answer, in call order. */
-  tools?: ToolUse[];
   streaming?: boolean;
+}
+
+export function messageText(m: ChatMessage) {
+  return m.parts.flatMap((p) => (p.text ? [p.text] : [])).join("\n\n");
+}
+
+function addText(parts: MessagePart[], text: string): MessagePart[] {
+  const last = parts.at(-1);
+  return last && !last.tool ? [...parts.slice(0, -1), { text: (last.text ?? "") + text }] : [...parts, { text }];
+}
+
+function setTool(parts: MessagePart[], tool: ToolUse): MessagePart[] {
+  return parts.some((p) => p.tool?.id === tool.id)
+    ? parts.map((p) => (p.tool?.id === tool.id ? { tool } : p))
+    : [...parts, { tool }];
 }
 
 /** An open chat tab. A new chat is saved with its first reply. */
@@ -41,7 +55,7 @@ let state: ChatsState = { open: [first], activeId: first.id };
 const listeners = new Set<() => void>();
 
 // The request answering each chat, and the chat each reply belongs to.
-const pending = new Map<string, { replyId: string; call: CancellablePromise<string> }>();
+const pending = new Map<string, { replyId: string; call: CancellablePromise<MessagePart[]> }>();
 const replyChat = new Map<string, string>();
 
 function set(next: Partial<ChatsState>) {
@@ -73,7 +87,7 @@ function persist(chatId: string) {
   if (!chat || chat.messages.length === 0) return;
   const messages = chat.messages
     .filter((m) => !m.streaming)
-    .map(({ id, role, content, error, tools }) => ({ id, role, content, error: error ?? "", tools }));
+    .map(({ id, role, parts, error }) => ({ id, role, parts, error: error ?? "" }));
   const save = (saving.get(chatId) ?? Promise.resolve())
     .then(() => AI.SaveChat({ id: chat.id, title: chat.title, messages }))
     .catch((err) => {
@@ -85,13 +99,15 @@ function persist(chatId: string) {
 // Streamed text arrives as events; apply it at most once per frame.
 const buffered = new Map<string, string>();
 let frame = 0;
+function flushReply(replyId: string) {
+  const text = buffered.get(replyId);
+  const chatId = replyChat.get(replyId);
+  buffered.delete(replyId);
+  if (text && chatId) patchMessage(chatId, replyId, (m) => ({ parts: addText(m.parts, text) }));
+}
 function flush() {
   frame = 0;
-  for (const [replyId, text] of buffered) {
-    const chatId = replyChat.get(replyId);
-    if (chatId) patchMessage(chatId, replyId, (m) => ({ content: m.content + text }));
-  }
-  buffered.clear();
+  [...buffered.keys()].forEach(flushReply);
 }
 
 Events.On("ai:delta", (ev) => {
@@ -101,16 +117,12 @@ Events.On("ai:delta", (ev) => {
 });
 
 // A tool is reported as it starts and again when it ends, with the same ID.
+// Text streamed before it is applied first so the parts stay in order.
 Events.On("ai:tool", (ev) => {
   const chatId = replyChat.get(ev.data.id);
-  const tool: ToolUse = ev.data.tool;
   if (!chatId) return;
-  patchMessage(chatId, ev.data.id, (m) => {
-    const tools = m.tools ?? [];
-    return tools.some((t) => t.id === tool.id)
-      ? { tools: tools.map((t) => (t.id === tool.id ? tool : t)) }
-      : { tools: [...tools, tool] };
-  });
+  flushReply(ev.data.id);
+  patchMessage(chatId, ev.data.id, (m) => ({ parts: setTool(m.parts, ev.data.tool) }));
 });
 
 /** History for the model: completed turns only, skipping exchanges that failed. */
@@ -119,11 +131,12 @@ function history(messages: ChatMessage[]) {
   for (let i = 0; i < messages.length; i++) {
     const m = messages[i];
     const reply = messages[i + 1];
-    if (m.role === "user" && reply?.role === "assistant" && (reply.error || !reply.content)) {
+    if (m.role === "user" && reply?.role === "assistant" && (reply.error || !messageText(reply))) {
       i++;
       continue;
     }
-    if (!m.error && m.content) out.push({ role: m.role, content: m.content });
+    const content = messageText(m);
+    if (!m.error && content) out.push({ role: m.role, content });
   }
   return out;
 }
@@ -131,7 +144,7 @@ function history(messages: ChatMessage[]) {
 async function run(chatId: string, context: ChatContext) {
   const chat = find(chatId);
   if (!chat) return;
-  const reply: ChatMessage = { id: uuidv4(), role: "assistant", content: "", streaming: true };
+  const reply: ChatMessage = { id: uuidv4(), role: "assistant", parts: [], streaming: true };
   const messages = history(chat.messages);
   patchChat(chatId, (c) => ({ messages: [...c.messages, reply] }));
 
@@ -139,21 +152,20 @@ async function run(chatId: string, context: ChatContext) {
   pending.set(chatId, { replyId: reply.id, call });
   replyChat.set(reply.id, chatId);
   try {
-    const text = await call;
-    patchMessage(chatId, reply.id, () => ({ content: text, streaming: false }));
+    const parts = await call;
+    buffered.delete(reply.id);
+    patchMessage(chatId, reply.id, () => ({ parts, streaming: false }));
   } catch (err) {
+    // Keep what streamed in before the stop or failure.
+    flushReply(reply.id);
     if (err instanceof CancelError) {
-      const rest = buffered.get(reply.id) ?? "";
-      patchMessage(chatId, reply.id, (m) =>
-        m.content + rest ? { content: m.content + rest, streaming: false } : { streaming: false, error: "Stopped." },
-      );
+      patchMessage(chatId, reply.id, (m) => (m.parts.length ? { streaming: false } : { streaming: false, error: "Stopped." }));
     } else {
       patchMessage(chatId, reply.id, () => ({ streaming: false, error: errorMessage(err) || "Something went wrong." }));
     }
   } finally {
     pending.delete(chatId);
     replyChat.delete(reply.id);
-    buffered.delete(reply.id);
     persist(chatId);
   }
 }
@@ -173,7 +185,7 @@ export const chats = {
     if (!content || pending.has(chatId)) return;
     patchChat(chatId, (c) => ({
       title: c.title || content.split("\n")[0].slice(0, TITLE_CHARS),
-      messages: [...c.messages, { id: uuidv4(), role: "user", content }],
+      messages: [...c.messages, { id: uuidv4(), role: "user", parts: [{ text: content }] }],
     }));
     void run(chatId, context);
   },
@@ -208,9 +220,8 @@ export const chats = {
         messages: saved.messages.map((m) => ({
           id: m.id,
           role: m.role === "user" ? "user" : "assistant",
-          content: m.content,
+          parts: m.parts ?? [],
           error: m.error || undefined,
-          tools: m.tools,
         })),
       }));
     } catch (err) {

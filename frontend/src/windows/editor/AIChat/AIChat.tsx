@@ -1,5 +1,5 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { AlertTriangle, ArrowUp, ChevronDown, Loader2, Maximize2, RotateCcw, Settings2, Sparkles, Square, SquarePen } from "lucide-react";
+import { AlertTriangle, ArrowUp, ChevronDown, Maximize2, RotateCcw, Settings2, Sparkles, Square, SquarePen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAppContext } from "@/context/app/Index";
 import { useEditorContext } from "@/context/editor/Index";
@@ -7,12 +7,12 @@ import { getTabSql, useTabSql } from "@/context/editor/store";
 import { cn } from "@/lib/utils";
 import { OpenSettingsWindow } from "@/services/bindings";
 import { useAIProviders, useDefaultModel, type ChatContext, type ModelRef, type ProviderStatus } from "@/services/ai";
-import { chats, useActiveChat, type ChatMessage, type Conversation } from "@/services/chats";
+import { chats, messageText, useActiveChat, type ChatMessage, type Conversation } from "@/services/chats";
 import { ChatHistory } from "./ChatHistory";
 import { ChatTabs } from "./ChatTabs";
 import { MarkdownMessage } from "./MarkdownMessage";
 import { ModelPicker } from "./ModelPicker";
-import { ToolSteps } from "./ToolSteps";
+import { ToolStep } from "./ToolStep";
 
 /** Reads the SQL when called, so typing doesn't re-render the chat. */
 function useChatContext(): () => ChatContext {
@@ -70,9 +70,7 @@ export function AIChat({ wide = false }: { wide?: boolean }) {
           />
         </>
       ) : (
-        <div className="flex flex-1 items-center justify-center text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" />
-        </div>
+        <div className="flex-1" />
       )}
     </div>
   );
@@ -163,8 +161,7 @@ function MessageList({
   const stick = useRef(true);
   const prevId = useRef<string | undefined>(undefined);
   const lastId = messages.at(-1)?.id;
-  const lastContent = messages.at(-1)?.content;
-  const lastTools = messages.at(-1)?.tools;
+  const lastParts = messages.at(-1)?.parts;
 
   // Jump to new messages; follow streamed output only while the user is at the bottom.
   useLayoutEffect(() => {
@@ -175,7 +172,7 @@ function MessageList({
       stick.current = true;
     }
     if (stick.current) el.scrollTop = el.scrollHeight;
-  }, [lastId, lastContent, lastTools]);
+  }, [lastId, lastParts]);
 
   const onScroll = () => {
     const el = ref.current;
@@ -238,7 +235,7 @@ function EmptyState({
 
   return (
     <Intro title="Ask about your data" text="Explore your data, or write and fix queries." wide={wide} className="py-8">
-      <div className={cn("w-full", wide ? "grid grid-cols-2 gap-2 max-w-lg" : "flex flex-col items-stretch gap-1.5 max-w-64")}>
+      <div className={cn("w-full flex", wide ? "flex-wrap justify-center gap-2 max-w-lg" : "flex-col items-stretch gap-1.5 max-w-64")}>
         {suggestions.map((s) => (
           <button
             key={s}
@@ -246,7 +243,7 @@ function EmptyState({
             onClick={() => chats.send(chatId, s, getContext())}
             className={cn(
               "border border-border/60 text-left text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer",
-              wide ? "rounded-lg px-3 py-2.5 text-xs" : "rounded-md px-2.5 py-1.5 text-[11px]",
+              wide ? "w-60 rounded-lg px-3 py-2.5 text-xs" : "rounded-md px-2.5 py-1.5 text-[11px]",
             )}
           >
             {s}
@@ -279,22 +276,22 @@ function Message({
             wide ? "max-w-[75%] rounded-2xl px-4 py-2.5" : "max-w-[85%] rounded-lg px-3 py-2",
           )}
         >
-          {message.content}
+          {messageText(message)}
         </div>
       </div>
     );
   }
   return (
-    <div className="min-w-0">
-      {message.tools && message.tools.length > 0 && (
-        <ToolSteps tools={message.tools} streaming={Boolean(message.streaming)} wide={wide} />
+    <div className={cn("min-w-0", wide ? "space-y-3" : "space-y-2")}>
+      {message.parts.map((p, i) =>
+        p.tool ? (
+          <ToolStep key={p.tool.id || i} tool={p.tool} running={Boolean(message.streaming) && !p.tool.done} wide={wide} />
+        ) : p.text ? (
+          <MarkdownMessage key={i} content={p.text} />
+        ) : null,
       )}
-      {message.content && <MarkdownMessage content={message.content} />}
-      {message.streaming && (
-        <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mt-1">
-          <Loader2 className="size-3 animate-spin" />
-          {!message.content && "Thinking…"}
-        </div>
+      {message.streaming && message.parts.length === 0 && (
+        <p className="text-[11px] text-muted-foreground animate-pulse">Thinking…</p>
       )}
       {message.error && (
         <div className="mt-1 flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 px-2.5 py-2 text-destructive">

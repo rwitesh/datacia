@@ -15,11 +15,10 @@ const (
 )
 
 type StoredMessage struct {
-	ID      string    `json:"id"`
-	Role    string    `json:"role"`
-	Content string    `json:"content"`
-	Error   string    `json:"error,omitempty"`
-	Tools   []ToolUse `json:"tools,omitempty"`
+	ID    string        `json:"id"`
+	Role  string        `json:"role"`
+	Parts []MessagePart `json:"parts"`
+	Error string        `json:"error,omitempty"`
 }
 
 // Chat is one conversation, saved in data.db.

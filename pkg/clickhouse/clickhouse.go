@@ -231,7 +231,13 @@ func (ch *ClickHouse) ReadOnlyQuery(ctx context.Context, sql string, maxRows int
 	ctx, cancel := context.WithTimeout(ctx, common.QUERY_TIMEOUT)
 	defer cancel()
 
-	queryCtx := clickhouse.Context(ctx, clickhouse.WithSettings(clickhouse.Settings{"readonly": 2, "allow_ddl": 0}))
+	// max_execution_time stops the query on the server too: over HTTP a
+	// cancelled request can leave it running.
+	queryCtx := clickhouse.Context(ctx, clickhouse.WithSettings(clickhouse.Settings{
+		"readonly":           2,
+		"allow_ddl":          0,
+		"max_execution_time": int(common.QUERY_TIMEOUT.Seconds()),
+	}))
 	rows, err := conn.Query(queryCtx, sql)
 	if err != nil {
 		return common.QueryResult{Type: common.QueryTypeRead}, err

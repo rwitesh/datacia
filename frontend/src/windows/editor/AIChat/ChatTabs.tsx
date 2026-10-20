@@ -1,5 +1,5 @@
 import type React from "react";
-import { History, Loader2, MessageSquare, Plus, X } from "lucide-react";
+import { History, MessageSquare, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { chats, useChats } from "@/services/chats";
@@ -19,7 +19,6 @@ export function ChatTabs() {
       <div className="flex h-full flex-1 items-center gap-0.5 overflow-x-auto overflow-y-hidden px-1 py-1 scrollbar-thin">
         {open.map((c) => {
           const isActive = c.id === activeId;
-          const streaming = c.messages.some((m) => m.streaming);
           return (
             <div
               key={c.id}
@@ -35,11 +34,7 @@ export function ChatTabs() {
                 className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 px-3 py-1"
                 onMouseDown={(e) => onMouseDown(e, c.id)}
               >
-                {streaming || !c.loaded ? (
-                  <Loader2 className="size-3.5 shrink-0 animate-spin text-primary" />
-                ) : (
-                  <MessageSquare className="size-3.5 shrink-0 text-primary" />
-                )}
+                <MessageSquare className="size-3.5 shrink-0 text-primary" />
                 <span className={cn("min-w-0 flex-1 truncate text-sm", isActive ? "font-medium" : "text-muted-foreground")}>
                   {c.title || "New chat"}
                 </span>

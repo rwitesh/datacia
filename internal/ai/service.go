@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"datacia/internal/db"
@@ -19,7 +20,7 @@ import (
 const (
 	DeltaEvent    = "ai:delta"
 	ToolEvent     = "ai:tool"
-	chatTimeout   = 5 * time.Minute
+	chatTimeout   = 10 * time.Minute
 	signInTimeout = 5 * time.Minute
 )
 
@@ -34,6 +35,46 @@ type ChatDelta struct {
 type ChatTool struct {
 	ID   string  `json:"id"`
 	Tool ToolUse `json:"tool"`
+}
+
+// MessagePart is a piece of a message, in order: text or a tool call.
+type MessagePart struct {
+	Text string   `json:"text,omitempty"`
+	Tool *ToolUse `json:"tool,omitempty"`
+}
+
+// replyParts builds a reply's parts as text streams in and tools run, which
+// happen on different goroutines. emit runs under the lock so the chat gets
+// the changes in the same order.
+type replyParts struct {
+	mu    sync.Mutex
+	parts []MessagePart
+}
+
+func (r *replyParts) addText(text string, emit func()) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if n := len(r.parts); n > 0 && r.parts[n-1].Tool == nil {
+		r.parts[n-1].Text += text
+	} else {
+		r.parts = append(r.parts, MessagePart{Text: text})
+	}
+	emit()
+}
+
+// setTool adds a tool call, or replaces the one with the same ID as it ends.
+func (r *replyParts) setTool(t ToolUse, emit func()) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for i, p := range r.parts {
+		if p.Tool != nil && p.Tool.ID == t.ID {
+			r.parts[i].Tool = &t
+			emit()
+			return
+		}
+	}
+	r.parts = append(r.parts, MessagePart{Tool: &t})
+	emit()
 }
 
 func init() {
@@ -146,48 +187,49 @@ func (s *Service) SetDefaultModel(m ModelRef) error {
 	return settings.SetAIModel(m.Provider, model)
 }
 
-// Chat streams the reply as DeltaEvent events and returns the full text.
-// Cancelling the call from the frontend stops the request.
-func (s *Service) Chat(ctx context.Context, req ChatRequest) (string, error) {
+// Chat streams the reply as DeltaEvent and ToolEvent events and returns its
+// parts. Cancelling the call from the frontend stops the request.
+func (s *Service) Chat(ctx context.Context, req ChatRequest) ([]MessagePart, error) {
 	history := normalizeHistory(req.Messages)
 	if len(history) == 0 || history[len(history)-1].Role != "user" {
-		return "", errors.New("Nothing to send.")
+		return nil, errors.New("Nothing to send.")
 	}
 	ref := s.DefaultModel()
 	if ref.Model == "" {
-		return "", errors.New("Choose a model.")
+		return nil, errors.New("Choose a model.")
 	}
 	p, err := findProvider(ref.Provider)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	key, err := apiKey(p)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	if !isReady(p, key != "") {
-		return "", fmt.Errorf("Set up %s in Settings.", p.Name)
+		return nil, fmt.Errorf("Set up %s in Settings.", p.Name)
 	}
 	m := p.chat(ref.Model, key, savedBaseURL(p))
 	logger.Info("ai_chat", "provider", p.ID, "model", ref.Model, "engine", req.Context.Engine)
 
+	var reply replyParts
 	tools := chatTools(s.db, req.Context, func(t ToolUse) {
-		s.app.Event.Emit(ToolEvent, ChatTool{ID: req.ID, Tool: t})
+		reply.setTool(t, func() { s.app.Event.Emit(ToolEvent, ChatTool{ID: req.ID, Tool: t}) })
 	})
 	opts := append([]goai.Option{goai.WithTools(tools...), goai.WithMaxSteps(maxToolSteps)}, p.options...)
 
 	ctx, cancel := context.WithTimeout(ctx, chatTimeout)
 	defer cancel()
-	reply, err := streamReply(ctx, m, systemPrompt(req.Context.Engine), history, func(text string) {
-		s.app.Event.Emit(DeltaEvent, ChatDelta{ID: req.ID, Text: text})
+	text, err := streamReply(ctx, m, systemPrompt(req.Context.Engine), history, func(text string) {
+		reply.addText(text, func() { s.app.Event.Emit(DeltaEvent, ChatDelta{ID: req.ID, Text: text}) })
 	}, opts...)
 	if err != nil {
-		return reply, reportChatError(p, ref.Model, err)
+		return reply.parts, reportChatError(p, ref.Model, err)
 	}
-	if strings.TrimSpace(reply) == "" {
-		return "", fmt.Errorf("%s returned an empty reply.", p.Name)
+	if strings.TrimSpace(text) == "" {
+		return reply.parts, fmt.Errorf("%s returned an empty reply.", p.Name)
 	}
-	return reply, nil
+	return reply.parts, nil
 }
 
 func streamReply(ctx context.Context, m provider.LanguageModel, system string, history []Message, onText func(string), opts ...goai.Option) (string, error) {
@@ -199,32 +241,37 @@ func streamReply(ctx context.Context, m provider.LanguageModel, system string, h
 			msgs[i] = goai.AssistantMessage(h.Content)
 		}
 	}
-	opts = append([]goai.Option{goai.WithSystem(system), goai.WithMessages(msgs...)}, opts...)
-	stream, err := goai.StreamText(ctx, m, opts...)
-	if err != nil {
-		return "", err
-	}
+	opts = append([]goai.Option{goai.WithSystem(system)}, opts...)
 	var reply strings.Builder
-	newStep := false
-	for chunk := range stream.Stream() {
-		switch {
-		case chunk.Type == provider.ChunkStepFinish:
-			newStep = reply.Len() > 0
-		case chunk.Type == provider.ChunkText && chunk.Text != "":
-			text := chunk.Text
-			if newStep {
-				// Text after a tool call starts a new paragraph.
-				text, newStep = "\n\n"+text, false
-			}
-			reply.WriteString(text)
-			onText(text)
-		}
+	res, err := streamStep(ctx, m, msgs, &reply, onText, opts...)
+	if err == nil && res.StepsExhausted {
+		// The loop ran out of steps after a tool call, so the model hasn't
+		// answered yet. goai can't turn tools off for a step, so replay the
+		// transcript once with tool choice "none"; the tools stay declared so
+		// the cached prompt prefix still matches.
+		msgs = append(msgs, res.ResponseMessages...)
+		_, err = streamStep(ctx, m, msgs, &reply, onText, append(opts, goai.WithToolChoice("none"), goai.WithMaxSteps(1))...)
 	}
-	if err := stream.Err(); err != nil {
+	if err != nil {
 		return reply.String(), err
 	}
 	// A cancelled stream ends without an error.
 	return reply.String(), ctx.Err()
+}
+
+// streamStep streams one model call, with its tool loop, into reply.
+func streamStep(ctx context.Context, m provider.LanguageModel, msgs []provider.Message, reply *strings.Builder, onText func(string), opts ...goai.Option) (*goai.TextResult, error) {
+	stream, err := goai.StreamText(ctx, m, append(opts, goai.WithMessages(msgs...))...)
+	if err != nil {
+		return nil, err
+	}
+	for chunk := range stream.Stream() {
+		if chunk.Type == provider.ChunkText && chunk.Text != "" {
+			reply.WriteString(chunk.Text)
+			onText(chunk.Text)
+		}
+	}
+	return stream.Result(), stream.Err()
 }
 
 // apiKey returns the provider's key, or an error if it's required and missing.

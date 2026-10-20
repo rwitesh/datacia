@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	maxToolSteps     = 8
+	maxToolSteps     = 25
 	defaultQueryRows = 50
 	maxQueryRows     = 200
 	maxCellChars     = 200

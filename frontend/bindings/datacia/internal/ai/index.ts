@@ -13,6 +13,7 @@ export {
     ChatRequest,
     ChatTool,
     Message,
+    MessagePart,
     Model,
     ModelRef,
     Provider,

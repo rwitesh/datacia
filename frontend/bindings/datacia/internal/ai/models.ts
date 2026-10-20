@@ -207,6 +207,32 @@ export class Message {
     }
 }
 
+/**
+ * MessagePart is a piece of a message, in order: text or a tool call.
+ */
+export class MessagePart {
+    "text"?: string;
+    "tool"?: ToolUse | null;
+
+    /** Creates a new MessagePart instance. */
+    constructor($$source: Partial<MessagePart> = {}) {
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new MessagePart instance from a string or object.
+     */
+    static createFrom($$source: any = {}): MessagePart {
+        const $$createField1_0 = $$createType6;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("tool" in $$parsedSource) {
+            $$parsedSource["tool"] = $$createField1_0($$parsedSource["tool"]);
+        }
+        return new MessagePart($$parsedSource as Partial<MessagePart>);
+    }
+}
+
 export class Model {
     "id": string;
     "name": string;
@@ -337,7 +363,7 @@ export class ProviderStatus {
      * Creates a new ProviderStatus instance from a string or object.
      */
     static createFrom($$source: any = {}): ProviderStatus {
-        const $$createField0_0 = $$createType6;
+        const $$createField0_0 = $$createType7;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("provider" in $$parsedSource) {
             $$parsedSource["provider"] = $$createField0_0($$parsedSource["provider"]);
@@ -378,8 +404,8 @@ export class QueryPreview {
      * Creates a new QueryPreview instance from a string or object.
      */
     static createFrom($$source: any = {}): QueryPreview {
-        const $$createField0_0 = $$createType7;
-        const $$createField1_0 = $$createType9;
+        const $$createField0_0 = $$createType8;
+        const $$createField1_0 = $$createType10;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("columns" in $$parsedSource) {
             $$parsedSource["columns"] = $$createField0_0($$parsedSource["columns"]);
@@ -394,9 +420,8 @@ export class QueryPreview {
 export class StoredMessage {
     "id": string;
     "role": string;
-    "content": string;
+    "parts": MessagePart[];
     "error"?: string;
-    "tools"?: ToolUse[];
 
     /** Creates a new StoredMessage instance. */
     constructor($$source: Partial<StoredMessage> = {}) {
@@ -406,8 +431,8 @@ export class StoredMessage {
         if (!("role" in $$source)) {
             this["role"] = "";
         }
-        if (!("content" in $$source)) {
-            this["content"] = "";
+        if (!("parts" in $$source)) {
+            this["parts"] = [];
         }
 
         Object.assign(this, $$source);
@@ -417,10 +442,10 @@ export class StoredMessage {
      * Creates a new StoredMessage instance from a string or object.
      */
     static createFrom($$source: any = {}): StoredMessage {
-        const $$createField4_0 = $$createType10;
+        const $$createField2_0 = $$createType12;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        if ("tools" in $$parsedSource) {
-            $$parsedSource["tools"] = $$createField4_0($$parsedSource["tools"]);
+        if ("parts" in $$parsedSource) {
+            $$parsedSource["parts"] = $$createField2_0($$parsedSource["parts"]);
         }
         return new StoredMessage($$parsedSource as Partial<StoredMessage>);
     }
@@ -464,7 +489,7 @@ export class ToolUse {
      * Creates a new ToolUse instance from a string or object.
      */
     static createFrom($$source: any = {}): ToolUse {
-        const $$createField5_0 = $$createType12;
+        const $$createField5_0 = $$createType14;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("result" in $$parsedSource) {
             $$parsedSource["result"] = $$createField5_0($$parsedSource["result"]);
@@ -480,10 +505,12 @@ const $$createType2 = Message.createFrom;
 const $$createType3 = $Create.Array($$createType2);
 const $$createType4 = ChatContext.createFrom;
 const $$createType5 = ToolUse.createFrom;
-const $$createType6 = Provider.createFrom;
-const $$createType7 = $Create.Array($Create.Any);
+const $$createType6 = $Create.Nullable($$createType5);
+const $$createType7 = Provider.createFrom;
 const $$createType8 = $Create.Array($Create.Any);
-const $$createType9 = $Create.Array($$createType8);
-const $$createType10 = $Create.Array($$createType5);
-const $$createType11 = QueryPreview.createFrom;
-const $$createType12 = $Create.Nullable($$createType11);
+const $$createType9 = $Create.Array($Create.Any);
+const $$createType10 = $Create.Array($$createType9);
+const $$createType11 = MessagePart.createFrom;
+const $$createType12 = $Create.Array($$createType11);
+const $$createType13 = QueryPreview.createFrom;
+const $$createType14 = $Create.Nullable($$createType13);

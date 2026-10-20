@@ -1,6 +1,7 @@
 export * from "../../../bindings/datacia/internal/ai/service";
 export {
   ChatContext,
+  type MessagePart,
   type ModelRef,
   type ProviderStatus,
   type QueryPreview,
