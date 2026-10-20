@@ -148,7 +148,7 @@ function Intro({
       </div>
       <div className="space-y-1">
         <p className={cn("font-medium", wide ? "text-base" : "text-xs")}>{title}</p>
-        <p className={cn("text-muted-foreground", wide ? "text-sm" : "text-[11px]")}>{text}</p>
+        {text && <p className={cn("text-muted-foreground", wide ? "text-sm" : "text-[11px]")}>{text}</p>}
       </div>
       {children}
     </div>
@@ -246,7 +246,8 @@ function EmptyState({
   ].filter((s): s is string => Boolean(s));
 
   return (
-    <Intro title="Ask about your data" text="Explore your data, or write and fix queries." wide={wide} className="py-8">
+    <Intro title="Ask about your data" text="" wide={wide} className="py-8">
+      <Capabilities wide={wide} />
       <div className={cn("w-full flex", wide ? "flex-wrap justify-center gap-2 max-w-lg" : "flex-col items-stretch gap-1.5 max-w-64")}>
         {suggestions.map((s) => (
           <button
@@ -416,6 +417,19 @@ function Composer({
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+/** What the AI is for and the access it has, shown before the first message. */
+function Capabilities({ wide }: { wide: boolean }) {
+  return (
+    <div className={cn("space-y-1.5 text-center text-muted-foreground leading-relaxed", wide ? "max-w-md text-xs" : "max-w-64 text-[11px]")}>
+      <p>It looks through your tables, runs queries and explains what it finds.</p>
+      <p>
+        It can read your data and help write SQL, but can't change anything. AI can make mistakes,
+        so check important answers.
+      </p>
     </div>
   );
 }
