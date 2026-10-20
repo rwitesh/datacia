@@ -10,6 +10,7 @@ export {
     Chat,
     ChatContext,
     ChatDelta,
+    ChatReply,
     ChatRequest,
     ChatTool,
     Message,
@@ -20,5 +21,6 @@ export {
     ProviderStatus,
     QueryPreview,
     StoredMessage,
-    ToolUse
+    ToolUse,
+    Usage
 } from "./models.js";

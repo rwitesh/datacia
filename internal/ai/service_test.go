@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/zendev-sh/goai"
+	"github.com/zendev-sh/goai/provider"
 )
 
 func sse(w http.ResponseWriter, events ...string) {
@@ -232,5 +233,16 @@ func TestStreamReplyAnswersAfterLastStep(t *testing.T) {
 	// tools off, gets the answer.
 	if reply != "pong" || len(choices) != 3 || choices[2] != "none" {
 		t.Fatalf("reply %q, tool choices %v", reply, choices)
+	}
+}
+
+func TestUsageAdd(t *testing.T) {
+	var u Usage
+	u.add(provider.Usage{InputTokens: 100, CacheWriteTokens: 900, OutputTokens: 20})
+	u.add(provider.Usage{InputTokens: 50, CacheReadTokens: 950, OutputTokens: 30})
+	// Context is the last call's prompt; cached tokens count as prompt tokens.
+	want := Usage{Context: 1000, Prompt: 2000, CacheRead: 950, Output: 50}
+	if u != want {
+		t.Fatalf("usage %+v, want %+v", u, want)
 	}
 }

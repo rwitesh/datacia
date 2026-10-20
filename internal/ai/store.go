@@ -19,6 +19,7 @@ type StoredMessage struct {
 	Role  string        `json:"role"`
 	Parts []MessagePart `json:"parts"`
 	Error string        `json:"error,omitempty"`
+	Usage *Usage        `json:"usage,omitempty"` // a reply's tokens
 }
 
 // Chat is one conversation, saved in data.db.

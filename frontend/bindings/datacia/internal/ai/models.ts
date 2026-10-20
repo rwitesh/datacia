@@ -107,6 +107,42 @@ export class ChatDelta {
 }
 
 /**
+ * ChatReply is a finished reply.
+ */
+export class ChatReply {
+    "parts": MessagePart[];
+    "usage": Usage;
+
+    /** Creates a new ChatReply instance. */
+    constructor($$source: Partial<ChatReply> = {}) {
+        if (!("parts" in $$source)) {
+            this["parts"] = [];
+        }
+        if (!("usage" in $$source)) {
+            this["usage"] = (new Usage());
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ChatReply instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ChatReply {
+        const $$createField0_0 = $$createType3;
+        const $$createField1_0 = $$createType4;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("parts" in $$parsedSource) {
+            $$parsedSource["parts"] = $$createField0_0($$parsedSource["parts"]);
+        }
+        if ("usage" in $$parsedSource) {
+            $$parsedSource["usage"] = $$createField1_0($$parsedSource["usage"]);
+        }
+        return new ChatReply($$parsedSource as Partial<ChatReply>);
+    }
+}
+
+/**
  * ChatRequest is sent to the default model.
  */
 export class ChatRequest {
@@ -133,8 +169,8 @@ export class ChatRequest {
      * Creates a new ChatRequest instance from a string or object.
      */
     static createFrom($$source: any = {}): ChatRequest {
-        const $$createField1_0 = $$createType3;
-        const $$createField2_0 = $$createType4;
+        const $$createField1_0 = $$createType6;
+        const $$createField2_0 = $$createType7;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("messages" in $$parsedSource) {
             $$parsedSource["messages"] = $$createField1_0($$parsedSource["messages"]);
@@ -170,7 +206,7 @@ export class ChatTool {
      * Creates a new ChatTool instance from a string or object.
      */
     static createFrom($$source: any = {}): ChatTool {
-        const $$createField1_0 = $$createType5;
+        const $$createField1_0 = $$createType8;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("tool" in $$parsedSource) {
             $$parsedSource["tool"] = $$createField1_0($$parsedSource["tool"]);
@@ -224,7 +260,7 @@ export class MessagePart {
      * Creates a new MessagePart instance from a string or object.
      */
     static createFrom($$source: any = {}): MessagePart {
-        const $$createField1_0 = $$createType6;
+        const $$createField1_0 = $$createType9;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("tool" in $$parsedSource) {
             $$parsedSource["tool"] = $$createField1_0($$parsedSource["tool"]);
@@ -363,7 +399,7 @@ export class ProviderStatus {
      * Creates a new ProviderStatus instance from a string or object.
      */
     static createFrom($$source: any = {}): ProviderStatus {
-        const $$createField0_0 = $$createType7;
+        const $$createField0_0 = $$createType10;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("provider" in $$parsedSource) {
             $$parsedSource["provider"] = $$createField0_0($$parsedSource["provider"]);
@@ -404,8 +440,8 @@ export class QueryPreview {
      * Creates a new QueryPreview instance from a string or object.
      */
     static createFrom($$source: any = {}): QueryPreview {
-        const $$createField0_0 = $$createType8;
-        const $$createField1_0 = $$createType10;
+        const $$createField0_0 = $$createType11;
+        const $$createField1_0 = $$createType13;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("columns" in $$parsedSource) {
             $$parsedSource["columns"] = $$createField0_0($$parsedSource["columns"]);
@@ -422,6 +458,11 @@ export class StoredMessage {
     "role": string;
     "parts": MessagePart[];
     "error"?: string;
+
+    /**
+     * a reply's tokens
+     */
+    "usage"?: Usage | null;
 
     /** Creates a new StoredMessage instance. */
     constructor($$source: Partial<StoredMessage> = {}) {
@@ -442,10 +483,14 @@ export class StoredMessage {
      * Creates a new StoredMessage instance from a string or object.
      */
     static createFrom($$source: any = {}): StoredMessage {
-        const $$createField2_0 = $$createType12;
+        const $$createField2_0 = $$createType3;
+        const $$createField4_0 = $$createType14;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("parts" in $$parsedSource) {
             $$parsedSource["parts"] = $$createField2_0($$parsedSource["parts"]);
+        }
+        if ("usage" in $$parsedSource) {
+            $$parsedSource["usage"] = $$createField4_0($$parsedSource["usage"]);
         }
         return new StoredMessage($$parsedSource as Partial<StoredMessage>);
     }
@@ -489,7 +534,7 @@ export class ToolUse {
      * Creates a new ToolUse instance from a string or object.
      */
     static createFrom($$source: any = {}): ToolUse {
-        const $$createField5_0 = $$createType14;
+        const $$createField5_0 = $$createType16;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("result" in $$parsedSource) {
             $$parsedSource["result"] = $$createField5_0($$parsedSource["result"]);
@@ -498,19 +543,61 @@ export class ToolUse {
     }
 }
 
+/**
+ * Usage is a reply's token use over all its model calls. Prompt tokens
+ * include the cached ones.
+ */
+export class Usage {
+    /**
+     * prompt tokens of the last call: how full the context is
+     */
+    "context": number;
+    "prompt": number;
+    "cacheRead": number;
+    "output": number;
+
+    /** Creates a new Usage instance. */
+    constructor($$source: Partial<Usage> = {}) {
+        if (!("context" in $$source)) {
+            this["context"] = 0;
+        }
+        if (!("prompt" in $$source)) {
+            this["prompt"] = 0;
+        }
+        if (!("cacheRead" in $$source)) {
+            this["cacheRead"] = 0;
+        }
+        if (!("output" in $$source)) {
+            this["output"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new Usage instance from a string or object.
+     */
+    static createFrom($$source: any = {}): Usage {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new Usage($$parsedSource as Partial<Usage>);
+    }
+}
+
 // Private type creation functions
 const $$createType0 = StoredMessage.createFrom;
 const $$createType1 = $Create.Array($$createType0);
-const $$createType2 = Message.createFrom;
+const $$createType2 = MessagePart.createFrom;
 const $$createType3 = $Create.Array($$createType2);
-const $$createType4 = ChatContext.createFrom;
-const $$createType5 = ToolUse.createFrom;
-const $$createType6 = $Create.Nullable($$createType5);
-const $$createType7 = Provider.createFrom;
-const $$createType8 = $Create.Array($Create.Any);
-const $$createType9 = $Create.Array($Create.Any);
-const $$createType10 = $Create.Array($$createType9);
-const $$createType11 = MessagePart.createFrom;
-const $$createType12 = $Create.Array($$createType11);
-const $$createType13 = QueryPreview.createFrom;
-const $$createType14 = $Create.Nullable($$createType13);
+const $$createType4 = Usage.createFrom;
+const $$createType5 = Message.createFrom;
+const $$createType6 = $Create.Array($$createType5);
+const $$createType7 = ChatContext.createFrom;
+const $$createType8 = ToolUse.createFrom;
+const $$createType9 = $Create.Nullable($$createType8);
+const $$createType10 = Provider.createFrom;
+const $$createType11 = $Create.Array($Create.Any);
+const $$createType12 = $Create.Array($Create.Any);
+const $$createType13 = $Create.Array($$createType12);
+const $$createType14 = $Create.Nullable($$createType4);
+const $$createType15 = QueryPreview.createFrom;
+const $$createType16 = $Create.Nullable($$createType15);

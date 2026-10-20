@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 import * as AI from "./bindings/ai";
 import { errorMessage } from "@/lib/utils";
-import type { ChatContext, MessagePart, ToolUse } from "./bindings/ai";
+import type { ChatContext, ChatReply, MessagePart, ToolUse, Usage } from "./bindings/ai";
 
 export interface ChatMessage {
   id: string;
@@ -12,6 +12,8 @@ export interface ChatMessage {
   /** Text and tool calls in the order they happened. */
   parts: MessagePart[];
   error?: string;
+  /** A finished reply's tokens. */
+  usage?: Usage;
   streaming?: boolean;
 }
 
@@ -55,7 +57,7 @@ let state: ChatsState = { open: [first], activeId: first.id };
 const listeners = new Set<() => void>();
 
 // The request answering each chat, and the chat each reply belongs to.
-const pending = new Map<string, { replyId: string; call: CancellablePromise<MessagePart[]> }>();
+const pending = new Map<string, { replyId: string; call: CancellablePromise<ChatReply> }>();
 const replyChat = new Map<string, string>();
 
 function set(next: Partial<ChatsState>) {
@@ -87,7 +89,7 @@ function persist(chatId: string) {
   if (!chat || chat.messages.length === 0) return;
   const messages = chat.messages
     .filter((m) => !m.streaming)
-    .map(({ id, role, parts, error }) => ({ id, role, parts, error: error ?? "" }));
+    .map(({ id, role, parts, error, usage }) => ({ id, role, parts, error: error ?? "", usage }));
   const save = (saving.get(chatId) ?? Promise.resolve())
     .then(() => AI.SaveChat({ id: chat.id, title: chat.title, messages }))
     .catch((err) => {
@@ -152,9 +154,9 @@ async function run(chatId: string, context: ChatContext) {
   pending.set(chatId, { replyId: reply.id, call });
   replyChat.set(reply.id, chatId);
   try {
-    const parts = await call;
+    const { parts, usage } = await call;
     buffered.delete(reply.id);
-    patchMessage(chatId, reply.id, () => ({ parts, streaming: false }));
+    patchMessage(chatId, reply.id, () => ({ parts, usage, streaming: false }));
   } catch (err) {
     // Keep what streamed in before the stop or failure.
     flushReply(reply.id);
@@ -222,6 +224,7 @@ export const chats = {
           role: m.role === "user" ? "user" : "assistant",
           parts: m.parts ?? [],
           error: m.error || undefined,
+          usage: m.usage ?? undefined,
         })),
       }));
     } catch (err) {

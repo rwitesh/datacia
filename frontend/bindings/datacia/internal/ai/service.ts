@@ -14,12 +14,12 @@ import * as db$0 from "../db/models.js";
 import * as $models from "./models.js";
 
 /**
- * Chat streams the reply as DeltaEvent and ToolEvent events and returns its
- * parts. Cancelling the call from the frontend stops the request.
+ * Chat streams the reply as DeltaEvent and ToolEvent events and returns it.
+ * Cancelling the call from the frontend stops the request.
  */
-export function Chat(req: $models.ChatRequest): $CancellablePromise<$models.MessagePart[]> {
+export function Chat(req: $models.ChatRequest): $CancellablePromise<$models.ChatReply> {
     return $Call.ByID(1524910126, req).then(($result: any) => {
-        return $$createType1($result);
+        return $$createType0($result);
     });
 }
 
@@ -28,7 +28,7 @@ export function Chat(req: $models.ChatRequest): $CancellablePromise<$models.Mess
  */
 export function DefaultModel(): $CancellablePromise<$models.ModelRef> {
     return $Call.ByID(3027648730).then(($result: any) => {
-        return $$createType2($result);
+        return $$createType1($result);
     });
 }
 
@@ -41,7 +41,7 @@ export function DeleteChat(id: string): $CancellablePromise<void> {
  */
 export function ListChats(): $CancellablePromise<db$0.ChatSummary[]> {
     return $Call.ByID(2860992431).then(($result: any) => {
-        return $$createType4($result);
+        return $$createType3($result);
     });
 }
 
@@ -51,13 +51,13 @@ export function ListChats(): $CancellablePromise<db$0.ChatSummary[]> {
  */
 export function ListModels(providerID: string): $CancellablePromise<$models.Model[]> {
     return $Call.ByID(2139047914, providerID).then(($result: any) => {
-        return $$createType6($result);
+        return $$createType5($result);
     });
 }
 
 export function LoadChat(id: string): $CancellablePromise<$models.Chat> {
     return $Call.ByID(2539027554, id).then(($result: any) => {
-        return $$createType7($result);
+        return $$createType6($result);
     });
 }
 
@@ -66,7 +66,7 @@ export function LoadChat(id: string): $CancellablePromise<$models.Chat> {
  */
 export function Providers(): $CancellablePromise<$models.ProviderStatus[]> {
     return $Call.ByID(3848986658).then(($result: any) => {
-        return $$createType9($result);
+        return $$createType8($result);
     });
 }
 
@@ -89,13 +89,12 @@ export function SignIn(providerID: string): $CancellablePromise<void> {
 }
 
 // Private type creation functions
-const $$createType0 = $models.MessagePart.createFrom;
-const $$createType1 = $Create.Array($$createType0);
-const $$createType2 = $models.ModelRef.createFrom;
-const $$createType3 = db$0.ChatSummary.createFrom;
-const $$createType4 = $Create.Array($$createType3);
-const $$createType5 = $models.Model.createFrom;
-const $$createType6 = $Create.Array($$createType5);
-const $$createType7 = $models.Chat.createFrom;
-const $$createType8 = $models.ProviderStatus.createFrom;
-const $$createType9 = $Create.Array($$createType8);
+const $$createType0 = $models.ChatReply.createFrom;
+const $$createType1 = $models.ModelRef.createFrom;
+const $$createType2 = db$0.ChatSummary.createFrom;
+const $$createType3 = $Create.Array($$createType2);
+const $$createType4 = $models.Model.createFrom;
+const $$createType5 = $Create.Array($$createType4);
+const $$createType6 = $models.Chat.createFrom;
+const $$createType7 = $models.ProviderStatus.createFrom;
+const $$createType8 = $Create.Array($$createType7);

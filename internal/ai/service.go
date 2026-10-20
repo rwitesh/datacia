@@ -43,6 +43,30 @@ type MessagePart struct {
 	Tool *ToolUse `json:"tool,omitempty"`
 }
 
+// ChatReply is a finished reply.
+type ChatReply struct {
+	Parts []MessagePart `json:"parts"`
+	Usage Usage         `json:"usage"`
+}
+
+// Usage is a reply's token use over all its model calls. Prompt tokens
+// include the cached ones.
+type Usage struct {
+	Context   int `json:"context"` // prompt tokens of the last call: how full the context is
+	Prompt    int `json:"prompt"`
+	CacheRead int `json:"cacheRead"`
+	Output    int `json:"output"`
+}
+
+func (u *Usage) add(step provider.Usage) {
+	// goai reports cache reads and writes apart from the other input tokens.
+	prompt := step.InputTokens + step.CacheReadTokens + step.CacheWriteTokens
+	u.Context = prompt
+	u.Prompt += prompt
+	u.CacheRead += step.CacheReadTokens
+	u.Output += step.OutputTokens
+}
+
 // replyParts builds a reply's parts as text streams in and tools run, which
 // happen on different goroutines. emit runs under the lock so the chat gets
 // the changes in the same order.
@@ -187,27 +211,27 @@ func (s *Service) SetDefaultModel(m ModelRef) error {
 	return settings.SetAIModel(m.Provider, model)
 }
 
-// Chat streams the reply as DeltaEvent and ToolEvent events and returns its
-// parts. Cancelling the call from the frontend stops the request.
-func (s *Service) Chat(ctx context.Context, req ChatRequest) ([]MessagePart, error) {
+// Chat streams the reply as DeltaEvent and ToolEvent events and returns it.
+// Cancelling the call from the frontend stops the request.
+func (s *Service) Chat(ctx context.Context, req ChatRequest) (ChatReply, error) {
 	history := normalizeHistory(req.Messages)
 	if len(history) == 0 || history[len(history)-1].Role != "user" {
-		return nil, errors.New("Nothing to send.")
+		return ChatReply{}, errors.New("Nothing to send.")
 	}
 	ref := s.DefaultModel()
 	if ref.Model == "" {
-		return nil, errors.New("Choose a model.")
+		return ChatReply{}, errors.New("Choose a model.")
 	}
 	p, err := findProvider(ref.Provider)
 	if err != nil {
-		return nil, err
+		return ChatReply{}, err
 	}
 	key, err := apiKey(p)
 	if err != nil {
-		return nil, err
+		return ChatReply{}, err
 	}
 	if !isReady(p, key != "") {
-		return nil, fmt.Errorf("Set up %s in Settings.", p.Name)
+		return ChatReply{}, fmt.Errorf("Set up %s in Settings.", p.Name)
 	}
 	m := p.chat(ref.Model, key, savedBaseURL(p))
 	logger.Info("ai_chat", "provider", p.ID, "model", ref.Model, "engine", req.Context.Engine)
@@ -216,7 +240,12 @@ func (s *Service) Chat(ctx context.Context, req ChatRequest) ([]MessagePart, err
 	tools := chatTools(s.db, req.Context, func(t ToolUse) {
 		reply.setTool(t, func() { s.app.Event.Emit(ToolEvent, ChatTool{ID: req.ID, Tool: t}) })
 	})
-	opts := append([]goai.Option{goai.WithTools(tools...), goai.WithMaxSteps(maxToolSteps)}, p.options...)
+	var usage Usage
+	opts := append([]goai.Option{
+		goai.WithTools(tools...),
+		goai.WithMaxSteps(maxToolSteps),
+		goai.WithOnStepFinish(func(step goai.StepResult) { usage.add(step.Usage) }),
+	}, p.options...)
 
 	ctx, cancel := context.WithTimeout(ctx, chatTimeout)
 	defer cancel()
@@ -224,12 +253,12 @@ func (s *Service) Chat(ctx context.Context, req ChatRequest) ([]MessagePart, err
 		reply.addText(text, func() { s.app.Event.Emit(DeltaEvent, ChatDelta{ID: req.ID, Text: text}) })
 	}, opts...)
 	if err != nil {
-		return reply.parts, reportChatError(p, ref.Model, err)
+		return ChatReply{}, reportChatError(p, ref.Model, err)
 	}
 	if strings.TrimSpace(text) == "" {
-		return reply.parts, fmt.Errorf("%s returned an empty reply.", p.Name)
+		return ChatReply{}, fmt.Errorf("%s returned an empty reply.", p.Name)
 	}
-	return reply.parts, nil
+	return ChatReply{Parts: reply.parts, Usage: usage}, nil
 }
 
 func streamReply(ctx context.Context, m provider.LanguageModel, system string, history []Message, onText func(string), opts ...goai.Option) (string, error) {

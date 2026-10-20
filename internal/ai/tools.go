@@ -16,7 +16,7 @@ import (
 
 const (
 	maxToolSteps     = 25
-	defaultQueryRows = 50
+	defaultQueryRows = 20
 	maxQueryRows     = 200
 	maxCellChars     = 200
 	maxToolOutput    = 16 << 10 // bytes per tool result
@@ -62,7 +62,7 @@ type (
 
 	runQueryInput struct {
 		SQL   string `json:"sql" jsonschema:"description=One read-only statement: SELECT / WITH / SHOW / DESCRIBE / EXPLAIN."`
-		Limit int    `json:"limit" jsonschema:"description=Most rows to return (1-200). Use 50 unless you need more."`
+		Limit int    `json:"limit" jsonschema:"description=Most rows to return, at most 200. Ask for the fewest that answer the question, usually 10-20."`
 	}
 )
 
@@ -105,7 +105,7 @@ func chatTools(db Database, editor ChatContext, report func(ToolUse)) []goai.Too
 				})
 			}),
 		goai.NewTool("run_query",
-			"Runs a read-only query on the user's database and returns the rows. Writes are blocked. Select only the columns you need and prefer aggregates. For more rows run it again with OFFSET.",
+			"Runs one read-only query on the user's database and returns its rows. Writes are blocked.",
 			func(ctx context.Context, in runQueryInput) (string, error) {
 				return step(ToolUse{Label: "Ran a query", SQL: in.SQL}, func(t *ToolUse) (string, error) {
 					res, err := runQuery(ctx, db, in.SQL, in.Limit)
@@ -159,9 +159,10 @@ func describeTable(db Database, table string) (string, error) {
 }
 
 func runQuery(ctx context.Context, db Database, sql string, limit int) (QueryPreview, error) {
-	if limit < 1 || limit > maxQueryRows {
+	if limit < 1 {
 		limit = defaultQueryRows
 	}
+	limit = min(limit, maxQueryRows)
 	// One extra row tells whether there are more.
 	res, err := db.ReadOnlyQuery(ctx, sql, limit+1)
 	if err != nil {

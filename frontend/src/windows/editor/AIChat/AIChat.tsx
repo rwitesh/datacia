@@ -6,7 +6,7 @@ import { useEditorContext } from "@/context/editor/Index";
 import { getTabSql, useTabSql } from "@/context/editor/store";
 import { cn } from "@/lib/utils";
 import { OpenSettingsWindow } from "@/services/bindings";
-import { useAIProviders, useDefaultModel, type ChatContext, type ModelRef, type ProviderStatus } from "@/services/ai";
+import { useAIProviders, useDefaultModel, type ChatContext, type ModelRef, type ProviderStatus, type Usage } from "@/services/ai";
 import { chats, messageText, useActiveChat, type ChatMessage, type Conversation } from "@/services/chats";
 import { ChatHistory } from "./ChatHistory";
 import { ChatTabs } from "./ChatTabs";
@@ -67,6 +67,7 @@ export function AIChat({ wide = false }: { wide?: boolean }) {
             streaming={streaming}
             providers={usable}
             model={model}
+            usage={chat.messages.at(-1)?.usage}
           />
         </>
       ) : (
@@ -320,6 +321,7 @@ function Composer({
   streaming,
   providers,
   model,
+  usage,
 }: {
   chatId: string;
   wide: boolean;
@@ -327,6 +329,7 @@ function Composer({
   streaming: boolean;
   providers: ProviderStatus[];
   model?: ModelRef;
+  usage?: Usage;
 }) {
   const [input, setInput] = useState("");
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -376,6 +379,7 @@ function Composer({
         <div className={cn("flex items-center gap-1", wide ? "px-2 pb-2" : "px-1 pb-1")}>
           <ModelPicker value={model} providers={providers} disabled={streaming} />
           <span className="flex-1" />
+          {usage && <UsageMeter usage={usage} />}
           {streaming ? (
             <Button
               size="icon-xs"
@@ -402,5 +406,22 @@ function Composer({
         </div>
       </div>
     </div>
+  );
+}
+
+function formatTokens(n: number) {
+  return n < 1000 ? String(n) : `${(n / 1000).toFixed(n < 10_000 ? 1 : 0)}k`;
+}
+
+/** The last reply's context size and how much of its input came from the provider's cache. */
+function UsageMeter({ usage }: { usage: Usage }) {
+  const cached = usage.prompt > 0 ? Math.round((usage.cacheRead / usage.prompt) * 100) : 0;
+  return (
+    <span
+      title={`Last reply: ${usage.prompt.toLocaleString()} input tokens, ${usage.cacheRead.toLocaleString()} from cache, ${usage.output.toLocaleString()} output`}
+      className="px-1 text-[11px] text-muted-foreground tabular-nums whitespace-nowrap cursor-default"
+    >
+      {formatTokens(usage.context)} context · {cached}% cached
+    </span>
   );
 }
