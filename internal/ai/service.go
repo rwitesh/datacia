@@ -249,7 +249,7 @@ func (s *Service) Chat(ctx context.Context, req ChatRequest) (ChatReply, error) 
 
 	ctx, cancel := context.WithTimeout(ctx, chatTimeout)
 	defer cancel()
-	text, err := streamReply(ctx, m, systemPrompt(req.Context.Engine), history, func(text string) {
+	text, err := streamReply(ctx, m, systemPrompt, withEngine(history, req.Context.Engine), func(text string) {
 		reply.addText(text, func() { s.app.Event.Emit(DeltaEvent, ChatDelta{ID: req.ID, Text: text}) })
 	}, opts...)
 	if err != nil {

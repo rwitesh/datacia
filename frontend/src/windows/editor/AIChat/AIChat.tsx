@@ -13,6 +13,7 @@ import { ChatTabs } from "./ChatTabs";
 import { MarkdownMessage } from "./MarkdownMessage";
 import { ModelPicker } from "./ModelPicker";
 import { ToolStep } from "./ToolStep";
+import { UsageMeter } from "./UsageMeter";
 
 /** Reads the SQL when called, so typing doesn't re-render the chat. */
 function useChatContext(): () => ChatContext {
@@ -406,22 +407,5 @@ function Composer({
         </div>
       </div>
     </div>
-  );
-}
-
-function formatTokens(n: number) {
-  return n < 1000 ? String(n) : `${(n / 1000).toFixed(n < 10_000 ? 1 : 0)}k`;
-}
-
-/** The last reply's context size and how much of its input came from the provider's cache. */
-function UsageMeter({ usage }: { usage: Usage }) {
-  const cached = usage.prompt > 0 ? Math.round((usage.cacheRead / usage.prompt) * 100) : 0;
-  return (
-    <span
-      title={`Last reply: ${usage.prompt.toLocaleString()} input tokens, ${usage.cacheRead.toLocaleString()} from cache, ${usage.output.toLocaleString()} output`}
-      className="shrink-0 px-1 text-[11px] text-muted-foreground tabular-nums whitespace-nowrap cursor-default"
-    >
-      {formatTokens(usage.context)} context · {cached}% cached
-    </span>
   );
 }

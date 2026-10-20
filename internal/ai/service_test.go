@@ -246,3 +246,14 @@ func TestUsageAdd(t *testing.T) {
 		t.Fatalf("usage %+v, want %+v", u, want)
 	}
 }
+
+func TestWithEngine(t *testing.T) {
+	in := []Message{{Role: "user", Content: "count users"}, {Role: "assistant", Content: "ok"}}
+	got := withEngine(in, "postgres")
+	if got[0].Content != "[Database engine: postgres]\n\ncount users" || got[1].Content != "ok" {
+		t.Fatalf("got %+v", got)
+	}
+	if in[0].Content != "count users" {
+		t.Error("changed the caller's history")
+	}
+}

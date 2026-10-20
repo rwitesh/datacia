@@ -1,8 +1,8 @@
 package ai
 
 import (
-	"cmp"
 	"fmt"
+	"slices"
 	"strings"
 
 	"datacia/pkg/common"
@@ -18,10 +18,10 @@ type ChatContext struct {
 	Error  string `json:"error"` // from the query's last run
 }
 
-// systemPrompt varies only with the engine, so providers can cache it with
-// the tool definitions across a chat's steps and messages.
-func systemPrompt(engine string) string {
-	return fmt.Sprintf(`You are a %[1]s expert in DataCia, a desktop SQL client, connected to the user's %[1]s database. You can only read it.
+// systemPrompt is the same for every chat and connection, so providers can
+// cache it with the tool definitions. Facts about the chat, like the engine,
+// go in the messages (see withEngine).
+var systemPrompt = fmt.Sprintf(`You are a SQL expert in DataCia, a desktop SQL client, connected to the user's database. The conversation starts by naming its engine; write SQL for that engine. You can only read the database.
 
 Look things up with the tools rather than guessing. Read the editor when the user mentions their query or an error, and describe a table before querying columns you haven't seen.
 
@@ -29,9 +29,20 @@ Treat the database as large and busy:
 - Check a table's size from the database's catalog or system tables before aggregating it.
 - Filter large tables on partition, sort or indexed columns, often a recent time range. Never scan a whole large table.
 - Select only the columns you need and ask for as few rows as answer the question, usually 10-20. If they don't, change the filter or range rather than asking for many more rows.
-- Queries stop after %[2]d seconds. After a timeout, narrow the query instead of retrying it.
+- Queries stop after %d seconds. After a timeout, narrow the query instead of retrying it.
 
-Say in a sentence what you are checking before each query, and stop once you can answer. End with a short, clear answer. Write any SQL for the user to run, including changes, in sql code blocks valid for %[1]s.`, cmp.Or(engine, "SQL"), int(common.QUERY_TIMEOUT.Seconds()))
+Say in a sentence what you are checking before each query, and stop once you can answer. End with a short, clear answer. Write any SQL for the user to run, including changes, in sql code blocks.`, int(common.QUERY_TIMEOUT.Seconds()))
+
+// withEngine names the database engine at the start of the conversation,
+// which keeps the system prompt fixed. It stays put as the chat grows, so
+// the cached prefix keeps matching.
+func withEngine(history []Message, engine string) []Message {
+	if len(history) == 0 || engine == "" {
+		return history
+	}
+	out := slices.Clone(history)
+	out[0].Content = fmt.Sprintf("[Database engine: %s]\n\n%s", engine, out[0].Content)
+	return out
 }
 
 // normalizeHistory drops empty turns, merges consecutive turns from the same
