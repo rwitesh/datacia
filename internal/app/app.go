@@ -119,7 +119,7 @@ func (a *App) Initialize() error {
 	a.instance.RegisterService(application.NewService(queries.NewQueriesService()))
 	a.instance.RegisterService(application.NewService(settings.NewService()))
 	a.instance.RegisterService(application.NewService(intellisense.NewService(store)))
-	a.instance.RegisterService(application.NewService(ai.NewService(a.instance, a.engine)))
+	a.instance.RegisterService(application.NewService(ai.NewService(a.instance, a.engine, store)))
 	return nil
 }
 

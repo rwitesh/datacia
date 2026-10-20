@@ -1,9 +1,11 @@
 package ai
 
 import (
-	"cmp"
 	"fmt"
+	"slices"
 	"strings"
+
+	"datacia/pkg/common"
 )
 
 const maxHistory = 20
@@ -16,17 +18,27 @@ type ChatContext struct {
 	Error  string `json:"error"` // from the query's last run
 }
 
-func systemPrompt(engine string) string {
-	engine = cmp.Or(engine, "SQL")
-	return fmt.Sprintf(`You are a %[1]s expert in DataCia, a desktop SQL client, working with the user's connected %[1]s database.
+// systemPrompt never varies, so providers can cache it; chat facts go in the messages.
+var systemPrompt = fmt.Sprintf(`You are a SQL expert in DataCia, a desktop SQL client, connected to the user's database. The conversation starts by naming its engine; write SQL for that engine. You can only read the database.
 
-Use the tools instead of guessing:
-- get_editor when the user refers to their query or an error.
-- list_tables and describe_table before writing SQL against tables you haven't seen.
-- run_query to look at real data, check assumptions and answer questions about the data. Keep results small: pick the columns you need, aggregate and use LIMIT.
+Look things up with the tools rather than guessing. Read the editor when the user mentions their query or an error, and describe a table before querying columns you haven't seen.
 
-You can only read. When the user wants to change data or schema, write the statement for them to run.
-Answer from what you found, briefly. Put SQL meant for the user in sql fenced code blocks, valid for %[1]s.`, engine)
+Treat the database as large and busy:
+- Check a table's size from the database's catalog or system tables before aggregating it.
+- Filter large tables on partition, sort or indexed columns, often a recent time range. Never scan a whole large table.
+- Select only the columns you need and ask for as few rows as answer the question, usually 10-20. If they don't, change the filter or range rather than asking for many more rows.
+- Queries stop after %d seconds. After a timeout, narrow the query instead of retrying it.
+
+Say in a sentence what you are checking before each query, and stop once you can answer. End with a short, clear answer. Write any SQL for the user to run, including changes, in sql code blocks.`, int(common.QUERY_TIMEOUT.Seconds()))
+
+// withEngine names the engine on the first message, keeping the system prompt fixed.
+func withEngine(history []Message, engine string) []Message {
+	if len(history) == 0 || engine == "" {
+		return history
+	}
+	out := slices.Clone(history)
+	out[0].Content = fmt.Sprintf("[Database engine: %s]\n\n%s", engine, out[0].Content)
+	return out
 }
 
 // normalizeHistory drops empty turns, merges consecutive turns from the same

@@ -6,13 +6,21 @@
 import { Create as $Create } from "@wailsio/runtime";
 
 /**
- * Chat is the AI panel's conversation, kept between launches.
+ * Chat is one conversation, saved in data.db.
  */
 export class Chat {
+    "id": string;
+    "title": string;
     "messages": StoredMessage[];
 
     /** Creates a new Chat instance. */
     constructor($$source: Partial<Chat> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = "";
+        }
+        if (!("title" in $$source)) {
+            this["title"] = "";
+        }
         if (!("messages" in $$source)) {
             this["messages"] = [];
         }
@@ -24,10 +32,10 @@ export class Chat {
      * Creates a new Chat instance from a string or object.
      */
     static createFrom($$source: any = {}): Chat {
-        const $$createField0_0 = $$createType1;
+        const $$createField2_0 = $$createType1;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("messages" in $$parsedSource) {
-            $$parsedSource["messages"] = $$createField0_0($$parsedSource["messages"]);
+            $$parsedSource["messages"] = $$createField2_0($$parsedSource["messages"]);
         }
         return new Chat($$parsedSource as Partial<Chat>);
     }
@@ -99,6 +107,42 @@ export class ChatDelta {
 }
 
 /**
+ * ChatReply is a finished reply.
+ */
+export class ChatReply {
+    "parts": MessagePart[];
+    "usage": Usage;
+
+    /** Creates a new ChatReply instance. */
+    constructor($$source: Partial<ChatReply> = {}) {
+        if (!("parts" in $$source)) {
+            this["parts"] = [];
+        }
+        if (!("usage" in $$source)) {
+            this["usage"] = (new Usage());
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ChatReply instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ChatReply {
+        const $$createField0_0 = $$createType3;
+        const $$createField1_0 = $$createType4;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("parts" in $$parsedSource) {
+            $$parsedSource["parts"] = $$createField0_0($$parsedSource["parts"]);
+        }
+        if ("usage" in $$parsedSource) {
+            $$parsedSource["usage"] = $$createField1_0($$parsedSource["usage"]);
+        }
+        return new ChatReply($$parsedSource as Partial<ChatReply>);
+    }
+}
+
+/**
  * ChatRequest is sent to the default model.
  */
 export class ChatRequest {
@@ -125,8 +169,8 @@ export class ChatRequest {
      * Creates a new ChatRequest instance from a string or object.
      */
     static createFrom($$source: any = {}): ChatRequest {
-        const $$createField1_0 = $$createType3;
-        const $$createField2_0 = $$createType4;
+        const $$createField1_0 = $$createType6;
+        const $$createField2_0 = $$createType7;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("messages" in $$parsedSource) {
             $$parsedSource["messages"] = $$createField1_0($$parsedSource["messages"]);
@@ -139,7 +183,8 @@ export class ChatRequest {
 }
 
 /**
- * ChatTool reports a tool call made while answering the ChatRequest ID.
+ * ChatTool reports a tool call made while answering the ChatRequest ID: once
+ * as it starts and again, with the same Tool.ID, when it ends.
  */
 export class ChatTool {
     "id": string;
@@ -161,7 +206,7 @@ export class ChatTool {
      * Creates a new ChatTool instance from a string or object.
      */
     static createFrom($$source: any = {}): ChatTool {
-        const $$createField1_0 = $$createType5;
+        const $$createField1_0 = $$createType8;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("tool" in $$parsedSource) {
             $$parsedSource["tool"] = $$createField1_0($$parsedSource["tool"]);
@@ -195,6 +240,32 @@ export class Message {
     static createFrom($$source: any = {}): Message {
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         return new Message($$parsedSource as Partial<Message>);
+    }
+}
+
+/**
+ * MessagePart is a piece of a message, in order: text or a tool call.
+ */
+export class MessagePart {
+    "text"?: string;
+    "tool"?: ToolUse | null;
+
+    /** Creates a new MessagePart instance. */
+    constructor($$source: Partial<MessagePart> = {}) {
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new MessagePart instance from a string or object.
+     */
+    static createFrom($$source: any = {}): MessagePart {
+        const $$createField1_0 = $$createType9;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("tool" in $$parsedSource) {
+            $$parsedSource["tool"] = $$createField1_0($$parsedSource["tool"]);
+        }
+        return new MessagePart($$parsedSource as Partial<MessagePart>);
     }
 }
 
@@ -328,7 +399,7 @@ export class ProviderStatus {
      * Creates a new ProviderStatus instance from a string or object.
      */
     static createFrom($$source: any = {}): ProviderStatus {
-        const $$createField0_0 = $$createType6;
+        const $$createField0_0 = $$createType10;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("provider" in $$parsedSource) {
             $$parsedSource["provider"] = $$createField0_0($$parsedSource["provider"]);
@@ -337,12 +408,61 @@ export class ProviderStatus {
     }
 }
 
+/**
+ * QueryPreview is run_query's result exactly as the model sees it, so the
+ * chat can show and keep the same capped rows.
+ */
+export class QueryPreview {
+    "columns": string[];
+    "rows": any[][];
+    "more_rows": boolean;
+    "ms": number;
+
+    /** Creates a new QueryPreview instance. */
+    constructor($$source: Partial<QueryPreview> = {}) {
+        if (!("columns" in $$source)) {
+            this["columns"] = [];
+        }
+        if (!("rows" in $$source)) {
+            this["rows"] = [];
+        }
+        if (!("more_rows" in $$source)) {
+            this["more_rows"] = false;
+        }
+        if (!("ms" in $$source)) {
+            this["ms"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new QueryPreview instance from a string or object.
+     */
+    static createFrom($$source: any = {}): QueryPreview {
+        const $$createField0_0 = $$createType11;
+        const $$createField1_0 = $$createType13;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("columns" in $$parsedSource) {
+            $$parsedSource["columns"] = $$createField0_0($$parsedSource["columns"]);
+        }
+        if ("rows" in $$parsedSource) {
+            $$parsedSource["rows"] = $$createField1_0($$parsedSource["rows"]);
+        }
+        return new QueryPreview($$parsedSource as Partial<QueryPreview>);
+    }
+}
+
 export class StoredMessage {
     "id": string;
     "role": string;
-    "content": string;
+    "parts": MessagePart[];
     "error"?: string;
-    "tools"?: ToolUse[];
+
+    /**
+     * a reply's tokens
+     */
+    "usage"?: Usage | null;
 
     /** Creates a new StoredMessage instance. */
     constructor($$source: Partial<StoredMessage> = {}) {
@@ -352,8 +472,8 @@ export class StoredMessage {
         if (!("role" in $$source)) {
             this["role"] = "";
         }
-        if (!("content" in $$source)) {
-            this["content"] = "";
+        if (!("parts" in $$source)) {
+            this["parts"] = [];
         }
 
         Object.assign(this, $$source);
@@ -363,10 +483,14 @@ export class StoredMessage {
      * Creates a new StoredMessage instance from a string or object.
      */
     static createFrom($$source: any = {}): StoredMessage {
-        const $$createField4_0 = $$createType7;
+        const $$createField2_0 = $$createType3;
+        const $$createField4_0 = $$createType14;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        if ("tools" in $$parsedSource) {
-            $$parsedSource["tools"] = $$createField4_0($$parsedSource["tools"]);
+        if ("parts" in $$parsedSource) {
+            $$parsedSource["parts"] = $$createField2_0($$parsedSource["parts"]);
+        }
+        if ("usage" in $$parsedSource) {
+            $$parsedSource["usage"] = $$createField4_0($$parsedSource["usage"]);
         }
         return new StoredMessage($$parsedSource as Partial<StoredMessage>);
     }
@@ -376,17 +500,31 @@ export class StoredMessage {
  * ToolUse tells the chat what a tool read, so the user sees what was shared.
  */
 export class ToolUse {
+    "id": string;
     "label": string;
 
     /**
      * the query run_query ran
      */
     "sql"?: string;
+    "done": boolean;
+    "error"?: string;
+
+    /**
+     * run_query's rows
+     */
+    "result"?: QueryPreview | null;
 
     /** Creates a new ToolUse instance. */
     constructor($$source: Partial<ToolUse> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = "";
+        }
         if (!("label" in $$source)) {
             this["label"] = "";
+        }
+        if (!("done" in $$source)) {
+            this["done"] = false;
         }
 
         Object.assign(this, $$source);
@@ -396,17 +534,70 @@ export class ToolUse {
      * Creates a new ToolUse instance from a string or object.
      */
     static createFrom($$source: any = {}): ToolUse {
+        const $$createField5_0 = $$createType16;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("result" in $$parsedSource) {
+            $$parsedSource["result"] = $$createField5_0($$parsedSource["result"]);
+        }
         return new ToolUse($$parsedSource as Partial<ToolUse>);
+    }
+}
+
+/**
+ * Usage is a reply's token use over all its model calls. Prompt tokens
+ * include the cached ones.
+ */
+export class Usage {
+    /**
+     * prompt tokens of the last call: how full the context is
+     */
+    "context": number;
+    "prompt": number;
+    "cacheRead": number;
+    "output": number;
+
+    /** Creates a new Usage instance. */
+    constructor($$source: Partial<Usage> = {}) {
+        if (!("context" in $$source)) {
+            this["context"] = 0;
+        }
+        if (!("prompt" in $$source)) {
+            this["prompt"] = 0;
+        }
+        if (!("cacheRead" in $$source)) {
+            this["cacheRead"] = 0;
+        }
+        if (!("output" in $$source)) {
+            this["output"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new Usage instance from a string or object.
+     */
+    static createFrom($$source: any = {}): Usage {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new Usage($$parsedSource as Partial<Usage>);
     }
 }
 
 // Private type creation functions
 const $$createType0 = StoredMessage.createFrom;
 const $$createType1 = $Create.Array($$createType0);
-const $$createType2 = Message.createFrom;
+const $$createType2 = MessagePart.createFrom;
 const $$createType3 = $Create.Array($$createType2);
-const $$createType4 = ChatContext.createFrom;
-const $$createType5 = ToolUse.createFrom;
-const $$createType6 = Provider.createFrom;
-const $$createType7 = $Create.Array($$createType5);
+const $$createType4 = Usage.createFrom;
+const $$createType5 = Message.createFrom;
+const $$createType6 = $Create.Array($$createType5);
+const $$createType7 = ChatContext.createFrom;
+const $$createType8 = ToolUse.createFrom;
+const $$createType9 = $Create.Nullable($$createType8);
+const $$createType10 = Provider.createFrom;
+const $$createType11 = $Create.Array($Create.Any);
+const $$createType12 = $Create.Array($Create.Any);
+const $$createType13 = $Create.Array($$createType12);
+const $$createType14 = $Create.Nullable($$createType4);
+const $$createType15 = QueryPreview.createFrom;
+const $$createType16 = $Create.Nullable($$createType15);

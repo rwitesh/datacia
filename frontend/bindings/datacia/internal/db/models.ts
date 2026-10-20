@@ -5,6 +5,38 @@
 // @ts-ignore: Unused imports
 import { Create as $Create } from "@wailsio/runtime";
 
+/**
+ * ChatSummary is a saved AI chat without its messages.
+ */
+export class ChatSummary {
+    "id": string;
+    "title": string;
+    "updatedAt": string;
+
+    /** Creates a new ChatSummary instance. */
+    constructor($$source: Partial<ChatSummary> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = "";
+        }
+        if (!("title" in $$source)) {
+            this["title"] = "";
+        }
+        if (!("updatedAt" in $$source)) {
+            this["updatedAt"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ChatSummary instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ChatSummary {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new ChatSummary($$parsedSource as Partial<ChatSummary>);
+    }
+}
+
 export class QueryHistoryItem {
     "id": string;
     "query": string;

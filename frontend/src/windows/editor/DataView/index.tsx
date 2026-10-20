@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { errorMessage } from "@/lib/utils";
 import { useSelectedRows } from "@/context/editor/store";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { AIChat } from "./ai";
+import { AIChat } from "../AIChat/AIChat";
 import { DataTabContent } from "./data";
 
 export type DataViewTab = "data" | "ai";
@@ -12,9 +12,12 @@ export type DataViewTab = "data" | "ai";
 interface DataViewProps {
   activeTab: DataViewTab;
   onTabChange: (tab: DataViewTab) => void;
+  // Off in AI mode, where the chat already fills the editor.
+  showAI: boolean;
 }
 
-export function DataView({ activeTab: activeTabValue, onTabChange }: DataViewProps) {
+export function DataView({ activeTab, onTabChange, showAI }: DataViewProps) {
+  const activeTabValue = showAI ? activeTab : "data";
   const [copied, setCopied] = useState(false);
   const selectedData = useSelectedRows();
 
@@ -50,9 +53,11 @@ export function DataView({ activeTab: activeTabValue, onTabChange }: DataViewPro
             <TabsTrigger value="data" className="text-xs px-2 h-5 max-w-32 cursor-pointer">
               Data
             </TabsTrigger>
-            <TabsTrigger value="ai" className="text-xs px-2 h-5 max-w-32 cursor-pointer">
-              AI
-            </TabsTrigger>
+            {showAI && (
+              <TabsTrigger value="ai" className="text-xs px-2 h-5 max-w-32 cursor-pointer">
+                AI
+              </TabsTrigger>
+            )}
           </TabsList>
           {activeTabValue === "data" && (
             <div className="flex items-center gap-1">
@@ -85,9 +90,11 @@ export function DataView({ activeTab: activeTabValue, onTabChange }: DataViewPro
           <DataTabContent lines={lines} />
         </TabsContent>
 
-        <TabsContent value="ai" className="flex-1 overflow-hidden mt-0">
-          <AIChat />
-        </TabsContent>
+        {showAI && (
+          <TabsContent value="ai" className="flex-1 overflow-hidden mt-0">
+            <AIChat />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

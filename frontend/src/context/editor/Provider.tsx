@@ -9,6 +9,7 @@ import { v4 as uuidv4 } from "uuid";
 import { errorMessage } from "@/lib/utils";
 import {
   EditorContext,
+  type EditorMode,
   type Tab,
   type TableDataParams,
 } from "./Context";
@@ -18,6 +19,7 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
   const { data = [], isLoading, error } = useTables();
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
+  const [editorMode, setEditorMode] = useState<EditorMode>("query");
   const tableRef = useRef<HTMLDivElement>(null);
   // Numbers "Query N" titles; unlike tabs.length it never repeats after a close.
   const queryTabCount = useRef(0);
@@ -48,10 +50,16 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
 
       setTabs((prev) => [...prev, newTab]);
       setActiveTabId(newId);
+      setEditorMode("query");
       return newTab;
     },
     []
   );
+
+  const setActiveTab = useCallback((tabId: string) => {
+    setActiveTabId(tabId);
+    setEditorMode("query");
+  }, []);
 
   const updateTab = useCallback((tabId: string, updates: Partial<Tab>) => {
     setTabs((prev) =>
@@ -184,11 +192,13 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
   const value = useMemo(
     () => ({
       tables: { data, isLoading, error },
+      editorMode,
+      setEditorMode,
       tabs,
       activeTab,
       createTab,
       closeTab,
-      setActiveTab: setActiveTabId,
+      setActiveTab,
       updateTab,
       runQuery,
       stopQuery,
@@ -199,10 +209,12 @@ export const EditorProvider = ({ children }: { children: React.ReactNode }) => {
       data,
       isLoading,
       error,
+      editorMode,
       tabs,
       activeTab,
       createTab,
       closeTab,
+      setActiveTab,
       updateTab,
       runQuery,
       stopQuery,

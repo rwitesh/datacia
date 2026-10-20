@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math"
 	"strings"
 	"testing"
 
@@ -42,10 +43,12 @@ func TestRunQuery(t *testing.T) {
 			{"id": 3, "name": "c"},
 		},
 	}}
-	out, err := runQuery(context.Background(), db, "select id, name from users", 2)
+	res, err := runQuery(context.Background(), db, "select id, name from users", 2)
 	if err != nil {
 		t.Fatal(err)
 	}
+	// What the model reads, which the chat also shows.
+	out := toJSON(res)
 	if db.maxRows != 3 {
 		t.Errorf("asked for %d rows, want limit+1", db.maxRows)
 	}
@@ -65,5 +68,13 @@ func TestRunQuery(t *testing.T) {
 	}
 	if s := got.Rows[0][0].(string); len(s) > maxCellChars+len("…") {
 		t.Errorf("long value not cut: %d chars", len(s))
+	}
+}
+
+func TestCellNonFinite(t *testing.T) {
+	// JSON can't encode these; the rest of the row must survive.
+	row := []any{cell(math.NaN()), cell(math.Inf(1)), cell(1.5)}
+	if _, err := json.Marshal(row); err != nil {
+		t.Fatal(err)
 	}
 }

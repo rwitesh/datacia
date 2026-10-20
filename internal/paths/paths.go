@@ -13,10 +13,6 @@ func GetDBPath() (string, error) {
 	return xdg.DataFile(filepath.Join(constants.APP_NAME, "data.db"))
 }
 
-func GetChatPath() (string, error) {
-	return xdg.DataFile(filepath.Join(constants.APP_NAME, "chat.json"))
-}
-
 func GetQueriesDir() (string, error) {
 	_, err := xdg.DataFile(filepath.Join(constants.APP_NAME, "queries"))
 	if err != nil {

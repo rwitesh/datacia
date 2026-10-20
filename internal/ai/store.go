@@ -3,51 +3,49 @@ package ai
 import (
 	"encoding/json"
 	"errors"
-	"os"
-	"sync"
+	"fmt"
+	"strings"
 
-	"datacia/internal/logger"
-	"datacia/internal/paths"
+	"datacia/internal/db"
+
+	"github.com/google/uuid"
 )
 
-const maxStoredMessages = 200
+const (
+	maxStoredMessages = 200
+	maxTitleChars     = 80
+	maxChatBytes      = 16 << 20
+)
 
 type StoredMessage struct {
-	ID      string    `json:"id"`
-	Role    string    `json:"role"`
-	Content string    `json:"content"`
-	Error   string    `json:"error,omitempty"`
-	Tools   []ToolUse `json:"tools,omitempty"`
+	ID    string        `json:"id"`
+	Role  string        `json:"role"`
+	Parts []MessagePart `json:"parts"`
+	Error string        `json:"error,omitempty"`
+	Usage *Usage        `json:"usage,omitempty"` // a reply's tokens
 }
 
-// Chat is the AI panel's conversation, kept between launches.
+// Chat is one conversation, saved in data.db.
 type Chat struct {
+	ID       string          `json:"id"`
+	Title    string          `json:"title"`
 	Messages []StoredMessage `json:"messages"`
 }
 
-type chatStore struct {
-	mu sync.Mutex
+// ListChats returns the saved chats, most recently updated first.
+func (s *Service) ListChats() ([]db.ChatSummary, error) {
+	return s.store.ListChats()
 }
 
-func (s *chatStore) load() (Chat, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	empty := Chat{Messages: []StoredMessage{}}
-	path, err := paths.GetChatPath()
+// LoadChat returns a saved chat with its messages.
+func (s *Service) LoadChat(id string) (Chat, error) {
+	title, data, err := s.store.LoadChat(id)
 	if err != nil {
-		return empty, err
+		return Chat{}, err
 	}
-	data, err := os.ReadFile(path)
-	if errors.Is(err, os.ErrNotExist) {
-		return empty, nil
-	}
-	if err != nil {
-		return empty, err
-	}
-	var chat Chat
-	if err := json.Unmarshal(data, &chat); err != nil {
-		logger.Warn("Unreadable AI chat file, starting fresh", "error", err.Error())
-		return empty, nil
+	chat := Chat{ID: id, Title: title}
+	if err := json.Unmarshal([]byte(data), &chat.Messages); err != nil {
+		return Chat{}, fmt.Errorf("This chat can't be read: %w", err)
 	}
 	if chat.Messages == nil {
 		chat.Messages = []StoredMessage{}
@@ -55,19 +53,25 @@ func (s *chatStore) load() (Chat, error) {
 	return chat, nil
 }
 
-func (s *chatStore) save(chat Chat) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+// SaveChat creates or replaces the chat, keeping its latest messages.
+func (s *Service) SaveChat(chat Chat) error {
+	if _, err := uuid.Parse(chat.ID); err != nil {
+		return errors.New("The chat has no valid ID.")
+	}
 	if n := len(chat.Messages); n > maxStoredMessages {
 		chat.Messages = chat.Messages[n-maxStoredMessages:]
 	}
-	path, err := paths.GetChatPath()
+	data, err := json.Marshal(chat.Messages)
 	if err != nil {
 		return err
 	}
-	data, err := json.Marshal(chat)
-	if err != nil {
-		return err
+	if len(data) > maxChatBytes {
+		return errors.New("This chat is too large to save. Start a new chat.")
 	}
-	return paths.WriteFileAtomic(path, data, 0600)
+	return s.store.SaveChat(chat.ID, truncate(strings.TrimSpace(chat.Title), maxTitleChars), string(data))
+}
+
+// DeleteChat removes a saved chat.
+func (s *Service) DeleteChat(id string) error {
+	return s.store.DeleteChat(id)
 }

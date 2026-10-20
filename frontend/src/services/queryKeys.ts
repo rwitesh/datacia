@@ -18,4 +18,5 @@ export const queryKeys = {
   aiProviders: ["ai", "providers"] as const,
   aiModels: (providerId: string) => ["ai", "models", providerId] as const,
   aiDefaultModel: ["ai", "default-model"] as const,
+  aiChats: ["ai", "chats"] as const,
 };

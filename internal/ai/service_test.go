@@ -2,8 +2,10 @@ package ai
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -13,6 +15,7 @@ import (
 	"time"
 
 	"github.com/zendev-sh/goai"
+	"github.com/zendev-sh/goai/provider"
 )
 
 func sse(w http.ResponseWriter, events ...string) {
@@ -175,5 +178,74 @@ func TestNormalizeHistory(t *testing.T) {
 	got := normalizeHistory(long)
 	if len(got) > maxHistory || got[0].Role != "user" {
 		t.Fatalf("len %d, first %v", len(got), got[0])
+	}
+}
+
+func TestReplyPartsKeepOrder(t *testing.T) {
+	var r replyParts
+	emitted := 0
+	emit := func() { emitted++ }
+	r.addText("Checking ", emit)
+	r.addText("sizes.", emit)
+	r.setTool(ToolUse{ID: "q", Label: "Ran a query"}, emit)
+	r.addText("Done.", emit)
+	r.setTool(ToolUse{ID: "q", Label: "Ran a query", Done: true}, emit)
+
+	if len(r.parts) != 3 || r.parts[0].Text != "Checking sizes." || r.parts[2].Text != "Done." {
+		t.Fatalf("parts %+v", r.parts)
+	}
+	// The finished tool replaces the running one in place.
+	if tool := r.parts[1].Tool; tool == nil || !tool.Done {
+		t.Fatalf("tool part %+v", r.parts[1])
+	}
+	if emitted != 5 {
+		t.Errorf("emitted %d changes, want 5", emitted)
+	}
+}
+
+func TestStreamReplyAnswersAfterLastStep(t *testing.T) {
+	var choices []any
+	srv := fakeServer(t, func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		var req struct {
+			ToolChoice any `json:"tool_choice"`
+		}
+		_ = json.Unmarshal(body, &req)
+		choices = append(choices, req.ToolChoice)
+		if len(choices) == 3 && !strings.Contains(string(body), `"role":"tool"`) {
+			t.Error("the answer request is missing the tool results")
+		}
+		if len(choices) <= 2 {
+			sse(w,
+				`data: {"id":"c","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"id":"t1","type":"function","function":{"name":"ping","arguments":"{}"}}]},"finish_reason":"tool_calls"}]}`,
+				`data: [DONE]`)
+			return
+		}
+		sse(w,
+			`data: {"id":"c","choices":[{"index":0,"delta":{"content":"pong"},"finish_reason":"stop"}]}`,
+			`data: [DONE]`)
+	})
+	ping := goai.NewTool("ping", "Pings.", func(context.Context, struct{}) (string, error) { return "ok", nil })
+
+	reply, err := streamReply(context.Background(), mustProvider(t, "local").chat("m", "", srv.URL), "sys", history, func(string) {},
+		goai.WithTools(ping), goai.WithMaxSteps(2))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The step budget ran out on a tool call, so one more request, with
+	// tools off, gets the answer.
+	if reply != "pong" || len(choices) != 3 || choices[2] != "none" {
+		t.Fatalf("reply %q, tool choices %v", reply, choices)
+	}
+}
+
+func TestUsageAdd(t *testing.T) {
+	var u Usage
+	u.add(provider.Usage{InputTokens: 100, CacheWriteTokens: 900, OutputTokens: 20})
+	u.add(provider.Usage{InputTokens: 50, CacheReadTokens: 950, OutputTokens: 30})
+	// Context is the last call's prompt; cached tokens count as prompt tokens.
+	want := Usage{Context: 1000, Prompt: 2000, CacheRead: 950, Output: 50}
+	if u != want {
+		t.Fatalf("usage %+v, want %+v", u, want)
 	}
 }

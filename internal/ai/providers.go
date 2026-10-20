@@ -58,6 +58,9 @@ var providers = []Provider{
 			return anthropic.Chat(model, anthropic.WithAPIKey(key), anthropic.WithBaseURL(baseURL))
 		},
 		list: listAnthropic,
+		// Marks the system prompt (and the tools before it) for caching. The
+		// other providers cache automatically and warn on this option.
+		options: []goai.Option{goai.WithPromptCaching(true)},
 	},
 	{
 		ID:             "openai",

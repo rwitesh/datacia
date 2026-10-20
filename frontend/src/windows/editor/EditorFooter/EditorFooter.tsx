@@ -5,7 +5,8 @@ import { AppUpdate } from "@/shared/AppUpdate/AppUpdate";
 import { cn } from "@/lib/utils";
 
 interface EditorFooterProps {
-  onToggleAI: () => void;
+  // Unset in AI mode, where the chat already fills the editor.
+  onToggleAI?: () => void;
   aiActive: boolean;
 }
 
@@ -19,17 +20,19 @@ export const EditorFooter = ({ onToggleAI, aiActive }: EditorFooterProps) => {
 
       <div className="flex items-center gap-3">
         <AppUpdate />
-        <button
-          type="button"
-          onClick={onToggleAI}
-          className={cn(
-            "flex items-center gap-1 cursor-pointer transition-colors",
-            aiActive ? "text-primary" : "hover:text-foreground"
-          )}
-        >
-          <Sparkles className="h-3 w-3" />
-          <span>AI</span>
-        </button>
+        {onToggleAI && (
+          <button
+            type="button"
+            onClick={onToggleAI}
+            className={cn(
+              "flex items-center gap-1 cursor-pointer transition-colors",
+              aiActive ? "text-primary" : "hover:text-foreground"
+            )}
+          >
+            <Sparkles className="h-3 w-3" />
+            <span>AI</span>
+          </button>
+        )}
       </div>
     </div>
   );

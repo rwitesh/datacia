@@ -46,10 +46,10 @@ Data flows UI → `frontend/src/services/` hooks → `services/bindings/` → Go
 | `pkg/postgres`, `mysql`, `sqlite`, `clickhouse` | One `DatabaseClient` each |
 | `pkg/common/` | Shared types, timeouts, identifier quoting and `TableDataSQL`, `CheckReadOnly`, `SecureString` |
 | `pkg/ssh/` | SSH tunnels |
-| `internal/db/` | Local SQLite store: saved connections (encrypted passwords) and query history |
+| `internal/db/` | Local SQLite store: saved connections (encrypted passwords), query history and AI chats (`ai_chats`) |
 | `internal/security/` | Device-bound key derivation and AES encryption |
 | `internal/settings/` | `settings.json`, defaults, encrypted AI keys |
-| `internal/ai/` | AI chat on `zendev-sh/goai`: providers, streaming, read-only DB tools, `chat.json` |
+| `internal/ai/` | AI chat on `zendev-sh/goai`: providers, streaming, read-only DB tools, saved chats (`ai_chats` in `data.db`) |
 | `internal/queries/` | Saved-query files on disk |
 | `internal/intellisense/` | Ghost-text suggestions from history |
 | `internal/files`, `clipboard`, `update`, `sentry`, `logger`, `paths`, `constants` | Export, clipboard, updater, error reporting, logging, XDG paths, constants |
@@ -129,8 +129,9 @@ Where to start:
 - **Stored data.** Saved passwords and AI keys are encrypted with a key from the device ID and
   `constants.AppSalt`; changing the salt, KDF or cipher makes existing credentials unreadable.
   `data.db` has no migrations (`CREATE TABLE IF NOT EXISTS`), so a column change needs explicit
-  `ALTER TABLE` handling. `settings.json` and `chat.json` must keep loading older files
-  (`fillDefaults`).
+  `ALTER TABLE` handling. `settings.json` must keep loading older files
+  (`fillDefaults`), and saved chats keep their messages as JSON, so `StoredMessage` and `ToolUse`
+  changes must still read older chats.
 - **Privacy in the app.** Never log or report passwords, keys, query text or results. Keep the
   README "Privacy" section accurate when changing what `internal/ai` sends (row caps are in
   `internal/ai/tools.go`).

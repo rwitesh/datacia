@@ -16,6 +16,11 @@ var (
 	// SELECT INTO creates a table. Like the other checks it ignores quoting,
 	// so a string containing one of these words is rejected too.
 	writeKeyword = regexp.MustCompile(`(?i)\b(insert|update|delete|merge|into|truncate|drop|alter|create)\b`)
+	// sideEffect catches calls a read-only transaction doesn't stop: locks that
+	// outlive it, ending sessions, server files and network access (dblink's
+	// own connection can even write), and MySQL /*+ hints that lift the time limit.
+	// Quotes, comments and Unicode-escaped names (U&"...") can't hide the call.
+	sideEffect = regexp.MustCompile(`(?is)/\*\+|u&"|\b(pg_(try_)?advisory\w*|pg_(terminate|cancel)_backend|dblink\w*|lo_(import|export)|pg_read_(binary_)?file|pg_ls_\w+|pg_stat_file|pg_(create|drop|copy)_\w*replication_slot|pg_replication_slot_advance|pg_reload_conf|pg_stat_reset\w*|pg_rotate_logfile|pg_switch_wal|http_\w+|net\.\w+|get_lock|load_file|url|remote\w*|file|s3\w*|hdfs|mysql|postgresql|odbc|jdbc|executable)(?:["\x60\]]|\s|/\*.*?\*/|--[^\n]*\n)*\(`)
 )
 
 // CheckReadOnly accepts a single read statement. It checks the raw text and
@@ -32,6 +37,9 @@ func CheckReadOnly(sql string) error {
 	}
 	if fileWrite.MatchString(sql) {
 		return errors.New("Queries can't write files.")
+	}
+	if sideEffect.MatchString(sql) {
+		return errors.New("Queries can't use functions that lock, end sessions, or reach files or the network.")
 	}
 	// SHOW only lists things, and SHOW CREATE TABLE is common.
 	if !strings.EqualFold(leadingWord(sql), "show") && writeKeyword.MatchString(sql) {

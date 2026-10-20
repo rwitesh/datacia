@@ -24,6 +24,7 @@ export function ModelPicker({ providers, value, disabled }: Props) {
     (id) => open || id === value?.provider,
   );
   const chosen = value && lists[providers.findIndex((p) => p.provider.id === value.provider)]?.data?.find((m) => m.id === value.model);
+  const label = value ? (chosen?.name ?? value.model) : "Choose a model";
 
   const choose = (model: ModelRef) => {
     select.mutate(model);
@@ -35,12 +36,13 @@ export function ModelPicker({ providers, value, disabled }: Props) {
       <PopoverTrigger
         disabled={disabled}
         aria-label="Model"
-        className="inline-flex h-6 max-w-44 min-w-0 items-center gap-1 rounded-md px-1.5 text-[11px] text-muted-foreground hover:text-foreground disabled:opacity-50 cursor-pointer"
+        title={label}
+        className="inline-flex h-6 max-w-80 min-w-0 items-center gap-1 rounded-md px-1.5 text-[11px] text-muted-foreground hover:text-foreground disabled:opacity-50 cursor-pointer"
       >
-        <span className="truncate">{value ? (chosen?.name ?? value.model) : "Choose a model"}</span>
+        <span className="truncate">{label}</span>
         <ChevronDown className="size-3 shrink-0" />
       </PopoverTrigger>
-      <PopoverContent align="start" side="top" className="w-72 p-0">
+      <PopoverContent align="start" side="top" className="w-96 max-w-[calc(100vw-2rem)] p-0">
         <Command className="text-xs">
           <Command.Input
             autoFocus
@@ -48,7 +50,7 @@ export function ModelPicker({ providers, value, disabled }: Props) {
             spellCheck={false}
             className="h-8 w-full border-b bg-transparent px-3 outline-none placeholder:text-muted-foreground"
           />
-          <Command.List className="max-h-72 overflow-y-auto p-1">
+          <Command.List className="max-h-80 overflow-y-auto p-1">
             <Command.Empty className="px-2 py-1 text-muted-foreground">No models found</Command.Empty>
             {providers.map(({ provider }, i) => {
               const { data, error, refetch } = lists[i];
@@ -79,7 +81,9 @@ export function ModelPicker({ providers, value, disabled }: Props) {
                         onSelect={() => choose({ provider: provider.id, model: m.id })}
                         className={cn(rowClass, "cursor-pointer data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground")}
                       >
-                        <span className="flex-1 truncate">{m.name}</span>
+                        <span className="flex-1 min-w-0 break-words" title={m.id}>
+                          {m.name}
+                        </span>
                         {value?.provider === provider.id && value.model === m.id && <Check className="size-3 shrink-0" />}
                       </Command.Item>
                     ))

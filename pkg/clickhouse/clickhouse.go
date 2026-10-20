@@ -216,9 +216,9 @@ func (ch *ClickHouse) query(ctx context.Context, conn driver.Conn, sql string, q
 	}, nil
 }
 
-// ReadOnlyQuery runs sql with readonly=2, which blocks writes but still
-// allows the connection's own settings (max_execution_time), and
-// allow_ddl=0, which also disables table functions such as url() and s3().
+// ReadOnlyQuery runs sql with readonly=1, which blocks writes, table
+// functions such as url() and remote(), and SETTINGS that would lift the
+// limits set here.
 func (ch *ClickHouse) ReadOnlyQuery(ctx context.Context, sql string, maxRows int) (common.QueryResult, error) {
 	ch.Mu.RLock()
 	conn := ch.conn
@@ -231,7 +231,9 @@ func (ch *ClickHouse) ReadOnlyQuery(ctx context.Context, sql string, maxRows int
 	ctx, cancel := context.WithTimeout(ctx, common.QUERY_TIMEOUT)
 	defer cancel()
 
-	queryCtx := clickhouse.Context(ctx, clickhouse.WithSettings(clickhouse.Settings{"readonly": 2, "allow_ddl": 0}))
+	// The driver also sets max_execution_time from ctx's deadline, so the
+	// server stops the query even if a cancelled HTTP request doesn't.
+	queryCtx := clickhouse.Context(ctx, clickhouse.WithSettings(clickhouse.Settings{"readonly": 1, "allow_ddl": 0}))
 	rows, err := conn.Query(queryCtx, sql)
 	if err != nil {
 		return common.QueryResult{Type: common.QueryTypeRead}, err
