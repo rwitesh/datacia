@@ -419,7 +419,7 @@ function UsageMeter({ usage }: { usage: Usage }) {
   return (
     <span
       title={`Last reply: ${usage.prompt.toLocaleString()} input tokens, ${usage.cacheRead.toLocaleString()} from cache, ${usage.output.toLocaleString()} output`}
-      className="px-1 text-[11px] text-muted-foreground tabular-nums whitespace-nowrap cursor-default"
+      className="shrink-0 px-1 text-[11px] text-muted-foreground tabular-nums whitespace-nowrap cursor-default"
     >
       {formatTokens(usage.context)} context · {cached}% cached
     </span>
