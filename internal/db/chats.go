@@ -58,6 +58,7 @@ func (s *Store) ListChats() ([]ChatSummary, error) {
 	return chats, rows.Err()
 }
 
+// DeleteChat removes a chat; a missing one is not an error.
 func (s *Store) DeleteChat(id string) error {
 	_, err := s.db.Exec(`DELETE FROM ai_chats WHERE id = ?`, id)
 	return err

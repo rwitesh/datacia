@@ -16,7 +16,7 @@ export function ChatTabs() {
 
   return (
     <div className="flex shrink-0 items-center border-b border-border">
-      <div className="flex h-full flex-1 items-center gap-0.5 overflow-x-auto overflow-y-hidden px-1 py-1 scrollbar-thin">
+      <div role="tablist" aria-label="Chats" className="flex h-full flex-1 items-center gap-0.5 overflow-x-auto overflow-y-hidden px-1 py-1 scrollbar-thin">
         {open.map((c) => {
           const isActive = c.id === activeId;
           return (
@@ -31,8 +31,17 @@ export function ChatTabs() {
                 <div className="absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-primary" />
               )}
               <div
-                className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 px-3 py-1"
+                role="tab"
+                tabIndex={0}
+                aria-selected={isActive}
+                className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-md px-3 py-1 outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 onMouseDown={(e) => onMouseDown(e, c.id)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    chats.activate(c.id);
+                  }
+                }}
               >
                 <MessageSquare className="size-3.5 shrink-0 text-primary" />
                 <span className={cn("min-w-0 flex-1 truncate text-sm", isActive ? "font-medium" : "text-muted-foreground")}>
@@ -42,7 +51,7 @@ export function ChatTabs() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="mr-1.5 h-5 w-5 cursor-pointer rounded-full p-0 opacity-0 transition-opacity hover:bg-destructive/20 group-hover:opacity-100"
+                className="mr-1.5 h-5 w-5 cursor-pointer rounded-full p-0 opacity-0 transition-opacity hover:bg-destructive/20 group-hover:opacity-100 focus-visible:opacity-100"
                 onClick={() => chats.close(c.id)}
                 aria-label="Close chat"
               >

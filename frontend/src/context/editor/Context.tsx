@@ -65,7 +65,7 @@ export type EditorContextType = {
 
   tabs: Tab[];
   activeTab: Tab | undefined;
-  // Both switch to query mode so the tab is visible.
+  // createTab and setActiveTab switch to query mode so the tab is visible.
   createTab: (title?: string, type?: "query" | "table") => Tab;
   closeTab: (tabId: string) => void;
   setActiveTab: (tabId: string) => void;

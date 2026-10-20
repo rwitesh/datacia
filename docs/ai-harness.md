@@ -61,12 +61,18 @@ Every query the AI runs goes through these guards:
 1. **Read-only, checked twice.** The app first rejects anything that isn't a single read
    statement. The database itself is then told to refuse writes: a read-only transaction
    (Postgres, MySQL), a read-only setting (ClickHouse) or a read-only connection (SQLite).
-2. **30-second limit.** A query that runs longer is stopped, and the database is told to stop it
+2. **No side effects.** Some functions do things a read-only transaction can't undo: take locks
+   that outlive the query, end other sessions, read server files or reach the network. Queries
+   that call them are rejected before they run. On ClickHouse the read-only setting also blocks
+   table functions like `url()` and stops a query from changing its own limits.
+3. **30-second limit.** A query that runs longer is stopped, and the database is told to stop it
    too, so it doesn't keep working in the background.
-3. **Small results.** The model is asked to fetch as few rows as answer the question, usually
+4. **Small results.** The model is asked to fetch as few rows as answer the question, usually
    10–20, and to change its filter or range rather than fetch more. 200 rows and about 16 KB per
    query is the hard cap, with long values cut to 200 characters.
-4. **Good habits in the prompt.** The model is told to check how big a table is from the
+5. **One query at a time.** Tool calls run one after another, so a reply can't tie up every
+   connection. If you switch database while a reply is running, it stops.
+6. **Good habits in the prompt.** The model is told to check how big a table is from the
    database's own statistics before aggregating it, to filter large tables on their partition,
    sort or indexed columns, never to scan a whole large table, and not to retry a query that
    timed out.

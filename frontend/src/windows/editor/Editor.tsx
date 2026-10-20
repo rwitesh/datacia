@@ -17,6 +17,7 @@ import { useState, useEffect, useRef } from "react";
 import { FileUp } from "lucide-react";
 import { useWriteFile } from "@/services/queries";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import type { PanelImperativeHandle } from "react-resizable-panels";
 import { AIChat } from "./AIChat/AIChat";
 
@@ -148,86 +149,92 @@ export const Editor = () => {
 
           <ResizableHandle />
 
-          <ResizablePanel id="main" className="min-w-0" defaultSize={sidePanelOpen ? 47 : 75}>
-            {isAIMode ? (
-              <AIChat wide />
-            ) : (
-              <div
-                className="flex h-full w-full flex-col overflow-hidden relative"
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-              >
-                {isDragging && (
-                  <div className="absolute inset-0 z-50 bg-background/90 backdrop-blur-sm flex flex-col items-center justify-center border-2 border-dashed border-primary m-4 rounded-lg animate-in fade-in duration-200">
-                    <div className="bg-primary/10 p-6 rounded-full mb-4">
-                      <FileUp className="w-12 h-12 text-primary" />
+          <ResizablePanel id="workspace" className="min-w-0" defaultSize={75}>
+            <ResizablePanelGroup direction="horizontal" className="h-full">
+              <ResizablePanel id="main" className="min-w-0 relative" defaultSize={sidePanelOpen ? 62 : 100}>
+                {isAIMode && <AIChat wide />}
+                {/* Kept mounted in AI mode so the editor, results and selection survive. */}
+                <div
+                  className={cn(
+                    "flex h-full w-full flex-col overflow-hidden relative",
+                    isAIMode && "invisible absolute inset-0",
+                  )}
+                  inert={isAIMode}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                >
+                  {isDragging && (
+                    <div className="absolute inset-0 z-50 bg-background/90 backdrop-blur-sm flex flex-col items-center justify-center border-2 border-dashed border-primary m-4 rounded-lg animate-in fade-in duration-200">
+                      <div className="bg-primary/10 p-6 rounded-full mb-4">
+                        <FileUp className="w-12 h-12 text-primary" />
+                      </div>
+                      <h3 className="text-2xl font-semibold text-primary mb-2">
+                        Import SQL File
+                      </h3>
+                      <p className="text-muted-foreground text-lg">
+                        Drop your .sql file here to open it in the editor
+                      </p>
                     </div>
-                    <h3 className="text-2xl font-semibold text-primary mb-2">
-                      Import SQL File
-                    </h3>
-                    <p className="text-muted-foreground text-lg">
-                      Drop your .sql file here to open it in the editor
-                    </p>
+                  )}
+
+                  <div className="shrink-0 border-b border-border">
+                    <TabBar />
                   </div>
-                )}
 
-                <div className="shrink-0 border-b border-border">
-                  <TabBar />
-                </div>
+                  <div className="flex-1 min-h-0">
+                    <ResizablePanelGroup direction="vertical" className="h-full">
+                      {showQueryInput && (
+                        <>
+                          <ResizablePanel
+                            defaultSize={isResultPanelVisible ? 50 : 100}
+                            minSize={20}
+                            className="min-h-0 overflow-hidden"
+                          >
+                            <QueryInput />
+                          </ResizablePanel>
+                          {isResultPanelVisible && <ResizableHandle />}
+                        </>
+                      )}
 
-                <div className="flex-1 min-h-0">
-                  <ResizablePanelGroup direction="vertical" className="h-full">
-                    {showQueryInput && (
-                      <>
+                      {isResultPanelVisible && (
                         <ResizablePanel
-                          defaultSize={isResultPanelVisible ? 50 : 100}
+                          defaultSize={showQueryInput ? 50 : 100}
                           minSize={20}
                           className="min-h-0 overflow-hidden"
                         >
-                          <QueryInput />
+                          <QueryResult onOpenDataView={openDataView} />
                         </ResizablePanel>
-                        {isResultPanelVisible && <ResizableHandle />}
-                      </>
-                    )}
+                      )}
+                    </ResizablePanelGroup>
+                  </div>
 
-                    {isResultPanelVisible && (
-                      <ResizablePanel
-                        defaultSize={showQueryInput ? 50 : 100}
-                        minSize={20}
-                        className="min-h-0 overflow-hidden"
-                      >
-                        <QueryResult onOpenDataView={openDataView} />
-                      </ResizablePanel>
-                    )}
-                  </ResizablePanelGroup>
+                  <div className="shrink-0">
+                    <ResultBar />
+                  </div>
                 </div>
-
-                <div className="shrink-0">
-                  <ResultBar />
-                </div>
-              </div>
-            )}
-          </ResizablePanel>
-
-          {sidePanelOpen && (
-            <>
-              <ResizableHandle />
-              <ResizablePanel
-                id="side-panel"
-                minSize={18}
-                defaultSize={28}
-                maxSize={45}
-                className="min-w-0 overflow-hidden"
-              >
-                <DataView
-                  activeTab={dataViewTab}
-                  onTabChange={setDataViewTab}
-                  showAI={!isAIMode}
-                />
               </ResizablePanel>
-            </>
-          )}
+
+              {sidePanelOpen && (
+                <>
+                  <ResizableHandle />
+                  <ResizablePanel
+                    id="side-panel"
+                    minSize={25}
+                    defaultSize={38}
+                    maxSize={60}
+                    className="min-w-0 overflow-hidden"
+                  >
+                    <DataView
+                      activeTab={dataViewTab}
+                      onTabChange={setDataViewTab}
+                      showAI={!isAIMode}
+                    />
+                  </ResizablePanel>
+                </>
+              )}
+            </ResizablePanelGroup>
+          </ResizablePanel>
         </ResizablePanelGroup>
       </div>
 

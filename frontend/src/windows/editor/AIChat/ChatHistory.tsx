@@ -5,8 +5,7 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn, errorMessage } from "@/lib/utils";
-import { useChatHistory } from "@/services/ai";
-import { chats } from "@/services/chats";
+import { chats, useChatHistory } from "@/services/chats";
 import { queryKeys } from "@/services/queryKeys";
 import { timeAgo } from "../EditorSidebar/utils";
 

@@ -67,9 +67,7 @@ func (u *Usage) add(step provider.Usage) {
 	u.Output += step.OutputTokens
 }
 
-// replyParts builds a reply's parts as text streams in and tools run, which
-// happen on different goroutines. emit runs under the lock so the chat gets
-// the changes in the same order.
+// replyParts collects text and tool calls from different goroutines; emit runs under the lock to keep order.
 type replyParts struct {
 	mu    sync.Mutex
 	parts []MessagePart
@@ -244,6 +242,8 @@ func (s *Service) Chat(ctx context.Context, req ChatRequest) (ChatReply, error) 
 	opts := append([]goai.Option{
 		goai.WithTools(tools...),
 		goai.WithMaxSteps(maxToolSteps),
+		// One query at a time, so a reply can't fill the connection pool.
+		goai.WithSequentialToolExecution(),
 		goai.WithOnStepFinish(func(step goai.StepResult) { usage.add(step.Usage) }),
 	}, p.options...)
 
@@ -270,8 +270,7 @@ func streamReply(ctx context.Context, m provider.LanguageModel, system string, h
 			msgs[i] = goai.AssistantMessage(h.Content)
 		}
 	}
-	// A cache breakpoint after the history lets each tool step reuse it, on
-	// top of the system prompt and tools. Only Anthropic reads it.
+	// Caches the history across tool steps; only Anthropic reads it.
 	if n := len(msgs); n > 0 && len(msgs[n-1].Content) > 0 {
 		msgs[n-1].Content[0].CacheControl = "ephemeral"
 	}
@@ -279,10 +278,7 @@ func streamReply(ctx context.Context, m provider.LanguageModel, system string, h
 	var reply strings.Builder
 	res, err := streamStep(ctx, m, msgs, &reply, onText, opts...)
 	if err == nil && res.StepsExhausted {
-		// The loop ran out of steps after a tool call, so the model hasn't
-		// answered yet. goai can't turn tools off for a step, so replay the
-		// transcript once with tool choice "none"; the tools stay declared so
-		// the cached prompt prefix still matches.
+		// Out of steps before answering: replay once with tools declared but off.
 		msgs = append(msgs, res.ResponseMessages...)
 		_, err = streamStep(ctx, m, msgs, &reply, onText, append(opts, goai.WithToolChoice("none"), goai.WithMaxSteps(1))...)
 	}

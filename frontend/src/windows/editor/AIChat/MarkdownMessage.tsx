@@ -22,6 +22,14 @@ function openLink(href = "") {
   if (url.protocol === "http:" || url.protocol === "https:") void Browser.OpenURL(url.href);
 }
 
+function linkHost(href = "") {
+  try {
+    return new URL(href).host;
+  } catch {
+    return "";
+  }
+}
+
 export function CodeBlock({ code, language }: { code: string; language: string }) {
   const { activeTab, createTab, setEditorMode } = useEditorContext();
   const [copied, setCopied] = useState(false);
@@ -101,7 +109,7 @@ const components: Components = {
   ol: ({ children }) => <ol className="list-decimal pl-4 mb-2 last:mb-0 space-y-0.5">{children}</ol>,
   // Fenced blocks are rendered by `pre`, so this is inline code only.
   code: ({ children }) => (
-    <code className="bg-muted rounded px-1 py-0.5 text-[11px] font-mono">{children}</code>
+    <code className="bg-muted rounded px-1 py-0.5 text-[11px] font-mono [overflow-wrap:anywhere]">{children}</code>
   ),
   // `children` is the fenced block's <code> element.
   pre: ({ children }) => {
@@ -110,9 +118,11 @@ const components: Components = {
       : {};
     return <CodeBlock code={String(text).replace(/\n$/, "")} language={className.replace(/^language-/, "")} />;
   },
+  // Model output is untrusted, so the link's host is always visible.
   a: ({ href, children }) => (
     <a
       href={href}
+      title={href}
       onClick={(e) => {
         e.preventDefault();
         openLink(href);
@@ -120,6 +130,7 @@ const components: Components = {
       className="text-primary underline underline-offset-2 hover:opacity-80 cursor-pointer"
     >
       {children}
+      {linkHost(href) && <span className="ml-1 text-[10px] text-muted-foreground no-underline">({linkHost(href)})</span>}
     </a>
   ),
   blockquote: ({ children }) => (

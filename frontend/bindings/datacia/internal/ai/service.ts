@@ -32,6 +32,9 @@ export function DefaultModel(): $CancellablePromise<$models.ModelRef> {
     });
 }
 
+/**
+ * DeleteChat removes a saved chat.
+ */
 export function DeleteChat(id: string): $CancellablePromise<void> {
     return $Call.ByID(961656909, id);
 }
@@ -55,6 +58,9 @@ export function ListModels(providerID: string): $CancellablePromise<$models.Mode
     });
 }
 
+/**
+ * LoadChat returns a saved chat with its messages.
+ */
 export function LoadChat(id: string): $CancellablePromise<$models.Chat> {
     return $Call.ByID(2539027554, id).then(($result: any) => {
         return $$createType6($result);

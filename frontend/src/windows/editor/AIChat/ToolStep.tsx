@@ -1,20 +1,24 @@
-import { useState } from "react";
+import { memo, useState } from "react";
 import { AlertTriangle, ChevronRight, Database } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { QueryPreview, ToolUse } from "@/services/ai";
 import { CodeBlock } from "./MarkdownMessage";
 
 /** One thing the model did while answering; queries also show what they returned. */
-export function ToolStep({ tool, running, wide }: { tool: ToolUse; running: boolean; wide: boolean }) {
+export const ToolStep = memo(function ToolStep({ tool, running, wide }: { tool: ToolUse; running: boolean; wide: boolean }) {
   if (tool.sql) return <QueryStep tool={tool} running={running} wide={wide} />;
   return (
     <div className={cn("flex items-center gap-1.5 text-muted-foreground", wide ? "text-xs" : "text-[11px]", running && "animate-pulse")}>
       <StepIcon error={tool.error} />
       <span className="truncate">{tool.label}</span>
-      {tool.error && <span className="truncate text-destructive">{tool.error}</span>}
+      {tool.error && (
+        <span className="truncate text-destructive" title={tool.error}>
+          {tool.error}
+        </span>
+      )}
     </div>
   );
-}
+});
 
 function StepIcon({ error }: { error?: string }) {
   return error ? (

@@ -51,8 +51,3 @@ export function useSetDefaultModel() {
     },
   });
 }
-
-/** Saved chats, newest first. Refetched whenever a list showing them mounts. */
-export function useChatHistory() {
-  return useQuery({ queryKey: queryKeys.aiChats, queryFn: () => AI.ListChats(), staleTime: 0 });
-}

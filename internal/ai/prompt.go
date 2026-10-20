@@ -18,9 +18,7 @@ type ChatContext struct {
 	Error  string `json:"error"` // from the query's last run
 }
 
-// systemPrompt is the same for every chat and connection, so providers can
-// cache it with the tool definitions. Facts about the chat, like the engine,
-// go in the messages (see withEngine).
+// systemPrompt never varies, so providers can cache it; chat facts go in the messages.
 var systemPrompt = fmt.Sprintf(`You are a SQL expert in DataCia, a desktop SQL client, connected to the user's database. The conversation starts by naming its engine; write SQL for that engine. You can only read the database.
 
 Look things up with the tools rather than guessing. Read the editor when the user mentions their query or an error, and describe a table before querying columns you haven't seen.
@@ -33,9 +31,7 @@ Treat the database as large and busy:
 
 Say in a sentence what you are checking before each query, and stop once you can answer. End with a short, clear answer. Write any SQL for the user to run, including changes, in sql code blocks.`, int(common.QUERY_TIMEOUT.Seconds()))
 
-// withEngine names the database engine at the start of the conversation,
-// which keeps the system prompt fixed. The note stays on the same message
-// until the history passes maxHistory, so the cached prefix keeps matching.
+// withEngine names the engine on the first message, keeping the system prompt fixed.
 func withEngine(history []Message, engine string) []Message {
 	if len(history) == 0 || engine == "" {
 		return history

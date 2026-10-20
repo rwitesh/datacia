@@ -7,11 +7,14 @@ import (
 	"strings"
 
 	"datacia/internal/db"
+
+	"github.com/google/uuid"
 )
 
 const (
 	maxStoredMessages = 200
 	maxTitleChars     = 80
+	maxChatBytes      = 16 << 20
 )
 
 type StoredMessage struct {
@@ -34,6 +37,7 @@ func (s *Service) ListChats() ([]db.ChatSummary, error) {
 	return s.store.ListChats()
 }
 
+// LoadChat returns a saved chat with its messages.
 func (s *Service) LoadChat(id string) (Chat, error) {
 	title, data, err := s.store.LoadChat(id)
 	if err != nil {
@@ -51,8 +55,8 @@ func (s *Service) LoadChat(id string) (Chat, error) {
 
 // SaveChat creates or replaces the chat, keeping its latest messages.
 func (s *Service) SaveChat(chat Chat) error {
-	if chat.ID == "" {
-		return errors.New("The chat has no ID.")
+	if _, err := uuid.Parse(chat.ID); err != nil {
+		return errors.New("The chat has no valid ID.")
 	}
 	if n := len(chat.Messages); n > maxStoredMessages {
 		chat.Messages = chat.Messages[n-maxStoredMessages:]
@@ -61,9 +65,13 @@ func (s *Service) SaveChat(chat Chat) error {
 	if err != nil {
 		return err
 	}
+	if len(data) > maxChatBytes {
+		return errors.New("This chat is too large to save. Start a new chat.")
+	}
 	return s.store.SaveChat(chat.ID, truncate(strings.TrimSpace(chat.Title), maxTitleChars), string(data))
 }
 
+// DeleteChat removes a saved chat.
 func (s *Service) DeleteChat(id string) error {
 	return s.store.DeleteChat(id)
 }

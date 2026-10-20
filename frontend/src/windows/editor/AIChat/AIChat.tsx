@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Fragment, memo, useCallback, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AlertTriangle, ArrowUp, ChevronDown, Maximize2, RotateCcw, Settings2, Sparkles, Square, SquarePen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAppContext } from "@/context/app/Index";
@@ -136,7 +136,7 @@ function Intro({
   children,
 }: {
   title: string;
-  text: string;
+  text?: string;
   wide: boolean;
   className?: string;
   children?: ReactNode;
@@ -246,7 +246,7 @@ function EmptyState({
   ].filter((s): s is string => Boolean(s));
 
   return (
-    <Intro title="Ask about your data" text="" wide={wide} className="py-8">
+    <Intro title="Ask about your data" wide={wide} className="py-8">
       <Capabilities wide={wide} />
       <div className={cn("w-full flex", wide ? "flex-wrap justify-center gap-2 max-w-lg" : "flex-col items-stretch gap-1.5 max-w-64")}>
         {suggestions.map((s) => (
@@ -267,7 +267,8 @@ function EmptyState({
   );
 }
 
-function Message({
+// Memoized: while a reply streams, only that message changes.
+const Message = memo(function Message({
   chatId,
   message,
   last,
@@ -295,10 +296,10 @@ function Message({
     );
   }
   return (
-    <div className={cn("min-w-0", wide ? "space-y-3" : "space-y-2")}>
+    <div className={cn("min-w-0 [overflow-wrap:anywhere]", wide ? "space-y-3" : "space-y-2")}>
       {message.parts.map((p, i) =>
         p.tool ? (
-          <ToolStep key={p.tool.id || i} tool={p.tool} running={Boolean(message.streaming) && !p.tool.done} wide={wide} />
+          <ToolStep key={p.tool.id} tool={p.tool} running={Boolean(message.streaming) && !p.tool.done} wide={wide} />
         ) : p.text ? (
           <MarkdownMessage key={i} content={p.text} />
         ) : null,
@@ -324,7 +325,7 @@ function Message({
       )}
     </div>
   );
-}
+});
 
 function Composer({
   chatId,
@@ -343,7 +344,11 @@ function Composer({
   model?: ModelRef;
   usage?: Usage;
 }) {
-  const [input, setInput] = useState("");
+  const [input, setInputState] = useState(() => chats.draft(chatId));
+  const setInput = (text: string) => {
+    setInputState(text);
+    chats.setDraft(chatId, text);
+  };
   const ref = useRef<HTMLTextAreaElement>(null);
   const canSend = input.trim() !== "" && !streaming && model !== undefined;
 

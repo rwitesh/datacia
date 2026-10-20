@@ -1,10 +1,12 @@
 import { useSyncExternalStore } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { CancelError, Events, type CancellablePromise } from "@wailsio/runtime";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 import * as AI from "./bindings/ai";
 import { errorMessage } from "@/lib/utils";
 import type { ChatContext, ChatReply, MessagePart, ToolUse, Usage } from "./bindings/ai";
+import { queryKeys } from "./queryKeys";
 
 export interface ChatMessage {
   id: string;
@@ -45,8 +47,6 @@ interface ChatsState {
   open: Conversation[];
   activeId: string;
 }
-
-const TITLE_CHARS = 80;
 
 function emptyChat(): Conversation {
   return { id: uuidv4(), title: "", messages: [], loaded: true };
@@ -115,7 +115,7 @@ function flush() {
   [...buffered.keys()].forEach(flushReply);
 }
 
-Events.On("ai:delta", (ev) => {
+const offDelta = Events.On("ai:delta", (ev) => {
   if (!replyChat.has(ev.data.id)) return;
   buffered.set(ev.data.id, (buffered.get(ev.data.id) ?? "") + ev.data.text);
   frame ||= requestAnimationFrame(flush);
@@ -123,11 +123,29 @@ Events.On("ai:delta", (ev) => {
 
 // A tool is reported as it starts and again when it ends, with the same ID.
 // Text streamed before it is applied first so the parts stay in order.
-Events.On("ai:tool", (ev) => {
+const offTool = Events.On("ai:tool", (ev) => {
   const chatId = replyChat.get(ev.data.id);
   if (!chatId) return;
   flushReply(ev.data.id);
   patchMessage(chatId, ev.data.id, (m) => ({ parts: setTool(m.parts, ev.data.tool) }));
+});
+
+/** Ends a stopped reply, keeping what it had streamed. */
+function stopReply(chatId: string, replyId: string) {
+  flushReply(replyId);
+  patchMessage(chatId, replyId, (m) => (m.parts.length ? { streaming: false } : { streaming: false, error: "Stopped." }));
+}
+
+// Replies stop when the connection changes, so their queries can't reach the new database.
+const offConnection = Events.On("connection-changed", () => {
+  for (const { call } of pending.values()) call.cancel();
+});
+
+// Hot reloads re-run this module; drop the old listeners.
+import.meta.hot?.dispose(() => {
+  offDelta();
+  offTool();
+  offConnection();
 });
 
 /** History for the model: completed turns only, skipping exchanges that failed. */
@@ -164,15 +182,20 @@ async function run(chatId: string, context: ChatContext) {
     // Keep what streamed in before the stop or failure.
     flushReply(reply.id);
     if (err instanceof CancelError) {
-      patchMessage(chatId, reply.id, (m) => (m.parts.length ? { streaming: false } : { streaming: false, error: "Stopped." }));
+      stopReply(chatId, reply.id);
     } else {
       patchMessage(chatId, reply.id, () => ({ streaming: false, error: errorMessage(err) || "Something went wrong." }));
     }
   } finally {
-    pending.delete(chatId);
+    if (pending.get(chatId)?.replyId === reply.id) pending.delete(chatId);
     replyChat.delete(reply.id);
     persist(chatId);
   }
+}
+
+/** Saved chats, newest first. Refetched whenever a list showing them mounts. */
+export function useChatHistory() {
+  return useQuery({ queryKey: queryKeys.aiChats, queryFn: () => AI.ListChats(), staleTime: 0 });
 }
 
 export function useChats() {
@@ -184,12 +207,22 @@ export function useActiveChat() {
   return open.find((c) => c.id === activeId) ?? open[0];
 }
 
+// Unsent text per chat, so switching tabs or modes keeps it.
+const drafts = new Map<string, string>();
+
 export const chats = {
+  draft(chatId: string) {
+    return drafts.get(chatId) ?? "";
+  },
+  setDraft(chatId: string, text: string) {
+    if (text) drafts.set(chatId, text);
+    else drafts.delete(chatId);
+  },
   send(chatId: string, text: string, context: ChatContext) {
     const content = text.trim();
     if (!content || pending.has(chatId)) return;
     patchChat(chatId, (c) => ({
-      title: c.title || content.split("\n")[0].slice(0, TITLE_CHARS),
+      title: c.title || content.split("\n")[0],
       messages: [...c.messages, { id: uuidv4(), role: "user", parts: [{ text: content }] }],
     }));
     void run(chatId, context);
@@ -218,6 +251,8 @@ export const chats = {
     if (find(chatId)) return set({ activeId: chatId });
     set({ open: [...state.open, { id: chatId, title: "", messages: [], loaded: false }], activeId: chatId });
     try {
+      // A save from closing it may still be running.
+      await saving.get(chatId);
       const saved = await AI.LoadChat(chatId);
       patchChat(chatId, () => ({
         title: saved.title,
@@ -227,7 +262,7 @@ export const chats = {
           role: m.role === "user" ? "user" : "assistant",
           parts: m.parts ?? [],
           error: m.error || undefined,
-          usage: m.usage ?? undefined,
+          usage: m.usage || undefined,
         })),
       }));
     } catch (err) {
@@ -252,14 +287,12 @@ export const chats = {
  * replaced by an empty chat.
  */
 function closeChat(chatId: string, save: boolean) {
+  drafts.delete(chatId);
   const reply = pending.get(chatId);
   if (reply) {
     reply.call.cancel();
     if (save) {
-      flushReply(reply.replyId);
-      patchMessage(chatId, reply.replyId, (m) =>
-        m.parts.length ? { streaming: false } : { streaming: false, error: "Stopped." },
-      );
+      stopReply(chatId, reply.replyId);
       persist(chatId);
     }
   }

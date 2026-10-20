@@ -6,10 +6,11 @@ function formatTokens(n: number) {
   return n < 1000 ? String(n) : n < 9950 ? `${(n / 1000).toFixed(1)}k` : `${Math.round(n / 1000)}k`;
 }
 
-// Green once most input is cached, amber when some is; otherwise `low`.
-function cacheColor(percent: number, low: string) {
-  if (percent >= 60) return "text-emerald-500";
-  if (percent >= 20) return "text-amber-500";
+// Green once most input is cached, amber when some is; otherwise `low`. The
+// tooltip is light in dark mode, so it needs the darker shades there.
+function cacheColor(percent: number, low: string, onTooltip = false) {
+  if (percent >= 60) return onTooltip ? "text-emerald-500 dark:text-emerald-700" : "text-emerald-500";
+  if (percent >= 20) return onTooltip ? "text-amber-500 dark:text-amber-700" : "text-amber-500";
   return low;
 }
 
@@ -62,7 +63,7 @@ export function UsageMeter({ usage }: { usage: Usage }) {
         </div>
         <div className="mb-2.5 h-1.5 overflow-hidden rounded-full bg-current/15">
           <div
-            className={cn("h-full rounded-full bg-current transition-[width] duration-500", cacheColor(percent, "text-current"))}
+            className={cn("h-full rounded-full bg-current transition-[width] duration-500", cacheColor(percent, "text-current", true))}
             style={{ width: `${percent}%` }}
           />
         </div>
