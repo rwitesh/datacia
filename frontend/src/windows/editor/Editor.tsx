@@ -57,7 +57,7 @@ export const Editor = () => {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+      if ((e.metaKey || e.ctrlKey) && e.key === "s" && editorMode === "query") {
         e.preventDefault();
         if (activeTab && activeTab.type === "query") {
           if (activeTab.savedPath) {
@@ -76,7 +76,7 @@ export const Editor = () => {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [activeTab, writeFile]);
+  }, [activeTab, writeFile, editorMode]);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();

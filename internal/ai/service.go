@@ -270,6 +270,11 @@ func streamReply(ctx context.Context, m provider.LanguageModel, system string, h
 			msgs[i] = goai.AssistantMessage(h.Content)
 		}
 	}
+	// A cache breakpoint after the history lets each tool step reuse it, on
+	// top of the system prompt and tools. Only Anthropic reads it.
+	if n := len(msgs); n > 0 && len(msgs[n-1].Content) > 0 {
+		msgs[n-1].Content[0].CacheControl = "ephemeral"
+	}
 	opts = append([]goai.Option{goai.WithSystem(system)}, opts...)
 	var reply strings.Builder
 	res, err := streamStep(ctx, m, msgs, &reply, onText, opts...)

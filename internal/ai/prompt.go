@@ -34,8 +34,8 @@ Treat the database as large and busy:
 Say in a sentence what you are checking before each query, and stop once you can answer. End with a short, clear answer. Write any SQL for the user to run, including changes, in sql code blocks.`, int(common.QUERY_TIMEOUT.Seconds()))
 
 // withEngine names the database engine at the start of the conversation,
-// which keeps the system prompt fixed. It stays put as the chat grows, so
-// the cached prefix keeps matching.
+// which keeps the system prompt fixed. The note stays on the same message
+// until the history passes maxHistory, so the cached prefix keeps matching.
 func withEngine(history []Message, engine string) []Message {
 	if len(history) == 0 || engine == "" {
 		return history

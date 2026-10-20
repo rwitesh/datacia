@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"slices"
 	"strings"
 	"time"
@@ -202,7 +203,15 @@ func previewRows(res common.QueryResult, limit int) QueryPreview {
 // cell makes a value short and JSON-friendly.
 func cell(v any) any {
 	switch v := v.(type) {
-	case nil, bool, int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
+	case nil, bool, int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
+		return v
+	case float32:
+		return cell(float64(v))
+	case float64:
+		// JSON has no NaN or Inf; one would make the whole row unreadable.
+		if math.IsNaN(v) || math.IsInf(v, 0) {
+			return fmt.Sprint(v)
+		}
 		return v
 	case string:
 		return truncate(v, maxCellChars)

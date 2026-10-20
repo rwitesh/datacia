@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math"
 	"strings"
 	"testing"
 
@@ -67,5 +68,13 @@ func TestRunQuery(t *testing.T) {
 	}
 	if s := got.Rows[0][0].(string); len(s) > maxCellChars+len("…") {
 		t.Errorf("long value not cut: %d chars", len(s))
+	}
+}
+
+func TestCellNonFinite(t *testing.T) {
+	// JSON can't encode these; the rest of the row must survive.
+	row := []any{cell(math.NaN()), cell(math.Inf(1)), cell(1.5)}
+	if _, err := json.Marshal(row); err != nil {
+		t.Fatal(err)
 	}
 }

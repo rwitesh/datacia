@@ -10,7 +10,7 @@ import (
 const chatTimeLayout = "2006-01-02T15:04:05.000Z"
 
 // ErrChatNotFound is returned when loading a chat that was deleted.
-var ErrChatNotFound = errors.New("chat not found")
+var ErrChatNotFound = errors.New("This chat no longer exists.")
 
 // ChatSummary is a saved AI chat without its messages.
 type ChatSummary struct {
@@ -42,7 +42,7 @@ func (s *Store) LoadChat(id string) (title, messages string, err error) {
 
 // ListChats returns every chat, most recently updated first.
 func (s *Store) ListChats() ([]ChatSummary, error) {
-	rows, err := s.db.Query(`SELECT id, title, updated_at FROM ai_chats ORDER BY updated_at DESC`)
+	rows, err := s.db.Query(`SELECT id, title, updated_at FROM ai_chats ORDER BY updated_at DESC, id`)
 	if err != nil {
 		return nil, err
 	}

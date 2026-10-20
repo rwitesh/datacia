@@ -96,6 +96,9 @@ function persist(chatId: string) {
       toast.error("Couldn't save the chat", { description: errorMessage(err) });
     });
   saving.set(chatId, save);
+  void save.then(() => {
+    if (saving.get(chatId) === save) saving.delete(chatId);
+  });
 }
 
 // Streamed text arrives as events; apply it at most once per frame.
@@ -232,21 +235,38 @@ export const chats = {
       chats.close(chatId);
     }
   },
-  /** Closes a tab, stopping its reply. The last tab is replaced by an empty chat. */
   close(chatId: string) {
-    pending.get(chatId)?.call.cancel();
-    const index = state.open.findIndex((c) => c.id === chatId);
-    if (index === -1) return;
-    const open = state.open.filter((c) => c.id !== chatId);
-    if (open.length === 0) open.push(emptyChat());
-    const activeId = state.activeId === chatId ? open[Math.min(index, open.length - 1)].id : state.activeId;
-    set({ open, activeId });
+    closeChat(chatId, true);
   },
   /** Deletes a saved chat and closes its tab. */
   async remove(chatId: string) {
-    // A closed chat isn't saved again; wait for a save already under way.
-    chats.close(chatId);
+    closeChat(chatId, false);
     await saving.get(chatId);
     await AI.DeleteChat(chatId);
   },
 };
+
+/**
+ * Closes a tab, stopping its reply. The reply so far is saved unless the chat
+ * is being deleted; after that the chat isn't saved again. The last tab is
+ * replaced by an empty chat.
+ */
+function closeChat(chatId: string, save: boolean) {
+  const reply = pending.get(chatId);
+  if (reply) {
+    reply.call.cancel();
+    if (save) {
+      flushReply(reply.replyId);
+      patchMessage(chatId, reply.replyId, (m) =>
+        m.parts.length ? { streaming: false } : { streaming: false, error: "Stopped." },
+      );
+      persist(chatId);
+    }
+  }
+  const index = state.open.findIndex((c) => c.id === chatId);
+  if (index === -1) return;
+  const open = state.open.filter((c) => c.id !== chatId);
+  if (open.length === 0) open.push(emptyChat());
+  const activeId = state.activeId === chatId ? open[Math.min(index, open.length - 1)].id : state.activeId;
+  set({ open, activeId });
+}

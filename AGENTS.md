@@ -46,7 +46,7 @@ Data flows UI → `frontend/src/services/` hooks → `services/bindings/` → Go
 | `pkg/postgres`, `mysql`, `sqlite`, `clickhouse` | One `DatabaseClient` each |
 | `pkg/common/` | Shared types, timeouts, identifier quoting and `TableDataSQL`, `CheckReadOnly`, `SecureString` |
 | `pkg/ssh/` | SSH tunnels |
-| `internal/db/` | Local SQLite store: saved connections (encrypted passwords) and query history |
+| `internal/db/` | Local SQLite store: saved connections (encrypted passwords), query history and AI chats (`ai_chats`) |
 | `internal/security/` | Device-bound key derivation and AES encryption |
 | `internal/settings/` | `settings.json`, defaults, encrypted AI keys |
 | `internal/ai/` | AI chat on `zendev-sh/goai`: providers, streaming, read-only DB tools, saved chats (`ai_chats` in `data.db`) |

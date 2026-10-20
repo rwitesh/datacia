@@ -33,12 +33,12 @@ function HistoryList({ onOpen }: { onOpen: () => void }) {
   const [confirmId, setConfirmId] = useState<string>();
 
   const remove = async (id: string) => {
+    setConfirmId(undefined);
     try {
       await chats.remove(id);
     } catch (err) {
       toast.error("Couldn't delete the chat", { description: errorMessage(err) });
     }
-    setConfirmId(undefined);
     queryClient.invalidateQueries({ queryKey: queryKeys.aiChats });
   };
 
@@ -69,7 +69,7 @@ function HistoryList({ onOpen }: { onOpen: () => void }) {
           <Command.Item
             key={c.id}
             value={c.id}
-            keywords={[c.title]}
+            keywords={[c.title || "Untitled chat"]}
             onSelect={() => {
               void chats.open(c.id);
               onOpen();
@@ -77,7 +77,7 @@ function HistoryList({ onOpen }: { onOpen: () => void }) {
             className={cn(rowClass, "group cursor-pointer data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground")}
           >
             <span className="flex-1 truncate">{c.title || "Untitled chat"}</span>
-            <span className="shrink-0 text-[10px] text-muted-foreground group-hover:hidden">{timeAgo(c.updatedAt)}</span>
+            <span className="shrink-0 text-[10px] text-muted-foreground group-hover:hidden group-data-[selected=true]:hidden">{timeAgo(c.updatedAt)}</span>
             <button
               type="button"
               onClick={(e) => {
@@ -89,7 +89,7 @@ function HistoryList({ onOpen }: { onOpen: () => void }) {
               title={confirmId === c.id ? "Click again to delete" : "Delete chat"}
               aria-label="Delete chat"
               className={cn(
-                "hidden shrink-0 items-center gap-1 rounded px-1 group-hover:inline-flex cursor-pointer",
+                "hidden shrink-0 items-center gap-1 rounded px-1 group-hover:inline-flex group-data-[selected=true]:inline-flex cursor-pointer",
                 confirmId === c.id ? "text-destructive" : "text-muted-foreground hover:text-destructive",
               )}
             >

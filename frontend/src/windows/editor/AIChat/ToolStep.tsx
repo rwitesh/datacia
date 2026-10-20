@@ -59,6 +59,11 @@ function QueryStep({ tool, running, wide }: { tool: ToolUse; running: boolean; w
   );
 }
 
+function cellTitle(value: unknown) {
+  if (value === null || value === undefined) return undefined;
+  return typeof value === "object" ? JSON.stringify(value) : String(value);
+}
+
 function formatCell(value: unknown) {
   if (value === null || value === undefined) return <span className="italic text-muted-foreground">NULL</span>;
   return typeof value === "object" ? JSON.stringify(value) : String(value);
@@ -84,8 +89,11 @@ function ResultPreview({ result }: { result: QueryPreview }) {
             {result.rows.map((row, r) => (
               <tr key={r} className="even:bg-muted/30">
                 {row.map((v, c) => (
-                  <td key={c} className="max-w-72 truncate px-2 py-0.5 align-top" title={typeof v === "string" ? v : undefined}>
-                    {formatCell(v)}
+                  <td key={c} className="px-2 py-0.5 align-top">
+                    {/* Table cells ignore max-width, so the cap is on a div. */}
+                    <div className="max-w-72 truncate" title={cellTitle(v)}>
+                      {formatCell(v)}
+                    </div>
                   </td>
                 ))}
               </tr>
@@ -95,7 +103,7 @@ function ResultPreview({ result }: { result: QueryPreview }) {
       </div>
       {result.more_rows && (
         <p className="mt-1 px-1 text-[10px] text-muted-foreground">
-          The AI read only these rows. Open the query in a tab to see them all.
+          The AI read only these rows. Use "Open in new tab" above to see them all.
         </p>
       )}
     </div>

@@ -1,10 +1,10 @@
-import { useCallback, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Fragment, useCallback, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AlertTriangle, ArrowUp, ChevronDown, Maximize2, RotateCcw, Settings2, Sparkles, Square, SquarePen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAppContext } from "@/context/app/Index";
 import { useEditorContext } from "@/context/editor/Index";
 import { getTabSql, useTabSql } from "@/context/editor/store";
-import { cn } from "@/lib/utils";
+import { cn, errorMessage } from "@/lib/utils";
 import { OpenSettingsWindow } from "@/services/bindings";
 import { useAIProviders, useDefaultModel, type ChatContext, type ModelRef, type ProviderStatus, type Usage } from "@/services/ai";
 import { chats, messageText, useActiveChat, type ChatMessage, type Conversation } from "@/services/chats";
@@ -14,6 +14,13 @@ import { MarkdownMessage } from "./MarkdownMessage";
 import { ModelPicker } from "./ModelPicker";
 import { ToolStep } from "./ToolStep";
 import { UsageMeter } from "./UsageMeter";
+
+/** The latest reply's tokens, kept on show while the next one streams. */
+function lastUsage(messages: ChatMessage[]) {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].usage) return messages[i].usage;
+  }
+}
 
 /** Reads the SQL when called, so typing doesn't re-render the chat. */
 function useChatContext(): () => ChatContext {
@@ -42,6 +49,9 @@ export function AIChat({ wide = false }: { wide?: boolean }) {
   const model = saved?.model && usable.some((p) => p.provider.id === saved.provider) ? saved : undefined;
 
   if (providers.isLoading || defaultModel.isLoading) return null;
+  if (providers.error) {
+    return <Intro title="AI isn't available" text={errorMessage(providers.error)} wide={wide} className="px-6" />;
+  }
   if (usable.length === 0) {
     return (
       <Intro title="Set up AI" text="Add a provider in Settings." wide={wide} className="px-6">
@@ -58,19 +68,19 @@ export function AIChat({ wide = false }: { wide?: boolean }) {
     <div className={cn("flex flex-col h-full min-h-0", wide && "bg-background")}>
       {wide ? <ChatTabs /> : <PanelHeader title={chat.title} />}
       {chat.loaded ? (
-        <>
-          <MessageList key={chat.id} chat={chat} getContext={getContext} streaming={streaming} hasModel={model !== undefined} wide={wide} />
+        // Keyed per chat so its scroll position and draft don't carry over.
+        <Fragment key={chat.id}>
+          <MessageList chat={chat} getContext={getContext} streaming={streaming} hasModel={model !== undefined} wide={wide} />
           <Composer
-            key={chat.id}
             chatId={chat.id}
             wide={wide}
             getContext={getContext}
             streaming={streaming}
             providers={usable}
             model={model}
-            usage={chat.messages.at(-1)?.usage}
+            usage={lastUsage(chat.messages)}
           />
-        </>
+        </Fragment>
       ) : (
         <div className="flex-1" />
       )}

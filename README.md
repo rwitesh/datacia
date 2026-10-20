@@ -56,9 +56,9 @@ encrypted connections (9440 by default).
 - **Error reports** are anonymous and help fix bugs. They never include your queries, results or
   passwords. You can turn them off in **Settings → Privacy**.
 - **The AI assistant** only sends data when you use it, and only to the provider you pick: your
-  messages, the SQL in the current tab and its last error, and whatever it reads from your
-  database to answer (table names, table structure and a limited number of rows from read-only
-  queries). The chat shows everything it reads.
+  messages, the database type, the SQL in the current tab and its last error, and whatever it
+  reads from your database to answer (table names, table structure and a limited number of rows
+  from read-only queries). The chat shows everything it reads.
 - **Chats** are saved on your computer, including the rows the AI read, so you can reopen them.
   Deleting a chat from its history removes it.
 

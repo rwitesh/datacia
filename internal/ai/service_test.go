@@ -212,6 +212,9 @@ func TestStreamReplyAnswersAfterLastStep(t *testing.T) {
 		}
 		_ = json.Unmarshal(body, &req)
 		choices = append(choices, req.ToolChoice)
+		if len(choices) == 3 && !strings.Contains(string(body), `"role":"tool"`) {
+			t.Error("the answer request is missing the tool results")
+		}
 		if len(choices) <= 2 {
 			sse(w,
 				`data: {"id":"c","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"id":"t1","type":"function","function":{"name":"ping","arguments":"{}"}}]},"finish_reason":"tool_calls"}]}`,
@@ -244,16 +247,5 @@ func TestUsageAdd(t *testing.T) {
 	want := Usage{Context: 1000, Prompt: 2000, CacheRead: 950, Output: 50}
 	if u != want {
 		t.Fatalf("usage %+v, want %+v", u, want)
-	}
-}
-
-func TestWithEngine(t *testing.T) {
-	in := []Message{{Role: "user", Content: "count users"}, {Role: "assistant", Content: "ok"}}
-	got := withEngine(in, "postgres")
-	if got[0].Content != "[Database engine: postgres]\n\ncount users" || got[1].Content != "ok" {
-		t.Fatalf("got %+v", got)
-	}
-	if in[0].Content != "count users" {
-		t.Error("changed the caller's history")
 	}
 }

@@ -3,14 +3,14 @@ import { cn } from "@/lib/utils";
 import type { Usage } from "@/services/ai";
 
 function formatTokens(n: number) {
-  return n < 1000 ? String(n) : `${(n / 1000).toFixed(n < 10_000 ? 1 : 0)}k`;
+  return n < 1000 ? String(n) : n < 9950 ? `${(n / 1000).toFixed(1)}k` : `${Math.round(n / 1000)}k`;
 }
 
-// Green once most input is cached, amber when some is, muted when none is.
-function cacheColor(percent: number) {
+// Green once most input is cached, amber when some is; otherwise `low`.
+function cacheColor(percent: number, low: string) {
   if (percent >= 60) return "text-emerald-500";
   if (percent >= 20) return "text-amber-500";
-  return "text-muted-foreground";
+  return low;
 }
 
 /** A ring filled to the cache hit rate. */
@@ -39,7 +39,8 @@ function Ring({ percent, className }: { percent: number; className?: string }) {
 /** The last reply's context size and cache hit rate; details on hover. */
 export function UsageMeter({ usage }: { usage: Usage }) {
   const percent = usage.prompt > 0 ? Math.round((usage.cacheRead / usage.prompt) * 100) : 0;
-  const color = cacheColor(percent);
+  // Some providers report no usage.
+  if (usage.context === 0) return null;
 
   return (
     <Tooltip delayDuration={200}>
@@ -49,7 +50,7 @@ export function UsageMeter({ usage }: { usage: Usage }) {
           aria-label={`${formatTokens(usage.context)} tokens of context, ${percent}% from cache`}
           className="flex shrink-0 cursor-default items-center gap-1 rounded-md px-1.5 h-6 text-[11px] text-muted-foreground tabular-nums hover:bg-muted/60 transition-colors"
         >
-          <Ring percent={percent} className={color} />
+          <Ring percent={percent} className={cacheColor(percent, "text-muted-foreground")} />
           {formatTokens(usage.context)}
         </button>
       </TooltipTrigger>
@@ -61,7 +62,7 @@ export function UsageMeter({ usage }: { usage: Usage }) {
         </div>
         <div className="mb-2.5 h-1.5 overflow-hidden rounded-full bg-current/15">
           <div
-            className={cn("h-full rounded-full bg-current transition-[width] duration-500", color)}
+            className={cn("h-full rounded-full bg-current transition-[width] duration-500", cacheColor(percent, "text-current"))}
             style={{ width: `${percent}%` }}
           />
         </div>

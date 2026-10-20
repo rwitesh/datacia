@@ -43,6 +43,9 @@ func (s *Service) LoadChat(id string) (Chat, error) {
 	if err := json.Unmarshal([]byte(data), &chat.Messages); err != nil {
 		return Chat{}, fmt.Errorf("This chat can't be read: %w", err)
 	}
+	if chat.Messages == nil {
+		chat.Messages = []StoredMessage{}
+	}
 	return chat, nil
 }
 
