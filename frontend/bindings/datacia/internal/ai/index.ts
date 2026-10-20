@@ -7,6 +7,7 @@ export {
 };
 
 export {
+    Access,
     Chat,
     ChatContext,
     ChatDelta,

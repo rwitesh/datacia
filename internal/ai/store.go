@@ -29,6 +29,7 @@ type StoredMessage struct {
 type Chat struct {
 	ID       string          `json:"id"`
 	Title    string          `json:"title"`
+	Access   Access          `json:"access"`
 	Messages []StoredMessage `json:"messages"`
 }
 
@@ -39,11 +40,11 @@ func (s *Service) ListChats() ([]db.ChatSummary, error) {
 
 // LoadChat returns a saved chat with its messages.
 func (s *Service) LoadChat(id string) (Chat, error) {
-	title, data, err := s.store.LoadChat(id)
+	title, access, data, err := s.store.LoadChat(id)
 	if err != nil {
 		return Chat{}, err
 	}
-	chat := Chat{ID: id, Title: title}
+	chat := Chat{ID: id, Title: title, Access: Access(access)}
 	if err := json.Unmarshal([]byte(data), &chat.Messages); err != nil {
 		return Chat{}, fmt.Errorf("This chat can't be read: %w", err)
 	}
@@ -58,6 +59,9 @@ func (s *Service) SaveChat(chat Chat) error {
 	if _, err := uuid.Parse(chat.ID); err != nil {
 		return errors.New("The chat has no valid ID.")
 	}
+	if !chat.Access.valid() {
+		return errors.New("The chat has no valid access level.")
+	}
 	if n := len(chat.Messages); n > maxStoredMessages {
 		chat.Messages = chat.Messages[n-maxStoredMessages:]
 	}
@@ -68,7 +72,7 @@ func (s *Service) SaveChat(chat Chat) error {
 	if len(data) > maxChatBytes {
 		return errors.New("This chat is too large to save. Start a new chat.")
 	}
-	return s.store.SaveChat(chat.ID, truncate(strings.TrimSpace(chat.Title), maxTitleChars), string(data))
+	return s.store.SaveChat(chat.ID, truncate(strings.TrimSpace(chat.Title), maxTitleChars), string(chat.Access), string(data))
 }
 
 // DeleteChat removes a saved chat.

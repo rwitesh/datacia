@@ -24,6 +24,20 @@ const (
 	maxListedTables  = 500
 )
 
+// Access is what a chat's tools may read from the database. It is chosen when
+// the chat starts and saved with it.
+type Access string
+
+const (
+	AccessNone   Access = "none"   // no database tools: answers from the chat and the editor
+	AccessSchema Access = "schema" // table names and their columns, never rows
+	AccessData   Access = "data"   // also read-only queries
+)
+
+func (a Access) valid() bool {
+	return a == AccessNone || a == AccessSchema || a == AccessData
+}
+
 // Database is the active connection, as the tools use it.
 type Database interface {
 	ListTables() ([]string, error)
@@ -67,11 +81,12 @@ type (
 	}
 )
 
-// chatTools returns the tools for one chat request: the user's editor and
-// read-only access to the connected database, so the model can answer from
-// real data instead of guessing. editor is the editor as it was when the
-// message was sent; report is called as each tool starts and ends.
-func chatTools(db Database, editor ChatContext, report func(ToolUse)) []goai.Tool {
+// chatTools returns the tools for one chat request: the user's editor and as
+// much read-only access to the connected database as the chat allows, so the
+// model can answer from the real schema or data instead of guessing. editor
+// is the editor as it was when the message was sent; report is called as each
+// tool starts and ends.
+func chatTools(db Database, access Access, editor ChatContext, report func(ToolUse)) []goai.Tool {
 	step := func(t ToolUse, run func(*ToolUse) (string, error)) (string, error) {
 		t.ID = uuid.NewString()
 		report(t)
@@ -83,7 +98,7 @@ func chatTools(db Database, editor ChatContext, report func(ToolUse)) []goai.Too
 		report(t)
 		return out, err
 	}
-	return []goai.Tool{
+	tools := []goai.Tool{
 		goai.NewTool("get_editor",
 			"Returns the SQL in the user's editor and the error from its last run. Call it when the user mentions their query or an error.",
 			func(ctx context.Context, _ editorInput) (string, error) {
@@ -91,6 +106,12 @@ func chatTools(db Database, editor ChatContext, report func(ToolUse)) []goai.Too
 					return readEditor(editor), nil
 				})
 			}),
+	}
+	// Fails closed: an unknown level gets no database tools.
+	if access != AccessSchema && access != AccessData {
+		return tools
+	}
+	tools = append(tools,
 		goai.NewTool("list_tables",
 			"Lists the tables in the connected database.",
 			func(ctx context.Context, in listTablesInput) (string, error) {
@@ -105,6 +126,11 @@ func chatTools(db Database, editor ChatContext, report func(ToolUse)) []goai.Too
 					return describeTable(db, in.Table)
 				})
 			}),
+	)
+	if access != AccessData {
+		return tools
+	}
+	return append(tools,
 		goai.NewTool("run_query",
 			"Runs one read-only query on the user's database and returns its rows. Writes are blocked.",
 			func(ctx context.Context, in runQueryInput) (string, error) {
@@ -117,7 +143,7 @@ func chatTools(db Database, editor ChatContext, report func(ToolUse)) []goai.Too
 					return toJSON(res), nil
 				})
 			}),
-	}
+	)
 }
 
 func readEditor(c ChatContext) string {

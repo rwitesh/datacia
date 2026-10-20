@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 import * as AI from "./bindings/ai";
 import { errorMessage } from "@/lib/utils";
-import type { ChatContext, ChatReply, MessagePart, ToolUse, Usage } from "./bindings/ai";
+import { Access, type ChatContext, type ChatReply, type MessagePart, type ToolUse, type Usage } from "./bindings/ai";
 import { queryKeys } from "./queryKeys";
 
 export interface ChatMessage {
@@ -38,6 +38,8 @@ function setTool(parts: MessagePart[], tool: ToolUse): MessagePart[] {
 export interface Conversation {
   id: string;
   title: string;
+  /** What the AI may read from the database; fixed once the chat has messages. */
+  access: Access;
   messages: ChatMessage[];
   /** False while a saved chat is read from disk. */
   loaded: boolean;
@@ -49,7 +51,7 @@ interface ChatsState {
 }
 
 function emptyChat(): Conversation {
-  return { id: uuidv4(), title: "", messages: [], loaded: true };
+  return { id: uuidv4(), title: "", access: Access.AccessSchema, messages: [], loaded: true };
 }
 
 const first = emptyChat();
@@ -91,7 +93,7 @@ function persist(chatId: string) {
     .filter((m) => !m.streaming)
     .map(({ id, role, parts, error, usage }) => ({ id, role, parts, error: error ?? "", usage }));
   const save = (saving.get(chatId) ?? Promise.resolve())
-    .then(() => AI.SaveChat({ id: chat.id, title: chat.title, messages }))
+    .then(() => AI.SaveChat({ id: chat.id, title: chat.title, access: chat.access, messages }))
     .catch((err) => {
       toast.error("Couldn't save the chat", { description: errorMessage(err) });
     });
@@ -171,7 +173,7 @@ async function run(chatId: string, context: ChatContext) {
   const messages = history(chat.messages);
   patchChat(chatId, (c) => ({ messages: [...c.messages, reply] }));
 
-  const call = AI.Chat({ id: reply.id, messages, context });
+  const call = AI.Chat({ id: reply.id, messages, context, access: chat.access });
   pending.set(chatId, { replyId: reply.id, call });
   replyChat.set(reply.id, chatId);
   try {
@@ -218,6 +220,10 @@ export const chats = {
     if (text) drafts.set(chatId, text);
     else drafts.delete(chatId);
   },
+  /** Chooses what a new chat may read; a chat keeps its access once it has messages. */
+  setAccess(chatId: string, access: Access) {
+    if (find(chatId)?.messages.length === 0) patchChat(chatId, () => ({ access }));
+  },
   send(chatId: string, text: string, context: ChatContext) {
     const content = text.trim();
     if (!content || pending.has(chatId)) return;
@@ -249,13 +255,14 @@ export const chats = {
   /** Opens a saved chat in a tab, or shows it if it is open already. */
   async open(chatId: string) {
     if (find(chatId)) return set({ activeId: chatId });
-    set({ open: [...state.open, { id: chatId, title: "", messages: [], loaded: false }], activeId: chatId });
+    set({ open: [...state.open, { id: chatId, title: "", access: Access.AccessSchema, messages: [], loaded: false }], activeId: chatId });
     try {
       // A save from closing it may still be running.
       await saving.get(chatId);
       const saved = await AI.LoadChat(chatId);
       patchChat(chatId, () => ({
         title: saved.title,
+        access: saved.access,
         loaded: true,
         messages: saved.messages.map((m) => ({
           id: m.id,

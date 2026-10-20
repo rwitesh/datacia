@@ -154,7 +154,7 @@ func TestChats(t *testing.T) {
 	defer store.Close()
 
 	for _, c := range []struct{ id, title string }{{"a", "first"}, {"b", "second"}, {"a", "first, renamed"}} {
-		if err := store.SaveChat(c.id, c.title, `[]`); err != nil {
+		if err := store.SaveChat(c.id, c.title, "schema", `[]`); err != nil {
 			t.Fatal(err)
 		}
 		time.Sleep(2 * time.Millisecond) // updated_at has millisecond precision
@@ -171,10 +171,10 @@ func TestChats(t *testing.T) {
 	if err := store.DeleteChat("a"); err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := store.LoadChat("a"); !errors.Is(err, ErrChatNotFound) {
+	if _, _, _, err := store.LoadChat("a"); !errors.Is(err, ErrChatNotFound) {
 		t.Errorf("loading a deleted chat: %v", err)
 	}
-	if title, _, err := store.LoadChat("b"); err != nil || title != "second" {
-		t.Errorf("title %q, err %v", title, err)
+	if title, access, _, err := store.LoadChat("b"); err != nil || title != "second" || access != "schema" {
+		t.Errorf("title %q, access %q, err %v", title, access, err)
 	}
 }

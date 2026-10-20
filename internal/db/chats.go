@@ -19,25 +19,26 @@ type ChatSummary struct {
 	UpdatedAt string `json:"updatedAt"`
 }
 
-// SaveChat creates or replaces a chat. messages is JSON the ai package owns.
-func (s *Store) SaveChat(id, title, messages string) error {
+// SaveChat creates or replaces a chat. access and messages are values the ai package owns.
+func (s *Store) SaveChat(id, title, access, messages string) error {
 	now := time.Now().UTC().Format(chatTimeLayout)
 	_, err := s.db.Exec(`
-		INSERT INTO ai_chats (id, title, messages, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?)
+		INSERT INTO ai_chats (id, title, access, messages, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?)
 		ON CONFLICT(id) DO UPDATE SET
-			title = excluded.title, messages = excluded.messages, updated_at = excluded.updated_at
-	`, id, title, messages, now, now)
+			title = excluded.title, access = excluded.access, messages = excluded.messages,
+			updated_at = excluded.updated_at
+	`, id, title, access, messages, now, now)
 	return err
 }
 
-// LoadChat returns a chat's title and messages JSON.
-func (s *Store) LoadChat(id string) (title, messages string, err error) {
-	err = s.db.QueryRow(`SELECT title, messages FROM ai_chats WHERE id = ?`, id).Scan(&title, &messages)
+// LoadChat returns a chat's title, access and messages JSON.
+func (s *Store) LoadChat(id string) (title, access, messages string, err error) {
+	err = s.db.QueryRow(`SELECT title, access, messages FROM ai_chats WHERE id = ?`, id).Scan(&title, &access, &messages)
 	if errors.Is(err, sql.ErrNoRows) {
 		err = ErrChatNotFound
 	}
-	return title, messages, err
+	return title, access, messages, err
 }
 
 // ListChats returns every chat, most recently updated first.

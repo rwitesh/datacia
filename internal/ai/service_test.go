@@ -249,3 +249,14 @@ func TestUsageAdd(t *testing.T) {
 		t.Fatalf("usage %+v, want %+v", u, want)
 	}
 }
+
+// An unknown access level has no system prompt, so Chat must refuse it.
+func TestChatRejectsInvalidAccess(t *testing.T) {
+	s := &Service{}
+	for _, access := range []Access{"", "rows", "Data"} {
+		_, err := s.Chat(context.Background(), ChatRequest{Messages: history, Access: access})
+		if err == nil || !strings.Contains(err.Error(), "access") {
+			t.Errorf("access %q: err %v, want an access error", access, err)
+		}
+	}
+}
