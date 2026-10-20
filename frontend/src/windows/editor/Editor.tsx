@@ -18,12 +18,12 @@ import { FileUp } from "lucide-react";
 import { useWriteFile } from "@/services/queries";
 import { toast } from "sonner";
 import type { PanelImperativeHandle } from "react-resizable-panels";
-import { ScriptMode } from "./ScriptMode/ScriptMode";
+import { AIChat } from "./AIChat/AIChat";
 
 type ViewPanels = { resultCollapsed: boolean; dataViewOpen: boolean };
 
 export const Editor = () => {
-  const { activeTab, createTab } = useEditorContext();
+  const { activeTab, createTab, editorMode, setEditorMode } = useEditorContext();
   const [viewPanels, setViewPanels] = useState<ViewPanels>({
     resultCollapsed: false,
     dataViewOpen: false,
@@ -31,7 +31,6 @@ export const Editor = () => {
   const [dataViewTab, setDataViewTab] = useState<DataViewTab>("data");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const [isScriptMode, setIsScriptMode] = useState(false);
   const sidebarRef = useRef<PanelImperativeHandle>(null);
   const { mutate: writeFile } = useWriteFile();
 
@@ -112,19 +111,24 @@ export const Editor = () => {
 
   const showQueryInput = activeTab?.type === "query";
   const isResultPanelVisible = !resultCollapsed;
+  const isAIMode = editorMode === "ai";
+  // A panel left on the chat hides in AI mode and returns in query mode.
+  const sidePanelOpen = dataViewOpen && !(isAIMode && dataViewTab === "ai");
+  const toggleSidePanel = () =>
+    isAIMode && !sidePanelOpen ? openDataView() : togglePanel("dataViewOpen");
 
   return (
     <div className="h-full w-full flex flex-col bg-card font-display">
       <div className="shrink-0">
         <NavigationBar
+          mode={editorMode}
+          onModeChange={setEditorMode}
           sidebarCollapsed={sidebarCollapsed}
           onToggleSidebar={handleToggleSidebar}
           resultCollapsed={resultCollapsed}
           onToggleResult={() => togglePanel("resultCollapsed")}
-          dataViewOpen={dataViewOpen}
-          onToggleDataView={() => togglePanel("dataViewOpen")}
-          isScriptMode={isScriptMode}
-          onToggleScriptMode={() => setIsScriptMode((prev) => !prev)}
+          dataViewOpen={sidePanelOpen}
+          onToggleDataView={toggleSidePanel}
         />
       </div>
 
@@ -144,12 +148,10 @@ export const Editor = () => {
 
           <ResizableHandle />
 
-          <ResizablePanel className="min-w-0" defaultSize={80}>
-            {/* Always mounted so its blocks survive toggling the mode. */}
-            <div className={isScriptMode ? "h-full" : "hidden"}>
-              <ScriptMode />
-            </div>
-            {!isScriptMode && (
+          <ResizablePanel id="main" className="min-w-0" defaultSize={sidePanelOpen ? 47 : 75}>
+            {isAIMode ? (
+              <AIChat wide />
+            ) : (
               <div
                 className="flex h-full w-full flex-col overflow-hidden relative"
                 onDragOver={handleDragOver}
@@ -175,55 +177,28 @@ export const Editor = () => {
                 </div>
 
                 <div className="flex-1 min-h-0">
-                  <ResizablePanelGroup direction="horizontal" className="h-full">
-                    <ResizablePanel
-                      className="min-w-0"
-                      defaultSize={dataViewOpen ? 58 : 100}
-                    >
-                      <ResizablePanelGroup
-                        direction="vertical"
-                        className="h-full"
-                      >
-                        {showQueryInput && (
-                          <>
-                            <ResizablePanel
-                              defaultSize={isResultPanelVisible ? 50 : 100}
-                              minSize={20}
-                              className="min-h-0 overflow-hidden"
-                            >
-                              <QueryInput />
-                            </ResizablePanel>
-                            {isResultPanelVisible && <ResizableHandle />}
-                          </>
-                        )}
-
-                        {isResultPanelVisible && (
-                          <ResizablePanel
-                            defaultSize={showQueryInput ? 50 : 100}
-                            minSize={20}
-                            className="min-h-0 overflow-hidden"
-                          >
-                            <QueryResult onOpenDataView={openDataView} />
-                          </ResizablePanel>
-                        )}
-                      </ResizablePanelGroup>
-                    </ResizablePanel>
-
-                    {dataViewOpen && (
+                  <ResizablePanelGroup direction="vertical" className="h-full">
+                    {showQueryInput && (
                       <>
-                        <ResizableHandle />
                         <ResizablePanel
-                          minSize={25}
-                          defaultSize={42}
-                          maxSize={60}
-                          className="min-w-0 overflow-hidden"
+                          defaultSize={isResultPanelVisible ? 50 : 100}
+                          minSize={20}
+                          className="min-h-0 overflow-hidden"
                         >
-                          <DataView
-                            activeTab={dataViewTab}
-                            onTabChange={setDataViewTab}
-                          />
+                          <QueryInput />
                         </ResizablePanel>
+                        {isResultPanelVisible && <ResizableHandle />}
                       </>
+                    )}
+
+                    {isResultPanelVisible && (
+                      <ResizablePanel
+                        defaultSize={showQueryInput ? 50 : 100}
+                        minSize={20}
+                        className="min-h-0 overflow-hidden"
+                      >
+                        <QueryResult onOpenDataView={openDataView} />
+                      </ResizablePanel>
                     )}
                   </ResizablePanelGroup>
                 </div>
@@ -234,12 +209,31 @@ export const Editor = () => {
               </div>
             )}
           </ResizablePanel>
+
+          {sidePanelOpen && (
+            <>
+              <ResizableHandle />
+              <ResizablePanel
+                id="side-panel"
+                minSize={18}
+                defaultSize={28}
+                maxSize={45}
+                className="min-w-0 overflow-hidden"
+              >
+                <DataView
+                  activeTab={dataViewTab}
+                  onTabChange={setDataViewTab}
+                  showAI={!isAIMode}
+                />
+              </ResizablePanel>
+            </>
+          )}
         </ResizablePanelGroup>
       </div>
 
       <div className="shrink-0 border-t border-border">
         <EditorFooter
-          onToggleAI={toggleAIChat}
+          onToggleAI={isAIMode ? undefined : toggleAIChat}
           aiActive={dataViewOpen && dataViewTab === "ai"}
         />
       </div>

@@ -10,10 +10,10 @@ A fast, free desktop SQL client for PostgreSQL, MySQL, SQLite and ClickHouse, on
   based on queries you've run before.
 - **Results** – a quick table with sorting, resizable columns and cell selection, plus a JSON view.
 - **Export** – copy or save results as JSON, CSV or PNG.
-- **Script mode** – run several statements one after another.
 - **History and saved queries** – search past queries, and keep your own in folders.
-- **AI assistant** – ask about your queries and data with Anthropic, OpenAI, Google Gemini,
-  OpenRouter, OpenCode or a local model (Ollama, LM Studio), using your own API key.
+- **AI assistant** – ask about your queries and data in a full-window chat or next to your query,
+  with Anthropic, OpenAI, Google Gemini, OpenRouter, OpenCode or a local model (Ollama, LM Studio),
+  using your own API key.
 - **Make it yours** – light or dark theme, and your choice of fonts and editor colours.
 - **Automatic updates** – new versions download in the background and install on restart.
 

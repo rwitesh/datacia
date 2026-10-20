@@ -11,6 +11,8 @@ import {
   PanelBottomOpen,
   PanelRightClose,
   PanelRightOpen,
+  SquareTerminal,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -24,27 +26,28 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { queryKeys } from "@/services/queryKeys";
+import type { EditorMode } from "@/context/editor/Context";
 
 type NavigationBarProps = {
+  mode: EditorMode;
+  onModeChange: (mode: EditorMode) => void;
   sidebarCollapsed: boolean;
   onToggleSidebar: () => void;
   resultCollapsed: boolean;
   onToggleResult: () => void;
   dataViewOpen: boolean;
   onToggleDataView: () => void;
-  isScriptMode: boolean;
-  onToggleScriptMode: () => void;
 };
 
 export function NavigationBar({
+  mode,
+  onModeChange,
   sidebarCollapsed,
   onToggleSidebar,
   resultCollapsed,
   onToggleResult,
   dataViewOpen,
   onToggleDataView,
-  isScriptMode,
-  onToggleScriptMode,
 }: NavigationBarProps) {
   const queryClient = useQueryClient();
   const { reload } = useAppContext();
@@ -83,25 +86,27 @@ export function NavigationBar({
             </TooltipTrigger>
             <TooltipContent side="bottom">Toggle sidebar</TooltipContent>
           </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                size="icon"
-                variant="ghost"
-                className={toggleButtonClass}
-                onClick={onToggleResult}
-                aria-label="Toggle result panel"
-                data-state={resultCollapsed ? "off" : "on"}
-              >
-                {resultCollapsed ? (
-                  <PanelBottomOpen className="h-5 w-5" />
-                ) : (
-                  <PanelBottomClose className="h-5 w-5" />
-                )}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">Toggle result panel</TooltipContent>
-          </Tooltip>
+          {mode === "query" && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className={toggleButtonClass}
+                  onClick={onToggleResult}
+                  aria-label="Toggle result panel"
+                  data-state={resultCollapsed ? "off" : "on"}
+                >
+                  {resultCollapsed ? (
+                    <PanelBottomOpen className="h-5 w-5" />
+                  ) : (
+                    <PanelBottomClose className="h-5 w-5" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Toggle result panel</TooltipContent>
+            </Tooltip>
+          )}
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -109,7 +114,7 @@ export function NavigationBar({
                 variant="ghost"
                 className={toggleButtonClass}
                 onClick={onToggleDataView}
-                aria-label="Toggle DataView"
+                aria-label="Toggle side panel"
                 data-state={dataViewOpen ? "on" : "off"}
               >
                 {dataViewOpen ? (
@@ -119,31 +124,32 @@ export function NavigationBar({
                 )}
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="bottom">Toggle DataView</TooltipContent>
+            <TooltipContent side="bottom">Toggle side panel</TooltipContent>
           </Tooltip>
         </TooltipProvider>
         <div className="mr-2 flex items-center border-r border-border pr-2">
           <ToggleGroup
             type="single"
-            value={isScriptMode ? "script" : "sql"}
-            onValueChange={(val) => {
-              if (val && (val === "script") !== isScriptMode) onToggleScriptMode();
-            }}
+            value={mode}
+            onValueChange={(value) => value && onModeChange(value as EditorMode)}
+            aria-label="Editor mode"
             className="gap-1 bg-muted/50 p-0.5 rounded-lg border border-border"
           >
             <ToggleGroupItem
-              value="sql"
+              value="query"
               size="sm"
-              className="h-6 px-2 text-xs rounded-md data-[state=on]:bg-background data-[state=on]:shadow-sm transition-all"
+              className="h-6 px-2 gap-1 text-xs rounded-md cursor-pointer data-[state=on]:bg-background data-[state=on]:shadow-sm transition-all"
             >
-              SQL
+              <SquareTerminal className="size-3.5" />
+              Query
             </ToggleGroupItem>
             <ToggleGroupItem
-              value="script"
+              value="ai"
               size="sm"
-              className="h-6 px-2 text-xs rounded-md data-[state=on]:bg-background data-[state=on]:shadow-sm transition-all text-emerald-600 font-medium"
+              className="h-6 px-2 gap-1 text-xs rounded-md cursor-pointer data-[state=on]:bg-background data-[state=on]:text-primary data-[state=on]:shadow-sm transition-all"
             >
-              Script
+              <Sparkles className="size-3.5" />
+              AI
             </ToggleGroupItem>
           </ToggleGroup>
         </div>

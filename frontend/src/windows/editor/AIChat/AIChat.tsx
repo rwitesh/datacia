@@ -1,5 +1,5 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { AlertTriangle, ArrowUp, Database, Loader2, RotateCcw, Settings2, Sparkles, Square, SquarePen } from "lucide-react";
+import { AlertTriangle, ArrowUp, Database, Loader2, Maximize2, RotateCcw, Settings2, Sparkles, Square, SquarePen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAppContext } from "@/context/app/Index";
 import { useEditorContext } from "@/context/editor/Index";
@@ -17,7 +17,7 @@ import {
   type ProviderStatus,
   type ToolUse,
 } from "@/services/ai";
-import { MarkdownMessage } from "./MarkdownMessage";
+import { CodeBlock, MarkdownMessage } from "./MarkdownMessage";
 import { ModelPicker } from "./ModelPicker";
 
 /** Reads the SQL when called, so typing doesn't re-render the chat. */
@@ -32,7 +32,8 @@ function useChatContext(): () => ChatContext {
   );
 }
 
-export function AIChat() {
+/** The chat: `wide` fills the editor in AI mode, otherwise it fits the side panel. */
+export function AIChat({ wide = false }: { wide?: boolean }) {
   const providers = useAIProviders();
   const defaultModel = useDefaultModel();
   const state = useChat();
@@ -48,6 +49,7 @@ export function AIChat() {
       <Intro
         title="Set up AI"
         text="Add a provider in Settings."
+        wide={wide}
         className="px-6"
       >
         <Button size="xs" variant="outline" onClick={() => OpenSettingsWindow("ai")} className="cursor-pointer">
@@ -60,9 +62,16 @@ export function AIChat() {
 
   const streaming = state.messages.some((m) => m.streaming);
   return (
-    <div className="flex flex-col h-full min-h-0">
-      <MessageList messages={state.messages} getContext={getContext} streaming={streaming} hasModel={model !== undefined} />
+    <div className={cn("flex flex-col h-full min-h-0", wide && "bg-background")}>
+      <MessageList
+        messages={state.messages}
+        getContext={getContext}
+        streaming={streaming}
+        hasModel={model !== undefined}
+        wide={wide}
+      />
       <Composer
+        wide={wide}
         getContext={getContext}
         streaming={streaming}
         providers={usable}
@@ -76,22 +85,24 @@ export function AIChat() {
 function Intro({
   title,
   text,
+  wide,
   className,
   children,
 }: {
   title: string;
   text: string;
+  wide: boolean;
   className?: string;
   children?: ReactNode;
 }) {
   return (
-    <div className={cn("h-full flex flex-col items-center justify-center gap-3 text-center", className)}>
-      <div className="size-8 rounded-full bg-primary/10 flex items-center justify-center">
-        <Sparkles className="size-4 text-primary/70" />
+    <div className={cn("h-full flex flex-col items-center justify-center text-center", wide ? "gap-4" : "gap-3", className)}>
+      <div className={cn("rounded-full bg-primary/10 flex items-center justify-center", wide ? "size-12" : "size-8")}>
+        <Sparkles className={cn("text-primary/70", wide ? "size-6" : "size-4")} />
       </div>
       <div className="space-y-1">
-        <p className="text-xs font-medium">{title}</p>
-        <p className="text-[11px] text-muted-foreground">{text}</p>
+        <p className={cn("font-medium", wide ? "text-base" : "text-xs")}>{title}</p>
+        <p className={cn("text-muted-foreground", wide ? "text-sm" : "text-[11px]")}>{text}</p>
       </div>
       {children}
     </div>
@@ -103,11 +114,13 @@ function MessageList({
   getContext,
   streaming,
   hasModel,
+  wide,
 }: {
   messages: ChatMessage[];
   getContext: () => ChatContext;
   streaming: boolean;
   hasModel: boolean;
+  wide: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const stick = useRef(true);
@@ -138,24 +151,29 @@ function MessageList({
       role="log"
       aria-live="polite"
       aria-busy={streaming}
-      className="flex-1 min-h-0 overflow-y-scroll overflow-x-hidden px-3 py-3 space-y-4 text-xs leading-relaxed select-text"
-    >
-      {messages.length === 0 ? (
-        <EmptyState getContext={getContext} hasModel={hasModel} />
-      ) : (
-        messages.map((m, i) => (
-          <Message key={m.id} message={m} last={i === messages.length - 1} getContext={getContext} />
-        ))
+      className={cn(
+        "flex-1 min-h-0 overflow-y-scroll overflow-x-hidden leading-relaxed select-text",
+        wide ? "px-6 py-6 text-[13px]" : "px-3 py-3 text-xs",
       )}
+    >
+      <div className={cn("min-h-full", wide ? "mx-auto max-w-3xl space-y-6" : "space-y-4")}>
+        {messages.length === 0 ? (
+          <EmptyState getContext={getContext} hasModel={hasModel} wide={wide} />
+        ) : (
+          messages.map((m, i) => (
+            <Message key={m.id} message={m} last={i === messages.length - 1} getContext={getContext} wide={wide} />
+          ))
+        )}
+      </div>
     </div>
   );
 }
 
-function EmptyState({ getContext, hasModel }: { getContext: () => ChatContext; hasModel: boolean }) {
+function EmptyState({ getContext, hasModel, wide }: { getContext: () => ChatContext; hasModel: boolean; wide: boolean }) {
   const { activeTab } = useEditorContext();
   const sql = useTabSql(activeTab?.type === "query" ? activeTab.id : undefined);
   const error = activeTab?.error;
-  if (!hasModel) return <Intro title="Choose a model" text="Pick one below to start." className="py-8" />;
+  if (!hasModel) return <Intro title="Choose a model" text="Pick one below to start." wide={wide} className="py-8" />;
   const suggestions = [
     error && "Fix my query error",
     sql.trim() && "Explain my query",
@@ -164,14 +182,17 @@ function EmptyState({ getContext, hasModel }: { getContext: () => ChatContext; h
   ].filter((s): s is string => Boolean(s));
 
   return (
-    <Intro title="Ask about your data" text="Explore your data, or write and fix queries." className="py-8">
-      <div className="flex flex-col items-stretch gap-1.5 w-full max-w-64">
+    <Intro title="Ask about your data" text="Explore your data, or write and fix queries." wide={wide} className="py-8">
+      <div className={cn("w-full", wide ? "grid grid-cols-2 gap-2 max-w-lg" : "flex flex-col items-stretch gap-1.5 max-w-64")}>
         {suggestions.map((s) => (
           <button
             key={s}
             type="button"
             onClick={() => chat.send(s, getContext())}
-            className="rounded-md border border-border/60 px-2.5 py-1.5 text-[11px] text-left text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer"
+            className={cn(
+              "border border-border/60 text-left text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer",
+              wide ? "rounded-lg px-3 py-2.5 text-xs" : "rounded-md px-2.5 py-1.5 text-[11px]",
+            )}
           >
             {s}
           </button>
@@ -181,11 +202,26 @@ function EmptyState({ getContext, hasModel }: { getContext: () => ChatContext; h
   );
 }
 
-function Message({ message, last, getContext }: { message: ChatMessage; last: boolean; getContext: () => ChatContext }) {
+function Message({
+  message,
+  last,
+  getContext,
+  wide,
+}: {
+  message: ChatMessage;
+  last: boolean;
+  getContext: () => ChatContext;
+  wide: boolean;
+}) {
   if (message.role === "user") {
     return (
       <div className="flex justify-end">
-        <div className="max-w-[85%] rounded-lg bg-muted px-3 py-2 whitespace-pre-wrap break-words">
+        <div
+          className={cn(
+            "bg-muted whitespace-pre-wrap break-words",
+            wide ? "max-w-[75%] rounded-2xl px-4 py-2.5" : "max-w-[85%] rounded-lg px-3 py-2",
+          )}
+        >
           {message.content}
         </div>
       </div>
@@ -193,7 +229,7 @@ function Message({ message, last, getContext }: { message: ChatMessage; last: bo
   }
   return (
     <div className="min-w-0">
-      {message.tools && message.tools.length > 0 && <ToolCalls tools={message.tools} />}
+      {message.tools && message.tools.length > 0 && <ToolCalls tools={message.tools} wide={wide} />}
       {message.content && <MarkdownMessage content={message.content} />}
       {message.streaming && (
         <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mt-1">
@@ -222,10 +258,10 @@ function Message({ message, last, getContext }: { message: ChatMessage; last: bo
 }
 
 /** What the model read to answer; queries expand to show their SQL. */
-function ToolCalls({ tools }: { tools: ToolUse[] }) {
+function ToolCalls({ tools, wide }: { tools: ToolUse[]; wide: boolean }) {
   const row = "flex items-center gap-1.5";
   return (
-    <ul className="mb-1.5 space-y-0.5 text-[11px] text-muted-foreground">
+    <ul className={cn("space-y-0.5 text-muted-foreground", wide ? "mb-3 text-xs" : "mb-1.5 text-[11px]")}>
       {tools.map((t, i) => {
         const label = (
           <>
@@ -238,9 +274,15 @@ function ToolCalls({ tools }: { tools: ToolUse[] }) {
             {t.sql ? (
               <details>
                 <summary className={cn(row, "list-none cursor-pointer hover:text-foreground")}>{label}</summary>
-                <pre className="mt-1 rounded bg-muted/60 px-2 py-1 font-mono text-[10px] whitespace-pre-wrap break-words select-text">
-                  {t.sql}
-                </pre>
+                {wide ? (
+                  <div className="mt-1.5">
+                    <CodeBlock code={t.sql} language="sql" />
+                  </div>
+                ) : (
+                  <pre className="mt-1 rounded bg-muted/60 px-2 py-1 font-mono text-[10px] whitespace-pre-wrap break-words select-text">
+                    {t.sql}
+                  </pre>
+                )}
               </details>
             ) : (
               <div className={row}>{label}</div>
@@ -253,18 +295,21 @@ function ToolCalls({ tools }: { tools: ToolUse[] }) {
 }
 
 function Composer({
+  wide,
   getContext,
   streaming,
   providers,
   model,
   canClear,
 }: {
+  wide: boolean;
   getContext: () => ChatContext;
   streaming: boolean;
   providers: ProviderStatus[];
   model?: ModelRef;
   canClear: boolean;
 }) {
+  const { setEditorMode } = useEditorContext();
   const [input, setInput] = useState("");
   const ref = useRef<HTMLTextAreaElement>(null);
   const canSend = input.trim() !== "" && !streaming && model !== undefined;
@@ -283,8 +328,13 @@ function Composer({
   };
 
   return (
-    <div className="shrink-0 border-t border-border/50 p-2">
-      <div className="rounded-md border border-input bg-background focus-within:ring-1 focus-within:ring-ring transition-shadow">
+    <div className={cn("shrink-0", wide ? "px-6 pb-5 pt-2" : "border-t border-border/50 p-2")}>
+      <div
+        className={cn(
+          "border border-input bg-background focus-within:ring-1 focus-within:ring-ring transition-shadow",
+          wide ? "mx-auto max-w-3xl rounded-xl shadow-sm" : "rounded-md",
+        )}
+      >
         <textarea
           ref={ref}
           rows={1}
@@ -299,11 +349,26 @@ function Composer({
           placeholder="Ask about your data…"
           title="Enter to send, Shift+Enter for a new line"
           aria-label="Message"
-          className="block w-full resize-none bg-transparent px-2.5 pt-2 pb-1 text-xs leading-relaxed outline-none placeholder:text-muted-foreground"
+          className={cn(
+            "block w-full resize-none bg-transparent leading-relaxed outline-none placeholder:text-muted-foreground",
+            wide ? "px-3.5 pt-3 pb-1.5 text-sm" : "px-2.5 pt-2 pb-1 text-xs",
+          )}
         />
-        <div className="flex items-center gap-1 px-1 pb-1">
+        <div className={cn("flex items-center gap-1", wide ? "px-2 pb-2" : "px-1 pb-1")}>
           <ModelPicker value={model} providers={providers} disabled={streaming} />
           <span className="flex-1" />
+          {!wide && (
+            <Button
+              size="icon-xs"
+              variant="ghost"
+              onClick={() => setEditorMode("ai")}
+              title="Open in AI mode"
+              aria-label="Open in AI mode"
+              className="text-muted-foreground hover:text-foreground cursor-pointer"
+            >
+              <Maximize2 />
+            </Button>
+          )}
           {canClear && (
             <Button
               size="icon-xs"

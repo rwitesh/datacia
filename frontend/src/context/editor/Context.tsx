@@ -42,6 +42,9 @@ export interface Tab {
   selection?: { range: CellSelection; sorted: boolean };
 }
 
+// The editor shows either query tabs or the full-window AI chat.
+export type EditorMode = "query" | "ai";
+
 export type TableDataParams = {
   table: string;
   limit: number;
@@ -57,8 +60,12 @@ export type EditorContextType = {
     error?: Error | null;
   };
 
+  editorMode: EditorMode;
+  setEditorMode: (mode: EditorMode) => void;
+
   tabs: Tab[];
   activeTab: Tab | undefined;
+  // Both switch to query mode so the tab is visible.
   createTab: (title?: string, type?: "query" | "table") => Tab;
   closeTab: (tabId: string) => void;
   setActiveTab: (tabId: string) => void;

@@ -22,8 +22,8 @@ function openLink(href = "") {
   if (url.protocol === "http:" || url.protocol === "https:") void Browser.OpenURL(url.href);
 }
 
-function CodeBlock({ code, language }: { code: string; language: string }) {
-  const { activeTab, createTab } = useEditorContext();
+export function CodeBlock({ code, language }: { code: string; language: string }) {
+  const { activeTab, createTab, setEditorMode } = useEditorContext();
   const [copied, setCopied] = useState(false);
   const isSQL = language === "" || language.toLowerCase() === "sql";
   const canInsert = activeTab?.type === "query";
@@ -40,6 +40,7 @@ function CodeBlock({ code, language }: { code: string; language: string }) {
     if (activeTab?.type !== "query") return;
     const current = getTabSql(activeTab.id).trimEnd();
     setTabSql(activeTab.id, current ? `${current}\n\n${code}` : code);
+    setEditorMode("query");
   };
 
   const openInNewTab = () => {
