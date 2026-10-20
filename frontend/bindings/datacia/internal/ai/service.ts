@@ -7,6 +7,10 @@ import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Cr
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as db$0 from "../db/models.js";
+
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as $models from "./models.js";
 
 /**
@@ -26,19 +30,32 @@ export function DefaultModel(): $CancellablePromise<$models.ModelRef> {
     });
 }
 
+export function DeleteChat(id: string): $CancellablePromise<void> {
+    return $Call.ByID(961656909, id);
+}
+
+/**
+ * ListChats returns the saved chats, most recently updated first.
+ */
+export function ListChats(): $CancellablePromise<db$0.ChatSummary[]> {
+    return $Call.ByID(2860992431).then(($result: any) => {
+        return $$createType2($result);
+    });
+}
+
 /**
  * ListModels returns the provider's chat models, newest first. Lists are
  * cached for an hour, or until the key or server URL changes.
  */
 export function ListModels(providerID: string): $CancellablePromise<$models.Model[]> {
     return $Call.ByID(2139047914, providerID).then(($result: any) => {
-        return $$createType2($result);
+        return $$createType4($result);
     });
 }
 
-export function LoadChat(): $CancellablePromise<$models.Chat> {
-    return $Call.ByID(2539027554).then(($result: any) => {
-        return $$createType3($result);
+export function LoadChat(id: string): $CancellablePromise<$models.Chat> {
+    return $Call.ByID(2539027554, id).then(($result: any) => {
+        return $$createType5($result);
     });
 }
 
@@ -47,10 +64,13 @@ export function LoadChat(): $CancellablePromise<$models.Chat> {
  */
 export function Providers(): $CancellablePromise<$models.ProviderStatus[]> {
     return $Call.ByID(3848986658).then(($result: any) => {
-        return $$createType5($result);
+        return $$createType7($result);
     });
 }
 
+/**
+ * SaveChat creates or replaces the chat, keeping its latest messages.
+ */
 export function SaveChat(chat: $models.Chat): $CancellablePromise<void> {
     return $Call.ByID(1941189643, chat);
 }
@@ -68,8 +88,10 @@ export function SignIn(providerID: string): $CancellablePromise<void> {
 
 // Private type creation functions
 const $$createType0 = $models.ModelRef.createFrom;
-const $$createType1 = $models.Model.createFrom;
+const $$createType1 = db$0.ChatSummary.createFrom;
 const $$createType2 = $Create.Array($$createType1);
-const $$createType3 = $models.Chat.createFrom;
-const $$createType4 = $models.ProviderStatus.createFrom;
-const $$createType5 = $Create.Array($$createType4);
+const $$createType3 = $models.Model.createFrom;
+const $$createType4 = $Create.Array($$createType3);
+const $$createType5 = $models.Chat.createFrom;
+const $$createType6 = $models.ProviderStatus.createFrom;
+const $$createType7 = $Create.Array($$createType6);

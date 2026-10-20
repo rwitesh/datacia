@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"datacia/internal/db"
 	"datacia/internal/logger"
 	"datacia/internal/settings"
 
@@ -28,7 +29,8 @@ type ChatDelta struct {
 	Text string `json:"text"`
 }
 
-// ChatTool reports a tool call made while answering the ChatRequest ID.
+// ChatTool reports a tool call made while answering the ChatRequest ID: once
+// as it starts and again, with the same Tool.ID, when it ends.
 type ChatTool struct {
 	ID   string  `json:"id"`
 	Tool ToolUse `json:"tool"`
@@ -67,13 +69,13 @@ type ProviderStatus struct {
 type Service struct {
 	app    *application.App
 	db     Database
-	store  chatStore
+	store  *db.Store
 	models modelCache
 }
 
-func NewService(app *application.App, db Database) *Service {
+func NewService(app *application.App, database Database, store *db.Store) *Service {
 	clearProviderEnv()
-	return &Service{app: app, db: db}
+	return &Service{app: app, db: database, store: store}
 }
 
 // Providers returns every provider with the user's configuration.
@@ -223,14 +225,6 @@ func streamReply(ctx context.Context, m provider.LanguageModel, system string, h
 	}
 	// A cancelled stream ends without an error.
 	return reply.String(), ctx.Err()
-}
-
-func (s *Service) LoadChat() (Chat, error) {
-	return s.store.load()
-}
-
-func (s *Service) SaveChat(chat Chat) error {
-	return s.store.save(chat)
 }
 
 // apiKey returns the provider's key, or an error if it's required and missing.

@@ -111,6 +111,14 @@ func (s *Store) initSchema() error {
 			status TEXT,
 			error_message TEXT
 		)`,
+		`CREATE TABLE IF NOT EXISTS ai_chats (
+			id TEXT PRIMARY KEY,
+			title TEXT NOT NULL,
+			messages TEXT NOT NULL,
+			created_at TEXT NOT NULL,
+			updated_at TEXT NOT NULL
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_ai_chats_updated_at ON ai_chats(updated_at)`,
 	}
 
 	for _, stmt := range schema {

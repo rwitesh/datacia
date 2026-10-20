@@ -42,10 +42,12 @@ func TestRunQuery(t *testing.T) {
 			{"id": 3, "name": "c"},
 		},
 	}}
-	out, err := runQuery(context.Background(), db, "select id, name from users", 2)
+	res, err := runQuery(context.Background(), db, "select id, name from users", 2)
 	if err != nil {
 		t.Fatal(err)
 	}
+	// What the model reads, which the chat also shows.
+	out := toJSON(res)
 	if db.maxRows != 3 {
 		t.Errorf("asked for %d rows, want limit+1", db.maxRows)
 	}

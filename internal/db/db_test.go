@@ -6,6 +6,7 @@ import (
 	"errors"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"datacia/pkg/common"
 )
@@ -142,5 +143,38 @@ func TestOpenOldDatabase(t *testing.T) {
 			}
 		}
 		store.Close()
+	}
+}
+
+func TestChats(t *testing.T) {
+	store, err := OpenFile(filepath.Join(t.TempDir(), "data.db"), bytes.Repeat([]byte{1}, 32))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+
+	for _, c := range []struct{ id, title string }{{"a", "first"}, {"b", "second"}, {"a", "first, renamed"}} {
+		if err := store.SaveChat(c.id, c.title, `[]`); err != nil {
+			t.Fatal(err)
+		}
+		time.Sleep(2 * time.Millisecond) // updated_at has millisecond precision
+	}
+	chats, err := store.ListChats()
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Saving "a" again replaces it and moves it to the top.
+	if len(chats) != 2 || chats[0].ID != "a" || chats[0].Title != "first, renamed" || chats[1].ID != "b" {
+		t.Fatalf("chats %+v", chats)
+	}
+
+	if err := store.DeleteChat("a"); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := store.LoadChat("a"); !errors.Is(err, ErrChatNotFound) {
+		t.Errorf("loading a deleted chat: %v", err)
+	}
+	if title, _, err := store.LoadChat("b"); err != nil || title != "second" {
+		t.Errorf("title %q, err %v", title, err)
 	}
 }

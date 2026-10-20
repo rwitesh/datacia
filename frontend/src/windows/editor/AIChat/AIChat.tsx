@@ -1,24 +1,18 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { AlertTriangle, ArrowUp, Database, Loader2, Maximize2, RotateCcw, Settings2, Sparkles, Square, SquarePen } from "lucide-react";
+import { AlertTriangle, ArrowUp, ChevronDown, Loader2, Maximize2, RotateCcw, Settings2, Sparkles, Square, SquarePen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAppContext } from "@/context/app/Index";
 import { useEditorContext } from "@/context/editor/Index";
 import { getTabSql, useTabSql } from "@/context/editor/store";
 import { cn } from "@/lib/utils";
 import { OpenSettingsWindow } from "@/services/bindings";
-import {
-  chat,
-  useAIProviders,
-  useChat,
-  useDefaultModel,
-  type ChatContext,
-  type ChatMessage,
-  type ModelRef,
-  type ProviderStatus,
-  type ToolUse,
-} from "@/services/ai";
-import { CodeBlock, MarkdownMessage } from "./MarkdownMessage";
+import { useAIProviders, useDefaultModel, type ChatContext, type ModelRef, type ProviderStatus } from "@/services/ai";
+import { chats, useActiveChat, type ChatMessage, type Conversation } from "@/services/chats";
+import { ChatHistory } from "./ChatHistory";
+import { ChatTabs } from "./ChatTabs";
+import { MarkdownMessage } from "./MarkdownMessage";
 import { ModelPicker } from "./ModelPicker";
+import { ToolSteps } from "./ToolSteps";
 
 /** Reads the SQL when called, so typing doesn't re-render the chat. */
 function useChatContext(): () => ChatContext {
@@ -32,26 +26,24 @@ function useChatContext(): () => ChatContext {
   );
 }
 
-/** The chat: `wide` fills the editor in AI mode, otherwise it fits the side panel. */
+/**
+ * The active chat: `wide` fills the editor in AI mode with a tab per open
+ * chat, otherwise it fits the side panel.
+ */
 export function AIChat({ wide = false }: { wide?: boolean }) {
   const providers = useAIProviders();
   const defaultModel = useDefaultModel();
-  const state = useChat();
+  const chat = useActiveChat();
   const getContext = useChatContext();
   const usable = useMemo(() => (providers.data ?? []).filter((p) => p.ready), [providers.data]);
 
   const saved = defaultModel.data;
   const model = saved?.model && usable.some((p) => p.provider.id === saved.provider) ? saved : undefined;
 
-  if (providers.isLoading || defaultModel.isLoading || !state.loaded) return null;
+  if (providers.isLoading || defaultModel.isLoading) return null;
   if (usable.length === 0) {
     return (
-      <Intro
-        title="Set up AI"
-        text="Add a provider in Settings."
-        wide={wide}
-        className="px-6"
-      >
+      <Intro title="Set up AI" text="Add a provider in Settings." wide={wide} className="px-6">
         <Button size="xs" variant="outline" onClick={() => OpenSettingsWindow("ai")} className="cursor-pointer">
           <Settings2 />
           Open Settings
@@ -60,24 +52,68 @@ export function AIChat({ wide = false }: { wide?: boolean }) {
     );
   }
 
-  const streaming = state.messages.some((m) => m.streaming);
+  const streaming = chat.messages.some((m) => m.streaming);
   return (
     <div className={cn("flex flex-col h-full min-h-0", wide && "bg-background")}>
-      <MessageList
-        messages={state.messages}
-        getContext={getContext}
-        streaming={streaming}
-        hasModel={model !== undefined}
-        wide={wide}
-      />
-      <Composer
-        wide={wide}
-        getContext={getContext}
-        streaming={streaming}
-        providers={usable}
-        model={model}
-        canClear={state.messages.length > 0}
-      />
+      {wide ? <ChatTabs /> : <PanelHeader title={chat.title} />}
+      {chat.loaded ? (
+        <>
+          <MessageList key={chat.id} chat={chat} getContext={getContext} streaming={streaming} hasModel={model !== undefined} wide={wide} />
+          <Composer
+            key={chat.id}
+            chatId={chat.id}
+            wide={wide}
+            getContext={getContext}
+            streaming={streaming}
+            providers={usable}
+            model={model}
+          />
+        </>
+      ) : (
+        <div className="flex flex-1 items-center justify-center text-muted-foreground">
+          <Loader2 className="size-4 animate-spin" />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** The side panel's chat controls; AI mode has the tab bar instead. */
+function PanelHeader({ title }: { title: string }) {
+  const { setEditorMode } = useEditorContext();
+  return (
+    <div className="flex h-8 shrink-0 items-center gap-0.5 border-b border-border/50 px-1">
+      <ChatHistory align="start">
+        <button
+          type="button"
+          title="Chat history"
+          className="inline-flex h-6 min-w-0 items-center gap-1 rounded-md px-1.5 text-[11px] text-muted-foreground hover:text-foreground cursor-pointer"
+        >
+          <span className="truncate">{title || "New chat"}</span>
+          <ChevronDown className="size-3 shrink-0" />
+        </button>
+      </ChatHistory>
+      <span className="flex-1" />
+      <Button
+        size="icon-xs"
+        variant="ghost"
+        onClick={() => chats.create()}
+        title="New chat"
+        aria-label="New chat"
+        className="text-muted-foreground hover:text-foreground cursor-pointer"
+      >
+        <SquarePen />
+      </Button>
+      <Button
+        size="icon-xs"
+        variant="ghost"
+        onClick={() => setEditorMode("ai")}
+        title="Open in AI mode"
+        aria-label="Open in AI mode"
+        className="text-muted-foreground hover:text-foreground cursor-pointer"
+      >
+        <Maximize2 />
+      </Button>
     </div>
   );
 }
@@ -110,23 +146,25 @@ function Intro({
 }
 
 function MessageList({
-  messages,
+  chat,
   getContext,
   streaming,
   hasModel,
   wide,
 }: {
-  messages: ChatMessage[];
+  chat: Conversation;
   getContext: () => ChatContext;
   streaming: boolean;
   hasModel: boolean;
   wide: boolean;
 }) {
+  const { messages } = chat;
   const ref = useRef<HTMLDivElement>(null);
   const stick = useRef(true);
   const prevId = useRef<string | undefined>(undefined);
   const lastId = messages.at(-1)?.id;
   const lastContent = messages.at(-1)?.content;
+  const lastTools = messages.at(-1)?.tools;
 
   // Jump to new messages; follow streamed output only while the user is at the bottom.
   useLayoutEffect(() => {
@@ -137,7 +175,7 @@ function MessageList({
       stick.current = true;
     }
     if (stick.current) el.scrollTop = el.scrollHeight;
-  }, [lastId, lastContent]);
+  }, [lastId, lastContent, lastTools]);
 
   const onScroll = () => {
     const el = ref.current;
@@ -158,10 +196,17 @@ function MessageList({
     >
       <div className={cn("min-h-full", wide ? "mx-auto max-w-3xl space-y-6" : "space-y-4")}>
         {messages.length === 0 ? (
-          <EmptyState getContext={getContext} hasModel={hasModel} wide={wide} />
+          <EmptyState chatId={chat.id} getContext={getContext} hasModel={hasModel} wide={wide} />
         ) : (
           messages.map((m, i) => (
-            <Message key={m.id} message={m} last={i === messages.length - 1} getContext={getContext} wide={wide} />
+            <Message
+              key={m.id}
+              chatId={chat.id}
+              message={m}
+              last={i === messages.length - 1}
+              getContext={getContext}
+              wide={wide}
+            />
           ))
         )}
       </div>
@@ -169,7 +214,17 @@ function MessageList({
   );
 }
 
-function EmptyState({ getContext, hasModel, wide }: { getContext: () => ChatContext; hasModel: boolean; wide: boolean }) {
+function EmptyState({
+  chatId,
+  getContext,
+  hasModel,
+  wide,
+}: {
+  chatId: string;
+  getContext: () => ChatContext;
+  hasModel: boolean;
+  wide: boolean;
+}) {
   const { activeTab } = useEditorContext();
   const sql = useTabSql(activeTab?.type === "query" ? activeTab.id : undefined);
   const error = activeTab?.error;
@@ -188,7 +243,7 @@ function EmptyState({ getContext, hasModel, wide }: { getContext: () => ChatCont
           <button
             key={s}
             type="button"
-            onClick={() => chat.send(s, getContext())}
+            onClick={() => chats.send(chatId, s, getContext())}
             className={cn(
               "border border-border/60 text-left text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer",
               wide ? "rounded-lg px-3 py-2.5 text-xs" : "rounded-md px-2.5 py-1.5 text-[11px]",
@@ -203,11 +258,13 @@ function EmptyState({ getContext, hasModel, wide }: { getContext: () => ChatCont
 }
 
 function Message({
+  chatId,
   message,
   last,
   getContext,
   wide,
 }: {
+  chatId: string;
   message: ChatMessage;
   last: boolean;
   getContext: () => ChatContext;
@@ -229,7 +286,9 @@ function Message({
   }
   return (
     <div className="min-w-0">
-      {message.tools && message.tools.length > 0 && <ToolCalls tools={message.tools} wide={wide} />}
+      {message.tools && message.tools.length > 0 && (
+        <ToolSteps tools={message.tools} streaming={Boolean(message.streaming)} wide={wide} />
+      )}
       {message.content && <MarkdownMessage content={message.content} />}
       {message.streaming && (
         <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mt-1">
@@ -244,7 +303,7 @@ function Message({
           {last && (
             <button
               type="button"
-              onClick={() => chat.retry(getContext())}
+              onClick={() => chats.retry(chatId, getContext())}
               className="shrink-0 inline-flex items-center gap-1 text-[11px] font-medium hover:underline cursor-pointer"
             >
               <RotateCcw className="size-3" />
@@ -257,59 +316,21 @@ function Message({
   );
 }
 
-/** What the model read to answer; queries expand to show their SQL. */
-function ToolCalls({ tools, wide }: { tools: ToolUse[]; wide: boolean }) {
-  const row = "flex items-center gap-1.5";
-  return (
-    <ul className={cn("space-y-0.5 text-muted-foreground", wide ? "mb-3 text-xs" : "mb-1.5 text-[11px]")}>
-      {tools.map((t, i) => {
-        const label = (
-          <>
-            <Database className="size-3 shrink-0" />
-            {t.label}
-          </>
-        );
-        return (
-          <li key={i}>
-            {t.sql ? (
-              <details>
-                <summary className={cn(row, "list-none cursor-pointer hover:text-foreground")}>{label}</summary>
-                {wide ? (
-                  <div className="mt-1.5">
-                    <CodeBlock code={t.sql} language="sql" />
-                  </div>
-                ) : (
-                  <pre className="mt-1 rounded bg-muted/60 px-2 py-1 font-mono text-[10px] whitespace-pre-wrap break-words select-text">
-                    {t.sql}
-                  </pre>
-                )}
-              </details>
-            ) : (
-              <div className={row}>{label}</div>
-            )}
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
-
 function Composer({
+  chatId,
   wide,
   getContext,
   streaming,
   providers,
   model,
-  canClear,
 }: {
+  chatId: string;
   wide: boolean;
   getContext: () => ChatContext;
   streaming: boolean;
   providers: ProviderStatus[];
   model?: ModelRef;
-  canClear: boolean;
 }) {
-  const { setEditorMode } = useEditorContext();
   const [input, setInput] = useState("");
   const ref = useRef<HTMLTextAreaElement>(null);
   const canSend = input.trim() !== "" && !streaming && model !== undefined;
@@ -323,7 +344,7 @@ function Composer({
 
   const send = () => {
     if (!canSend) return;
-    chat.send(input, getContext());
+    chats.send(chatId, input, getContext());
     setInput("");
   };
 
@@ -338,6 +359,7 @@ function Composer({
         <textarea
           ref={ref}
           rows={1}
+          autoFocus={wide}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {
@@ -357,35 +379,11 @@ function Composer({
         <div className={cn("flex items-center gap-1", wide ? "px-2 pb-2" : "px-1 pb-1")}>
           <ModelPicker value={model} providers={providers} disabled={streaming} />
           <span className="flex-1" />
-          {!wide && (
-            <Button
-              size="icon-xs"
-              variant="ghost"
-              onClick={() => setEditorMode("ai")}
-              title="Open in AI mode"
-              aria-label="Open in AI mode"
-              className="text-muted-foreground hover:text-foreground cursor-pointer"
-            >
-              <Maximize2 />
-            </Button>
-          )}
-          {canClear && (
-            <Button
-              size="icon-xs"
-              variant="ghost"
-              onClick={() => chat.clear()}
-              title="New chat"
-              aria-label="New chat"
-              className="text-muted-foreground hover:text-foreground cursor-pointer"
-            >
-              <SquarePen />
-            </Button>
-          )}
           {streaming ? (
             <Button
               size="icon-xs"
               variant="secondary"
-              onClick={() => chat.stop()}
+              onClick={() => chats.stop(chatId)}
               title="Stop"
               aria-label="Stop generating"
               className="cursor-pointer"

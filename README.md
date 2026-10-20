@@ -11,9 +11,9 @@ A fast, free desktop SQL client for PostgreSQL, MySQL, SQLite and ClickHouse, on
 - **Results** – a quick table with sorting, resizable columns and cell selection, plus a JSON view.
 - **Export** – copy or save results as JSON, CSV or PNG.
 - **History and saved queries** – search past queries, and keep your own in folders.
-- **AI assistant** – ask about your queries and data in a full-window chat or next to your query,
-  with Anthropic, OpenAI, Google Gemini, OpenRouter, OpenCode or a local model (Ollama, LM Studio),
-  using your own API key.
+- **AI assistant** – ask about your queries and data in chat tabs or next to your query, see the
+  rows it read, and reopen past chats. Works with Anthropic, OpenAI, Google Gemini, OpenRouter,
+  OpenCode or a local model (Ollama, LM Studio), using your own API key.
 - **Make it yours** – light or dark theme, and your choice of fonts and editor colours.
 - **Automatic updates** – new versions download in the background and install on restart.
 
@@ -59,6 +59,8 @@ encrypted connections (9440 by default).
   messages, the SQL in the current tab and its last error, and whatever it reads from your
   database to answer (table names, table structure and a limited number of rows from read-only
   queries). The chat shows everything it reads.
+- **Chats** are saved on your computer, including the rows the AI read, so you can reopen them.
+  Deleting a chat from its history removes it.
 
 ## Building from source
 

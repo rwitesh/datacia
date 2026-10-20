@@ -17,6 +17,7 @@ export {
     ModelRef,
     Provider,
     ProviderStatus,
+    QueryPreview,
     StoredMessage,
     ToolUse
 } from "./models.js";

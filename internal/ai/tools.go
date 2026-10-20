@@ -10,6 +10,7 @@ import (
 
 	"datacia/pkg/common"
 
+	"github.com/google/uuid"
 	"github.com/zendev-sh/goai"
 )
 
@@ -31,8 +32,21 @@ type Database interface {
 
 // ToolUse tells the chat what a tool read, so the user sees what was shared.
 type ToolUse struct {
-	Label string `json:"label"`
-	SQL   string `json:"sql,omitempty"` // the query run_query ran
+	ID     string        `json:"id"`
+	Label  string        `json:"label"`
+	SQL    string        `json:"sql,omitempty"` // the query run_query ran
+	Done   bool          `json:"done"`
+	Error  string        `json:"error,omitempty"`
+	Result *QueryPreview `json:"result,omitempty"` // run_query's rows
+}
+
+// QueryPreview is run_query's result exactly as the model sees it, so the
+// chat can show and keep the same capped rows.
+type QueryPreview struct {
+	Columns  []string `json:"columns"`
+	Rows     [][]any  `json:"rows"`
+	MoreRows bool     `json:"more_rows"`
+	Ms       int64    `json:"ms"`
 }
 
 type (
@@ -55,32 +69,52 @@ type (
 // chatTools returns the tools for one chat request: the user's editor and
 // read-only access to the connected database, so the model can answer from
 // real data instead of guessing. editor is the editor as it was when the
-// message was sent; report is called as each tool starts.
+// message was sent; report is called as each tool starts and ends.
 func chatTools(db Database, editor ChatContext, report func(ToolUse)) []goai.Tool {
+	step := func(t ToolUse, run func(*ToolUse) (string, error)) (string, error) {
+		t.ID = uuid.NewString()
+		report(t)
+		out, err := run(&t)
+		t.Done = true
+		if err != nil {
+			t.Error = err.Error()
+		}
+		report(t)
+		return out, err
+	}
 	return []goai.Tool{
 		goai.NewTool("get_editor",
 			"Returns the SQL in the user's editor and the error from its last run. Call it when the user mentions their query or an error.",
 			func(ctx context.Context, _ editorInput) (string, error) {
-				report(ToolUse{Label: "Read the editor"})
-				return readEditor(editor), nil
+				return step(ToolUse{Label: "Read the editor"}, func(*ToolUse) (string, error) {
+					return readEditor(editor), nil
+				})
 			}),
 		goai.NewTool("list_tables",
 			"Lists the tables in the connected database.",
 			func(ctx context.Context, in listTablesInput) (string, error) {
-				report(ToolUse{Label: "Listed tables"})
-				return listTables(db, in.Filter)
+				return step(ToolUse{Label: "Listed tables"}, func(*ToolUse) (string, error) {
+					return listTables(db, in.Filter)
+				})
 			}),
 		goai.NewTool("describe_table",
 			"Returns a table's CREATE statement with its columns and types. Call it before writing SQL against a table whose columns you haven't seen.",
 			func(ctx context.Context, in describeTableInput) (string, error) {
-				report(ToolUse{Label: "Read the schema of " + in.Table})
-				return describeTable(db, in.Table)
+				return step(ToolUse{Label: "Read the schema of " + in.Table}, func(*ToolUse) (string, error) {
+					return describeTable(db, in.Table)
+				})
 			}),
 		goai.NewTool("run_query",
 			"Runs a read-only query on the user's database and returns the rows. Writes are blocked. Select only the columns you need and prefer aggregates. For more rows run it again with OFFSET.",
 			func(ctx context.Context, in runQueryInput) (string, error) {
-				report(ToolUse{Label: "Ran a query", SQL: in.SQL})
-				return runQuery(ctx, db, in.SQL, in.Limit)
+				return step(ToolUse{Label: "Ran a query", SQL: in.SQL}, func(t *ToolUse) (string, error) {
+					res, err := runQuery(ctx, db, in.SQL, in.Limit)
+					if err != nil {
+						return "", err
+					}
+					t.Result = &res
+					return toJSON(res), nil
+				})
 			}),
 	}
 }
@@ -124,23 +158,27 @@ func describeTable(db Database, table string) (string, error) {
 	return truncate(ddl, maxToolOutput), nil
 }
 
-func runQuery(ctx context.Context, db Database, sql string, limit int) (string, error) {
+func runQuery(ctx context.Context, db Database, sql string, limit int) (QueryPreview, error) {
 	if limit < 1 || limit > maxQueryRows {
 		limit = defaultQueryRows
 	}
 	// One extra row tells whether there are more.
 	res, err := db.ReadOnlyQuery(ctx, sql, limit+1)
 	if err != nil {
-		return "", err
+		return QueryPreview{}, err
 	}
-	return formatRows(res, limit), nil
+	return previewRows(res, limit), nil
 }
 
-// formatRows renders up to limit rows as compact JSON within maxToolOutput,
-// in column order, with long values cut.
-func formatRows(res common.QueryResult, limit int) string {
-	more := len(res.Data) > limit
-	rows := make([]json.RawMessage, 0, min(len(res.Data), limit))
+// previewRows keeps up to limit rows that fit in maxToolOutput as JSON, in
+// column order, with long values cut.
+func previewRows(res common.QueryResult, limit int) QueryPreview {
+	p := QueryPreview{
+		Columns:  res.Columns,
+		Rows:     make([][]any, 0, min(len(res.Data), limit)),
+		MoreRows: len(res.Data) > limit,
+		Ms:       res.TimeElapsed,
+	}
 	size := 0
 	for _, r := range res.Data[:min(len(res.Data), limit)] {
 		row := make([]any, len(res.Columns))
@@ -149,20 +187,15 @@ func formatRows(res common.QueryResult, limit int) string {
 		}
 		b, err := json.Marshal(row)
 		if err != nil {
-			b = []byte(`"unreadable row"`)
+			row, b = []any{"unreadable row"}, []byte(`["unreadable row"]`)
 		}
 		if size += len(b); size > maxToolOutput {
-			more = true
+			p.MoreRows = true
 			break
 		}
-		rows = append(rows, b)
+		p.Rows = append(p.Rows, row)
 	}
-	return toJSON(map[string]any{
-		"columns":   res.Columns,
-		"rows":      rows,
-		"more_rows": more,
-		"ms":        res.TimeElapsed,
-	})
+	return p
 }
 
 // cell makes a value short and JSON-friendly.
