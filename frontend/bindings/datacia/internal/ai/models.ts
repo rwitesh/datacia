@@ -6,11 +6,38 @@
 import { Create as $Create } from "@wailsio/runtime";
 
 /**
+ * Access is what a chat's tools may read from the database. It is chosen when
+ * the chat starts and saved with it.
+ */
+export enum Access {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero = "",
+
+    /**
+     * no database tools: answers from the chat and the editor
+     */
+    AccessNone = "none",
+
+    /**
+     * table names and their columns, never rows
+     */
+    AccessSchema = "schema",
+
+    /**
+     * also read-only queries
+     */
+    AccessData = "data",
+};
+
+/**
  * Chat is one conversation, saved in data.db.
  */
 export class Chat {
     "id": string;
     "title": string;
+    "access": Access;
     "messages": StoredMessage[];
 
     /** Creates a new Chat instance. */
@@ -20,6 +47,9 @@ export class Chat {
         }
         if (!("title" in $$source)) {
             this["title"] = "";
+        }
+        if (!("access" in $$source)) {
+            this["access"] = Access.$zero;
         }
         if (!("messages" in $$source)) {
             this["messages"] = [];
@@ -32,10 +62,10 @@ export class Chat {
      * Creates a new Chat instance from a string or object.
      */
     static createFrom($$source: any = {}): Chat {
-        const $$createField2_0 = $$createType1;
+        const $$createField3_0 = $$createType1;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("messages" in $$parsedSource) {
-            $$parsedSource["messages"] = $$createField2_0($$parsedSource["messages"]);
+            $$parsedSource["messages"] = $$createField3_0($$parsedSource["messages"]);
         }
         return new Chat($$parsedSource as Partial<Chat>);
     }
@@ -149,6 +179,7 @@ export class ChatRequest {
     "id": string;
     "messages": Message[];
     "context": ChatContext;
+    "access": Access;
 
     /** Creates a new ChatRequest instance. */
     constructor($$source: Partial<ChatRequest> = {}) {
@@ -160,6 +191,9 @@ export class ChatRequest {
         }
         if (!("context" in $$source)) {
             this["context"] = (new ChatContext());
+        }
+        if (!("access" in $$source)) {
+            this["access"] = Access.$zero;
         }
 
         Object.assign(this, $$source);

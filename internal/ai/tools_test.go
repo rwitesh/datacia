@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"math"
+	"slices"
 	"strings"
 	"testing"
 
@@ -76,5 +77,26 @@ func TestCellNonFinite(t *testing.T) {
 	row := []any{cell(math.NaN()), cell(math.Inf(1)), cell(1.5)}
 	if _, err := json.Marshal(row); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestChatToolsByAccess(t *testing.T) {
+	// Schema access must never reach rows.
+	want := map[Access][]string{
+		AccessNone:   {"get_editor"},
+		AccessSchema: {"get_editor", "list_tables", "describe_table"},
+		AccessData:   {"get_editor", "list_tables", "describe_table", "run_query"},
+	}
+	for access, names := range want {
+		var got []string
+		for _, tool := range chatTools(&fakeDB{}, access, ChatContext{}, func(ToolUse) {}) {
+			got = append(got, tool.Name)
+		}
+		if !slices.Equal(got, names) {
+			t.Errorf("%s: tools %v, want %v", access, got, names)
+		}
+		if systemPrompts[access] == "" {
+			t.Errorf("%s: no system prompt", access)
+		}
 	}
 }

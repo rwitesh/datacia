@@ -114,6 +114,7 @@ type ChatRequest struct {
 	ID       string      `json:"id"`
 	Messages []Message   `json:"messages"`
 	Context  ChatContext `json:"context"`
+	Access   Access      `json:"access"`
 }
 
 // ModelRef names a provider's model.
@@ -216,6 +217,9 @@ func (s *Service) Chat(ctx context.Context, req ChatRequest) (ChatReply, error) 
 	if len(history) == 0 || history[len(history)-1].Role != "user" {
 		return ChatReply{}, errors.New("Nothing to send.")
 	}
+	if !req.Access.valid() {
+		return ChatReply{}, errors.New("Choose what the AI can access.")
+	}
 	ref := s.DefaultModel()
 	if ref.Model == "" {
 		return ChatReply{}, errors.New("Choose a model.")
@@ -232,10 +236,10 @@ func (s *Service) Chat(ctx context.Context, req ChatRequest) (ChatReply, error) 
 		return ChatReply{}, fmt.Errorf("Set up %s in Settings.", p.Name)
 	}
 	m := p.chat(ref.Model, key, savedBaseURL(p))
-	logger.Info("ai_chat", "provider", p.ID, "model", ref.Model, "engine", req.Context.Engine)
+	logger.Info("ai_chat", "provider", p.ID, "model", ref.Model, "engine", req.Context.Engine, "access", string(req.Access))
 
 	var reply replyParts
-	tools := chatTools(s.db, req.Context, func(t ToolUse) {
+	tools := chatTools(s.db, req.Access, req.Context, func(t ToolUse) {
 		reply.setTool(t, func() { s.app.Event.Emit(ToolEvent, ChatTool{ID: req.ID, Tool: t}) })
 	})
 	var usage Usage
@@ -249,7 +253,7 @@ func (s *Service) Chat(ctx context.Context, req ChatRequest) (ChatReply, error) 
 
 	ctx, cancel := context.WithTimeout(ctx, chatTimeout)
 	defer cancel()
-	text, err := streamReply(ctx, m, systemPrompt, withEngine(history, req.Context.Engine), func(text string) {
+	text, err := streamReply(ctx, m, systemPrompts[req.Access], withEngine(history, req.Context.Engine), func(text string) {
 		reply.addText(text, func() { s.app.Event.Emit(DeltaEvent, ChatDelta{ID: req.ID, Text: text}) })
 	}, opts...)
 	if err != nil {

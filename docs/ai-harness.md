@@ -28,14 +28,20 @@ Each round of "think, maybe call tools" is one **step**.
 
 ## The tools
 
-The model can only read. It has four tools:
+The model can only read, and each chat chooses how much. The **access level** is picked in the
+message box before the first message and saved with the chat; after that it can't change, so a
+chat never sees more than it started with. New chats start at **Schema only**.
 
-| Tool | What it does |
-| --- | --- |
-| `get_editor` | Reads the SQL in your current tab and its last error |
-| `list_tables` | Lists the tables (up to 500, optionally filtered by name) |
-| `describe_table` | Shows a table's columns and types |
-| `run_query` | Runs one read-only query and returns its rows (20 by default, 200 at most) |
+| Tool | What it does | No access | Schema only | Schema and data |
+| --- | --- | --- | --- | --- |
+| `get_editor` | Reads the SQL in your current tab and its last error | ✓ | ✓ | ✓ |
+| `list_tables` | Lists the tables (up to 500, optionally filtered by name) | | ✓ | ✓ |
+| `describe_table` | Shows a table's columns and types | | ✓ | ✓ |
+| `run_query` | Runs one read-only query and returns its rows (20 by default, 200 at most) | | | ✓ |
+
+A level the chat doesn't have is left out of the request entirely, so the model can't call it.
+`chatTools` builds the list and `TestChatToolsByAccess` pins it. Without data access the model
+is told to give SQL for the user to run when an answer depends on the rows.
 
 When a tool fails, the error goes back to the model as text, so it can fix its query and try
 again.
@@ -79,10 +85,10 @@ Every query the AI runs goes through these guards:
 
 ## The prompt and caching
 
-The system prompt never changes: it is the same for every chat and every database. The database
-type (ClickHouse, Postgres and so on) is named in a short note on the first message instead, which
-stays put until the chat is longer than the 20 turns we send. The tool definitions never change
-either.
+There is one fixed system prompt per access level, the same for every chat and every database.
+The database type (ClickHouse, Postgres and so on) is named in a short note on the first message
+instead, which stays put until the chat is longer than the 20 turns we send. A chat's tools never
+change either, since its access level is fixed.
 
 That matters because every step of the loop resends the system prompt, the tools and the
 conversation so far. When the start of each request is identical, providers can **cache** it and
@@ -126,6 +132,7 @@ Chats are stored on your computer in the app's local SQLite database (`data.db`)
 | --- | --- |
 | `id` | The chat's ID |
 | `title` | The first line of your first message |
+| `access` | The chat's access level: `none`, `schema` or `data` |
 | `messages` | The whole conversation as JSON: every message and its parts, including query rows |
 | `created_at`, `updated_at` | When it was started and last changed |
 

@@ -6,8 +6,10 @@ import { useEditorContext } from "@/context/editor/Index";
 import { getTabSql, useTabSql } from "@/context/editor/store";
 import { cn, errorMessage } from "@/lib/utils";
 import { OpenSettingsWindow } from "@/services/bindings";
-import { useAIProviders, useDefaultModel, type ChatContext, type ModelRef, type ProviderStatus, type Usage } from "@/services/ai";
+import { Access, useAIProviders, useDefaultModel, type ChatContext, type ModelRef, type ProviderStatus, type Usage } from "@/services/ai";
 import { chats, messageText, useActiveChat, type ChatMessage, type Conversation } from "@/services/chats";
+import { AccessPicker } from "./AccessPicker";
+import { accessLevel } from "./accessLevels";
 import { ChatHistory } from "./ChatHistory";
 import { ChatTabs } from "./ChatTabs";
 import { MarkdownMessage } from "./MarkdownMessage";
@@ -72,7 +74,7 @@ export function AIChat({ wide = false }: { wide?: boolean }) {
         <Fragment key={chat.id}>
           <MessageList chat={chat} getContext={getContext} streaming={streaming} hasModel={model !== undefined} wide={wide} />
           <Composer
-            chatId={chat.id}
+            chat={chat}
             wide={wide}
             getContext={getContext}
             streaming={streaming}
@@ -205,7 +207,7 @@ function MessageList({
     >
       <div className={cn("min-h-full", wide ? "mx-auto max-w-3xl space-y-6" : "space-y-4")}>
         {messages.length === 0 ? (
-          <EmptyState chatId={chat.id} getContext={getContext} hasModel={hasModel} wide={wide} />
+          <EmptyState chat={chat} getContext={getContext} hasModel={hasModel} wide={wide} />
         ) : (
           messages.map((m, i) => (
             <Message
@@ -224,12 +226,12 @@ function MessageList({
 }
 
 function EmptyState({
-  chatId,
+  chat,
   getContext,
   hasModel,
   wide,
 }: {
-  chatId: string;
+  chat: Conversation;
   getContext: () => ChatContext;
   hasModel: boolean;
   wide: boolean;
@@ -242,18 +244,18 @@ function EmptyState({
     error && "Fix my query error",
     sql.trim() && "Explain my query",
     sql.trim() && "Make my query faster",
-    "What's in this database?",
+    chat.access !== Access.AccessNone && "What's in this database?",
   ].filter((s): s is string => Boolean(s));
 
   return (
     <Intro title="Ask about your data" wide={wide} className="py-8">
-      <Capabilities wide={wide} />
+      <Capabilities access={chat.access} wide={wide} />
       <div className={cn("w-full flex", wide ? "flex-wrap justify-center gap-2 max-w-lg" : "flex-col items-stretch gap-1.5 max-w-64")}>
         {suggestions.map((s) => (
           <button
             key={s}
             type="button"
-            onClick={() => chats.send(chatId, s, getContext())}
+            onClick={() => chats.send(chat.id, s, getContext())}
             className={cn(
               "border border-border/60 text-left text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer",
               wide ? "w-60 rounded-lg px-3 py-2.5 text-xs" : "rounded-md px-2.5 py-1.5 text-[11px]",
@@ -328,7 +330,7 @@ const Message = memo(function Message({
 });
 
 function Composer({
-  chatId,
+  chat,
   wide,
   getContext,
   streaming,
@@ -336,7 +338,7 @@ function Composer({
   model,
   usage,
 }: {
-  chatId: string;
+  chat: Conversation;
   wide: boolean;
   getContext: () => ChatContext;
   streaming: boolean;
@@ -344,6 +346,7 @@ function Composer({
   model?: ModelRef;
   usage?: Usage;
 }) {
+  const chatId = chat.id;
   const [input, setInputState] = useState(() => chats.draft(chatId));
   const setInput = (text: string) => {
     setInputState(text);
@@ -395,6 +398,7 @@ function Composer({
         />
         <div className={cn("flex items-center gap-1", wide ? "px-2 pb-2" : "px-1 pb-1")}>
           <ModelPicker value={model} providers={providers} disabled={streaming} />
+          <AccessPicker chatId={chatId} value={chat.access} locked={chat.messages.length > 0} />
           <span className="flex-1" />
           {usage && <UsageMeter usage={usage} />}
           {streaming ? (
@@ -427,13 +431,13 @@ function Composer({
 }
 
 /** What the AI is for and the access it has, shown before the first message. */
-function Capabilities({ wide }: { wide: boolean }) {
+function Capabilities({ access, wide }: { access: Access; wide: boolean }) {
   return (
     <div className={cn("space-y-1.5 text-center text-muted-foreground leading-relaxed", wide ? "max-w-md text-xs" : "max-w-64 text-[11px]")}>
-      <p>It looks through your tables, runs queries and explains what it finds.</p>
+      <p>{accessLevel(access).summary}</p>
       <p>
-        It can read your data and help write SQL, but can't change anything. AI can make mistakes,
-        so check important answers.
+        Choose what it can see below. It can't change anything. AI can make mistakes, so check
+        important answers.
       </p>
     </div>
   );

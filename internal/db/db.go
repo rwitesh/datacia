@@ -114,6 +114,7 @@ func (s *Store) initSchema() error {
 		`CREATE TABLE IF NOT EXISTS ai_chats (
 			id TEXT PRIMARY KEY,
 			title TEXT NOT NULL,
+			access TEXT NOT NULL,
 			messages TEXT NOT NULL,
 			created_at TEXT NOT NULL,
 			updated_at TEXT NOT NULL

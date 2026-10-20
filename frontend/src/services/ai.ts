@@ -8,7 +8,7 @@ import type { ModelRef } from "./bindings/ai";
 import { queryKeys } from "./queryKeys";
 
 export type { ChatContext, ModelRef, ProviderStatus, QueryPreview, ToolUse, Usage } from "./bindings/ai";
-export { SignIn } from "./bindings/ai";
+export { Access, SignIn } from "./bindings/ai";
 
 export function useAIProviders() {
   const queryClient = useQueryClient();
